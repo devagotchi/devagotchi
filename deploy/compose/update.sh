@@ -42,7 +42,9 @@ healthy() {
 # The services this stack runs: Postgres and the hub, and Caddy unless an edge elsewhere
 # terminates TLS. All of them, so a compose.yaml that changed reaches each.
 services() {
-  printf '%s\n' postgres hub
+  # ClickHouse is the hub's statistics (warehouse.rs): brought up with it, and the deploy
+  # waits for it, though the hub serves the boards without it.
+  printf '%s\n' postgres clickhouse hub
   [[ "$(env_get DEVAGOTCHI_EDGE)" == external ]] || printf '%s\n' caddy
 }
 up() {
