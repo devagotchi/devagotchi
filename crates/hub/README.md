@@ -128,6 +128,15 @@ to its tenant by forced row-level security; the three questions that cross tenan
 organisations a subject is in, which projects it was given, which tenant an invite belongs
 to) are `SECURITY DEFINER` functions that answer ids and roles only.
 
+## Signals to sinks
+
+`signals.sinks` in the config sends the hub's signals, `devagotchi.signal/v1`, to the
+operator's endpoints: every board event, every tenant event and every tool call with its
+outcome, at least once, in order within a board, a tenant or the audit chain, each with a
+stable id. A sink that is down falls behind alone; `/healthz` reports each one under
+`signals`. The contract, delivery, signing and configuration are in
+[docs/signals.md](../../docs/signals.md).
+
 ## Statistics in ClickHouse
 
 With `clickhouse.url` in the config (or `DEVAGOTCHI_CLICKHOUSE_URL`; `_DATABASE` and

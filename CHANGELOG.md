@@ -7,6 +7,30 @@ heading. Agents draft the fragments below; they never tag.
 
 ## Unreleased
 
+### Signals: one versioned event stream for sinks (increment 117)
+- `devagotchi.signal/v1` (`signals.rs`, `docs/signals.md`, JSON Schema in
+  `docs/signals/v1.schema.json`, generated from the type and held equal by a test): every
+  board event (tickets, approvals, issue context), every tenant event (organisations,
+  members, roles, teams, invites, accounts) and every tool call with its outcome, each with
+  a stable `id`, `source`, `kind` and `at_ms`, and `tenant`, `owner`, `project`, `actor`,
+  `ticket`, `target`, `operation`, `outcome` where they apply.
+- `signals.sinks` in the config: HTTPS endpoints (or http to this machine or a private
+  service name) that take NDJSON batches of up to 500, with a bearer token and an
+  HMAC-SHA256 signature from environment variables the config names. `metadata` (the
+  default) never carries `data`; `full` does. Each sink keeps its own position per scope
+  (`signal_cursors`, migration 0019), so delivery is at least once and in order within a
+  board, a tenant or the audit chain, and a sink that is down falls behind alone, backing
+  off up to a minute, holding back neither the hub nor another sink.
+- `/healthz` `signals`: each sink's `ready`, `degraded`, `sent`, `waiting`,
+  `oldest_waiting_secs`, `last_error`, never a token, a secret or a signal; never counted
+  against the hub's health. Compose: `DEVAGOTCHI_HUB_SIGNAL_SINKS`, `DEVAGOTCHI_SIGNAL_TOKEN`
+  and `DEVAGOTCHI_SIGNAL_SECRET`.
+- Tests: `signals/tests.rs` (the published schema, timestamps, and on Postgres two sinks
+  against a stand-in receiver: down, behind and reported, then every signal once, signed,
+  `metadata` without the private text that `full` gets, and a sink's URL policy);
+  `tests/signals_probe.py` in e2e: the sink is down through every other probe, the hub
+  stays healthy and reports it, then listening it gets every signal once.
+
 ### Organisations on the hub's pages (increment 116)
 - `/orgs` lists a person's organisations and makes one; `/orgs/{org}` shows its projects
   (who sees each, its own members, its events of the last 7 days when the hub exports to
