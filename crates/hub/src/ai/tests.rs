@@ -544,12 +544,20 @@ fn lifecycle_promotion_and_policy_schema_drift_require_explicit_reconciliation()
     let original: Value = serde_json::from_slice(&fs::read(&file).unwrap()).unwrap();
     let mut project = original.clone();
     project["stage"] = json!("production");
+    project["release_mode"] = json!("production");
     fs::write(&file, serde_json::to_vec(&project).unwrap()).unwrap();
     assert!(check_contracts(repo).is_err());
     project["production_promotion"] = json!({
         "approval":"https://example.invalid/review/1","candidate":"sha256:candidate",
         "evidence":"https://example.invalid/evidence/1","date":"2026-11-10"
     });
+    fs::write(&file, serde_json::to_vec(&project).unwrap()).unwrap();
+    check_contracts(repo).unwrap();
+    project = original.clone();
+    project["alpha_readiness"] = json!("confirmed");
+    fs::write(&file, serde_json::to_vec(&project).unwrap()).unwrap();
+    assert!(check_contracts(repo).is_err());
+    project["alpha_acceptance"] = json!("https://example.invalid/acceptance/1");
     fs::write(&file, serde_json::to_vec(&project).unwrap()).unwrap();
     check_contracts(repo).unwrap();
     project = original.clone();

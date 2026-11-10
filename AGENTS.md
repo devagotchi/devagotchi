@@ -4,6 +4,8 @@ This is the provider-neutral entry point. Provider files are discovery adapters,
 alternative policies. Read [the AI contract index](.ai/README.md), especially
 [DG-LIFECYCLE-1](.ai/docs/lifecycle.md) and [DG-DELIVERY-1](.ai/dev/workflow.md).
 The machine-readable stage is **alpha** in [.ai/project.json](.ai/project.json).
+Release mode is **pre-release**; alpha readiness remains **unconfirmed** until the
+actual supported end-to-end workflows are accepted. Merge is not certification.
 Do not claim production readiness, stability, universal client support, or completion
 from an unrelated passing test.
 

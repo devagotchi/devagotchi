@@ -33,7 +33,12 @@ capture, automatic training eligibility, private WardenMesh fork creation.
 | M2 | Native operator policy and private journal | M1 | managed/advanced consent, durability/replay/concurrency tests | implemented; 17 targeted tests passed |
 | M3 | Claude/Codex/Copilot native stubs, bounded incremental import/export | M2, official payload research | fixture mappings, privacy/gap/refusal tests; actual binary without board | implemented; 3 new native tests passed |
 | M4 | Validate, reconcile documentation and report actual delivery state | M1-M3 | schema drift, tests, scoped diff and evidence receipts | local tests passed; actual-client admission remains operator acceptance |
-| M5 | Scoped validated push, reviewed PR, operator-approved merge | M4, actual approval | remote state confirmed | not_started |
+| M5 | Scoped validated push, reviewed PR, operator-approved merge | M4, actual approval | remote state confirmed | approval received; publication in progress |
+
+Operator explicitly requested integration into main after review/validation, with
+pre-release development retained and no production promotion. The project stage
+describes alpha development; machine state now separately marks `pre_release` mode
+and `alpha_readiness: unconfirmed`. Actual alpha acceptance is not claimed.
 
 Research extension: [cross-project training-data standard](../../docs/cross-project-training-standard.md).
 This inventories the target data, reusable standards packaging, rights/redaction/review
@@ -106,9 +111,18 @@ remote-main baseline above. Verification on Windows:
 All commands used isolated local fixtures. No actual provider API/chat session or
 training upload was performed. Raw capture remains opt-in.
 
+After the operator's main-integration/pre-release clarification, the **17 targeted hub
+tests and 3 + 6 native tests were rerun and passed** for explicit release-mode/readiness
+gates and accurate automatic-transcript-following status. Final Windows candidate
+SHA-256: `df1fd34e20e648624c7622e0d4df73a5d9aee1cccd8472994a7cae0257072311`.
+Canonical schema checks, 14 instruction/contract documents and 48 local links passed.
+Worktree-generated broker artifacts initially differed only in checkout line endings;
+regenerating with the existing canonical tool resolved drift with no semantic/generated
+Git diff. The task-labelled disposable Postgres container was stopped and removed.
+
 ## Delivery
 
 Implementation: implemented for this packet. Local validation: passed as scoped above.
-Live-client acceptance: pending operator admission. Push: not performed for this packet.
-PR: not_verified; none created here. Main: not_verified.
-**DELIVERY INCOMPLETE: THIS PACKET IS UNCOMMITTED / NOT PUSHED / NOT CONFIRMED MERGED TO MAIN.**
+Live-client acceptance: pending operator admission. Publication: in progress.
+Main integration: explicitly approved by the operator, pending reviewed passing CI.
+**DELIVERY INCOMPLETE: PUBLICATION / MERGE STILL REQUIRE REMOTE CONFIRMATION.**

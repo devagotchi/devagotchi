@@ -3,6 +3,11 @@
 Canonical current stage: **alpha**, recorded once in [project.json](../project.json).
 "Nearly alpha", "pre-release" and a package version are descriptions, not stage switches.
 This project is not represented as a production service.
+`release_mode: pre_release` and `alpha_readiness: unconfirmed` distinguish the
+development stage from a tested alpha release. Merging this packet is not alpha
+acceptance or permission to implement production rollout practices. Confirm alpha
+readiness only through a reviewed acceptance receipt covering the actual supported
+clients, integration paths and release gates; do not infer it from local tests.
 
 ## Mandatory at every stage
 
@@ -24,6 +29,7 @@ smallest relevant slice while iterating; do not burn CI on known-incomplete work
 
 Only a reviewed PR may change `stage` to `production`. Its `production_promotion` object
 must identify the approval, candidate commit/image, acceptance evidence and date.
+The same PR must explicitly change `release_mode` to `production`.
 The operator must explicitly authorize production promotion. A model cannot infer it.
 The PR must reconcile the [release gates](../../docs/implementation-and-release-plan.md)
 and record unresolved limitations; a JSON edit alone does not establish readiness.
