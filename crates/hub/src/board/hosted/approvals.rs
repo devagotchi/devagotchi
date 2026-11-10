@@ -9,7 +9,9 @@ impl HostedBoard {
         what: &str,
         why: &str,
         undo: &str,
+        labels: &[String],
     ) -> BridgeResult<ApprovalStatus> {
+        let labels = serde_json::to_string(labels).expect("labels json");
         let title = text("title", title, 300, true)?;
         let what = text("what", what, 4000, true)?;
         let why = text("why", why, 4000, false)?;
@@ -22,9 +24,10 @@ impl HostedBoard {
             sqlx::query(
                 "INSERT INTO board_tickets
                  (tenant_id,board_id,id,kind,title,description,state,priority,labels,created_by,created_at,updated_at)
-                 VALUES ($1,$2,$3,'approval',$4,$5,$6,1,'[\"approval\"]',$7,$8,$8)",
+                 VALUES ($1,$2,$3,'approval',$4,$5,$6,1,$9,$7,$8,$8)",
             ).bind(&self.tenant).bind(&self.project).bind(&id).bind(&title).bind(&description)
-                .bind(&workflow.attention_state).bind(actor.id).bind(now).execute(&mut *connection).await?;
+                .bind(&workflow.attention_state).bind(actor.id).bind(now).bind(&labels)
+                .execute(&mut *connection).await?;
             self.event(
                 connection,
                 actor.id,
@@ -84,6 +87,29 @@ impl HostedBoard {
             decided_by,
             decided_at,
             note,
+            kind: crate::board::approval::label_value(&ticket.labels, "kind:"),
+            target: crate::board::approval::label_value(&ticket.labels, "target:"),
+        })
+    }
+
+    pub(crate) async fn edit_settings<F>(
+        &self,
+        actor: &Actor<'_>,
+        action: &str,
+        edit: &F,
+    ) -> BridgeResult<Settings>
+    where
+        F: Fn(&mut Settings) -> BridgeResult<serde_json::Value>,
+    {
+        transaction!(&self.store, |connection| {
+            let now = self.scope(connection).await?;
+            let mut settings: Settings = self.configuration(connection, "settings").await?;
+            let data = edit(&mut settings)?;
+            self.save_configuration(connection, "settings", &settings)
+                .await?;
+            self.event(connection, actor.id, now, action, None, None, data)
+                .await?;
+            Ok(settings)
         })
     }
 

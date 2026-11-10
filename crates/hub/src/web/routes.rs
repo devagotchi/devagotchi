@@ -75,6 +75,8 @@ pub fn router(hub_authorization: bool) -> Router<AppState> {
         .route("/approvals", get(approvals::list))
         .route("/approvals/decide", post(approvals::decide))
         .route("/approvals/test", post(approvals::test))
+        .route("/approvals/standing", post(approvals::grant))
+        .route("/approvals/standing/revoke", post(approvals::revoke))
         .route("/machines/add", post(machines::add))
         .route("/machines/revoke", post(machines::revoke))
         .route("/push/subscribe", post(notify::subscribe))

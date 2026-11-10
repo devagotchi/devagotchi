@@ -2658,3 +2658,9 @@ fn a_customised_workflow_is_left_as_it_is() {
             .all(|e| e.action != "board.workflow_upgraded")
     );
 }
+
+#[test]
+fn a_kind_approved_ahead_of_time_is_approved_the_moment_it_is_asked() {
+    let f = fixture();
+    super::standing_tests::standing_approvals_hold(&f.board, Some(&|ms| f.advance(ms)));
+}

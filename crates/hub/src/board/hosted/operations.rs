@@ -153,7 +153,7 @@ impl HostedBoard {
         })
     }
 
-    async fn save_configuration<T: serde::Serialize>(
+    pub(super) async fn save_configuration<T: serde::Serialize>(
         &self,
         connection: &mut AnyConnection,
         key: &str,

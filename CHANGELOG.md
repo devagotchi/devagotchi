@@ -7,6 +7,23 @@ heading. Agents draft the fragments below; they never tag.
 
 ## Unreleased
 
+### Approving ahead of time (increment 118)
+- `approval_request` takes `kind` (`restart`, `deploy`, `edit-file`, ...) and `target` (a
+  machine, a service); the ticket carries them as labels and `/approvals` shows them.
+- **Approve, and allow {kind} on {target} for 30 days** on `/approvals` approves the request
+  and grants a standing approval on that board. A later request of that kind and target is
+  approved at once by `standing:<id>`, with no push to any phone, and the answer names the
+  standing approval that covered it. Without a target it covers the kind on the whole board.
+- Only a person grants or stops one (`humans_only` for agents); 1 to 90 days; at most 50 live
+  per board; every grant and stop is on the board's chain. `/approvals` lists them per project
+  with **Stop**, and offers a kind after 3 approvals in 30 days with no denial.
+- Settings changes now run in one transaction on Postgres boards and one write on file
+  boards (`Board::edit_settings`), so two grants at once never lose one.
+- Tests: `board/standing_tests.rs` on file and Postgres boards (clock moved past expiry);
+  `ahead_tests.rs` over HTTP on SQLite and Postgres, including a cross-site form refused.
+- The landing page now describes organisations and roles, ClickHouse in the self-host
+  compose, statistics and signals, approving ahead of time, and two items under Next.
+
 ### Organisations on the hub's pages (increment 116)
 - `/orgs` lists a person's organisations and makes one; `/orgs/{org}` shows its projects
   (who sees each, its own members, its events of the last 7 days when the hub exports to

@@ -107,7 +107,7 @@
         "items": [
           {
             "term": "Approvals on your phone",
-            "text": "Before a step that needs your say, your AI asks: what will change, why, and how to undo it. It reaches your phone as a push, and the AI waits for your answer."
+            "text": "Before a step that needs your say, your AI asks: what will change, why, and how to undo it. It reaches your phone as a push, and the AI waits for your answer. Approve a kind of step ahead of time, say restarts on one machine for 30 days, and those go through without a buzz until you stop them with one tap."
           },
           {
             "term": "Setup links",
@@ -115,15 +115,19 @@
           },
           {
             "term": "A board your agents share",
-            "text": "Claude and Codex coordinate on one ticket board: claim work, leave notes, hand off."
+            "text": "Claude and Codex coordinate on one ticket board: claim work, leave notes, hand off. Bring your team: organisations with members and teams, a role on each project (owner, admin, member, agent or viewer) and invites by link. A viewer reads, an agent works, and only people approve."
           },
           {
             "term": "Every machine you have",
             "text": "Linux servers on x86_64 and ARM64, and Windows PCs. Your AI asks the hub which machines are online and works on any of them."
           },
           {
+            "term": "Statistics and signals",
+            "text": "Every board event lands in ClickHouse for per-project statistics: what moved, who did it, how long tickets took. The same events, with every tool call and its outcome, stream to any receiver you name, signed and versioned, so your own alerting or datasets see what your AIs do."
+          },
+          {
             "term": "Self-host or hosted",
-            "text": "A Docker image and compose with its own Postgres, claimed from your browser with the code from its log. Or the same hub, hosted at {domain}."
+            "text": "A Docker image and compose with its own Postgres and ClickHouse, claimed from your browser with the code from its log. Or the same hub, hosted at {domain}."
           }
         ]
       },
@@ -259,7 +263,9 @@
     "intro": "Coming, and not built yet:",
     "items": [
       "**{product}'s own private mesh.** The link moves onto Iroh: your machines connect directly when they can, through a relay when they can't, and fall back to today's link whenever that fails.",
-      "**Secrets and devspaces**, from the same hub."
+      "**Secrets and devspaces**, from the same hub.",
+      "**Tickets from your projects.** Scan a project folder on your machine and get draft tickets (failing tests, TODOs, outdated dependencies) to accept on your phone, never a flood.",
+      "**Approvals by email and SMS**, as backups when a push goes unanswered."
     ]
   },
   "faq": {
