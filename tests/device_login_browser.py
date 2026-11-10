@@ -109,10 +109,17 @@ def main() -> int:
     work = Path(tempfile.mkdtemp(prefix="device-login-"))
     port = free_port()
     url = f"http://localhost:{port}"
+    # The hub keeps accounts in Postgres (docs/adr/0001); the environment names an empty
+    # database for it, and the config carries it since the hub's environment is stripped of
+    # every DEVAGOTCHI_ variable below (the command line under test must find nothing of
+    # this machine's own Devagotchi).
+    storage = os.environ.get("DEVAGOTCHI_HUB_STORAGE_URL", "")
+    if not storage.startswith(("postgres://", "postgresql://")):
+        sys.exit("set DEVAGOTCHI_HUB_STORAGE_URL to an empty Postgres database for this script's hub")
     config = work / "hub.json"
     config.write_text(json.dumps({
         "listen": f"127.0.0.1:{port}", "public_url": url, "auth": {"mode": "hub"},
-        "storage": {"url": f"sqlite:{work / 'accounts.sqlite3'}"}, "brokers": [], "grants": []}))
+        "storage": {"url": storage}, "brokers": [], "grants": []}))
     env = {k: v for k, v in os.environ.items() if not k.startswith("DEVAGOTCHI_")}
     hub = subprocess.Popen([args.devagotchi, "hub", "serve", "--state-dir", str(work / "state"),
                             "--config", str(config)], stdout=subprocess.DEVNULL,
