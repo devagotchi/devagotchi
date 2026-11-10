@@ -663,12 +663,19 @@ impl Store {
 }
 
 /// Postgres refused a transaction because another one ran alongside it: serialization
-/// failure (40001) or deadlock (40P01). Running it again is the remedy.
+/// failure (40001), deadlock (40P01), or a unique violation (23505). Running it again is the
+/// remedy. The last is a collision too: a SERIALIZABLE transaction keeps the snapshot it
+/// began with even after waiting on a row another transaction then committed, so a key it
+/// computed from that snapshot (the next note or event `seq` of a hosted board, after
+/// `SELECT … FOR UPDATE` on the board's row) may already be taken by the time it inserts.
+/// Postgres reports that as the unique violation, not as 40001. Run again, the block sees
+/// the committed rows: a repeat of a request it already recorded comes back as its receipt.
+/// A duplicate that is no collision fails the same way after the retries.
 fn collided(error: &sqlx::Error) -> bool {
     error
         .as_database_error()
         .and_then(|e| e.code())
-        .is_some_and(|code| code == "40001" || code == "40P01")
+        .is_some_and(|code| code == "40001" || code == "40P01" || code == "23505")
 }
 
 /// A SQLite store and its -wal and -shm files, when present, readable by the hub alone.

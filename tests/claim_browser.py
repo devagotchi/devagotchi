@@ -42,11 +42,11 @@ def free_port() -> int:
         return s.getsockname()[1]
 
 
-def wait_ready(url: str, process: subprocess.Popen) -> None:
+def wait_ready(url: str, process: subprocess.Popen, log: Path) -> None:
     deadline = time.time() + 30
     while time.time() < deadline:
         if process.poll() is not None:
-            raise SystemExit(f"the hub exited with {process.returncode}")
+            raise SystemExit(f"the hub exited with {process.returncode}:\n{log.read_text()}")
         try:
             with urllib.request.urlopen(url + "/healthz", timeout=1) as answer:
                 if answer.status == 200:
@@ -121,7 +121,7 @@ def main() -> int:
     }))
     hub = serve(args.devagotchi, state, config, work / "hub.log")
     try:
-        wait_ready(url, hub)
+        wait_ready(url, hub, work / "hub.log")
         printed = re.findall(rf"{re.escape(url)}/claim#[0-9A-Z-]+", (work / "hub.log").read_text())
         assert len(printed) == 1, "the hub prints one claim link when it starts"
         link = printed[0]
@@ -195,7 +195,7 @@ def main() -> int:
 
     hub = serve(args.devagotchi, state, config, work / "restart.log")
     try:
-        wait_ready(url, hub)
+        wait_ready(url, hub, work / "restart.log")
         assert "/claim#" not in (work / "restart.log").read_text(), "a claimed hub prints no code"
         print("PASS a claimed hub prints no claim code when it restarts")
     finally:

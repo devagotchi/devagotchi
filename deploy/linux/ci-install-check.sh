@@ -105,6 +105,11 @@ wait_for 20 "broker listening again" broker_up
 ok "restarted by systemd (pid $pid -> $(prop devagotchi-broker.service MainPID))"
 
 echo "--- the link joins a hub"
+# Each hub keeps its accounts and boards in Postgres (docs/adr/0001) and a database holds
+# one hub (migration 0007): the three hubs this check starts (the one the link joins, the
+# one that hands out a build, the update probe's) need an empty database each.
+[[ -n "${DEVAGOTCHI_HUB_STORAGE_URL:-}" && -n "${DEVAGOTCHI_HUB_JOIN_STORAGE_URL:-}" && -n "${DEVAGOTCHI_HUB_UPDATE_STORAGE_URL:-}" ]] \
+    || fail "set DEVAGOTCHI_HUB_STORAGE_URL, DEVAGOTCHI_HUB_JOIN_STORAGE_URL and DEVAGOTCHI_HUB_UPDATE_STORAGE_URL to three empty Postgres databases"
 PORT=$(python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1",0)); print(s.getsockname()[1])')
 TOKEN=ci-host-$(python3 -c 'import secrets; print(secrets.token_hex(16))')
 install -m 0600 /dev/null "$WORK/tokens.json"
@@ -205,7 +210,8 @@ cat > "$WORK/join-hub.json" <<EOF
  "grants": [{"subject": "ci", "brokers": ["ci-joined"]}],
  "downloads": "$DIST", "machines": {"auto_update": false}}
 EOF
-"$BIN/devagotchi" hub serve --state-dir "$WORK/join-state" --config "$WORK/join-hub.json" 2> "$WORK/join-hub.log" &
+DEVAGOTCHI_HUB_STORAGE_URL="$DEVAGOTCHI_HUB_JOIN_STORAGE_URL" \
+    "$BIN/devagotchi" hub serve --state-dir "$WORK/join-state" --config "$WORK/join-hub.json" 2> "$WORK/join-hub.log" &
 JOIN_HUB_PID=$!
 join_hub_ready() { grep -q 'devagotchi hub ready:' "$WORK/join-hub.log"; }
 joined_connected() {
@@ -361,7 +367,8 @@ done
 cargo build --locked --bin devagotchi
 # The probe runs as root, so what it writes is root's: removed here, before the cleanup.
 updated=0
-sudo python3 tests/machine_update_probe.py --installer linux --a "$WORK/build-a" --b "$WORK/build-b" --work "$WORK/update" \
+sudo env DEVAGOTCHI_HUB_STORAGE_URL="$DEVAGOTCHI_HUB_UPDATE_STORAGE_URL" \
+    python3 tests/machine_update_probe.py --installer linux --a "$WORK/build-a" --b "$WORK/build-b" --work "$WORK/update" \
     && updated=1
 sudo rm -rf "$WORK/update"
 [ $updated = 1 ] || fail "the machine did not update itself through its hub"

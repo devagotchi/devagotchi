@@ -10,9 +10,18 @@
 # them, the hub's site: a directory checked with the hub image and put in place, a change
 # to it served after `docker compose up -d hub` with no rebuild, a bad one refused while
 # the hub keeps the site it had, and the built-in site back with --no-site.
-#   sudo bash tests/deploy_scripts.sh
+#
+# The hub image is this commit's, built beforehand (CI: as the `hub (compose)` job builds
+# it) and named as the one argument. The local registry serves it as the track install.sh
+# follows, so nothing here waits on GHCR: the image a commit publishes exists only once
+# that commit is on main, and the repository's owner can change before its first publish.
+#   docker build -f deploy/compose/Dockerfile -t devagotchi-hub:ci .
+#   sudo bash tests/deploy_scripts.sh devagotchi-hub:ci
 set -euo pipefail
 root="$(cd "$(dirname "$0")/.." && pwd)"
+image=${1:-}
+[[ -n "$image" ]] || { echo "usage: $0 IMAGE (the hub image built from this commit)" >&2; exit 2; }
+docker image inspect "$image" >/dev/null 2>&1 || { echo "no image $image on this host" >&2; exit 2; }
 work=$(mktemp -d)
 dir="$work/hub" port=18790
 export DEVAGOTCHI_UPDATE_STATE="$work/update-state" DEVAGOTCHI_DIR="$dir"
@@ -27,10 +36,18 @@ trap cleanup EXIT
 fail() { printf 'FAIL %s\n' "$1" >&2; (cd "$dir" && docker compose logs --tail 40) >&2 || true; exit 1; }
 env_get() { sed -n "s/^$1=//p" "$dir/.env" | tail -1; }
 
+# The registry that stands in for GHCR, with this commit's image as the track to follow.
+docker run -d --name "$registry" -p 127.0.0.1:5055:5000 \
+  registry:2@sha256:a3d8aaa63ed8681a604f1dea0aa03f100d5895b6a58ace528858a7b332415373 >/dev/null
+for _ in $(seq 1 30); do curl -fsS -o /dev/null http://127.0.0.1:5055/v2/ 2>/dev/null && break; sleep 1; done
+track=localhost:5055/devagotchi:main
+docker tag "$image" "$track"
+docker push -q "$track" >/dev/null
+
 out=$("$root/deploy/compose/install.sh" --domain hub.test.example --rp-id test.example \
-  --edge external --hub-bind 127.0.0.1 --hub-port "$port" --dir "$dir" --no-timer 2>&1) \
+  --edge external --hub-bind 127.0.0.1 --hub-port "$port" --dir "$dir" --no-timer --track "$track" 2>&1) \
   || { printf '%s\n' "$out" >&2; fail "install.sh brings the stack up"; }
-[[ "$(env_get DEVAGOTCHI_IMAGE)" == ghcr.io/devagotchi/devagotchi@sha256:* ]] || fail "the image is pinned by digest"
+[[ "$(env_get DEVAGOTCHI_IMAGE)" == localhost:5055/devagotchi@sha256:* ]] || fail "the image is pinned by digest"
 curl -fsS "http://127.0.0.1:$port/healthz" | grep -q '"ok":true' || fail "the hub answers healthy on its port"
 grep -q "https://hub.test.example/claim#" <<<"$out" || fail "install.sh prints the claim link"
 echo "PASS install.sh: stack up, image pinned by digest, claim link printed"
@@ -69,7 +86,7 @@ wait_page() { for _ in $(seq 1 30); do has "$1" "$2" && return 0; sleep 1; done;
 hub_log() { (cd "$dir" && docker compose logs --no-color hub 2>/dev/null) || true; }
 install_site() {
   "$root/deploy/compose/install.sh" --domain hub.test.example --rp-id test.example \
-    --edge external --hub-bind 127.0.0.1 --hub-port "$port" --dir "$dir" --no-timer "$@"
+    --edge external --hub-bind 127.0.0.1 --hub-port "$port" --dir "$dir" --no-timer --track "$track" "$@"
 }
 site_files="site.json tokens.json assets content/landing.json content/messages.json content/docs.md
   content/privacy.md content/terms.md content/support.md"
@@ -132,7 +149,7 @@ DEVAGOTCHI_GOOGLE_CLIENT_ID=test-client.apps.googleusercontent.com
 DEVAGOTCHI_GOOGLE_CLIENT_SECRET='test-secret-not-real'
 EOF
 out=$("$root/deploy/compose/install.sh" --domain hub.test.example --rp-id test.example \
-  --edge external --hub-bind 127.0.0.1 --hub-port "$port" --dir "$dir" --no-timer \
+  --edge external --hub-bind 127.0.0.1 --hub-port "$port" --dir "$dir" --no-timer --track "$track" \
   --tenancy multi --operators email:ops@test.example --google --env-file "$work/hub.env" \
   --analytics-retention-days 30 2>&1) \
   || { printf '%s\n' "$out" >&2; fail "install.sh re-runs the stack as a hosted hub"; }
@@ -147,16 +164,13 @@ curl -fsS "http://127.0.0.1:$port/" | grep -q "Get started" || fail "the hosted 
 curl -fsS "http://127.0.0.1:$port/auth/login" | grep -q "Continue with Google" || fail "the sign-in page offers Google"
 echo "PASS install.sh: a hosted hub with an operator and Google, its secrets kept 0600, no claim"
 
-# The deploy files come with the image, from the commit its label names. A local registry
+# The deploy files come with the image, from the commit its label names. The local registry
 # holds two images of the running hub, relabelled with made-up commits; a file server holds
 # those commits' deploy files: the first's as they are with a marker, the second's with a
 # hub that cannot start.
 good=$(env_get DEVAGOTCHI_IMAGE)
 next_rev=1111111111111111111111111111111111111111 bad_rev=2222222222222222222222222222222222222222
 lost_rev=3333333333333333333333333333333333333333
-docker run -d --name "$registry" -p 127.0.0.1:5055:5000 \
-  registry:2@sha256:a3d8aaa63ed8681a604f1dea0aa03f100d5895b6a58ace528858a7b332415373 >/dev/null
-for _ in $(seq 1 30); do curl -fsS -o /dev/null http://127.0.0.1:5055/v2/ 2>/dev/null && break; sleep 1; done
 for rev in "$next_rev" "$bad_rev" "$lost_rev"; do
   printf 'FROM %s\nLABEL org.opencontainers.image.revision=%s\n' "$good" "$rev" \
     | docker build -q -t "localhost:5055/devagotchi:${rev:0:4}" - >/dev/null

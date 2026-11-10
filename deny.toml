@@ -23,6 +23,14 @@ ignore = [
   # proc-macro-error 1.x is unmaintained; it reaches us only through the GTK bindings
   # under the Tauri inspector (glib-macros 0.18). Not linked by the broker, adapter or hub.
   { id = "RUSTSEC-2024-0370", reason = "transitive via gtk/glib-macros for the desktop inspector only; tracked until the gtk-rs 0.19+ move" },
+  # Bundled SQLite before 3.54 can hand back uninitialised page-cache memory when a database
+  # is opened next to a crafted -wal file of another page size. It reaches us through
+  # libsqlite3-sys 0.37, which sqlx-sqlite 0.9.0 and rusqlite 0.39 both pin; the fixed
+  # 0.39 needs an sqlx-sqlite that does not exist yet, and one `links = sqlite3` crate is all
+  # a graph may hold, so neither can move alone. The broker, hub and command line open
+  # SQLite files of their own making in their state directories and the project's board
+  # directory, never files a request hands them.
+  { id = "RUSTSEC-2026-0459", reason = "bundled SQLite via libsqlite3-sys 0.37, pinned by sqlx-sqlite 0.9.0 and rusqlite 0.39; tracked until sqlx-sqlite takes libsqlite3-sys 0.39" },
 ]
 
 [licenses]

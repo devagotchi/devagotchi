@@ -28,11 +28,29 @@ heading. Agents draft the fragments below; they never tag.
 ### Hubs under test run on Postgres (increment 113)
 - `hub serve` keeps accounts and boards in Postgres (ADR 0001), so `tests/e2e.py` now
   requires `DEVAGOTCHI_HUB_STORAGE_URL` and says so at once instead of failing at "hub did
-  not become ready"; `--no-hub` runs the broker and stdio adapter probes alone. CI's e2e job
-  starts a throwaway Postgres on Linux and the runner image's own PostgreSQL on windows-2022
-  and windows-2025, one schema per step (`DEVAGOTCHI_HUB_STORAGE_SCHEMA`); windows-11-arm
-  has none and runs `--no-hub`, and `ci-install-check.ps1` ends before its hub parts when the
-  storage URL is empty.
+  not become ready"; `--no-hub` runs the broker and stdio adapter probes alone. A database
+  holds one hub (migration 0007: a second hub's tables in `devagotchi` stop it), so every
+  hub CI starts gets an empty database of its own: `tests/throwaway_postgres.sh` makes them
+  on Linux (the e2e, host-install and hub Postgres jobs), the runner image's own PostgreSQL
+  serves windows-2022 and windows-2025, and `ci-install-check.sh` and `.ps1` take
+  `DEVAGOTCHI_HUB_JOIN_STORAGE_URL` and `DEVAGOTCHI_HUB_UPDATE_STORAGE_URL` for the second
+  and third hub they start. windows-11-arm has no PostgreSQL and runs `--no-hub`, and
+  `ci-install-check.ps1` ends before its hub parts when the storage URL is empty. The
+  browser scripts print the hub's log when it exits before it is ready.
+- Hosted boards: a unique violation inside a SERIALIZABLE transaction counts as a collision
+  and the transaction runs again (`store.rs` `collided`). Two agents writing issue context at
+  once both computed the next note `seq` from the snapshot they began with; Postgres reports
+  that as `board_notes_pkey`, not as a serialization failure, and the second write came back
+  503 instead of as the first's receipt.
+- `tests/deploy_scripts.sh` runs on the hub image built from the commit under test, served
+  by its local registry as the track `install.sh` follows, not on the image GHCR publishes:
+  that image exists only once the commit is on main, and the repository's owner changed
+  before its first publish there.
+- `rmcp` 3.5.1 to 3.9.0 for RUSTSEC-2026-0457, -0461 and -0462 (its OAuth client's SSRF
+  filter, the streamable HTTP server's tool schema cache, the streamable HTTP client's
+  response buffering). RUSTSEC-2026-0459, bundled SQLite before 3.54 through
+  `libsqlite3-sys` 0.37, has no fix sqlx-sqlite 0.9.0 can take yet and is recorded in
+  `deny.toml` with its reason; `cargo deny` is clean again.
 - `tests/hub_probe.py` expects the 22 board tools (`board_attach`, `board_issue_context`,
   `board_issue_checkpoint` joined); `board_issue_checkpoint` carries `readOnlyHint` like
   every other tool. `tests/board_probe.py` asserts the hub's tickets are in Postgres and not

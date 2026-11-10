@@ -102,6 +102,11 @@ if (-not $env:DEVAGOTCHI_HUB_STORAGE_URL) {
     Write-Host 'skip the hub, link and join checks: no Postgres on this runner (DEVAGOTCHI_HUB_STORAGE_URL is empty)'
     exit 0
 }
+# A database holds one hub (migration 0007): the hub the link joins, the one that hands out
+# a build and the update probe's each need an empty database of their own.
+if (-not $env:DEVAGOTCHI_HUB_JOIN_STORAGE_URL -or -not $env:DEVAGOTCHI_HUB_UPDATE_STORAGE_URL) {
+    throw 'set DEVAGOTCHI_HUB_JOIN_STORAGE_URL and DEVAGOTCHI_HUB_UPDATE_STORAGE_URL to empty Postgres databases for the second and third hub'
+}
 
 # The link: join a hub running on this runner the way gus or dabo joins one, by installer.
 $utf8 = New-Object System.Text.UTF8Encoding($false)
@@ -188,6 +193,7 @@ $joinConfig = [ordered]@{
 }
 [System.IO.File]::WriteAllText($joinCfg, ($joinConfig | ConvertTo-Json -Depth 5), $utf8)
 $joinLog = Join-Path $env:RUNNER_TEMP 'join-hub.log'
+$env:DEVAGOTCHI_HUB_STORAGE_URL = $env:DEVAGOTCHI_HUB_JOIN_STORAGE_URL
 $joinHub = Start-Process -FilePath $hubExe -ArgumentList @('hub', 'serve', '--state-dir', "`"$joinState`"", '--config', "`"$joinCfg`"") `
     -WindowStyle Hidden -RedirectStandardError $joinLog -PassThru
 for ($i = 0; $i -lt 300; $i++) {
@@ -246,6 +252,7 @@ foreach ($build in 'a', 'b') {
     Copy-Item 'target\debug\devagotchi.exe' (Join-Path $updates $build)
 }
 Remove-Item Env:DEVAGOTCHI_BUILD
+$env:DEVAGOTCHI_HUB_STORAGE_URL = $env:DEVAGOTCHI_HUB_UPDATE_STORAGE_URL
 python tests/machine_update_probe.py --installer windows --a (Join-Path $updates 'a') --b (Join-Path $updates 'b') --work (Join-Path $updates 'probe')
 if ($LASTEXITCODE -ne 0) { throw 'the machine did not update itself through its hub' }
 Write-Host 'ok   a broken build rolled back to ci-a and said so; ci-b came up by itself'
