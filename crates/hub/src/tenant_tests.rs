@@ -118,6 +118,12 @@ pub(crate) async fn hosted_with_ingress(
     let mut boards = board::mcp::Boards::from_config(&config, dir.path());
     if accounts.store().backend() == store::Backend::Postgres {
         boards = boards.using_postgres(accounts.store().clone()).unwrap();
+    } else if tokio::runtime::Handle::current().runtime_flavor()
+        == tokio::runtime::RuntimeFlavor::MultiThread
+    {
+        // Organisations in the SQLite store beside the board files, as `run` keeps them in
+        // Postgres; their synchronous lookups need a multi-thread runtime, as `run` has.
+        boards = boards.with_orgs(accounts.store().clone());
     }
     let boards = Arc::new(boards);
     if accounts.store().backend() == store::Backend::Postgres {

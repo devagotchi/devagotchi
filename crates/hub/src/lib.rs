@@ -32,6 +32,9 @@ mod oauth;
 mod offers;
 #[cfg(test)]
 mod offers_tests;
+mod orgs;
+#[cfg(test)]
+mod orgs_tests;
 #[cfg(test)]
 mod output_schema;
 #[cfg(test)]
@@ -1131,6 +1134,15 @@ fn app(state: AppState) -> Router {
                 .layer(middleware::from_fn_with_state(
                     state.clone(),
                     require_bearer,
+                )),
+        )
+        // Organisations, members, teams, project roles and invites (`orgs::api`).
+        .merge(
+            orgs::api::routes()
+                .layer(axum::extract::DefaultBodyLimit::max(16 * 1024))
+                .layer(middleware::from_fn_with_state(
+                    state.clone(),
+                    orgs::api::bearer_or_session,
                 )),
         )
         .merge(join::routes())

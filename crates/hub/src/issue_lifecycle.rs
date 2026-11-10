@@ -356,7 +356,7 @@ fn error_response(error: BridgeError) -> Response {
         "invalid" | "unsupported_action" => StatusCode::UNPROCESSABLE_ENTITY,
         "invalid_signature" => StatusCode::UNAUTHORIZED,
         "not_offered" | "not_found" | "unknown_board" => StatusCode::NOT_FOUND,
-        "not_granted" | "waiting" => StatusCode::FORBIDDEN,
+        "not_granted" | "waiting" | "read_only" => StatusCode::FORBIDDEN,
         "version_conflict" | "request_conflict" | "delivery_conflict" | "stale_fence"
         | "lease_expired" | "not_holder" => StatusCode::CONFLICT,
         "payload_too_large" => StatusCode::PAYLOAD_TOO_LARGE,
@@ -429,6 +429,7 @@ async fn authorized_board(
     subject: &Subject,
     headers: &HeaderMap,
     repository: &str,
+    write: bool,
 ) -> BridgeResult<(Arc<Board>, u64, String)> {
     if let Some(refusal) = state.hub.waiting_refusal(subject) {
         return Err(BridgeError::new("waiting", refusal.message));
@@ -441,7 +442,7 @@ async fn authorized_board(
     if seat.is_some_and(|seat| !crate::config::valid_name(seat)) {
         return Err(invalid("invalid seat header"));
     }
-    let (board, kind) = state.hub.board_for(subject, &mapped.project)?;
+    let (board, kind, role) = state.hub.board_access(subject, &mapped.project)?;
     // A personal board with the same project name is not the configured source target.
     if kind != crate::board::mcp::Kind::Shared {
         return Err(BridgeError::new(
@@ -449,7 +450,16 @@ async fn authorized_board(
             "issue repository belongs to the configured shared board",
         ));
     }
-    let (actor, _) = state.hub.actor_for(subject, seat, kind);
+    if write && !role.may_work() {
+        return Err(BridgeError::new(
+            "read_only",
+            format!(
+                "{} is a viewer on {:?}: it reads this board and changes nothing",
+                subject.id, mapped.project
+            ),
+        ));
+    }
+    let (actor, _) = state.hub.actor_for(subject, seat, kind, role);
     Ok((board, mapped.repository_id, actor))
 }
 
@@ -468,7 +478,7 @@ pub async fn issue_state_route(
             return Err(invalid("invalid issue number or notes page"));
         }
         let (board, repository, _) =
-            authorized_board(&state, &subject, &headers, &query.repository).await?;
+            authorized_board(&state, &subject, &headers, &query.repository, false).await?;
         let context = board
             .hosted_backend()?
             .issue_context(repository, query.issue_number, query.after, query.limit)
@@ -497,7 +507,7 @@ pub async fn shared_state_write_route(
     let result = async {
         payload.validate()?;
         let (board, repository, actor) =
-            authorized_board(&state, &subject, &headers, &payload.repository).await?;
+            authorized_board(&state, &subject, &headers, &payload.repository, true).await?;
         let receipt = board
             .hosted_backend()?
             .write_issue_context(&actor, repository, &payload)

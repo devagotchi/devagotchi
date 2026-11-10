@@ -184,6 +184,16 @@ pub struct MachineAdded {
     pub manual: String,
 }
 
+/// An organisation the caller belongs to, as `whoami` lists it.
+#[derive(Debug, Serialize, JsonSchema)]
+pub struct OrgRole {
+    /// What boards of it are named by: `<org>/<project>`.
+    pub org: String,
+    pub name: String,
+    /// owner, admin, member, agent or viewer: what the caller may do on its projects.
+    pub role: crate::orgs::Role,
+}
+
 #[derive(Debug, Serialize, JsonSchema)]
 pub struct WhoAmI {
     /// The account ID (`sub`) the identity provider proved, never a caller-supplied name.
@@ -247,8 +257,13 @@ pub struct WhoAmI {
     /// Brokers this subject holds a grant for, by name.
     pub brokers: Vec<String>,
     /// Project boards this subject may work on, by project name: its org's (or, with no
-    /// org, the account's own; `board_bind`) first, then the shared ones it holds a grant for.
+    /// org, the account's own; `board_bind`) first, then the shared ones it holds a grant
+    /// for, then its organisations' projects as `<org>/<project>`.
     pub boards: Vec<String>,
+    /// The organisations of this hub the subject belongs to, with its role in each.
+    /// `default` keeps it out of the schema's `required`: it is left out when empty.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub orgs: Vec<OrgRole>,
 }
 
 impl Hub {
@@ -590,17 +605,31 @@ impl Hub {
                 brokers
             },
             boards: {
-                let mut boards = self
-                    .boards
-                    .account_boards(&crate::board::mcp::Boards::owner_of(&subject))
-                    .map_err(Json)?;
-                boards.extend(
-                    self.config
-                        .boards_for(&subject.id)
-                        .into_iter()
-                        .map(|b| b.project.clone()),
-                );
-                boards
+                let hub = self.clone();
+                let who = subject.clone();
+                tokio::task::spawn_blocking(move || hub.board_names(&who))
+                    .await
+                    .unwrap_or_else(|join| {
+                        Err(BridgeError::new(
+                            "board_store",
+                            format!("board call did not complete: {join}"),
+                        ))
+                    })
+                    .map_err(Json)?
+            },
+            orgs: match self.boards.orgs() {
+                Some(orgs) => orgs
+                    .of_subject(&subject.id)
+                    .await
+                    .map_err(Json)?
+                    .into_iter()
+                    .map(|(org, role)| OrgRole {
+                        org: org.slug,
+                        name: org.name,
+                        role,
+                    })
+                    .collect(),
+                None => Vec::new(),
             },
             owner: self.config.is_owner(&subject.id),
             // An AI connected through the hub's own tokens never has a person's standing.
@@ -1046,6 +1075,7 @@ mod schema_tests {
             human: false,
             brokers: Vec::new(),
             boards: Vec::new(),
+            orgs: Vec::new(),
         })
         .unwrap();
         let required = schema["required"].as_array().expect("required properties");
@@ -1057,5 +1087,6 @@ mod schema_tests {
             );
         }
         assert!(!required.iter().any(|p| p == "provisional_warning"));
+        assert!(!required.iter().any(|p| p == "orgs"));
     }
 }

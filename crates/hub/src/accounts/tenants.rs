@@ -159,7 +159,7 @@ fn event_hash(
 
 /// Add an event to `tenant`'s chain, inside the caller's transaction (so it is recorded
 /// exactly when what it records is), which is scoped to `tenant`.
-pub(super) async fn record_in(
+pub(crate) async fn record_in(
     connection: &mut AnyConnection,
     tenant: &str,
     actor: &str,
