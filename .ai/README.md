@@ -13,6 +13,9 @@ its versioned contracts, not another agent or task engine.
 - [Plans](dev/plans/README.md): maintained task/PR plans, with [template](dev/plans/TEMPLATE.md).
 - [Patterns](patterns/README.md): reusable guidance, not duplicated architecture decisions.
 - [Capture schema](docs/capture-event.schema.json): generated from canonical Rust types.
+- [Cross-project training-data standard](docs/cross-project-training-standard.md):
+  researched recommendations, data inventory, curation/evaluation gates and explicit
+  implementation gaps; raw capture is not a training-ready dataset.
 - [Evaluation definitions](docs/evaluations.json): measurable checks, not assertions that they passed.
 
 Raw chats/journals/evidence live outside the checkout in the operator's private state

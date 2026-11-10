@@ -21,18 +21,16 @@ Changes requiring a ruling remain explicit blockers, not silently implemented al
 
 ### Current implementation receipt
 
-The repository AI-development packet is locally implemented:
+The repository AI-development packet implements
 [canonical instructions](../AGENTS.md), the requested `.ai` plans/docs/patterns,
 an explicit **alpha** lifecycle, thin Claude/Codex/Copilot discovery/hook adapters,
 and native `devagotchi ai` operator policy/private capture/import/export controls.
 Managed defaults permit validated branch pushes and require merge approval; advanced
 capabilities require explicit operator acknowledgment. Capture defaults off, raw content
 requires separate informed consent, and native hook metadata is never called a full chat.
-Local receipts: **17 focused hub tests, 2 contract tests, 3 new native-binary tests and
-6 existing binary tests passed**. See the [packet receipt](../.ai/dev/plans/ai-development-capture.md)
-for exact scope, privacy boundaries, actual-client admission still to test and unpublished
-delivery state. This is not completion of hosted project transcript sharing or the product's
-release gates, and no CI was dispatched for this packet.
+See the [packet receipt](../.ai/dev/plans/ai-development-capture.md) for validation,
+actual-client acceptance and delivery state. This is not completion of hosted project
+transcript sharing or the product's release gates.
 
 The Postgres migration foundation and native live-board cutover are implemented:
 

@@ -49,6 +49,11 @@ Use the platform's binary/endpoint spelling. Process hub tests require isolated 
 analytics tests require the configured isolated ClickHouse. Read harness help/setup;
 never aim tests at a user's real data. Contract generation needs the desktop's locked
 dev dependencies. Mark unavailable environments unverified, not passed.
+`security_boundary.py` is the Linux desktop IPC proof; `mcp_smoke.py` currently uses
+Unix pipe polling. Do not claim either passes on Windows: use the Windows process/E2E
+and native boundary tests there, and retain Linux execution as a separate review/CI gate.
+If `nextest` is unavailable, the same default workspace tests can be run with
+`cargo test --locked`; record the actual runner rather than claim a nextest run.
 Documentation-only edits need link/schema validation, not a needless full binary build.
 Changing hooks/capture requires the actual-binary and provider-fixture tests.
 

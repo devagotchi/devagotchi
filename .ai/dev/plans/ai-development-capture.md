@@ -3,10 +3,13 @@
 - Request: repository-neutral `.ai`, canonical instructions, provider adapters, alpha
   lifecycle, configurable operator autonomy, actual private runtime capture.
 - PR: not_verified; no PR created for this packet.
-- Observed verification checkout: `increment-117/signal-contract`,
+- Initial verification checkout: `increment-117/signal-contract`,
   `483e9380ec4a49f5f27f3ed53975c615b4dc9fba` plus dirty work. This shared checkout
   also contains independently changing, unrelated work; this packet does not own its
   branch or authorize publication of those changes.
+- Delivery branch: `increment-118/ai-development-capture`, isolated worktree based on
+  remote `main` (`738338d52d6dc4baf2426e165eb465d8755a13ac`). No signal, organisation,
+  ClickHouse packet commits or unrelated dirty hunks are included.
 - Stage: **alpha**, [DG-LIFECYCLE-1](../../docs/lifecycle.md).
 - Broader product authority: [release plan](../../../docs/implementation-and-release-plan.md).
 
@@ -31,6 +34,11 @@ capture, automatic training eligibility, private WardenMesh fork creation.
 | M3 | Claude/Codex/Copilot native stubs, bounded incremental import/export | M2, official payload research | fixture mappings, privacy/gap/refusal tests; actual binary without board | implemented; 3 new native tests passed |
 | M4 | Validate, reconcile documentation and report actual delivery state | M1-M3 | schema drift, tests, scoped diff and evidence receipts | local tests passed; actual-client admission remains operator acceptance |
 | M5 | Scoped validated push, reviewed PR, operator-approved merge | M4, actual approval | remote state confirmed | not_started |
+
+Research extension: [cross-project training-data standard](../../docs/cross-project-training-standard.md).
+This inventories the target data, reusable standards packaging, rights/redaction/review
+pipeline, dataset versions/splits and verification gates. The document explicitly
+separates the implemented capture foundation from unimplemented curation/export products.
 
 ## Risks
 
@@ -72,6 +80,31 @@ Capture remains off unless the operator deliberately opts in. No local chat data
 operator consent was fabricated to make a demonstration appear complete.
 Hosted project transcript publication, desktop GUI policy controls and automatic curated
 dataset generation are not claimed by this local CLI capture packet.
+
+### Isolated main-based candidate verification
+
+The delivery candidate excludes the original worktree's unrelated changes and uses the
+remote-main baseline above. Verification on Windows:
+
+- `cargo build --locked --bins`: passed. Candidate executable SHA-256:
+  `97114ba2dd8ce1648e8d9fa593657ef7a6b1dc7719768fb04bbe8d346b96f32c`.
+- `cargo test --locked`: **587 passed, zero failed/ignored**, including **472 hub
+  library tests**, all native-binary tests and the capture/governance tests. A separately
+  labelled disposable Postgres 18 instance enabled real database tests; no shared
+  database content was used. Nextest is not installed; this is a Cargo test receipt.
+- `cargo deny --all-features check`: passed, with existing duplicate-dependency warnings.
+- `python tests/e2e.py --bin-dir target/debug`: **E2E PASSED**, real broker, MCP, hub,
+  link and isolated Postgres. Existing Linux machine-update/deploy-script cases are
+  explicitly skipped by this Windows harness; no cross-OS certification is claimed.
+- `python tests/mcp_protocol.py` with the absolute candidate and unique unused named
+  pipe: passed, **11 checks** covering protocol/catalog, input rejection and shutdown.
+- `security_boundary.py`: unavailable on Windows (`os.geteuid` at module import).
+  `mcp_smoke.py`: unavailable on Windows (`select` on subprocess stdout).
+  These existing Linux-only harness limitations are recorded, not silently fixed,
+  suppressed or reported as successes. The Windows E2E/process tests passed separately.
+
+All commands used isolated local fixtures. No actual provider API/chat session or
+training upload was performed. Raw capture remains opt-in.
 
 ## Delivery
 
