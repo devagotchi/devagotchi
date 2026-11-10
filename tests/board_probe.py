@@ -315,14 +315,18 @@ if all(who in tokens for who in ("alice", "bob", "carol")):
     check("and holds none of the first org's tickets", task["id"] not in [t["id"] for t in listed], json.dumps(listed)[:160])
     bob.refused("board_bind", {"project": "acme-second"}, "plan_limit", "the free limit counts the org's projects")
 
-# The command line, on the hub's host, is the other face of the same store.
+# The hub's board lives in Postgres (docs/adr/0001): the project directory the hub's config
+# names is never the board of record, so the command line reading that directory as a local
+# board sees none of the hub's tickets. The command line that shares the hub's board is a
+# bound one (`board bind --hub`), exercised in tests/nomen_probe.py.
 result = subprocess.run([args.devagotchi, "board", "ls", "--dir", args.dir, "--json"], capture_output=True, text=True, timeout=30)
 try:
     rows = json.loads(result.stdout or "[]")
     ids = {row["id"] for row in rows}
 except (json.JSONDecodeError, KeyError, TypeError):
     ids = set()
-check("the command line sees the tickets the tools made", result.returncode == 0 and {first["id"], second["id"], found["id"]} <= ids,
+check("the hub's tickets are in Postgres, not in the directory's local board",
+      result.returncode == 0 and not ({first["id"], second["id"], found["id"]} & ids),
       f"exit {result.returncode}: {result.stdout.strip()[:120]!r} {result.stderr.strip()[:120]!r}")
 
 status, _, raw = operator.http("GET", "/healthz")

@@ -36,11 +36,12 @@ def free_port() -> int:
         return s.getsockname()[1]
 
 
-def wait_ready(url: str, process: subprocess.Popen) -> None:
+def wait_ready(url: str, process: subprocess.Popen, log: Path | None = None) -> None:
     deadline = time.time() + 30
     while time.time() < deadline:
         if process.poll() is not None:
-            raise SystemExit(f"the hub exited with {process.returncode}")
+            said = f":\n{log.read_text()}" if log and log.exists() else ""
+            raise SystemExit(f"the hub exited with {process.returncode}{said}")
         try:
             with urllib.request.urlopen(url + "/healthz", timeout=1) as answer:
                 if answer.status == 200:
@@ -95,7 +96,7 @@ def main() -> int:
         stderr=open(work / "hub.log", "w"),
     )
     try:
-        wait_ready(url, hub)
+        wait_ready(url, hub, work / "hub.log")
         made = subprocess.run(
             [args.devagotchi, "hub", "owner", "--state-dir", str(state), "--config", str(config),
              "--name", "Jesse"],
@@ -132,6 +133,7 @@ def main() -> int:
             page.wait_for_url(f"{url}/signed-out")
             page.goto(f"{url}/account")
             page.wait_for_url(f"{url}/auth/login?return_to=/account")
+            page.locator("details.ways summary").click()
             page.click("#passkey-sign-in")
             page.wait_for_url(f"{url}/account", timeout=15_000)
             assert "Signed in as Jesse" in page.inner_text("main")
@@ -165,9 +167,36 @@ def main() -> int:
             page.click("header form button")
             page.wait_for_url(f"{url}/signed-out")
             page.goto(f"{url}/auth/login")
+            page.locator("details.ways summary").click()
             page.click("#passkey-sign-in")
             page.wait_for_url(f"{url}/account", timeout=15_000)
             print("PASS --replace works on the device that held the old passkey")
+
+            # 6. An owner link can establish local password access without WebAuthn,
+            # OAuth, or SMTP. A replacement link also removes the old passkeys.
+            password_link = subprocess.run(
+                [args.devagotchi, "hub", "owner", "--state-dir", str(state), "--config",
+                 str(config), "--replace"],
+                capture_output=True, text=True, check=True,
+            ).stdout.strip()
+            page.goto(password_link)
+            page.click("#owner-password-link")
+            page.wait_for_url(f"{url}/owner/password")
+            until(lambda: not page.evaluate("location.hash"), "owner link left the address bar")
+            page.fill('input[name="email"]', "owner@example.com")
+            page.fill('input[name="password"]', "a local password without email")
+            page.click("#owner-password-submit")
+            page.wait_for_url(f"{url}/account", timeout=15_000)
+            assert "Signed in as Jesse" in page.inner_text("main")
+            page.click("header form button")
+            page.wait_for_url(f"{url}/signed-out")
+            page.goto(f"{url}/auth/login")
+            page.fill('input[name="email"]', "owner@example.com")
+            page.fill('input[name="password"]', "a local password without email")
+            page.click('form[action="/auth/password"] button[type="submit"]')
+            page.wait_for_url(f"{url}/account", timeout=15_000)
+            assert "You own this hub" in page.inner_text("main")
+            print("PASS owner link sets local password and signs in without a passkey")
             browser.close()
     finally:
         hub.terminate()

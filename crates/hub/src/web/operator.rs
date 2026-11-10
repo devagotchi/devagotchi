@@ -29,7 +29,7 @@ use serde::Deserialize;
 use super::{
     approvals::same_origin,
     pages::{self, escape, utc},
-    routes::see_other,
+    routes::{see_other, unavailable},
 };
 use crate::{
     AppState,
@@ -121,7 +121,13 @@ pub async fn page(
     .unwrap_or_default();
     let mut usage = Vec::with_capacity(admitted.len());
     for view in &admitted {
-        usage.push(usage_of(&state, &site, view));
+        match usage_of(&state, &site, view) {
+            Ok(value) => usage.push(value),
+            Err(error) => {
+                eprintln!("devagotchi hub: project usage: {error}");
+                return unavailable();
+            }
+        }
     }
     let body = format!(
         "<h1>{}</h1><p class=\"meta\" id=\"sign-up\">{} {}</p>\
@@ -234,9 +240,17 @@ fn waiting_list(site: &Site, waiting: &[TenantView]) -> String {
 }
 
 /// A tenant's use of each limit against its plan, in the site's words.
-fn usage_of(state: &AppState, site: &Site, view: &TenantView) -> String {
+fn usage_of(
+    state: &AppState,
+    site: &Site,
+    view: &TenantView,
+) -> devagotchi_contracts::BridgeResult<String> {
     let copy = &site.messages.operator;
     let plan = access::plan_for(site, &view.tenant, &view.access);
+    let mut projects = 0;
+    for account in &view.accounts {
+        projects += state.hub.boards.account_boards(account)?.len();
+    }
     let items: String = LIMIT_KEYS
         .iter()
         .map(|key| {
@@ -246,11 +260,7 @@ fn usage_of(state: &AppState, site: &Site, view: &TenantView) -> String {
                     .iter()
                     .map(|account| state.hub.links.held(account).unwrap_or(0))
                     .sum(),
-                "projects" => view
-                    .accounts
-                    .iter()
-                    .map(|account| state.hub.boards.account_boards(account).len())
-                    .sum(),
+                "projects" => projects,
                 _ => view.clients,
             };
             let text = match plan.as_ref().map(|plan| plan.cap(key)) {
@@ -266,7 +276,7 @@ fn usage_of(state: &AppState, site: &Site, view: &TenantView) -> String {
             format!("<li>{}</li>", escape(&text))
         })
         .collect();
-    format!("<ul class=\"usage\">{items}</ul>")
+    Ok(format!("<ul class=\"usage\">{items}</ul>"))
 }
 
 fn admitted_list(site: &Site, admitted: &[TenantView], usage: &[String]) -> String {

@@ -25,9 +25,9 @@
 //! - Redirects are not followed when talking to Nomen.
 
 mod analytics;
-mod app;
 #[cfg(test)]
 mod analytics_tests;
+mod app;
 mod approvals;
 mod claim;
 #[cfg(test)]
@@ -85,6 +85,7 @@ pub(crate) fn utc(secs: u64) -> String {
     pages::utc(secs)
 }
 
+pub use email::Mailer;
 pub(crate) use email::announce_admissions;
 pub(crate) use landing::render as landing_for;
 pub use passkeys::HubSignIn;

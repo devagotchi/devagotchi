@@ -299,7 +299,7 @@
         "a": "Self-hosting runs on your own hardware, with no limit on calls. The hosted hub is free during its alpha."
       }
     ],
-    "meta": "The source is on GitHub: [EonsofStupid/devagotchi]({link:source})."
+    "meta": "The source is on GitHub: [devagotchi/devagotchi]({link:source})."
   },
   "closing": {
     "rail": "Get started",

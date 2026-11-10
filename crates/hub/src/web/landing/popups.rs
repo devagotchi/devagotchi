@@ -173,9 +173,12 @@ pub const TOOLS: [(&str, &[(&[&str], &str)]); 5] = [
                 "board_wait",
                 "board_verify",
                 "board_bind",
+                "board_attach",
+                "board_issue_context",
+                "board_issue_checkpoint",
                 "board_settings",
             ],
-            "A project's ticket board: see what is ready, claim work and keep the claim alive, leave notes, hand off, finish.",
+            "A project's ticket board: attach shared work, read issue context, claim and keep the claim alive, checkpoint advice and evidence, hand off, finish.",
         )],
     ),
 ];

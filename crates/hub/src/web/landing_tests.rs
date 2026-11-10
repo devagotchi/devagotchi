@@ -215,7 +215,7 @@ async fn the_page_needs_nothing_the_plain_csp_refuses() {
                 href.starts_with('/')
                     || href.starts_with('#')
                     || href == "https://devagotchi.com/"
-                    || href.starts_with("https://github.com/EonsofStupid/devagotchi")
+                    || href.starts_with("https://github.com/devagotchi/devagotchi")
                     || offerings.contains(&href)
                     || href == "https://shippin.cloud",
                 "{href}"

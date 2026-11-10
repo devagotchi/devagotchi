@@ -83,7 +83,9 @@ pub struct ListInput {
     #[serde(default = "default_list_limit")]
     pub limit: u32,
 }
-fn default_list_limit() -> u32 { 32 }
+fn default_list_limit() -> u32 {
+    32
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
@@ -115,7 +117,9 @@ pub struct ReadInput {
     pub max_bytes: usize,
 }
 
-fn default_page_bytes() -> usize { MAX_OUTPUT_PAGE_BYTES }
+fn default_page_bytes() -> usize {
+    MAX_OUTPUT_PAGE_BYTES
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -216,7 +220,9 @@ pub struct FileReadInput {
 /// Most lines one read by lines returns.
 pub const MAX_READ_LINES: u32 = 5000;
 
-fn default_file_read_bytes() -> usize { MAX_FILE_READ_BYTES }
+fn default_file_read_bytes() -> usize {
+    MAX_FILE_READ_BYTES
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
@@ -267,7 +273,9 @@ pub struct FileListInput {
     pub max_entries: u32,
 }
 
-fn default_list_entries() -> u32 { 200 }
+fn default_list_entries() -> u32 {
+    200
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
@@ -349,7 +357,9 @@ pub struct FileEditInput {
     pub expected_replacements: u32,
 }
 
-fn default_replacements() -> u32 { 1 }
+fn default_replacements() -> u32 {
+    1
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
@@ -436,7 +446,10 @@ pub struct BridgeError {
 
 impl BridgeError {
     pub fn new(code: &str, message: impl Into<String>) -> Self {
-        Self { code: code.into(), message: message.into() }
+        Self {
+            code: code.into(),
+            message: message.into(),
+        }
     }
 }
 impl std::fmt::Display for BridgeError {
@@ -449,7 +462,12 @@ impl std::error::Error for BridgeError {}
 pub type BridgeResult<T> = Result<T, BridgeError>;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "method", content = "params", rename_all = "snake_case", deny_unknown_fields)]
+#[serde(
+    tag = "method",
+    content = "params",
+    rename_all = "snake_case",
+    deny_unknown_fields
+)]
 pub enum RequestBody {
     OperationStart(StartInput),
     OperationGet(GetInput),
@@ -489,7 +507,12 @@ pub struct WireRequest {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "kind", content = "value", rename_all = "snake_case", deny_unknown_fields)]
+#[serde(
+    tag = "kind",
+    content = "value",
+    rename_all = "snake_case",
+    deny_unknown_fields
+)]
 pub enum ResponseBody {
     Start(StartOutput),
     Operation(OperationView),
@@ -503,7 +526,12 @@ pub enum ResponseBody {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "status", content = "value", rename_all = "snake_case", deny_unknown_fields)]
+#[serde(
+    tag = "status",
+    content = "value",
+    rename_all = "snake_case",
+    deny_unknown_fields
+)]
 pub enum WireResponse {
     Ok(ResponseBody),
     Error(BridgeError),
@@ -522,14 +550,28 @@ pub const MAX_LINK_MESSAGE_BYTES: usize = 1024 * 1024;
 #[serde(tag = "type", rename_all = "snake_case", deny_unknown_fields)]
 pub enum HubFrame {
     /// The first frame on every connection. The device answers with a signed `hello`.
-    Challenge { nonce: String, hub: String },
-    Welcome { device: String },
-    Refused { code: String, message: String },
-    Call { id: u64, request: WireRequest },
+    Challenge {
+        nonce: String,
+        hub: String,
+    },
+    Welcome {
+        device: String,
+    },
+    Refused {
+        code: String,
+        message: String,
+    },
+    Call {
+        id: u64,
+        request: WireRequest,
+    },
     /// Update this machine to the hub's build `version`: wait for its running jobs unless
     /// `force`, then download, check and install it. The hub sends it only to a device
     /// whose hello carried `build`; an older device would refuse an unknown frame.
-    Update { version: String, force: bool },
+    Update {
+        version: String,
+        force: bool,
+    },
 }
 
 /// Device to hub.
@@ -552,7 +594,10 @@ pub enum LinkFrame {
         #[serde(default)]
         build: Option<String>,
     },
-    Result { id: u64, response: WireResponse },
+    Result {
+        id: u64,
+        response: WireResponse,
+    },
     Heartbeat,
     /// Where an update the hub asked for stands: `waiting_for_jobs`, `downloading`,
     /// `installing`, `done` or `failed`, with `detail` saying why when it failed.
@@ -598,9 +643,17 @@ mod link_frame_tests {
         let back: LinkFrame = serde_json::from_str(&text).unwrap();
         assert!(matches!(back, LinkFrame::Hello { build: Some(ref b), .. } if b == "main-abc1234"));
         // What a device from before builds had a name sends.
-        let old = r#"{"type":"hello","version":1,"device":"dabo","public_key":"ab","signature":"cd"}"#;
+        let old =
+            r#"{"type":"hello","version":1,"device":"dabo","public_key":"ab","signature":"cd"}"#;
         let parsed: LinkFrame = serde_json::from_str(old).unwrap();
-        assert!(matches!(parsed, LinkFrame::Hello { build: None, enroll_code: None, .. }));
+        assert!(matches!(
+            parsed,
+            LinkFrame::Hello {
+                build: None,
+                enroll_code: None,
+                ..
+            }
+        ));
     }
 
     #[test]
@@ -610,9 +663,14 @@ mod link_frame_tests {
             force: true,
         };
         let text = serde_json::to_string(&update).unwrap();
-        assert_eq!(text, r#"{"type":"update","version":"main-abc1234","force":true}"#);
+        assert_eq!(
+            text,
+            r#"{"type":"update","version":"main-abc1234","force":true}"#
+        );
         let back: HubFrame = serde_json::from_str(&text).unwrap();
-        assert!(matches!(back, HubFrame::Update { ref version, force: true } if version == "main-abc1234"));
+        assert!(
+            matches!(back, HubFrame::Update { ref version, force: true } if version == "main-abc1234")
+        );
         for state in UPDATE_STATES {
             let detail = (state == "failed").then(|| "busy".to_string());
             let status = LinkFrame::UpdateStatus {
@@ -626,7 +684,8 @@ mod link_frame_tests {
                 "{text}"
             );
         }
-        let bare: LinkFrame = serde_json::from_str(r#"{"type":"update_status","state":"downloading"}"#).unwrap();
+        let bare: LinkFrame =
+            serde_json::from_str(r#"{"type":"update_status","state":"downloading"}"#).unwrap();
         assert!(matches!(bare, LinkFrame::UpdateStatus { detail: None, .. }));
     }
 }

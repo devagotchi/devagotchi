@@ -19,7 +19,7 @@ Gold host or in the `platform` project.
 
 ```bash
 # as the workspace user, in any Debian 13 / Ubuntu workspace with egress to GitHub
-curl -fsSL https://raw.githubusercontent.com/EonsofStupid/devagotchi/main/deploy/shippin/install-workspace.sh | bash
+curl -fsSL https://raw.githubusercontent.com/devagotchi/devagotchi/main/deploy/shippin/install-workspace.sh | bash
 # pinned, or offline from pre-fetched release tarballs (image bake):
 DEVAGOTCHI_VERSION=0.1.0 bash install-workspace.sh
 DEVAGOTCHI_ARTIFACT_DIR=/srv/devagotchi-release bash install-workspace.sh

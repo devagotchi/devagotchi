@@ -69,7 +69,7 @@ async fn stores() -> Vec<Option<String>> {
     out
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_waiting_tenant_is_answered_not_served_until_an_operator_lets_it_in() {
     for store in stores().await {
         waiting(hub_with(store.as_deref(), early_access).await).await;
@@ -245,7 +245,7 @@ async fn opening_sign_up_lets_everyone_waiting_in_and_closing_it_puts_nobody_bac
     assert_eq!(whoami(&hub, &mut late).await["access"], "waiting");
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_plans_limits_hold_at_the_boundary_and_name_the_plan() {
     for store in stores().await {
         limits(hub_with(store.as_deref(), plans).await).await;

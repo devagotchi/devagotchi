@@ -44,7 +44,10 @@ async fn an_account_names_its_boards_repo_and_environments_and_nobody_else_can()
         )
         .await;
     assert!(!refused(&made), "{made}");
-    assert_eq!(made["structuredContent"]["repo"], "https://github.com/x/alpha");
+    assert_eq!(
+        made["structuredContent"]["repo"],
+        "https://github.com/x/alpha"
+    );
     let staging = hub
         .call(
             &mut alice,
@@ -56,9 +59,18 @@ async fn an_account_names_its_boards_repo_and_environments_and_nobody_else_can()
 
     // Bad input: refused, with what is wrong in `next`.
     for (arguments, says) in [
-        (json!({ "project": "alpha", "repo": "http://github.com/x/alpha" }), "is not an https URL"),
-        (json!({ "project": "alpha", "environments": [] }), "1 to 20 names"),
-        (json!({ "project": "alpha", "environments": ["Prod"] }), "not a lowercase name"),
+        (
+            json!({ "project": "alpha", "repo": "http://github.com/x/alpha" }),
+            "is not an https URL",
+        ),
+        (
+            json!({ "project": "alpha", "environments": [] }),
+            "1 to 20 names",
+        ),
+        (
+            json!({ "project": "alpha", "environments": ["Prod"] }),
+            "not a lowercase name",
+        ),
     ] {
         let answer = settings(&hub, &mut alice, arguments.clone()).await;
         assert!(refused(&answer), "{arguments}: {answer}");
@@ -72,7 +84,10 @@ async fn an_account_names_its_boards_repo_and_environments_and_nobody_else_can()
                 serde_json::from_str(answer["content"][0]["text"].as_str().unwrap()).unwrap()
             });
         let next = error["next"].as_str().unwrap();
-        assert!(next.contains(says) && next.contains("board_settings again"), "{next}");
+        assert!(
+            next.contains(says) && next.contains("board_settings again"),
+            "{next}"
+        );
     }
 
     // B reaches neither A's settings nor A's board.
@@ -82,10 +97,16 @@ async fn an_account_names_its_boards_repo_and_environments_and_nobody_else_can()
     ] {
         let answer = settings(&hub, &mut bob, arguments).await;
         assert!(refused(&answer), "{answer}");
-        assert!(!answer.to_string().contains("github.com/x/alpha"), "{answer}");
+        assert!(
+            !answer.to_string().contains("github.com/x/alpha"),
+            "{answer}"
+        );
     }
     let read = settings(&hub, &mut alice, json!({ "project": "alpha" })).await;
-    assert_eq!(read["structuredContent"]["repo"], "https://github.com/x/alpha");
+    assert_eq!(
+        read["structuredContent"]["repo"],
+        "https://github.com/x/alpha"
+    );
 
     // Every change is on the chain, which still verifies.
     let events = hub

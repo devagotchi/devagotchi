@@ -4,7 +4,14 @@ use devagotchi_contracts::FileContent;
 
 use super::*;
 
-fn page(path: &str, size: u64, offset: u64, text: Option<String>, base64: Option<String>, next: u64) -> FileContent {
+fn page(
+    path: &str,
+    size: u64,
+    offset: u64,
+    text: Option<String>,
+    base64: Option<String>,
+    next: u64,
+) -> FileContent {
     FileContent {
         path: path.into(),
         size,
@@ -37,7 +44,11 @@ fn broker(
         let end = (start + input.max_bytes.min(page_bytes)).min(bytes.len());
         let chunk = &bytes[start..end];
         let lead = if start > 0 {
-            chunk.iter().take(3).take_while(|b| **b & 0xC0 == 0x80).count()
+            chunk
+                .iter()
+                .take(3)
+                .take_while(|b| **b & 0xC0 == 0x80)
+                .count()
         } else {
             0
         };
@@ -69,7 +80,14 @@ fn broker(
                 None,
                 (start + len) as u64,
             ),
-            _ => page("/img", size, start as u64, None, Some(BASE64.encode(chunk)), end as u64),
+            _ => page(
+                "/img",
+                size,
+                start as u64,
+                None,
+                Some(BASE64.encode(chunk)),
+                end as u64,
+            ),
         };
         std::future::ready(Ok(ResponseBody::File(answer)))
     }
@@ -89,12 +107,17 @@ fn png(width: u32, height: u32, filler: &[u8]) -> Vec<u8> {
 
 #[tokio::test]
 async fn an_image_over_many_pages_comes_back_whole() {
-    let filler: Vec<u8> = (0..3 * MAX_FILE_READ_BYTES + 17).map(|i| (i % 251) as u8).collect();
+    let filler: Vec<u8> = (0..3 * MAX_FILE_READ_BYTES + 17)
+        .map(|i| (i % 251) as u8)
+        .collect();
     let bytes = png(10, 10, &filler);
     let image = read_image(broker(bytes.clone(), MAX_FILE_READ_BYTES), "/img".into())
         .await
         .unwrap();
-    assert_eq!((image.mime_type, image.width, image.height), ("image/png", 10, 10));
+    assert_eq!(
+        (image.mime_type, image.width, image.height),
+        ("image/png", 10, 10)
+    );
     assert_eq!(BASE64.decode(image.base64).unwrap(), bytes);
 }
 
@@ -106,7 +129,9 @@ async fn text_inside_an_image_across_a_page_edge_is_joined_exactly() {
         let mut text = "x".repeat(40 - shift);
         text.push_str(&"é".repeat(60));
         let bytes = png(4, 4, text.as_bytes());
-        let image = read_image(broker(bytes.clone(), 64), "/img".into()).await.unwrap();
+        let image = read_image(broker(bytes.clone(), 64), "/img".into())
+            .await
+            .unwrap();
         assert_eq!(BASE64.decode(image.base64).unwrap(), bytes, "shift {shift}");
     }
 }
@@ -117,7 +142,11 @@ async fn too_tall_or_too_wide_is_refused_before_it_reaches_the_client() {
     assert_eq!(tall.unwrap_err().code, "too_large");
     let wide = read_image(broker(png(8001, 10, b"pixels"), 64), "/img".into()).await;
     assert_eq!(wide.unwrap_err().code, "too_large");
-    assert!(read_image(broker(png(8000, 8000, b"pixels"), 64), "/img".into()).await.is_ok());
+    assert!(
+        read_image(broker(png(8000, 8000, b"pixels"), 64), "/img".into())
+            .await
+            .is_ok()
+    );
 }
 
 #[tokio::test]
@@ -126,8 +155,19 @@ async fn what_is_not_an_image_or_too_large_is_refused_at_the_first_page() {
     assert_eq!(text.unwrap_err().code, "not_an_image");
     let words = vec![b'w'; MAX_IMAGE_BYTES as usize + 1];
     let big_text = read_image(broker(words, 64), "/img".into()).await;
-    assert_eq!(big_text.unwrap_err().code, "not_an_image", "the type is checked first");
-    let huge = read_image(broker(png(10, 10, &vec![0; MAX_IMAGE_BYTES as usize]), MAX_FILE_READ_BYTES), "/img".into()).await;
+    assert_eq!(
+        big_text.unwrap_err().code,
+        "not_an_image",
+        "the type is checked first"
+    );
+    let huge = read_image(
+        broker(
+            png(10, 10, &vec![0; MAX_IMAGE_BYTES as usize]),
+            MAX_FILE_READ_BYTES,
+        ),
+        "/img".into(),
+    )
+    .await;
     assert_eq!(huge.unwrap_err().code, "too_large");
 }
 
@@ -139,24 +179,57 @@ async fn a_broker_that_misreports_is_refused_not_followed() {
     let first = BASE64.encode(&head[..50]);
     let replies: Vec<FileContent> = vec![
         page("/img", 116, 0, None, Some(first.clone()), 50),
-        page("/img", 116, 50, None, Some(BASE64.encode(&head[50..60])), 50),
+        page(
+            "/img",
+            116,
+            50,
+            None,
+            Some(BASE64.encode(&head[50..60])),
+            50,
+        ),
     ];
     let stuck = scripted(replies);
-    assert_eq!(read_image(stuck, "/img".into()).await.unwrap_err().code, "changed_while_reading");
+    assert_eq!(
+        read_image(stuck, "/img".into()).await.unwrap_err().code,
+        "changed_while_reading"
+    );
 
     let replies = vec![
         page("/img", 116, 0, None, Some(first.clone()), 50),
-        page("/img", 116, 50, None, Some(BASE64.encode(&head[50..60])), 90),
+        page(
+            "/img",
+            116,
+            50,
+            None,
+            Some(BASE64.encode(&head[50..60])),
+            90,
+        ),
     ];
     let overclaims = scripted(replies);
-    assert_eq!(read_image(overclaims, "/img".into()).await.unwrap_err().code, "changed_while_reading");
+    assert_eq!(
+        read_image(overclaims, "/img".into())
+            .await
+            .unwrap_err()
+            .code,
+        "changed_while_reading"
+    );
 
     let replies = vec![
         page("/img", 116, 0, None, Some(first), 50),
-        page("/img", 200, 50, None, Some(BASE64.encode(&head[50..100])), 100),
+        page(
+            "/img",
+            200,
+            50,
+            None,
+            Some(BASE64.encode(&head[50..100])),
+            100,
+        ),
     ];
     let swapped = scripted(replies);
-    assert_eq!(read_image(swapped, "/img".into()).await.unwrap_err().code, "changed_while_reading");
+    assert_eq!(
+        read_image(swapped, "/img".into()).await.unwrap_err().code,
+        "changed_while_reading"
+    );
 }
 
 fn scripted(
@@ -164,7 +237,11 @@ fn scripted(
 ) -> impl Fn(RequestBody) -> std::future::Ready<Result<ResponseBody, BridgeError>> {
     let replies = Mutex::new(replies.into_iter());
     move |_| {
-        let next = replies.lock().unwrap().next().expect("asked past the script");
+        let next = replies
+            .lock()
+            .unwrap()
+            .next()
+            .expect("asked past the script");
         std::future::ready(Ok(ResponseBody::File(next)))
     }
 }
@@ -195,7 +272,8 @@ fn types_and_sizes_come_from_the_first_bytes() {
     lossless.extend(packed.to_le_bytes());
     assert_eq!(dimensions(&lossless), Some((100, 50)));
     // WebP VP8 (lossy): 14-bit width and height after the start code.
-    let mut lossy = b"RIFF\x00\x00\x00\x00WEBPVP8 \x00\x00\x00\x00\x00\x00\x00\x9d\x01\x2a".to_vec();
+    let mut lossy =
+        b"RIFF\x00\x00\x00\x00WEBPVP8 \x00\x00\x00\x00\x00\x00\x00\x9d\x01\x2a".to_vec();
     lossy.extend(640u16.to_le_bytes());
     lossy.extend(480u16.to_le_bytes());
     assert_eq!(dimensions(&lossy), Some((640, 480)));

@@ -21,8 +21,7 @@ use windows_sys::Win32::Foundation::{
 };
 use windows_sys::Win32::Security::Authorization::{
     ConvertSidToStringSidW, ConvertStringSecurityDescriptorToSecurityDescriptorW,
-    ConvertStringSidToSidW, GetSecurityInfo,
-    SDDL_REVISION_1, SE_FILE_OBJECT, SE_OBJECT_TYPE,
+    ConvertStringSidToSidW, GetSecurityInfo, SDDL_REVISION_1, SE_FILE_OBJECT, SE_OBJECT_TYPE,
 };
 use windows_sys::Win32::Security::{
     ACCESS_ALLOWED_ACE, ACE_HEADER, ACL, ACL_SIZE_INFORMATION, AclSizeInformation, CopySid,
@@ -262,10 +261,7 @@ impl ObjectSecurity {
     }
 }
 
-pub fn object_security(
-    handle: RawHandle,
-    object: SE_OBJECT_TYPE,
-) -> io::Result<ObjectSecurity> {
+pub fn object_security(handle: RawHandle, object: SE_OBJECT_TYPE) -> io::Result<ObjectSecurity> {
     let mut owner: PSID = null_mut();
     let mut dacl: *mut ACL = null_mut();
     let mut descriptor: PSECURITY_DESCRIPTOR = null_mut();
@@ -497,7 +493,9 @@ mod tests {
                 std::env::var_os("GITHUB_ACTIONS").is_none(),
                 "GitHub's Windows runners are elevated administrators"
             );
-            eprintln!("only an elevated administrator can make a file the Administrators group owns");
+            eprintln!(
+                "only an elevated administrator can make a file the Administrators group owns"
+            );
             return;
         };
         assert_eq!(

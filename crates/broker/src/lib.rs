@@ -210,6 +210,9 @@ fn write_endpoint_file(state: &std::path::Path, endpoint: &std::path::Path) {
         std::fs::rename(&tmp, &path)
     });
     if let Err(error) = written {
-        eprintln!("devagotchi broker: could not write {}: {error}", path.display());
+        eprintln!(
+            "devagotchi broker: could not write {}: {error}",
+            path.display()
+        );
     }
 }

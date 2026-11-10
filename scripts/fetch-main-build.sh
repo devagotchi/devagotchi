@@ -12,7 +12,7 @@ set -euo pipefail
 commit=${1:?usage: fetch-main-build.sh COMMIT [TARGET] [OUT_DIR]}
 target=${2:-x86_64-unknown-linux-gnu}
 out=${3:-$(mktemp -d)}
-repo=${DEVAGOTCHI_REPO:-EonsofStupid/devagotchi}
+repo=${DEVAGOTCHI_REPO:-devagotchi/devagotchi}
 sha=$(gh api "repos/$repo/commits/$commit" --jq .sha)
 run=$(gh api "repos/$repo/actions/workflows/release.yml/runs?branch=main&event=push&head_sha=$sha&status=success" \
     --jq '.workflow_runs[0].id // empty')

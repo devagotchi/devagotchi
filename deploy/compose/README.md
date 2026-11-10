@@ -3,14 +3,15 @@
 The hub, its own Postgres, and Caddy for TLS, from one command on any Linux box with Docker:
 
 ```bash
-git clone https://github.com/EonsofStupid/devagotchi && cd devagotchi/deploy/compose
+git clone https://github.com/devagotchi/devagotchi && cd devagotchi/deploy/compose
 cp .env.example .env        # set DEVAGOTCHI_DOMAIN to the name that points at this box
 docker compose up -d
 ```
 
-Then claim it: the hub prints a claim link to its log when it starts. Open that link on the
-phone or computer that will hold your passkey, give your name, and press **Claim this hub
-and make my passkey**. You are signed in as its owner.
+Then claim it: the hub prints a claim link to its log when it starts. Open it, give your name,
+and choose either **Claim this hub and make my passkey** or **Use a local email and password
+instead**. The local email is only a login name; it needs no Google account or mail server.
+You are signed in as its owner.
 
 ```bash
 docker compose logs hub | grep -A1 "Claim it in a browser"
@@ -20,17 +21,78 @@ docker compose logs hub | grep -A1 "Claim it in a browser"
 Until then, `https://<DEVAGOTCHI_DOMAIN>/` offers only the claim, and only the code from the
 log claims it: reading the log takes this box or its container platform, so nobody who just
 found the address can. The code works for a day (`claim_secs`); `docker compose restart hub`
-prints a new one, and only the newest works. Your first passkey ends it for good. On the box,
+prints a new one, and only the newest works. Establishing either owner sign-in method ends it.
+On the box,
 `docker compose exec hub devagotchi hub owner --state-dir /var/lib/devagotchi --config
-/etc/devagotchi/hub.json` prints a one-time owner link instead, and later adds passkeys
+/etc/devagotchi/hub.json` prints a one-time owner link instead; it can make a passkey or set
+a local email and password, and later add passkeys
 (`crates/hub/README.md`).
 
 AI clients connect to `https://<DEVAGOTCHI_DOMAIN>/mcp`: they register themselves, you approve
-each one once with your passkey, and the hub issues and checks their tokens itself
+each one once while signed in, and the hub issues and checks their tokens itself
 (`crates/hub/README.md`, "AI clients sign in with the hub itself"). From a terminal,
 `devagotchi login --hub https://<DEVAGOTCHI_DOMAIN>` shows a link and a code; approve it on
-the hub's `/device` page, signed in with your passkey, and the CLI (and `devagotchi mcp --hub`)
+the hub's `/device` page, signed in to your account, and the CLI (and `devagotchi mcp --hub`)
 works as your account.
+
+## Connect a GitHub issue repository to the shared board
+
+After claiming the hub, set these optional JSON values in `.env` (examples are in
+[.env.example](.env.example)):
+
+```dotenv
+DEVAGOTCHI_HUB_BOARDS='[{"project":"demo","dir":"/var/lib/devagotchi/unused-demo"}]'
+DEVAGOTCHI_GITHUB_REPOSITORIES='[{"repository_id":123,"repository":"acme/demo","project":"demo"}]'
+```
+
+Replace `123` with GitHub's immutable numeric repository ID, not an issue number.
+The `dir` field is required by the legacy configuration format but is not opened:
+the hosted board, source mapping, delivery receipts, notes and analytics outbox use
+the hub's Postgres. Do not change a repository's project mapping to migrate live work.
+That requires an explicit migration; moving the config does not move its records.
+
+Generate a random secret of at least 32 bytes and set `DEVAGOTCHI_GITHUB_WEBHOOK_SECRET`.
+Keep `.env` owner-readable only and never put that secret in a repository or URL.
+Set the same secret on a GitHub webhook with content type `application/json`, the
+**Issues** event, and payload URL `https://YOUR_DOMAIN/webhooks/github/issues`.
+Apply with `docker compose up -d hub`. A configured repository without a valid secret
+stops startup rather than enabling unsigned ingress.
+The installer also reads these variables from its environment or `--env-file` and
+preserves existing values on a re-run, including an explicit JSON `[]` to disable a mapping.
+
+The owner already has access. For another account, add
+`DEVAGOTCHI_HUB_GRANTS='[{"subject":"ACCOUNT_SUBJECT","boards":["demo"]}]'`
+using its `whoami` subject, not its email. Restart the hub to apply config changes.
+The signature authenticates GitHub, not an account; reading or writing shared context
+still requires the account's normal grant.
+
+Open/edit/close/reopen events create or update one canonical ticket. Redelivery with
+the same delivery ID and bytes does not create another effect. Older updates cannot
+roll back source state; equal-time conflicting updates show reconciliation required.
+GitHub closure never completes board work or releases an agent's lease.
+The existing ticket page shows the source link/state and pending finalization.
+There is not yet a reconciliation/finalization worker: pending means pending.
+
+Clients use `board_issue_context` and `board_issue_checkpoint` on the existing MCP
+connection. To point this checkout's CLI/native hooks at the same shared board:
+
+```text
+devagotchi login --hub https://YOUR_DOMAIN
+devagotchi board bind --hub https://YOUR_DOMAIN --project demo --shared
+devagotchi board hooks --for all
+```
+
+Merge the printed hook entries into the clients' existing config, preserving unrelated
+hooks. Codex requires project trust and review of the exact definitions through `/hooks`;
+do not bypass it. Client installation/real-client acceptance is still a release gate.
+The native handler works without a POSIX shell; compatibility `.sh` launchers only
+delegate to it. Keep `devagotchi` on the client's PATH.
+
+GitHub expects a response within ten seconds. This ingress bounds the projection
+transaction to eight seconds and acknowledges only after commit; a timeout or storage
+failure returns a retryable 503. Check GitHub's delivery log and explicitly redeliver
+failed deliveries using the original delivery identity. GitHub does not promise automatic
+retry. See the [API and consistency contract](../../crates/hub/README.md#issue-context).
 
 ## On a server, kept current by itself
 
@@ -147,6 +209,49 @@ sudo ./install.sh --domain app.example.com --rp-id example.com --tenancy multi \
   per-address limit on new accounts); by default private and loopback addresses, which is
   what Caddy on the compose network and an edge proxy on the host are.
 
+### Mail: sign-in links and notices
+
+The hub needs no mail server: it is claimed, signs its owner in with a local email and
+password or a passkey, and recovers through a replacement owner link (`devagotchi hub owner
+--replace`) without one. Mail adds sign-in links by email, the "you're in" notice a hosted
+hub's tenant gets when let in, and, once built, approvals and recovery by email. Turn it on
+after the hub is up, in this order:
+
+1. Put the two values in the env file the secret store writes (never in a shell history):
+   `DEVAGOTCHI_SMTP_URL=smtps://sign-in@smtp.example.com:465` and
+   `DEVAGOTCHI_SMTP_PASSWORD=…`. `smtps://` is TLS from the first byte (port 465);
+   `smtp://…:587` is STARTTLS, which the server must offer. The URL never carries the
+   password; one with a password in it is refused. Without a user (`smtps://smtp.example.com`)
+   the hub sends unauthenticated, which only a relay of your own should accept.
+2. Re-run the installer with the sender: `sudo ./install.sh --domain … --email-from
+   "Devagotchi <sign-in@example.com>" --env-file /root/hub-secrets.env` (the other flags as
+   before; a re-run keeps what `.env` already holds). It writes `DEVAGOTCHI_HUB_EMAIL`, brings
+   the hub up and then runs the hub's own check: connect, TLS, sign in, send nothing. A
+   refusal is printed (the server's reply code or the step that failed, never the password)
+   and does not stop the hub.
+3. Read a check email yourself:
+
+   ```bash
+   cd /opt/devagotchi-hub && docker compose run --rm --no-deps -T hub \
+     hub check-mail --config /etc/devagotchi/hub.json --to you@example.com
+   ```
+
+   It says plainly that it is a check, so nobody takes it for a sign-in link. Then
+   `curl -fsS https://<DEVAGOTCHI_DOMAIN>/healthz` shows `"mail": {"configured": true, …,
+   "last_send": {"ok": true, …}}`.
+4. Sign out and use **Forgot password?** on `/auth/login`, which mails a sign-in link (the
+   link appears only when mail is configured): five links per address an hour.
+
+Examples of the URL: Google Workspace `smtps://you@example.com@smtp.gmail.com:465` with an
+app password; Fastmail `smtps://you@fastmail.com@smtp.fastmail.com:465` with an app password;
+your own Postfix `smtp://hub@mail.example.com:587` (STARTTLS, submission port). The `@` in a
+user that is itself an address is fine: the hub splits at the last one.
+
+A hub whose `.env` names a variable that is not set does not start, and says which
+(`auth.email: DEVAGOTCHI_SMTP_URL is not set`): fix the env file and re-run the installer. A
+mail server that is down later never marks the hub unhealthy; `/healthz` `mail.last_send`
+shows the failure, and people keep signing in by password, passkey and provider.
+
 ## The image
 
 GitHub builds the hub image from every commit that lands on `main` (and every release tag),
@@ -156,7 +261,7 @@ natively on x86_64 and ARM64, and publishes one multi-arch image to GHCR
 the image you pulled was built by this repository's workflow from a given commit:
 
 ```bash
-gh attestation verify oci://ghcr.io/eonsofstupid/devagotchi:main --owner EonsofStupid
+gh attestation verify oci://ghcr.io/devagotchi/devagotchi:main --owner devagotchi
 ```
 
 The image also carries the builds the hub hands to the machines that join it: the Linux and
@@ -167,7 +272,7 @@ or `irm <hub>/join/<code>.ps1 | iex` on Windows) works on a fresh stack; `/healt
 version under `downloads`. CI builds each arch, brings this stack up from it and joins a
 machine with that line before anything is pushed.
 
-Pin a commit with `DEVAGOTCHI_IMAGE=ghcr.io/eonsofstupid/devagotchi:sha-<commit>`, or build
+Pin a commit with `DEVAGOTCHI_IMAGE=ghcr.io/devagotchi/devagotchi:sha-<commit>`, or build
 from this checkout with `docker compose up --build` (such a build carries no builds to hand
 out: `/join` is off until the hub's config names a directory of them).
 
@@ -190,7 +295,7 @@ Everything is in `.env`; each has a default (`.env.example` lists them).
 |---|---|---|
 | `DEVAGOTCHI_DOMAIN` | (required) | The name the hub is reached at; Caddy gets its certificate for it. `localhost` works for a try-out, with Caddy's own certificate. |
 | `DEVAGOTCHI_PUBLIC_URL` | `https://<DEVAGOTCHI_DOMAIN>` | The URL clients use, when it differs (another port, another proxy in front). Passkeys and AI clients are bound to it. |
-| `DEVAGOTCHI_IMAGE` | `ghcr.io/eonsofstupid/devagotchi:main` | The hub image. `docker compose up --build` builds it from this checkout instead. |
+| `DEVAGOTCHI_IMAGE` | `ghcr.io/devagotchi/devagotchi:main` | The hub image. `docker compose up --build` builds it from this checkout instead. |
 | `DEVAGOTCHI_HTTP_PORT`, `DEVAGOTCHI_HTTPS_PORT` | `80`, `443` | Where Caddy listens on the host. |
 | `DEVAGOTCHI_PG_SHARED_BUFFERS` | `256MB` | About a quarter of the box's RAM. |
 | `DEVAGOTCHI_PG_EFFECTIVE_CACHE_SIZE` | `768MB` | About three quarters of the box's RAM. |
@@ -220,6 +325,8 @@ docker compose ps                                   # all three healthy or runni
 curl -fsS https://<DEVAGOTCHI_DOMAIN>/healthz       # the hub answers
 docker compose logs hub | grep "ready"              # "devagotchi hub ready: … auth hub accounts"
 curl -fsS https://<DEVAGOTCHI_DOMAIN>/ | grep -o "Claim this hub\|Get started\|Sign in" | head -1
+curl -fsS https://<DEVAGOTCHI_DOMAIN>/healthz | grep -o '"mail":{[^}]*}'   # with --email-from: configured, last send
+docker compose run --rm --no-deps -T hub hub check-mail --config /etc/devagotchi/hub.json --to you@example.com
 ```
 
 CI brings this stack up on every change (`hub (compose)` in `.github/workflows/ci.yml`) and

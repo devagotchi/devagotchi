@@ -11,7 +11,7 @@
 set -euo pipefail
 commit=${1:?usage: lay-down-dist.sh COMMIT OUT_DIR}
 out=${2:?usage: lay-down-dist.sh COMMIT OUT_DIR}
-repo=${DEVAGOTCHI_REPO:-EonsofStupid/devagotchi}
+repo=${DEVAGOTCHI_REPO:-devagotchi/devagotchi}
 here=$(cd "$(dirname "$0")" && pwd)
 sha=$(gh api "repos/$repo/commits/$commit" --jq .sha)
 mkdir -p "$out"

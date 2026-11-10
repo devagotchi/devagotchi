@@ -7,6 +7,63 @@ heading. Agents draft the fragments below; they never tag.
 
 ## Unreleased
 
+### Mail check and health (increment 113)
+- `devagotchi hub check-mail --config ABS_JSON [--to ADDRESS]` (`auth.mode hub`) connects to
+  `auth.email`'s mail server as `serve` would, negotiates TLS and signs in as its user,
+  sending nothing; with `--to` it sends one email that says this hub's mail works, plainly a
+  check and not a sign-in link. It prints the server's refusal and never the password.
+  `deploy/compose/install.sh --email-from` runs it once the stack is up and shows the `--to`
+  command to read a check email yourself; a refusal does not stop the hub.
+- `/healthz` reports `mail`: `configured`, how the connection is protected (`tls`), the
+  per-address limit and the last send (`ok`, `at`, and on failure the server's reply code or
+  the step that failed, never an address or a body). Reported, not counted, like the issuer:
+  a mail outage never marks the hub down.
+- Docs: `deploy/compose/README.md` gets the mail walkthrough (env file, `--email-from`, the
+  check, example URLs for Google Workspace, Fastmail and Postfix); `docs/auth.md` no longer
+  says the hub has no mail sender, which is true of `auth.mode devagotchi` only.
+- Tests: `mail::check` against the stub server sends nothing and meets the same refusals;
+  the CLI's flags; `check-mail --to` end to end against the stub in `lib.rs`;
+  `/healthz` `mail.last_send` after a sign-in link goes out in `provider_tests.rs`.
+
+### Hubs under test run on Postgres (increment 113)
+- `hub serve` keeps accounts and boards in Postgres (ADR 0001), so `tests/e2e.py` now
+  requires `DEVAGOTCHI_HUB_STORAGE_URL` and says so at once instead of failing at "hub did
+  not become ready"; `--no-hub` runs the broker and stdio adapter probes alone. A database
+  holds one hub (migration 0007: a second hub's tables in `devagotchi` stop it), so every
+  hub CI starts gets an empty database of its own: `tests/throwaway_postgres.sh` makes them
+  on Linux (the e2e, host-install and hub Postgres jobs), the runner image's own PostgreSQL
+  serves windows-2022 and windows-2025, and `ci-install-check.sh` and `.ps1` take
+  `DEVAGOTCHI_HUB_JOIN_STORAGE_URL` and `DEVAGOTCHI_HUB_UPDATE_STORAGE_URL` for the second
+  and third hub they start (and `_ROLE_` and `_IDP_` for the Linux installer's two hub
+  roles). windows-11-arm
+  has no PostgreSQL and runs `--no-hub`, and
+  `ci-install-check.ps1` ends before its hub parts when the storage URL is empty. The
+  browser scripts print the hub's log when it exits before it is ready.
+- `deploy/linux/install-devagotchi.sh --role hub` takes the hub's Postgres from
+  `DEVAGOTCHI_HUB_STORAGE_URL` in its environment the first time (`sudo env …`, never the
+  command line) and writes it into `hub.json` as `storage.url`; without it the installed
+  hub could no longer start. `deploy/linux/README.md` says so. The browser scripts open
+  "Use a passkey instead" before pressing the passkey button, as the sign-in page now keeps
+  it behind that summary.
+- Hosted boards: a unique violation inside a SERIALIZABLE transaction counts as a collision
+  and the transaction runs again (`store.rs` `collided`). Two agents writing issue context at
+  once both computed the next note `seq` from the snapshot they began with; Postgres reports
+  that as `board_notes_pkey`, not as a serialization failure, and the second write came back
+  503 instead of as the first's receipt.
+- `tests/deploy_scripts.sh` runs on the hub image built from the commit under test, served
+  by its local registry as the track `install.sh` follows, not on the image GHCR publishes:
+  that image exists only once the commit is on main, and the repository's owner changed
+  before its first publish there.
+- `rmcp` 3.5.1 to 3.9.0 for RUSTSEC-2026-0457, -0461 and -0462 (its OAuth client's SSRF
+  filter, the streamable HTTP server's tool schema cache, the streamable HTTP client's
+  response buffering). RUSTSEC-2026-0459, bundled SQLite before 3.54 through
+  `libsqlite3-sys` 0.37, has no fix sqlx-sqlite 0.9.0 can take yet and is recorded in
+  `deny.toml` with its reason; `cargo deny` is clean again.
+- `tests/hub_probe.py` expects the 22 board tools (`board_attach`, `board_issue_context`,
+  `board_issue_checkpoint` joined); `board_issue_checkpoint` carries `readOnlyHint` like
+  every other tool. `tests/board_probe.py` asserts the hub's tickets are in Postgres and not
+  in the configured directory's local board, which the hub never opens.
+
 ### Windows upgrade over a logon-started broker (increment 95)
 - `deploy/windows/install-devagotchi.ps1` re-run as an upgrade no longer aborts with
   "Clear-Content : The process cannot access the file …\logs\broker.log" (dabo,

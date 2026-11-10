@@ -53,7 +53,8 @@ The same installer, `--role hub`, puts the hub on a server: the bastion agents r
 fetches the certificate itself once DNS points at the host.
 
 ```bash
-sudo ./install-devagotchi.sh --role hub --version 0.2.0 --public-url https://devagotchi.com \
+sudo env DEVAGOTCHI_HUB_STORAGE_URL=postgres://devagotchi@/devagotchi?host=/var/run/postgresql \
+     ./install-devagotchi.sh --role hub --version 0.2.0 --public-url https://devagotchi.com \
      --board devagotchi --person jesse --agent claude-on-gus --agent codex-on-dabo --caddy
 sudo ./install-devagotchi.sh --role hub --agent gemini-on-wi1     # one more token, printed once
 sudo ./install-devagotchi.sh --role hub --version 0.2.1            # upgrade; config, tokens, boards kept
@@ -62,7 +63,8 @@ sudo ./install-devagotchi.sh --role hub --version 0.2.1            # upgrade; co
 | | |
 |---|---|
 | Service | `devagotchi-hub` as the account's `systemd --user` unit; `Restart=always`, lingering |
-| Config | `~/.config/devagotchi/hub.json` (0600): `listen`, `public_url`, dev-token sign-in, `brokers`, `boards`, `grants`. Written once; afterwards yours — a re-run prints the lines to add, and the hub restarts only when something it runs changed |
+| Config | `~/.config/devagotchi/hub.json` (0600): `listen`, `public_url`, dev-token sign-in, `storage.url`, `brokers`, `boards`, `grants`. Written once; afterwards yours — a re-run prints the lines to add, and the hub restarts only when something it runs changed |
+| Storage | The hub keeps its accounts and boards in Postgres (`docs/adr/0001`), which you run: the first `--role hub` run takes `DEVAGOTCHI_HUB_STORAGE_URL` from its environment (`sudo env …`, never the command line) and writes it as `storage.url`; a database holds one hub |
 | Tokens | `~/.config/devagotchi/hub-tokens.json` (0600): `--person NAME` and `--agent NAME` mint a bearer token each, shown once and never logged; the hub reads the file on every request, so a new token needs no restart. A person may force-release and move tickets by hand; an agent never |
 | Boards | `--board NAME` initialises `~/projects/NAME` (or `--board NAME=/abs/dir`, which the account must be able to write) with `devagotchi board init --agents-md`, lists it in the config, and grants it to every `--person` / `--agent` of the same run |
 | Edge | `--caddy` installs Caddy from the distribution when missing, writes `/etc/caddy/devagotchi-hub.caddy` (`<host> { reverse_proxy 127.0.0.1:8787 }`), imports it from the Caddyfile, validates and reloads. An `http://host:port` public URL serves plain HTTP (tests, loopback) |

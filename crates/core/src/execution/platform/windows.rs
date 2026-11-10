@@ -13,8 +13,8 @@
 // Native OS calls live here and nowhere else in this crate's dependents.
 #![allow(unsafe_code)]
 
-use devagotchi_contracts::{BridgeError, BridgeResult, OperationState};
 use crate::execution::GROUP_SETTLE;
+use devagotchi_contracts::{BridgeError, BridgeResult, OperationState};
 use std::ffi::OsStr;
 use std::fs::Metadata;
 use std::io;
@@ -26,9 +26,7 @@ use std::time::Duration;
 use tokio::process::{Child, Command};
 use tokio::sync::watch;
 use tokio::time::timeout;
-use windows_sys::Win32::Foundation::{
-    ERROR_NO_MORE_FILES, FALSE, INVALID_HANDLE_VALUE,
-};
+use windows_sys::Win32::Foundation::{ERROR_NO_MORE_FILES, FALSE, INVALID_HANDLE_VALUE};
 use windows_sys::Win32::System::Diagnostics::ToolHelp::{
     CreateToolhelp32Snapshot, TH32CS_SNAPTHREAD, THREADENTRY32, Thread32First, Thread32Next,
 };
@@ -47,8 +45,7 @@ use windows_sys::Win32::System::SystemServices::{
     JOB_OBJECT_MSG_EXIT_PROCESS,
 };
 use windows_sys::Win32::System::Threading::{
-    CREATE_NO_WINDOW, CREATE_SUSPENDED, INFINITE, OpenThread, ResumeThread,
-    THREAD_SUSPEND_RESUME,
+    CREATE_NO_WINDOW, CREATE_SUSPENDED, INFINITE, OpenThread, ResumeThread, THREAD_SUSPEND_RESUME,
 };
 
 pub(crate) const SCOPE: &str = "Windows root process and every process in the broker-owned Job Object it was assigned to before it ran. Breakaway is not permitted, and closing the broker's job handle terminates remaining members. Work a member hands to a service or another process outside the job is not owned. This is not OS containment.";
@@ -340,7 +337,13 @@ fn listen(port: &OwnedHandle, exits: &watch::Sender<u64>) {
         let mut key = 0_usize;
         let mut overlapped: *mut OVERLAPPED = null_mut();
         let ok = unsafe {
-            GetQueuedCompletionStatus(port.as_raw_handle(), &mut message, &mut key, &mut overlapped, INFINITE)
+            GetQueuedCompletionStatus(
+                port.as_raw_handle(),
+                &mut message,
+                &mut key,
+                &mut overlapped,
+                INFINITE,
+            )
         };
         if ok == FALSE || key == STOP_KEY {
             return;
@@ -443,7 +446,11 @@ mod tests {
 
     fn system32(name: &str) -> String {
         let root = std::env::var_os("SystemRoot").expect("SystemRoot is set on Windows");
-        Path::new(&root).join("System32").join(name).display().to_string()
+        Path::new(&root)
+            .join("System32")
+            .join(name)
+            .display()
+            .to_string()
     }
 
     /// `cmd /d /c <line>`, created suspended as the broker creates every root.
@@ -471,7 +478,10 @@ mod tests {
             .stdin(Stdio::null())
             .output()
             .unwrap();
-        let (stdout, stderr) = (String::from_utf8_lossy(&out.stdout), String::from_utf8_lossy(&out.stderr));
+        let (stdout, stderr) = (
+            String::from_utf8_lossy(&out.stdout),
+            String::from_utf8_lossy(&out.stderr),
+        );
         assert!(out.status.success(), "{stdout}\n{stderr}");
         assert_eq!(stdout.trim(), "ok", "{stderr}");
         assert!(!stderr.contains("#< CLIXML"), "{stderr}");
@@ -488,15 +498,28 @@ mod tests {
         let (shell, args) = shell_command(&script.display().to_string()).unwrap_or_else(|error| {
             panic!("Git for Windows is required on this machine for this test: {error}")
         });
-        assert!(!shell.display().to_string().to_ascii_lowercase().contains("system32"));
+        assert!(
+            !shell
+                .display()
+                .to_string()
+                .to_ascii_lowercase()
+                .contains("system32")
+        );
         let out = std::process::Command::new(&shell)
             .args(args)
             .stdin(Stdio::null())
             .output()
             .unwrap();
         let _ = std::fs::remove_dir_all(&dir);
-        let (stdout, stderr) = (String::from_utf8_lossy(&out.stdout), String::from_utf8_lossy(&out.stderr));
-        assert!(out.status.success(), "{}: {stdout}\n{stderr}", shell.display());
+        let (stdout, stderr) = (
+            String::from_utf8_lossy(&out.stdout),
+            String::from_utf8_lossy(&out.stderr),
+        );
+        assert!(
+            out.status.success(),
+            "{}: {stdout}\n{stderr}",
+            shell.display()
+        );
         assert_eq!(stdout.trim(), "ok", "{stderr}");
     }
 
@@ -506,7 +529,11 @@ mod tests {
         let tree = OwnedTree::adopt(&mut child).await.ok().unwrap();
         let began = Instant::now();
         tree.root_exit(&mut child).await.unwrap();
-        assert!(began.elapsed() >= Duration::from_millis(500), "{:?}", began.elapsed());
+        assert!(
+            began.elapsed() >= Duration::from_millis(500),
+            "{:?}",
+            began.elapsed()
+        );
         tree.members_settled().await.unwrap();
         assert!(!tree.has_executing_members().unwrap());
     }
@@ -517,7 +544,10 @@ mod tests {
         let mut child = spawn(&format!("start \"\" /b {} & exit 0", ping(2)));
         let tree = OwnedTree::adopt(&mut child).await.ok().unwrap();
         tree.root_exit(&mut child).await.unwrap();
-        assert!(tree.has_executing_members().unwrap(), "a member outlives the root");
+        assert!(
+            tree.has_executing_members().unwrap(),
+            "a member outlives the root"
+        );
         timeout(Duration::from_secs(30), tree.members_settled())
             .await
             .expect("settled")
@@ -602,9 +632,8 @@ pub(crate) fn spawn_detached(
     };
 
     let wide = |text: &OsStr| -> Vec<u16> { text.encode_wide().collect() };
-    let terminated = |text: &OsStr| -> Vec<u16> {
-        text.encode_wide().chain(std::iter::once(0)).collect()
-    };
+    let terminated =
+        |text: &OsStr| -> Vec<u16> { text.encode_wide().chain(std::iter::once(0)).collect() };
 
     let stdin = std::fs::OpenOptions::new().read(true).open("NUL")?;
     let log = std::fs::OpenOptions::new()
@@ -638,9 +667,7 @@ pub(crate) fn spawn_detached(
         .iter()
         .map(|(name, value)| (wide(name), wide(value)))
         .collect();
-    variables.sort_by_key(|(name, _)| {
-        String::from_utf16_lossy(name).to_uppercase()
-    });
+    variables.sort_by_key(|(name, _)| String::from_utf16_lossy(name).to_uppercase());
     let mut environment = Vec::new();
     for (name, value) in variables {
         environment.extend(name);
@@ -765,7 +792,10 @@ mod detached_tests {
         let cmd = Path::new(&system_root).join("System32").join("cmd.exe");
         let env = [
             (OsString::from("SystemRoot"), system_root),
-            (OsString::from("DEVAGOTCHI_PROBE"), OsString::from("kept here")),
+            (
+                OsString::from("DEVAGOTCHI_PROBE"),
+                OsString::from("kept here"),
+            ),
         ];
         let args: [OsString; 3] = ["/d".into(), "/c".into(), "cd & set".into()];
         let mut child = detached::spawn(&DetachedSpec {
@@ -794,7 +824,10 @@ mod detached_tests {
             "{out}"
         );
         let vars: Vec<String> = lines.map(|l| l.to_ascii_uppercase()).collect();
-        assert!(vars.contains(&"DEVAGOTCHI_PROBE=KEPT HERE".to_string()), "{out}");
+        assert!(
+            vars.contains(&"DEVAGOTCHI_PROBE=KEPT HERE".to_string()),
+            "{out}"
+        );
         for absent in ["PATH=", "USERPROFILE=", "USERNAME="] {
             assert!(
                 !vars.iter().any(|v| v.starts_with(absent)),

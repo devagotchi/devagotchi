@@ -1,9 +1,9 @@
 //! Claiming a new hub from a browser (16c): a hub in `auth.mode hub` whose config names no
-//! owner, and whose owner cannot sign in with a passkey yet, prints a claim code to its own
-//! log when it starts, and whoever enters that code on the hub's `/claim` page makes the
-//! owner's passkey there. No terminal on the host. A config that names its owner has
-//! decided who that is (they may already reach the hub through Nomen): no code is printed,
-//! and their passkey is made with `devagotchi hub owner` on the host.
+//! owner, and whose owner has no durable sign-in yet, prints a claim code to its own log
+//! when it starts, and whoever enters that code on the hub's `/claim` page establishes the
+//! owner's sign-in there. No terminal on the host. A config that names its owner has decided
+//! who that is (they may already reach the hub through Nomen): no code is printed, and a
+//! passkey or local password can be set with `devagotchi hub owner` on the host.
 //!
 //! Why a code from the log, and not "the first visitor owns it": a new hub is usually on the
 //! internet before anyone has claimed it, so an open first-run page is a race anyone can
@@ -17,11 +17,11 @@
 //! - Only its SHA-256 is stored, with when it stops working (`auth.tokens.claim_secs`). Each
 //!   start of an unclaimed hub replaces it, so only the newest code printed works.
 //! - Claiming spends nothing: it makes the owner (once) and a one-time owner link, the same
-//!   link `devagotchi hub owner` prints, and the page goes straight on to make the passkey
-//!   with it. Claiming again supersedes the earlier link, so a cancelled passkey prompt or a
-//!   closed tab is retried with the same code.
-//! - The owner's first passkey ends it: the code is deleted in the same transaction as the
-//!   passkey is stored (`put_passkey`), and a claimed hub refuses every claim.
+//!   link `devagotchi hub owner` prints. The owner can make a passkey or establish a local
+//!   email/password credential with it. Claiming again supersedes the earlier link, so a
+//!   cancelled setup or a closed tab is retried with the same code.
+//! - The owner's first durable sign-in ends it: the code is deleted when the passkey or
+//!   password is established, and a claimed hub refuses every claim.
 
 use devagotchi_contracts::{BridgeError, BridgeResult};
 use sqlx::{AnyConnection, Row};
@@ -102,8 +102,7 @@ fn wrong_code() -> BridgeError {
 }
 
 impl Accounts {
-    /// Whether the hub's owner has a passkey to sign in with, inside the caller's
-    /// transaction (scoped to the owner's tenant from here on).
+    /// Whether the hub's owner has any durable sign-in, inside the caller's transaction.
     async fn claimed_in(&self, connection: &mut AnyConnection) -> Result<bool, sqlx::Error> {
         if self
             .enter(connection, crate::store::Lookup::Owner)
@@ -113,15 +112,18 @@ impl Accounts {
             return Ok(false);
         }
         Ok(sqlx::query(
-            "SELECT 1 FROM auth_accounts a JOIN auth_passkeys p ON p.account = a.id
-             WHERE a.owner = 1 LIMIT 1",
+            "SELECT 1 FROM auth_accounts a
+             WHERE a.owner = 1 AND (
+               EXISTS (SELECT 1 FROM auth_passkeys p WHERE p.account = a.id)
+               OR EXISTS (SELECT 1 FROM auth_identities i WHERE i.account = a.id)
+             ) LIMIT 1",
         )
         .fetch_optional(&mut *connection)
         .await?
         .is_some())
     }
 
-    /// Whether this hub is claimed: its owner has a passkey to sign in with.
+    /// Whether this hub is claimed: its owner has a durable sign-in method.
     pub async fn claimed(&self) -> BridgeResult<bool> {
         transaction!(&self.store, |connection| {
             Ok(self.claimed_in(connection).await?)
@@ -162,8 +164,8 @@ impl Accounts {
 
     /// Claim the hub with the code it printed: the owner made if there is none yet, named
     /// `name` (an owner made without a passkey keeps theirs when it is `None`; a new one is
-    /// "Owner"), and a one-time owner link for the claimant's first passkey. `claimed` once
-    /// the owner has a passkey; `wrong_code` for any code that is not the live one. Whether
+    /// "Owner"), and a one-time owner link for the claimant's sign-in. `claimed` once
+    /// the owner has any durable sign-in; `wrong_code` for any code that is not the live one. Whether
     /// the hub may be claimed at all (its config names no owner) is the caller's to check.
     pub async fn claim(&self, code: &str, name: Option<&str>) -> BridgeResult<(Account, String)> {
         self.claim_at(

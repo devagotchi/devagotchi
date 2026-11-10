@@ -6,7 +6,7 @@
 //!   protected-resource metadata (RFC 9728, `lib.rs`) names the hub as its server.
 //! - `/oauth/register` (RFC 7591): a client registers its redirect URIs. Public clients
 //!   only; PKCE S256 is required of every one.
-//! - `/oauth/authorize`: a person signed in with their passkey sees which client asks and
+//! - `/oauth/authorize`: a signed-in person sees which client asks and
 //!   where it sends them, and approves or refuses. Not signed in: the sign-in page first,
 //!   then back here. The approval is a POST from this page alone (`Origin` and
 //!   `Sec-Fetch-Site` checked), so another site cannot approve for them.

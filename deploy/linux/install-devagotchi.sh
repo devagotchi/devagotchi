@@ -12,12 +12,17 @@
 #   sudo ./install-devagotchi.sh --hub https://hub.example.com --device wi1 --enroll < code
 #   sudo ./install-devagotchi.sh --exec-policy account ...       # the broker runs commands as its account
 #   sudo ./install-devagotchi.sh --developer ...                 # also print the local MCP command
-#   sudo ./install-devagotchi.sh --role hub --version 0.2.0 --public-url https://devagotchi.com \
+#   sudo env DEVAGOTCHI_HUB_STORAGE_URL=postgres://devagotchi@/devagotchi?host=/var/run/postgresql \
+#        ./install-devagotchi.sh --role hub --version 0.2.0 --public-url https://devagotchi.com \
 #        --auth-config ./auth.json --person 395290028818825218 --board devagotchi --caddy
-#   sudo ./install-devagotchi.sh --role hub --public-url http://127.0.0.1:8787 --person jesse --agent claude   # dev tokens: tests only
+#   sudo env DEVAGOTCHI_HUB_STORAGE_URL=… ./install-devagotchi.sh --role hub --public-url http://127.0.0.1:8787 --person jesse --agent claude   # dev tokens: tests only
 #   sudo ./install-devagotchi.sh --uninstall
 #   ./install-devagotchi.sh --print-target                       # the release build this machine takes
 #
+# A hub keeps its accounts and boards in Postgres (docs/adr/0001): the first --role hub run
+# takes the database's URL from DEVAGOTCHI_HUB_STORAGE_URL in its environment (never the
+# command line, which other users can read) and writes it into hub.json (0600) as
+# "storage.url"; a re-run keeps what hub.json holds. Postgres itself is yours to run.
 # --auth-config is a JSON file with the hub's "auth" object (mode nomen or oidc; see
 # crates/hub/README.md) and, for nomen, "owner"; --person/--agent are then account IDs, let
 # in by grant. Without it the hub runs on dev tokens, minted for each --person/--agent and
@@ -31,7 +36,7 @@
 set -euo pipefail
 umask 022
 
-REPO=EonsofStupid/devagotchi
+REPO=devagotchi/devagotchi
 # The release build for this machine: the kernel's architecture, and a 64-bit userland (a
 # 32-bit ARM system on a 64-bit kernel reports aarch64 but cannot run aarch64 binaries).
 case $(uname -m) in
@@ -406,6 +411,9 @@ if [ "$ROLE" = hub ]; then
         for name in "${AGENTS[@]}"; do echo "    add to \"grants\": $(grant_line "$name" false)"; done
     else
         [ -n "$PUBLIC_URL" ] || die "--public-url https://… is required the first time: the hub's address as agents and machines see it"
+        STORAGE_URL=${DEVAGOTCHI_HUB_STORAGE_URL:-}
+        [[ $STORAGE_URL =~ ^postgres(ql)?:// ]] \
+            || die "the hub keeps its accounts and boards in Postgres: run with DEVAGOTCHI_HUB_STORAGE_URL=postgres://… in the environment (sudo env …) the first time; it goes into $HUB_CONFIG as storage.url"
         if [ -z "$AUTH_CONFIG" ]; then
             as_user test -s "$TOKENS" || [ ${#PEOPLE[@]} -gt 0 ] || [ ${#AGENTS[@]} -gt 0 ] \
                 || die "the first install needs at least one --person or --agent: the hub refuses to start with nobody to let in"
@@ -441,10 +449,11 @@ PY
         {
             printf '{\n  "listen": %s,\n  "public_url": %s,\n' "$(json_string "$LISTEN")" "$(json_string "$PUBLIC_URL")"
             printf '  "auth": %s,\n' "$auth_json"
+            printf '  "storage": { "url": %s },\n' "$(json_string "$STORAGE_URL")"
             printf '  "brokers": [],\n  "boards": [%s],\n  "grants": [%s]\n}\n' "$board_entries" "$grants"
         } | write_as_user "$HUB_CONFIG" 0600
         HUB_CHANGED=1
-        echo "    wrote $HUB_CONFIG: listen $LISTEN, public_url $PUBLIC_URL, auth ${AUTH_MODE:-dev}, ${#board_names[@]} boards, $(( ${#PEOPLE[@]} + ${#AGENTS[@]} )) grants"
+        echo "    wrote $HUB_CONFIG: listen $LISTEN, public_url $PUBLIC_URL, auth ${AUTH_MODE:-dev}, storage Postgres, ${#board_names[@]} boards, $(( ${#PEOPLE[@]} + ${#AGENTS[@]} )) grants"
         echo "    machines join by adding {\"name\": \"<device>\", \"link\": true} to \"brokers\" and a grant, then devagotchi hub enroll"
     fi
 

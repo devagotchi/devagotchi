@@ -28,6 +28,7 @@ devagotchi-hub --state-dir ~/.local/state/devagotchi-hub --config ~/.config/deva
 {
   "listen": "127.0.0.1:8787",
   "public_url": "https://hub.shippin.cloud",
+  "storage": { "url": "postgres://hub@db.internal/devagotchi" },
   "auth": {
     "mode": "nomen",
     "issuer": "https://id.shippin.cloud",
@@ -48,6 +49,115 @@ Unknown fields and unsafe values fail closed. The hub speaks plain HTTP; the edg
 terminates TLS at `public_url`, which is also the RFC 9728 resource identifier. A broker is
 either local (`socket`: the hub must run as the same OS user, since the IPC refuses
 endpoints owned by anyone else) or linked (`"link": true`: a machine that dials out to `/link`).
+
+## Hosted boards
+
+`devagotchi hub serve` requires Postgres. Account/org and configured shared boards use
+native tenant-scoped transactions in that same store, not per-project SQLite files.
+Enable account boards with `"account_boards": {}`. Binding, leases/fences, workflow,
+notes, dependencies, approvals and history all use Postgres. Account/org namespaces
+remain distinct even when project names match; seats, grants and project limits still apply.
+The legacy board `dir` settings are not consulted by the running Postgres backend.
+
+Committed events publish transactional Postgres notifications. Each hub listens before
+serving, wakes its open board waiters on peer writes, and invalidates them after a listener
+reconnect. The lease reaper discovers persisted leases across tenants even when no board
+has been opened since restart. Scheduling uses database time. Database failures surface as
+errors/503s rather than a local fallback or successful empty board.
+
+Standalone local boards, the broker journal and future offline client cache retain SQLite;
+they are not another authority for a hub-bound board. The older auxiliary hub SQLite stores
+(audit and devices) have not been migrated by this board cutover. Issue ingress no longer
+opens a prototype SQLite store.
+
+## Issue context
+
+Configure `github.repositories` with explicit `{repository_id, repository, project}`
+entries targeting configured shared boards, and set `DEVAGOTCHI_GITHUB_WEBHOOK_SECRET`
+to at least 32 bytes. [Compose setup](../../deploy/compose/README.md#connect-a-github-issue-repository-to-the-shared-board)
+includes shared-board/grant environment variables and GitHub webhook settings.
+
+The signed `POST /webhooks/github/issues` endpoint verifies HMAC-SHA256 over the
+original bytes using library verification, validates the immutable repository mapping,
+and projects `opened`, `edited`, `closed`, and `reopened` into the native Postgres
+board. The source mapping, ticket/note/history, delivery receipt, analytics outbox and
+transactional notification commit together. Unsupported signed events/actions are
+explicitly ignored. The body limit is 256 KiB.
+
+Delivery IDs are repeat-safe: changed bytes under an existing ID conflict. A replay
+returns the original outcome and `duplicate=true` with the **current** source projection,
+not a frozen response snapshot. Older source timestamps are recorded as stale; equal-time
+different source contents require reconciliation, never guessed ordering. Accepted
+closed-to-open updates increment the source epoch. Source and internal workflow remain
+separate: external close neither completes work nor takes a holder's fence.
+
+Use the normal authenticated MCP connection:
+
+- `board_attach {project}` validates an existing configured shared board and returns its
+  actual ticket prefix. `board bind --shared` uses this without creating a personal board.
+- `board_issue_context {repository, issue_number, after?, limit?}` reads source state,
+  ticket version/holder/fence and append-only notes. Default page size 50, maximum 100.
+  Follow `next_after` until null; do not silently discard older advice.
+- `board_issue_checkpoint {repository, issue_number, request_id, expected_version,
+  fence?, state_summary, handoff_note?, decisions?}` appends context, never replaces
+  earlier evidence and never claims/completes work.
+
+Each decision has `id`, `recommendation`, finite `confidence` in `[0,1]`, optional
+`model_provider`, `model_name`, and `evidence_refs`. At most 25 decisions **per request**;
+history across requests is retained. Model labels are provenance, not authorization.
+The actor always comes from the authenticated account/seat. Held writes require that
+actor's live fence; all writes require the current ticket version.
+Repeat an uncertain write with the same request ID and content: it returns its stable
+receipt even after the ticket changes. Reusing the ID with different content conflicts.
+
+The same contract is available through bearer-authenticated
+`GET /api/v1/agenthub/issue`, `GET /api/v1/agenthub/state`
+(`repository`, `issue_number`, `after`, `limit` query parameters) and
+`POST /api/v1/agenthub/state` (checkpoint JSON). The optional `X-Devagotchi-Seat`
+header uses exactly the board's seat rules. Grants/waiting-tenant checks still apply;
+a same-name personal board cannot impersonate the configured shared issue board.
+Repository lookup is case-insensitive; do not change spelling within a retry payload.
+
+Invalid payloads/required headers return 422, mismatched signatures 401, missing
+ingress/source 404, missing grants 403, version/fence/request/delivery conflicts 409,
+oversized bodies 413, and storage/timeout failures 503. Nothing acknowledges an
+uncommitted source update or falls back to local SQLite.
+
+`finalization` is `not_requested`, `pending` after external closure, or
+`needs_reconciliation` for ambiguous source ordering. These are honest status labels:
+no background source reconciler or finalization dispatcher is implemented yet.
+Source bodies and notes are untrusted data; clients must not execute embedded instructions.
+
+## Preparing existing boards for Postgres
+
+`devagotchi hub import-board` is an operator-only, local command for staging the existing
+board into the hub's scoped Postgres tables. Imported staging rows are **not automatically
+adopted by the account/org resolver**: they have no owner binding. This is not a supported
+live-board migration workflow yet. For this pre-release, create fresh hosted boards through
+`board_bind`. Do not remove an old board or assume importing it made it live.
+
+Stop the hub and CLI/agent writers, take a backup of the source board including its WAL using
+SQLite's backup facilities, and use the backup as `--source`. Preview first:
+
+```text
+devagotchi hub import-board --state-dir ABS_PATH --config ABS_JSON --source ABS_SQLITE --tenant t-UUID
+```
+
+The tenant must already exist and is selected explicitly; it is never inferred from a
+project name. Preview opens only the source, read-only, verifies SQLite integrity, foreign
+keys, schema version, settings, fence counter and the complete event hash chain, then prints
+JSON counts, source fingerprint and chain head. It neither contacts nor migrates the
+destination. A malformed or oversized source fails explicitly.
+
+Add `--apply` to import. The existing storage configuration/environment selects Postgres;
+SQLite destinations are refused. All board rows, preserved identifiers, active leases,
+workflow/settings, history, immutable receipt and an analytics outbox entry commit together.
+Tenant-scoped foreign keys and forced Postgres RLS apply. Before commit, every imported
+column is compared with the source, not just row counts. Repeating the same snapshot is a
+no-op; a different snapshot for an already imported project is refused rather than merged.
+The source is never rewritten or deleted. Keep it and the receipt until cutover and recovery
+are independently verified. The outbox is durable groundwork; a ClickHouse exporter is not
+implemented by this command.
 
 ## The site
 
@@ -287,7 +397,7 @@ mounts both (`app_builds_in_every_auth_mode` in `src/lib.rs`).
 
 | Mode | Bearer token | Who it is for |
 |---|---|---|
-| `hub` | The hub's own `dgh_` tokens, issued to AI clients at `/oauth/token` (32b); with an optional `nomen` block, Nomen tokens as in `nomen` mode. People sign in on the hub's own pages with passkeys | Any hub that should work with nothing else deployed (D25), devagotchi.com included |
+| `hub` | The hub's own `dgh_` tokens, issued to AI clients at `/oauth/token` (32b); with an optional `nomen` block, Nomen tokens as in `nomen` mode. People sign in with local email/password, optional providers, or passkeys | Any hub that should work with nothing else deployed (D25), devagotchi.com included |
 | `devagotchi` | ES256 JWTs the hub signs and checks locally (`src/oauth.rs`); upstream OpenID Connect providers are optional sign-in buttons | A hub whose AIs open accounts for people who claim them later ([docs/auth.md](../../docs/auth.md)) |
 | `nomen` | Any Nomen access token, opaque or JWT, checked by asking Nomen (introspection) as the hub's own API application | Shippin: your sign-in at console.shippin.cloud, relayed by mcp.shippin.cloud; `shippin-bridge` sessions |
 | `oidc` | A JWT from any OpenID Connect issuer: `iss`, `exp`, `aud`, `sub` required; RS256/384/512 or ES256/384; keys from the issuer's JWKS, refreshed on an unknown `kid` at most once a minute | Self-hosters whose identity provider issues JWT access tokens |
@@ -299,20 +409,21 @@ provider cannot be reached the hub answers `503`, never `401`.
 
 ## The store
 
-One storage layer, two backends (`src/store.rs`, ruled 2026-11-01): Postgres for a hosted
-hub, which any number of hub instances share, and SQLite built into the binary for a
-standalone one. The same code runs on both, and every hub test that takes a store runs on
-both in CI. Where it is, first match wins:
+The storage layer supports Postgres and SQLite fixtures, but the running hub now requires
+Postgres for its accounts and boards (ADR 0001). Any number of hub instances share it.
+SQLite remains available for standalone local boards, local journals and offline client
+storage, not hosted account/board authority. Where the hub store is, first match wins:
 
 1. `DEVAGOTCHI_HUB_STORAGE_URL` in the environment: how a Postgres password arrives, from
    the secret store (Vaultix), never from a file.
 2. The config's `"storage": { "url": "postgres://hub@db.internal/devagotchi" }` (no password:
-   one in the config is refused), or `"sqlite:/absolute/path"` (`sqlite:C:/…` on Windows).
-3. `accounts.sqlite3` in the state directory, 0600 with its `-wal` and `-shm` files.
+   one in the config is refused).
+3. Missing Postgres configuration, including the old SQLite default, is refused at startup.
 
 On Postgres the hub's tables live in the `devagotchi` schema, named by their part of the hub:
 `auth_*` (accounts, passkeys, sessions, links, linked sign-ins, email links), `oauth_*`,
-`tenancy_*` (tenants and their event chains) and `hub_*` (its keys). Migration 0007 moved and
+`tenancy_*` (tenants and their event chains), `hub_*` (its keys) and `board_*`
+(scoped board state, append-only history and the analytics outbox). Migration 0007 moved and
 renamed them once. On a Postgres something else also uses, `"storage": { "schema":
 "devagotchi_hub" }` (or `DEVAGOTCHI_HUB_STORAGE_SCHEMA`) keeps the migration record in a schema
 of its own, made if missing, and `public` stays as it was. One database holds one hub. On a
@@ -345,8 +456,8 @@ other tenant's rows.
   NOBYPASSRLS; GRANT devagotchi_hub TO <login role>;` once, before the hub starts.
 - **A hosted hub** (`tenancy.mode multi`) on Postgres does not start unless its queries are
   held to row-level security. A one-owner hub starts either way and reports it in `/healthz`.
-- **SQLite** has no row-level security. A standalone hub's store is its own file, and the
-  same code scopes the same queries on it.
+- **SQLite fixtures** have no row-level security. They exercise the shared account/storage
+  contract in tests; the running hub will not use them as its authority.
 - **Rolling back across migration 0007** is the one rollback a new image cannot do by
   itself: an older hub does not read the moved tables. Restore the backup `update.sh` takes
   before every deploy ([deploy/compose/README.md](../../deploy/compose/README.md#rolling-back-across-the-tenant-migration-0007)).
@@ -358,8 +469,9 @@ other tenant's rows.
 "owner": "395290028818825218"                           // optional: an earlier provider's subject to keep
 ```
 
-The hub keeps its accounts in its store and signs people in itself with passkeys (WebAuthn, verified on `aws-lc-rs`; ES256, EdDSA and RS256;
-user verification on every ceremony). Nothing else needs to be running. `rp_id` is the
+The hub keeps its accounts in its store. Passkeys (WebAuthn, verified on `aws-lc-rs`; ES256,
+EdDSA and RS256; user verification on every ceremony) are optional alongside local
+email/password credentials. Nothing else needs to be running. `rp_id` is the
 passkeys' relying party: the hub's host or a parent domain of it, and it can never change
 for passkeys already made. Plain `http` works only on loopback, for tests.
 
@@ -485,7 +597,8 @@ gets an account and a tenant (`t-<uuid>`) of their own, made on the spot:
 - **Operators, with no claim.** Someone who signs in with an identity `operators` names (a
   verified `email:`, or `google:`, `github:`, `nomen:` or `oidc:` and the provider's
   subject) is the hub's owner, the platform operator, in the first tenant (Jesse is tenant
-  #1). `devagotchi hub owner` on the host still makes the owner's passkey link.
+  #1). `devagotchi hub owner` on the host issues a one-time link to add a passkey or set a
+  local email/password sign-in.
 - **No claim.** A hosted hub prints no claim code, `/` gets people started, and `/claim`
   is a 404. A one-owner hub (`single`) whose config names `operators` is not claimed either:
   its operators were decided at deploy.
@@ -493,9 +606,11 @@ gets an account and a tenant (`t-<uuid>`) of their own, made on the spot:
 Every account belongs to a tenant. On a one-owner hub there is one, and a store from
 before tenants moves its accounts into it when the hub opens it (an add-only migration).
 
-### Sign in with Google, GitHub, Shippin or an email link
+### Sign in with a local password, Google, GitHub, Shippin or an email link
 
-Besides passkeys, a hub with its own accounts signs people in with any of these, each a
+The hub always supports local email/password credentials; the email is a login name and does
+not require an email provider. A hub with its own accounts can also sign people in with
+optional passkeys, providers, or email links. Each is a
 linked sign-in of the same account (`src/accounts/identities.rs`): signing in reaches the
 account it is linked to; else, for an `operators` identity, the owner; else the account a
 verified email already reaches; else one made on a hosted hub. From the account page, or
@@ -536,6 +651,13 @@ which secures it. A sign-in already linked elsewhere is refused, never moved.
   15 minutes) and answers the same for every address; the page it opens posts the token
   from its one button, so a mail scanner that follows links spends nothing. Five links per
   address an hour (`per_address_per_hour`), twenty per client address.
+- `devagotchi hub check-mail --config hub.json [--to you@example.com]` connects to that
+  server as `serve` would (the URL and password read the same way), negotiates TLS and signs
+  in, sending nothing; with `--to` it sends one email that says this hub's mail works. It
+  prints the server's refusal and never the password. The running hub reports the same in
+  `/healthz` under `mail` (`configured`, `tls`, `per_address_per_hour`, `last_send` with
+  `ok`, `at` and on failure the reply code or the step, never an address or a body);
+  reported, not counted, so a mail server that is down never marks the hub unhealthy.
 - `src/provider_tests.rs` runs all of it against a stub OpenID Connect provider, a stub
   GitHub and a stub mail server.
 
@@ -550,9 +672,9 @@ devagotchi hub is unclaimed: nobody can sign in as its owner yet. Claim it in a 
   https://hub.example.com/claim#XXXX-XXXX-XXXX-XXXX-XXXX-XXXX
 ```
 
-Open it on the device that will hold the owner's passkey (or open `/claim` and type the
-code; any case, dashes optional), give the owner a name and press **Claim this hub and make
-my passkey**: that makes the owner's account and their passkey, and signs them in. The
+Open it on a device you control (or open `/claim` and type the code; any case, dashes
+optional), give the owner a name and choose a passkey or local email/password: that makes the
+owner's account, establishes sign-in, and signs them in. The
 landing page (`/`) of an unclaimed hub offers nothing but the claim; once claimed it offers
 sign-in and says where AIs connect (`<public_url>/mcp`).
 
@@ -561,11 +683,11 @@ sign-in and says where AIs connect (`<public_url>/mcp`).
   code printed works; restart the hub for a new one. It is issued once the hub listens, so
   a start that fails does not replace the code a running hub printed.
 - Claiming again with the same code is how a cancelled passkey prompt is retried: it
-  supersedes the earlier link. The owner's first passkey, made by a claim or by
-  `devagotchi hub owner`, deletes the code, and a claimed hub refuses every claim.
+  supersedes the earlier link. The owner's first durable sign-in, a passkey or a local
+  email/password, deletes the code, and a claimed hub refuses every claim.
 - A config that names its `owner` has decided who that is (they may already reach the hub
-  through Nomen): it prints no code, `/` offers sign-in, and `/claim` refuses. Their passkey
-  is made on the host with `devagotchi hub owner`, below.
+  through Nomen): it prints no code, `/` offers sign-in, and `/claim` refuses. Their local
+  password or passkey is set using the one-time link from `devagotchi hub owner`, below.
 - Why a code and not "the first visitor owns it": a new hub is usually on the internet
   before anyone claims it. Portainer stops its setup after five minutes for this reason,
   Open WebUI documents it as an accepted risk, and Pangolin's users asked for a secret
@@ -582,17 +704,18 @@ devagotchi hub owner --state-dir DIR --config /etc/devagotchi/hub.json [--name J
 # https://app.devagotchi.com/owner#dgl_…   (stdout only, once; 15 minutes)
 ```
 
-Open the link on the device that will hold the passkey and press **Make a passkey**; that
-signs you in. The first run makes the owner's account, with the config's `owner` as its id
+Open the link and choose **Make a passkey** or **Use a local email and password instead**;
+either signs you in. The first run makes the owner's account, with the config's `owner` as its id
 when it names one, so a hub that had a Nomen owner keeps every board, machine and audit row
 keyed by it. Run it again to add a passkey: using the new link ends the owner's other
 sessions. With `--replace`, using it also removes every other passkey of the owner: the way
 to take the account back if someone else used a leaked link first. The config the command
 reads must name the same owner as the hub's, or the link is refused before it is spent.
-After that, `/auth/login` signs in with the passkey. Sessions last 30 days unused and 90 at
-most, end when their passkey is removed, when a copy of it is seen (its counter going back),
-or when the account is disabled, and are kept only as hashes. Signing out takes the hub's
-own page.
+After that, `/auth/login` offers local password, configured providers, email link when
+configured, and passkey fallback. Email recovery requires configured SMTP and mailbox access;
+otherwise the host operator issues a new owner link. Sessions last 30 days unused and 90 at
+most, end when the account is disabled, and are kept only as hashes. Signing out takes the
+hub's own page.
 
 Until the hub issues its own tokens (32b), a hub with no `nomen` block takes no bearer token
 at `/mcp`, and refuses `trusted_issuers`. Plain `http` on loopback is for tests: its cookies
@@ -614,7 +737,7 @@ Codex or any MCP client connects to `<public_url>/mcp` with nothing else deploye
 2. It registers itself at `/oauth/register` (RFC 7591): public clients only, redirect URIs
    https or http on loopback.
 3. `/oauth/authorize` shows the signed-in person which app asks and where it sends them
-   back; **Connect** is a POST from that page alone. Not signed in: the passkey sign-in first,
+   back; **Connect** is a POST from that page alone. Not signed in: the sign-in page first,
    then back to the same request.
 4. `/oauth/token` trades the code (PKCE S256 required) for an access token (`dgh_…`) and a
    refresh token (`dgr_…`), both opaque and stored only as hashes. Refresh tokens rotate; a
@@ -653,7 +776,7 @@ authorization (RFC 8628) at the endpoints the metadata names:
 1. The CLI posts to `/oauth/device` as `devagotchi-cli`, a client built into the hub (any
    client registered at `/oauth/register` may ask too) and prints
    `<public_url>/device?code=XXXX-XXXX`.
-2. The person opens it on any device. Not signed in: the passkey sign-in first, then back.
+2. The person opens it on any device. Not signed in: the sign-in page first, then back.
    The page names the app and the account and shows the code to check against the
    terminal; **Approve** is a POST from that page alone, as **Connect** is. `/device` with no
    code asks for it.

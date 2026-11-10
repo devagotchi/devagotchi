@@ -62,8 +62,13 @@ pub async fn act(
             &[],
         );
     }
-    let Some(board) = open_board(&state, &subject, &project) else {
-        return unknown();
+    let board = match open_board(&state, &subject, &project) {
+        Ok(Some(board)) => board,
+        Ok(None) => return unknown(),
+        Err(error) => {
+            eprintln!("devagotchi hub: open ticket action board: {error}");
+            return crate::web::routes::unavailable();
+        }
     };
     let tool = match action.as_str() {
         "comment" => "board_note",

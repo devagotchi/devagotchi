@@ -2,13 +2,13 @@
 
 **Your AI, at home in your workspace.**
 
-Devagotchi is a universal workspace bridge, beginning with locally installed MCP clients and a native app for seeing commands, output, and workspace activity. The product direction represents every admitted task as a graph and grows into a trusted internal mesh, with public API/MCP surfaces for adoption. Windows, macOS, and Linux are required targets. Source is published at [EonsofStupid/devagotchi](https://github.com/EonsofStupid/devagotchi). The rebuilt [Devagotchi Site](https://devagotchi.justsayit.chatgpt.site) is published with a read-only HTTP/MCP reference service and Linux source download; [devagotchi.net](https://devagotchi.net) has been added and is pending DNS validation.
+Devagotchi is a universal workspace bridge, beginning with locally installed MCP clients and a native app for seeing commands, output, and workspace activity. The product direction represents every admitted task as a graph and grows into a trusted internal mesh, with public API/MCP surfaces for adoption. Windows, macOS, and Linux are required targets. Source is published at [devagotchi/devagotchi](https://github.com/devagotchi/devagotchi). The rebuilt [Devagotchi Site](https://devagotchi.justsayit.chatgpt.site) is published with a read-only HTTP/MCP reference service and Linux source download; [devagotchi.net](https://devagotchi.net) has been added and is pending DNS validation.
 
 This working copy is built from a separate process broker, a thin official-SDK MCP adapter, and a Tauri desktop inspector. **Execution providers are implemented for Linux and Windows. The macOS provider is still required before a cross-platform release.**
 
 ## Install: one line, for you or your AI
 
-Tell your AI "install Devagotchi from github.com/EonsofStupid/devagotchi", or paste the line
+Tell your AI "install Devagotchi from github.com/devagotchi/devagotchi", or paste the line
 for your system into any terminal. It installs the `devagotchi` binary for your user (no
 administrator rights), then `setup` gives every AI client it finds (Claude Code, Codex, Claude
 Desktop) an MCP server named `devagotchi`. No account, nothing to start by hand: your broker
@@ -21,13 +21,13 @@ starts in the background on an AI's first call, and again on the first call afte
 Linux (x86_64, ARM64; glibc 2.35 or later, e.g. Ubuntu 22.04, Debian 12):
 
 ```sh
-bash -o pipefail -c 'curl --proto =https --tlsv1.2 -LsSf https://github.com/EonsofStupid/devagotchi/releases/latest/download/devagotchi-installer.sh | sh' && ~/.local/bin/devagotchi setup
+bash -o pipefail -c 'curl --proto =https --tlsv1.2 -LsSf https://github.com/devagotchi/devagotchi/releases/latest/download/devagotchi-installer.sh | sh' && ~/.local/bin/devagotchi setup
 ```
 
 Windows (x64, ARM64), from PowerShell, Command Prompt or Git Bash alike:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -c "[Environment]::SetEnvironmentVariable('PSModulePath', [Environment]::GetEnvironmentVariable('PSModulePath', 'Machine')); try { irm https://github.com/EonsofStupid/devagotchi/releases/latest/download/devagotchi-installer.ps1 -ErrorAction Stop | iex } catch { throw }; & ((Get-Variable HOME -ValueOnly) + '\.local\bin\devagotchi.exe') setup"
+powershell -NoProfile -ExecutionPolicy Bypass -c "[Environment]::SetEnvironmentVariable('PSModulePath', [Environment]::GetEnvironmentVariable('PSModulePath', 'Machine')); try { irm https://github.com/devagotchi/devagotchi/releases/latest/download/devagotchi-installer.ps1 -ErrorAction Stop | iex } catch { throw }; & ((Get-Variable HOME -ValueOnly) + '\.local\bin\devagotchi.exe') setup"
 ```
 
 Either line stops before `setup` if the download or the install fails. Restart any AI client
@@ -80,7 +80,7 @@ then run the line again. Windows cannot replace the program while anything still
 **Checking what you run:** the Linux installer checks the archive's SHA-256 before installing;
 the Windows installer does not. Every release's archives carry GitHub build attestations:
 download one from the release page and run
-`gh attestation verify <archive> --repo EonsofStupid/devagotchi`.
+`gh attestation verify <archive> --repo devagotchi/devagotchi`.
 
 ## Project status and source preview
 
@@ -136,7 +136,7 @@ cargo build --locked --bins
 cargo test --locked --lib
 ```
 
-The account (D22): `devagotchi login` signs in at a hub from any terminal (app.devagotchi.com unless `--hub` names another; `--issuer` signs in with your Shippin account directly) — it shows a code and a URL, you approve on any device where you are signed in with your passkey, and the tokens land owner-only in `~/.config/devagotchi/account.json` (`whoami` names the account, `logout` revokes). `devagotchi login --local` records the other choice: no account, everything on this machine. `devagotchi start` says which it is until one is on file. An agent reaches the hosted hub as that account with `devagotchi mcp --hub` — the same stdio command, relayed to the hub, the token never in the agent's config. `devagotchi connect` sets that up in Claude Code, Codex and Claude Desktop in one go (each config backed up and written whole), then starts the server once and lists its tools; `--local` points them at this machine's broker instead. A project's board moves to the hub with `devagotchi board bind`: from then on `devagotchi board …` and the hook pack run there as your account, your agents as seats, from every machine you sign in on (`board unbind` goes back).
+The account (D22): `devagotchi login` signs in at a hub from any terminal (app.devagotchi.com unless `--hub` names another; `--issuer` signs in with your Shippin account directly) — it shows a code and a URL, you approve on any device where you are signed in with a sign-in method configured for that hub, and the tokens land owner-only in `~/.config/devagotchi/account.json` (`whoami` names the account, `logout` revokes). `devagotchi login --local` records the other choice: no account, everything on this machine. `devagotchi start` says which it is until one is on file. An agent reaches the hosted hub as that account with `devagotchi mcp --hub` — the same stdio command, relayed to the hub, the token never in the agent's config. `devagotchi connect` sets that up in Claude Code, Codex and Claude Desktop in one go (each config backed up and written whole), then starts the server once and lists its tools; `--local` points them at this machine's broker instead. A project's board moves to the hub with `devagotchi board bind`: from then on `devagotchi board …` and the hook pack run there as your account, your agents as seats, from every machine you sign in on (`board unbind` goes back).
 
 The quick way: `devagotchi start` runs your broker with no paths to remember — the first run writes `broker.json` (it runs what your account can, `exec_policy` `account`; workspace: your home directory, or `--workspace`; grants, used only if you set `exec_policy` to `granted`: the toolchains found on PATH, plus `--grant`) under `~/.config/devagotchi`, keeps its state under `~/.local/state/devagotchi`, and tells `devagotchi mcp` where to find it. The explicit way, with your own config (`config/broker.example.json` as a template; absolute, existing paths; only executables you intend to authorize; the state directory's parent must already exist — the broker creates the state directory with mode `0700` or verifies an existing private directory):
 
@@ -275,6 +275,6 @@ The current engine uses pipes, not a PTY. It clears inherited environment variab
 
 The implementation here is a new foundation written from scratch in Rust. It makes no claim of benchmarked superiority over any other project.
 
-The broker, desktop inspector, planning documents, audit evidence, and website source are published in this repository. The initial complete source import is commit [`72ea5db`](https://github.com/EonsofStupid/devagotchi/commit/72ea5db73e898efa0ebfc8800a531a2df29fe6f7), whose Git tree matches the verified 211-file source snapshot. Website code lives in [`apps/website`](apps/website/README.md) and retains its existing Sites deployment identity. The earlier `404` is preserved in historical audit artifacts; repository access is now verified.
+The broker, desktop inspector, planning documents, audit evidence, and website source are published in this repository. The initial complete source import is commit [`72ea5db`](https://github.com/devagotchi/devagotchi/commit/72ea5db73e898efa0ebfc8800a531a2df29fe6f7), whose Git tree matches the verified 211-file source snapshot. Website code lives in [`apps/website`](apps/website/README.md) and retains its existing Sites deployment identity. The earlier `404` is preserved in historical audit artifacts; repository access is now verified.
 
 The website is published at https://devagotchi.justsayit.chatgpt.site as version 3, source commit `91bb93c49eb35fa37315973666ce71dbb437a659`. The [publication receipt](verification/website-publication.json) records 12 passing reference-handler checks, successful type checking/build, 13 successful public GET checks, and the deployed MCP OAuth challenge. The MCP plugin is provisioned and installed; its tools did not surface in this chat, so an authenticated named-client call is not claimed. Browser visual QA remained unavailable. `devagotchi.net` is pending DNS validation. Public reference availability does not imply graph/mesh/runtime HTTP implementation, a native installer, or measured superiority.

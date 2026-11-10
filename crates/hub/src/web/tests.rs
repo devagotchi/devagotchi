@@ -231,6 +231,7 @@ async fn world_with(downloads: Option<Arc<crate::downloads::Downloads>>) -> Worl
             audit,
             links,
         },
+        issue_store: Arc::new(crate::issue_lifecycle::IssueLifecycleStore::disabled()),
         web: Some(Arc::new(web)),
         passkeys: None,
     };
@@ -906,7 +907,10 @@ async fn configured_boards_decide_for_the_owner_and_human_grants_only() {
         .unwrap(),
     );
     let hub = Hub {
-        boards: Arc::new(crate::board::mcp::Boards::from_config(&config, w.dir.path())),
+        boards: Arc::new(crate::board::mcp::Boards::from_config(
+            &config,
+            w.dir.path(),
+        )),
         config,
         ..w.hub.clone()
     };
@@ -930,9 +934,14 @@ async fn configured_boards_decide_for_the_owner_and_human_grants_only() {
         ("300000000000000005", false),
     ] {
         let subject = person(id);
-        assert_eq!(hub.approval_board(&subject, "estate").is_ok(), decides, "{id}");
+        assert_eq!(
+            hub.approval_board(&subject, "estate").is_ok(),
+            decides,
+            "{id}"
+        );
         assert_eq!(
             hub.approval_boards(&subject)
+                .unwrap()
                 .iter()
                 .map(|(p, _)| p.as_str())
                 .collect::<Vec<_>>(),

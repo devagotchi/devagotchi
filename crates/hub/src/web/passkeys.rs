@@ -1,5 +1,5 @@
 //! Passkey sign-in on the hub's own pages (`auth.mode hub`, D25 §14): the owner's one-time
-//! link makes their first passkey, and `/auth/login` signs in with one. Nothing here talks
+//! link can make a passkey, and `/auth/login` offers it as a fallback. Nothing here talks
 //! to another service.
 //!
 //! - Challenges are the hub's own, signed and stateless until used (`accounts.rs`): asking
@@ -48,7 +48,7 @@ pub struct HubSignIn {
     rp_id: String,
     origin: String,
     secure: bool,
-    /// Seen claimed: the owner has a passkey (`claimed`).
+    /// Seen claimed: the owner has a durable sign-in (`claimed`).
     claimed: AtomicBool,
     /// Sign in with Google, GitHub, OpenID Connect providers and the email link.
     pub(super) providers: super::providers::Providers,
@@ -70,6 +70,14 @@ impl HubSignIn {
     /// Whether the store holds the hub's queries to one tenant's rows (`/healthz`).
     pub fn tenant_rls(&self) -> bool {
         self.accounts.store().enforced()
+    }
+
+    /// `/healthz` `mail`: whether this hub can send email, and how the last send went.
+    pub fn mail_status(&self) -> serde_json::Value {
+        match &self.providers.email {
+            Some(mailer) => mailer.status(),
+            None => serde_json::json!({ "configured": false }),
+        }
     }
 
     /// Passkey sign-in for a hub in `auth.mode hub`; `None` in any other mode.
@@ -157,9 +165,9 @@ impl HubSignIn {
     }
 
     /// Whether this hub can be claimed from the browser (`accounts/claim.rs`): a one-owner
-    /// hub whose config names no owner and no operators, and no owner can sign in with a
-    /// passkey yet. A config that names
-    /// its owner has decided who that is: their passkey is made on the host with
+    /// hub whose config names no owner and no operators, and no owner can sign in yet. A
+    /// config that names its owner has decided who that is: their passkey or password is
+    /// set with the one-time link from
     /// `devagotchi hub owner`, whatever the log says. `Err` when the store failed.
     pub(super) async fn claimable(&self) -> Result<bool, ()> {
         // A hosted hub is never claimed, and neither is one whose operators were set at
@@ -170,7 +178,7 @@ impl HubSignIn {
         self.claimed().await.map(|claimed| !claimed)
     }
 
-    /// Whether the hub's owner can sign in with a passkey yet. Once they can, that does not
+    /// Whether the hub's owner has a durable sign-in yet. Once they do, that does not
     /// change, so the store is asked only until then. `Err` when it failed.
     pub(super) async fn claimed(&self) -> Result<bool, ()> {
         if self.claimed.load(Ordering::Relaxed) {
@@ -410,30 +418,38 @@ pub(super) fn scripted(title: &str, body: &str) -> Response {
     pages::scripted(StatusCode::OK, title, body, "/assets/passkey.js")
 }
 
-/// `/auth/login` in hub mode: the passkey button and the script that runs its prompt, then
-/// every other way in this hub offers (`providers.rs`, `email.rs`).
+/// `/auth/login` in hub mode: configured providers and password/email sign-in first, with
+/// passkey sign-in as a fallback.
 pub fn login_page(hub: &HubSignIn, return_to: &str) -> Response {
     let return_to = safe_return_to(return_to);
     let others = hub.providers.buttons(&hub.site(), return_to, false);
     let others = if others.is_empty() {
         String::new()
     } else {
-        format!("<p class=\"ways\">{others}</p>")
+        format!("<p class=\"ways\">{others}</p><p class=\"meta\">or</p>")
     };
     let email = if hub.providers.email.is_some() {
-        super::email::form(return_to, false)
+        format!(
+            "<p class=\"meta\">or sign in with an email link</p>{}",
+            super::email::form(return_to, false)
+        )
     } else {
         String::new()
     };
+    let password = super::sign_in::password_form(hub, return_to);
     let mut response = scripted(
         "Sign in",
         &format!(
-            "<h1>Sign in</h1>\
+            "<h1>Sign in</h1>{others}{password}{email}\
+<details class=\"ways\"><summary>Use a passkey instead</summary>\
 <p>Use the passkey you made for this hub: your phone's or computer's fingerprint, face or PIN.</p>\
 <p><button class=\"button primary\" id=\"passkey-sign-in\" data-return-to=\"{}\" disabled>Sign in with a passkey</button></p>\
 <p class=\"meta\" id=\"passkey-status\" role=\"status\"></p>\
-<noscript><p>Signing in with a passkey needs JavaScript for this page.</p></noscript>{others}{email}",
-            pages::escape(return_to)
+<noscript><p>Signing in with a passkey needs JavaScript for this page.</p></noscript></details>",
+            pages::escape(return_to),
+            others = others,
+            password = password,
+            email = email,
         ),
     );
     // Its email form posts here: the browser sends that POST's true Origin only under
@@ -459,10 +475,107 @@ pub async fn owner_page(State(state): State<AppState>) -> Response {
 you want to sign in with; your passkey manager can share it with your other devices.</p>\
 <p><button class=\"button primary\" id=\"passkey-register\" disabled>Make a passkey</button></p>\
 <p class=\"meta\" id=\"passkey-status\" role=\"status\"></p>\
+<p><a id=\"owner-password-link\" href=\"/owner/password\">Use a local email and password instead</a></p>\
 <p class=\"meta\">Any other session of this account ends when you do. The link works once, for 15 minutes; \
 on the hub's host, <code>devagotchi hub owner</code> prints a new one.</p>\
 <noscript><p>Making a passkey needs JavaScript for this page.</p></noscript>",
     )
+}
+
+/// The owner's password setup page. The owner link is carried only in the URL fragment,
+/// then copied into the POST body by the page's same-origin script.
+pub async fn owner_password_page(State(state): State<AppState>) -> Response {
+    if state.passkeys.is_none() {
+        return super::routes::not_set_up();
+    }
+    pages::scripted(
+        StatusCode::OK,
+        "Set owner sign-in",
+        "<h1>Set owner sign-in</h1>\
+<p>Choose an email-shaped login name and a password. The address is not verified and is used \
+only as your local login name; no Google account or mail server is required.</p>\
+<form method=\"post\" action=\"/owner/password\">\
+<input type=\"hidden\" id=\"owner-link\" name=\"link\">\
+<label>Login email <input type=\"email\" name=\"email\" required autocomplete=\"email\" maxlength=\"254\"></label>\
+<label>Password <input type=\"password\" name=\"password\" required autocomplete=\"new-password\"></label>\
+<p class=\"actions\"><button class=\"button primary\" id=\"owner-password-submit\" type=\"submit\" disabled>Set password and sign in</button></p>\
+<p class=\"meta\" id=\"owner-password-status\" role=\"status\"></p></form>\
+<p>Email recovery requires an email server and access to that mailbox. Without it, the hub \
+operator can issue a replacement owner link.</p>",
+        "/assets/owner-password.js",
+    )
+}
+
+#[derive(Deserialize)]
+pub struct OwnerPassword {
+    link: String,
+    email: String,
+    password: String,
+}
+
+/// Redeem a host-issued owner link to create local credentials and sign in.
+pub async fn owner_password(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    axum::Form(form): axum::Form<OwnerPassword>,
+) -> Response {
+    let Some(hub) = state.passkeys.clone() else {
+        return super::routes::not_set_up();
+    };
+    if !super::approvals::same_origin(&headers, &hub.config.public_url) {
+        return pages::message(
+            StatusCode::FORBIDDEN,
+            "Not from this hub",
+            "Set your sign-in on this hub's own page.",
+            None,
+        );
+    }
+    match hub
+        .accounts()
+        .set_password_from_owner_link(&form.link, &form.email, &form.password)
+        .await
+    {
+        Ok(account) => super::session::open_and_return(&hub, None, &account, "/account", &[]).await,
+        Err(error) if error.code == "password_short" || error.code == "invalid_email" => {
+            pages::message(
+                StatusCode::BAD_REQUEST,
+                "Could not set owner sign-in",
+                &error.message,
+                Some(("/owner/password", "Try again with a new owner link")),
+            )
+        }
+        Err(error) if error.code == "email_taken" => pages::message(
+            StatusCode::CONFLICT,
+            "Login email already in use",
+            "Choose a different login email, then use a new owner link.",
+            Some(("/owner/password", "Try again with a new owner link")),
+        ),
+        Err(error) if error.code == "invalid_link" => pages::message(
+            StatusCode::BAD_REQUEST,
+            "Owner link expired or used",
+            "On the hub's host, run <code>devagotchi hub owner</code> to issue a new link.",
+            None,
+        ),
+        Err(error) => {
+            eprintln!(
+                "devagotchi-hub: could not set owner password: {}",
+                error.message
+            );
+            super::routes::unavailable()
+        }
+    }
+}
+
+pub async fn owner_password_script() -> Response {
+    let mut response = include_str!("assets/owner-password.js").into_response();
+    response.headers_mut().insert(
+        header::CONTENT_TYPE,
+        HeaderValue::from_static("text/javascript; charset=utf-8"),
+    );
+    response
+        .headers_mut()
+        .insert(header::CACHE_CONTROL, HeaderValue::from_static("no-cache"));
+    response
 }
 
 #[derive(Deserialize)]

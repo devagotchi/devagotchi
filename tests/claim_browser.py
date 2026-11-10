@@ -42,11 +42,12 @@ def free_port() -> int:
         return s.getsockname()[1]
 
 
-def wait_ready(url: str, process: subprocess.Popen) -> None:
+def wait_ready(url: str, process: subprocess.Popen, log: Path | None = None) -> None:
     deadline = time.time() + 30
     while time.time() < deadline:
         if process.poll() is not None:
-            raise SystemExit(f"the hub exited with {process.returncode}")
+            said = f":\n{log.read_text()}" if log and log.exists() else ""
+            raise SystemExit(f"the hub exited with {process.returncode}{said}")
         try:
             with urllib.request.urlopen(url + "/healthz", timeout=1) as answer:
                 if answer.status == 200:
@@ -121,7 +122,7 @@ def main() -> int:
     }))
     hub = serve(args.devagotchi, state, config, work / "hub.log")
     try:
-        wait_ready(url, hub)
+        wait_ready(url, hub, work / "hub.log")
         printed = re.findall(rf"{re.escape(url)}/claim#[0-9A-Z-]+", (work / "hub.log").read_text())
         assert len(printed) == 1, "the hub prints one claim link when it starts"
         link = printed[0]
@@ -179,6 +180,7 @@ def main() -> int:
             text = page.inner_text("main")
             assert f"{url}/mcp" in text and "Nobody owns" not in text, text
             page.goto(f"{url}/auth/login?return_to=/account")
+            page.locator("details.ways summary").click()
             page.click("#passkey-sign-in")
             page.wait_for_url(f"{url}/account", timeout=15_000)
             print("PASS signed out, the landing page says where AIs connect; back in with the passkey")
@@ -195,7 +197,7 @@ def main() -> int:
 
     hub = serve(args.devagotchi, state, config, work / "restart.log")
     try:
-        wait_ready(url, hub)
+        wait_ready(url, hub, work / "restart.log")
         assert "/claim#" not in (work / "restart.log").read_text(), "a claimed hub prints no code"
         print("PASS a claimed hub prints no claim code when it restarts")
     finally:

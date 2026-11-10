@@ -721,7 +721,7 @@ fn notes_are_append_only_and_the_chain_notices_tampering() {
         .add_note(&jesse, &id, "note", "first", None, None)
         .expect("note");
     {
-        let connection = f.board.connection.lock().expect("lock");
+        let connection = f.board.local().expect("local board");
         let refused = connection.execute("DELETE FROM notes", []);
         assert!(refused.is_err(), "notes are append-only");
         let refused = connection.execute("UPDATE events SET actor = 'mallory' WHERE seq = 1", []);
@@ -851,7 +851,13 @@ mod cli {
             dir.path(),
             None,
             false,
-            &["settings", "--repo", "https://github.com/x/demo", "--env", "dev,prod"],
+            &[
+                "settings",
+                "--repo",
+                "https://github.com/x/demo",
+                "--env",
+                "dev,prod",
+            ],
         );
         assert_eq!(code, EXIT_OK, "{err}");
         let set = json(&out);
@@ -859,7 +865,10 @@ mod cli {
         assert_eq!(set["environments"], serde_json::json!(["dev", "prod"]));
         let (code, out, _) = run(dir.path(), None, true, &["settings"]);
         assert_eq!(code, EXIT_OK);
-        assert_eq!(out.trim(), "repo https://github.com/x/demo · environments dev, prod");
+        assert_eq!(
+            out.trim(),
+            "repo https://github.com/x/demo · environments dev, prod"
+        );
         let (code, out, _) = run(dir.path(), None, false, &["settings", "--env", "a b"]);
         assert_eq!(code, cli::EXIT_REFUSED, "{out}");
         let refused = json(&out);
@@ -871,8 +880,17 @@ mod cli {
                 .contains("\"a b\" is not a lowercase name"),
             "{refused}"
         );
-        let (code, out, _) = run(dir.path(), None, false, &["new", "staged", "--env", "staging"]);
-        assert_eq!(code, cli::EXIT_REFUSED, "the board's environments are the new ones: {out}");
+        let (code, out, _) = run(
+            dir.path(),
+            None,
+            false,
+            &["new", "staged", "--env", "staging"],
+        );
+        assert_eq!(
+            code,
+            cli::EXIT_REFUSED,
+            "the board's environments are the new ones: {out}"
+        );
     }
 
     #[test]
@@ -1030,7 +1048,7 @@ mod cli {
         assert!(
             std::fs::read_to_string(dir.path().join(".devagotchi/hooks/stop.sh"))
                 .unwrap()
-                .contains("board held --text")
+                .contains("board hook stop")
         );
         assert!(
             std::fs::read_to_string(dir.path().join(".devagotchi/.gitignore"))
@@ -1041,13 +1059,13 @@ mod cli {
             hooks["claude_code"]["hooks"]["Stop"][0]["hooks"][0]["command"]
                 .as_str()
                 .unwrap()
-                .contains("stop.sh claude")
+                .contains("hook stop --as claude")
         );
         assert!(
             hooks["codex"]["hooks"]["SessionStart"][0]["hooks"][0]["command"]
                 .as_str()
                 .unwrap()
-                .contains("session-start.sh codex")
+                .contains("hook session-start --as codex")
         );
         let (code, out, _) = run(dir.path(), None, true, &["hooks", "--for", "codex"]);
         assert_eq!(code, EXIT_OK);
@@ -1227,52 +1245,6 @@ mod cli {
             "s-flag"
         );
         assert!(new(None, &["new", "none"])["session"].is_null());
-    }
-
-    #[cfg(unix)]
-    #[test]
-    fn the_session_start_hook_exports_the_clis_session_id() {
-        use std::{io::Write, process::Command, process::Stdio};
-
-        let dir = tempfile::tempdir().unwrap();
-        assert_eq!(
-            run(dir.path(), None, false, &["init", "--project", "demo"]).0,
-            EXIT_OK
-        );
-        assert_eq!(run(dir.path(), None, false, &["hooks"]).0, EXIT_OK);
-        let script = dir.path().join(".devagotchi/hooks/session-start.sh");
-        let hook = |input: &str| -> String {
-            let env_file = dir.path().join("claude-env");
-            let _ = std::fs::remove_file(&env_file);
-            let mut child = Command::new("sh")
-                .arg(&script)
-                .arg("claude")
-                // `true board prime --text`: the prime itself is not under test here.
-                .env("DEVAGOTCHI", "true")
-                .env("CLAUDE_ENV_FILE", &env_file)
-                .stdin(Stdio::piped())
-                .stdout(Stdio::null())
-                .spawn()
-                .unwrap();
-            child
-                .stdin
-                .take()
-                .unwrap()
-                .write_all(input.as_bytes())
-                .unwrap();
-            assert!(child.wait().unwrap().success());
-            std::fs::read_to_string(&env_file).unwrap_or_default()
-        };
-        assert_eq!(
-            hook(r#"{"session_id": "4f1c-9a.b_2", "hook_event_name": "SessionStart"}"#),
-            "export DEVAGOTCHI_SESSION=4f1c-9a.b_2\n"
-        );
-        assert_eq!(
-            hook(r#"{"session_id":"x; rm -rf /"}"#),
-            "",
-            "only a plain id is exported"
-        );
-        assert_eq!(hook(r#"{"hook_event_name": "SessionStart"}"#), "");
     }
 
     #[test]
@@ -1551,6 +1523,7 @@ mod bound {
                 audit,
                 links,
             },
+            issue_store: Arc::new(crate::issue_lifecycle::IssueLifecycleStore::disabled()),
             web: None,
             passkeys: None,
         };
@@ -1855,7 +1828,10 @@ mod bound {
         )
         .await
         .unwrap();
-        let session = init.headers()["mcp-session-id"].to_str().unwrap().to_string();
+        let session = init.headers()["mcp-session-id"]
+            .to_str()
+            .unwrap()
+            .to_string();
         post(
             json!({ "jsonrpc": "2.0", "method": "notifications/initialized" }),
             Some(&session),
@@ -1888,7 +1864,12 @@ mod bound {
         // A configured board the agent holds a grant for (not a person's).
         let shared = dir.path().join("shared");
         std::fs::create_dir_all(&shared).unwrap();
-        let (code, _, err) = run(&shared, &dir.path().join("none.json"), None, &["init", "--project", "shared"]);
+        let (code, _, err) = run(
+            &shared,
+            &dir.path().join("none.json"),
+            None,
+            &["init", "--project", "shared"],
+        );
         assert_eq!(code, EXIT_OK, "{err}");
         let url = hub_with(
             dir.path(),
@@ -1912,7 +1893,13 @@ mod bound {
                     &project,
                     &account,
                     Some("claude"),
-                    &["settings", "--repo", "https://github.com/x/demo", "--env", "dev, prod"],
+                    &[
+                        "settings",
+                        "--repo",
+                        "https://github.com/x/demo",
+                        "--env",
+                        "dev, prod",
+                    ],
                 );
                 assert_eq!(code, EXIT_OK, "{err}");
                 assert_eq!(set["repo"], "https://github.com/x/demo", "{set}");
@@ -1920,30 +1907,61 @@ mod bound {
                 let (code, read, err) = run(&project, &account, None, &["settings"]);
                 assert_eq!(code, EXIT_OK, "{err}");
                 assert_eq!(read, set, "read back as set");
-                let (code, ticket, err) = run(&project, &account, Some("claude"), &["new", "after the settings"]);
+                let (code, ticket, err) = run(
+                    &project,
+                    &account,
+                    Some("claude"),
+                    &["new", "after the settings"],
+                );
                 assert_eq!(code, EXIT_OK, "{err}");
                 assert_eq!(ticket["repo"], "https://github.com/x/demo", "P2c: {ticket}");
-                let (code, refused, all) = run(&project, &account, None, &["settings", "--repo", "ftp://x/demo"]);
+                let (code, refused, all) = run(
+                    &project,
+                    &account,
+                    None,
+                    &["settings", "--repo", "ftp://x/demo"],
+                );
                 assert_eq!(code, EXIT_REFUSED, "{all}");
                 assert_eq!(refused["error"]["code"], "invalid_settings", "{refused}");
                 let next = refused["error"]["next"].as_str().unwrap();
-                assert!(next.contains("is not an https URL") && next.contains("board settings again"), "{next}");
-                let (code, refused, all) = run(&project, &account, None, &["settings", "--env", "Prod"]);
+                assert!(
+                    next.contains("is not an https URL") && next.contains("board settings again"),
+                    "{next}"
+                );
+                let (code, refused, all) =
+                    run(&project, &account, None, &["settings", "--env", "Prod"]);
                 assert_eq!(code, EXIT_REFUSED, "{all}");
-                assert!(refused["error"]["next"].as_str().unwrap().contains("not a lowercase name"), "{refused}");
+                assert!(
+                    refused["error"]["next"]
+                        .as_str()
+                        .unwrap()
+                        .contains("not a lowercase name"),
+                    "{refused}"
+                );
             })
             .await
             .unwrap();
         }
         // The agent's grant is not a person's: it reads nothing and changes nothing there.
-        let refused = tool(&url, "tok-agent", "board_settings",
-            json!({ "project": "shared", "repo": "https://github.com/x/shared" })).await;
+        let refused = tool(
+            &url,
+            "tok-agent",
+            "board_settings",
+            json!({ "project": "shared", "repo": "https://github.com/x/shared" }),
+        )
+        .await;
         assert_eq!(refused["isError"], true, "{refused}");
         assert!(refused.to_string().contains("not_owner"), "{refused}");
         let (_, board) = crate::board::open_project(&shared).unwrap();
         assert_eq!(board.settings().unwrap().repo, None);
         // And the member's own board is not the agent's to reach at all.
-        let refused = tool(&url, "tok-agent", "board_settings", json!({ "project": "demo" })).await;
+        let refused = tool(
+            &url,
+            "tok-agent",
+            "board_settings",
+            json!({ "project": "demo" }),
+        )
+        .await;
         assert_eq!(refused["isError"], true, "{refused}");
         assert!(refused.to_string().contains("unknown_board"), "{refused}");
     }
@@ -2425,7 +2443,11 @@ fn a_boards_repo_and_environments_are_set_checked_and_on_the_chain() {
         .set_project(&jesse, &super::ProjectSettings::default())
         .expect("nothing given reads");
     assert_eq!(read, Settings::default());
-    assert_eq!(f.board.events(0, 1000).unwrap().len(), before, "a read writes nothing");
+    assert_eq!(
+        f.board.events(0, 1000).unwrap().len(),
+        before,
+        "a read writes nothing"
+    );
 
     let set = f
         .board
@@ -2440,7 +2462,11 @@ fn a_boards_repo_and_environments_are_set_checked_and_on_the_chain() {
     assert_eq!(set.repo.as_deref(), Some("https://github.com/x/y"));
     assert_eq!(set.environments, ["dev", "prod"]);
     assert_eq!(f.board.settings().unwrap(), set, "read back");
-    assert_eq!(set.lease_ttl_ms, Settings::default().lease_ttl_ms, "the rest stays");
+    assert_eq!(
+        set.lease_ttl_ms,
+        Settings::default().lease_ttl_ms,
+        "the rest stays"
+    );
     let changed = f.board.events(0, 1000).unwrap().pop().unwrap();
     assert_eq!(changed.action, "board.settings_changed");
     assert_eq!(changed.actor, "jesse");
@@ -2463,18 +2489,25 @@ fn a_boards_repo_and_environments_are_set_checked_and_on_the_chain() {
     assert_eq!(set.environments, ["staging"]);
     assert!(f.board.verify_chain().unwrap().ok);
 
-    let refused = |patch: super::ProjectSettings| {
-        f.board
-            .set_project(&jesse, &patch)
-            .expect_err("refused")
-    };
-    for repo in ["http://github.com/x/y", "github.com/x/y", "https://", "https://exa mple.com/x", "ftp://x.y/z"] {
+    let refused =
+        |patch: super::ProjectSettings| f.board.set_project(&jesse, &patch).expect_err("refused");
+    for repo in [
+        "http://github.com/x/y",
+        "github.com/x/y",
+        "https://",
+        "https://exa mple.com/x",
+        "ftp://x.y/z",
+    ] {
         let error = refused(super::ProjectSettings {
             repo: Some(repo.into()),
             ..Default::default()
         });
         assert_eq!(error.code, "invalid_settings", "{repo}");
-        assert!(error.message.contains("is not an https URL"), "{repo}: {}", error.message);
+        assert!(
+            error.message.contains("is not an https URL"),
+            "{repo}: {}",
+            error.message
+        );
     }
     let many: Vec<String> = (0..21).map(|n| format!("e{n}")).collect();
     for (environments, says) in [
@@ -2489,7 +2522,11 @@ fn a_boards_repo_and_environments_are_set_checked_and_on_the_chain() {
             ..Default::default()
         });
         assert_eq!(error.code, "invalid_settings", "{environments:?}");
-        assert!(error.message.contains(says), "{environments:?}: {}", error.message);
+        assert!(
+            error.message.contains(says),
+            "{environments:?}: {}",
+            error.message
+        );
     }
     let after = f.board.settings().unwrap();
     assert_eq!(after.environments, ["staging"], "a refusal changes nothing");
@@ -2543,7 +2580,10 @@ fn a_board_on_the_previous_default_workflow_gets_the_reopen_transitions_once() {
     store_workflow(&path, &previous);
 
     let board = Board::open(&path, "devagotchi").expect("reopen");
-    assert_eq!(board.workflow().expect("workflow"), Workflow::default_workflow());
+    assert_eq!(
+        board.workflow().expect("workflow"),
+        Workflow::default_workflow()
+    );
     let after = board.events(0, 1000).expect("events");
     assert_eq!(&after[..events.len()], &events[..], "every event kept");
     let upgraded = after.last().expect("upgrade event");
@@ -2606,7 +2646,10 @@ fn a_customised_workflow_is_left_as_it_is() {
     let fresh = dir.path().join("fresh.sqlite3");
     drop(Board::open(&fresh, "devagotchi").expect("new"));
     let board = Board::open(&fresh, "devagotchi").expect("reopen new");
-    assert_eq!(board.workflow().expect("workflow"), Workflow::default_workflow());
+    assert_eq!(
+        board.workflow().expect("workflow"),
+        Workflow::default_workflow()
+    );
     assert!(
         board
             .events(0, 1000)

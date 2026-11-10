@@ -3,7 +3,7 @@
 # has been built (see README: Build and start the broker).
 [Unit]
 Description=Devagotchi broker (per-user, independently supervised jobs)
-Documentation=https://github.com/EonsofStupid/devagotchi
+Documentation=https://github.com/devagotchi/devagotchi
 ConditionPathExists=/devspace/bin/devagotchi
 After=default.target
 

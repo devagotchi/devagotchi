@@ -43,7 +43,7 @@ pub const USAGE: &str = "Usage:
   devagotchi whoami [--json]                            who this machine is signed in as
 
 login shows a code and a URL; open the URL on any device, check or enter the code, approve
-it there (on a hub, signed in with your passkey), and the sign-in lands here (OAuth device
+it there (on a hub, signed in to your account), and the sign-in lands here (OAuth device
 authorization, RFC 8628). --hub defaults to @HUB@. Tokens are kept in account.json under
 the config directory, readable by you alone. A hosted hub requires an account; a local or
 self-hosted run does not, and --local records that choice.
@@ -694,7 +694,7 @@ fn hub_endpoint(metadata: &serde_json::Value, hub: &str, name: &str) -> Option<S
 /// Sign in at a hub: an account at once where the hub opens them for agents
 /// (`auth.mode devagotchi`, claimed later), otherwise device authorization (RFC 8628) at
 /// the endpoints the hub's metadata names: the person approves the code on the hub's
-/// `/device` page, signed in with their passkey (`auth.mode hub`).
+/// `/device` page, signed in to their account (`auth.mode hub`).
 async fn hub_device_login(hub: &str, tell: &mut dyn Write) -> Result<Account, Refusal> {
     let hub = hub.trim_end_matches('/');
     let http = hub_http()?;

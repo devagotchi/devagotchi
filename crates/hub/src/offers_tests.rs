@@ -105,7 +105,7 @@ fn path_of(link: &str, hub: &Hosted) -> String {
     path
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn on_by_default_offered_once_and_a_yes_is_kept_in_the_users_own_words() {
     for url in stores().await {
         let hub = hosted_with(url.as_deref(), |_, _| json!({})).await;
@@ -310,7 +310,7 @@ async fn verified_person(hub: &Hosted, n: u32, email: &str) -> (Person, String, 
     (person, subject, tenant)
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn with_provisioning_a_yes_links_the_account_on_nomen_with_no_click() {
     for url in stores().await {
         let (nomen, fake) = fake_nomen().await;
@@ -483,7 +483,7 @@ async fn with_provisioning_a_yes_links_the_account_on_nomen_with_no_click() {
     }
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn the_one_tap_link_signs_in_with_the_network_and_offers_then_says_linked() {
     for url in stores().await {
         let hub = hosted_with(

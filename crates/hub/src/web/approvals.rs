@@ -78,13 +78,26 @@ pub async fn list(
             Some(("/account", "Your account")),
         );
     }
-    let pending = pending(&state, &subject).await;
+    let pending = match pending(&state, &subject).await {
+        Ok(pending) => pending,
+        Err(error) => {
+            eprintln!("devagotchi hub: approvals: {error}");
+            return unavailable();
+        }
+    };
     let key = state.hub.push.as_ref().map(|p| p.public_key.clone());
     let flash = Flash {
         done: shown.done.as_deref(),
         test: shown.test.as_deref(),
     };
-    let can_test = !state.hub.approval_boards(&subject).is_empty();
+    let can_test = !pending.is_empty()
+        || match state.hub.approval_boards(&subject) {
+            Ok(boards) => !boards.is_empty(),
+            Err(error) => {
+                eprintln!("devagotchi hub: approval boards: {error}");
+                return unavailable();
+            }
+        };
     page(&pending, &flash, key.as_deref(), &subject.id, can_test)
 }
 
@@ -94,19 +107,19 @@ pub async fn list(
 pub(super) async fn pending(
     state: &AppState,
     subject: &crate::auth::Subject,
-) -> Vec<(String, ApprovalStatus)> {
-    let boards = state.hub.approval_boards(subject);
+) -> devagotchi_contracts::BridgeResult<Vec<(String, ApprovalStatus)>> {
+    let boards = state.hub.approval_boards(subject)?;
     tokio::task::spawn_blocking(move || {
         let mut all = Vec::new();
         for (project, board) in boards {
-            for approval in board.pending_approvals().unwrap_or_default() {
+            for approval in board.pending_approvals()? {
                 all.push((project.clone(), approval));
             }
         }
-        all
+        Ok(all)
     })
     .await
-    .unwrap_or_default()
+    .map_err(|error| devagotchi_contracts::BridgeError::new("board_store", error.to_string()))?
 }
 
 /// "Send me a test approval": a harmless approval on the person's first board, pushed to
@@ -133,7 +146,14 @@ pub async fn test(State(state): State<AppState>, headers: HeaderMap) -> Response
     let Some(push) = state.hub.push.clone() else {
         return see_other("/approvals", &[]);
     };
-    let Some((project, board)) = state.hub.approval_boards(&subject).into_iter().next() else {
+    let boards = match state.hub.approval_boards(&subject) {
+        Ok(boards) => boards,
+        Err(error) => {
+            eprintln!("devagotchi hub: approval boards: {error}");
+            return unavailable();
+        }
+    };
+    let Some((project, board)) = boards.into_iter().next() else {
         return pages::message(
             StatusCode::FORBIDDEN,
             "Not yours to test",

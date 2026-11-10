@@ -108,7 +108,9 @@ fn join(base: &str, tail: &str) -> String {
 }
 
 fn parent(dir: &str) -> Option<&str> {
-    dir.rfind(['\\', '/']).map(|at| &dir[..at]).filter(|parent| !parent.is_empty())
+    dir.rfind(['\\', '/'])
+        .map(|at| &dir[..at])
+        .filter(|parent| !parent.is_empty())
 }
 
 fn is_system_dir(path: &str) -> bool {
@@ -141,7 +143,10 @@ mod tests {
     #[test]
     fn the_bash_line_keeps_what_was_written() {
         assert_eq!(bash_line("Get-ChildItem"), None);
-        assert_eq!(bash_line("bash -c 'echo hi'").as_deref(), Some("bash -c 'echo hi'"));
+        assert_eq!(
+            bash_line("bash -c 'echo hi'").as_deref(),
+            Some("bash -c 'echo hi'")
+        );
         assert_eq!(
             bash_line("./scripts/check.sh --all").as_deref(),
             Some(r#""$BASH" ./scripts/check.sh --all"#)
@@ -157,8 +162,10 @@ mod tests {
     }
 
     fn find(env: &[(&str, &str)], files: &[&str]) -> Option<String> {
-        let env: HashMap<String, String> =
-            env.iter().map(|(k, v)| (k.to_string(), v.to_string())).collect();
+        let env: HashMap<String, String> = env
+            .iter()
+            .map(|(k, v)| (k.to_string(), v.to_string()))
+            .collect();
         find_bash(|name| env.get(name).cloned(), |path| files.contains(&path))
     }
 
@@ -208,7 +215,10 @@ mod tests {
             Some(bash)
         );
         // An installed Git still wins over PATH.
-        assert_eq!(find_all(&[], r"E:\Git\cmd", &[cmd, bash, PF]).as_deref(), Some(PF));
+        assert_eq!(
+            find_all(&[], r"E:\Git\cmd", &[cmd, bash, PF]).as_deref(),
+            Some(PF)
+        );
         // git.exe on PATH without a bash beside it finds nothing.
         assert_eq!(find_all(&[], r"E:\Git\cmd", &[cmd]), None);
     }
@@ -218,11 +228,21 @@ mod tests {
         let env = [("DEVAGOTCHI_BASH", WSL)];
         assert_eq!(find_all(&env, "", &[WSL]), None);
         let env = [("DEVAGOTCHI_BASH", r"C:\WINDOWS\SysNative\bash.exe")];
-        assert_eq!(find_all(&env, "", &[r"C:\WINDOWS\SysNative\bash.exe"]), None);
+        assert_eq!(
+            find_all(&env, "", &[r"C:\WINDOWS\SysNative\bash.exe"]),
+            None
+        );
         // git.exe in System32 would put bash.exe beside it there: refused.
         let path = r"C:\Windows\System32";
-        let files = [r"C:\Windows\System32\git.exe", WSL, r"C:\Windows\bin\bash.exe"];
-        assert_eq!(find_all(&[], path, &files).as_deref(), Some(r"C:\Windows\bin\bash.exe"));
+        let files = [
+            r"C:\Windows\System32\git.exe",
+            WSL,
+            r"C:\Windows\bin\bash.exe",
+        ];
+        assert_eq!(
+            find_all(&[], path, &files).as_deref(),
+            Some(r"C:\Windows\bin\bash.exe")
+        );
         assert_eq!(find_all(&[], path, &files[..2]), None);
         assert_eq!(find_all(&env, path, &[WSL]), None);
     }

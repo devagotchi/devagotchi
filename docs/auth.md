@@ -6,6 +6,19 @@ A hosted hub in `auth.mode` `hub` with `tenancy.mode` `multi` (app.devagotchi.co
 
 This page is `auth.mode` `devagotchi`. The hub has a second account system beside it, `auth.mode` `hub`: passkey accounts in SQLite or Postgres, the hub's own OAuth server for AI clients at `/oauth/*`, and the browser claim of a new hub. That one is described in [crates/hub/README.md](../crates/hub/README.md) and is what `deploy/compose/` runs. A hub runs the mode its config names. The two share no tables, and each mounts its own `/claim` and `/.well-known/oauth-authorization-server`.
 
+In `auth.mode` `hub`, `/auth/login` offers configured Google, GitHub or OIDC providers and
+email/password sign-in before the passkey fallback. Password sign-in is for an existing
+account; single-owner hubs do not expose public account creation. On first setup, the
+host-issued owner link can establish a local login email and password directly at
+`/owner/password`; a passkey is optional. A signed-in owner can change these credentials on
+`/account`. The address is a local login name; it is not claimed as verified and does not
+require Google, Nomen, or an SMTP server. Email-link recovery is available only when
+`auth.email` has a working mail server configured and the person can receive mail at that
+address. Google, GitHub, Nomen and email-link sign-in are not enabled automatically: the hub
+operator must configure provider credentials and mail delivery. If locked out of a self-hosted
+hub without working email recovery, its host operator can issue a replacement owner link with
+`devagotchi hub owner --replace`.
+
 The design notes, including how today's Nomen-only hub maps onto this, are in [plan/hub-auth-and-identity.md](plan/hub-auth-and-identity.md).
 
 ## What a minimal hub.json is
@@ -49,11 +62,11 @@ A new person gets an account id `dg_` plus 32 hex characters and a personal work
 2. Else a verified email already on file → link this subject to that account.
 3. Else create an account. An unverified email never selects an account.
 
-`devagotchi login` (no flags) does device authorization against the hub, default `https://app.devagotchi.com`. `--issuer` still talks to an upstream issuer directly. `connect-nomen` keeps using that direct path. `--hub URL` points the device flow at another hub. The CLI finds the endpoints in the hub's `/.well-known/oauth-authorization-server`, so the same command works against a hub in `auth.mode hub`, where the code is approved on the hub's `/device` page by a person signed in with their passkey (`crates/hub/README.md`, "A terminal signs in").
+`devagotchi login` (no flags) does device authorization against the hub, default `https://app.devagotchi.com`. `--issuer` still talks to an upstream issuer directly. `connect-nomen` keeps using that direct path. `--hub URL` points the device flow at another hub. The CLI finds the endpoints in the hub's `/.well-known/oauth-authorization-server`, so the same command works against a hub in `auth.mode hub`, where the code is approved on the hub's `/device` page by a person signed in to their account (`crates/hub/README.md`, "A terminal signs in").
 
 ## Magic links
 
-A magic link proves the mailbox only if it is delivered out of band. The HTTP response never contains it. On a public `https` URL, magic links are off until `auth.local.deliver` is `"log"`. `log` writes the URL to the hub journal and to `{state}/login-outbox/` (mode 0600). Loopback defaults to `log`, which is what tests use. There is no mail sender in the hub.
+A magic link proves the mailbox only if it is delivered out of band. The HTTP response never contains it. On a public `https` URL, magic links are off until `auth.local.deliver` is `"log"`. `log` writes the URL to the hub journal and to `{state}/login-outbox/` (mode 0600). Loopback defaults to `log`, which is what tests use. There is no mail sender in this mode; `auth.mode hub` sends its sign-in links and notices over SMTP through `auth.email` ([crates/hub/README.md](../crates/hub/README.md)).
 
 ## Tokens
 

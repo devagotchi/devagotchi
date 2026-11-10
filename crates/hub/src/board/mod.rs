@@ -10,8 +10,10 @@
 pub mod approval;
 pub mod cli;
 pub mod face;
+pub(crate) mod hosted;
 mod lease;
 pub mod mcp;
+pub(crate) mod migration;
 pub mod remote;
 pub mod welcome;
 pub mod workflow;
@@ -418,7 +420,9 @@ fn check_repo(repo: &str) -> BridgeResult<String> {
     {
         return Err(fail(
             "invalid_settings",
-            format!("repo {repo:?} is not an https URL: give one like https://github.com/you/project"),
+            format!(
+                "repo {repo:?} is not an https URL: give one like https://github.com/you/project"
+            ),
         ));
     }
     Ok(repo.to_string())
@@ -479,7 +483,8 @@ impl Default for Settings {
 /// One project's board. One connection, one writer: SQLite in WAL mode serialises
 /// writers anyway, and every mutation appends its event in the same transaction.
 pub struct Board {
-    connection: Mutex<Connection>,
+    connection: Option<Mutex<Connection>>,
+    hosted: Option<hosted::HostedBoard>,
     project: String,
     prefix: String,
     clock: Clock,
@@ -699,13 +704,58 @@ impl Board {
         }
         upgrade_default_workflow(&mut connection, clock())?;
         Ok(Self {
-            connection: Mutex::new(connection),
+            connection: Some(Mutex::new(connection)),
+            hosted: None,
             project: project.to_string(),
             prefix,
             clock,
             changes: watch::channel(0).0,
             activity: None,
         })
+    }
+
+    pub(crate) async fn from_hosted(hosted: hosted::HostedBoard) -> BridgeResult<Self> {
+        let prefix = hosted.prefix().await?;
+        Ok(Self {
+            project: hosted.name.clone(),
+            prefix,
+            clock: system_clock(),
+            connection: None,
+            hosted: Some(hosted),
+            changes: watch::channel(0).0,
+            activity: None,
+        })
+    }
+
+    pub(crate) fn hosted_backend(&self) -> BridgeResult<&hosted::HostedBoard> {
+        self.hosted.as_ref().ok_or_else(|| {
+            fail(
+                "not_offered",
+                "issue integration requires a hosted Postgres board",
+            )
+        })
+    }
+
+    fn local(&self) -> BridgeResult<std::sync::MutexGuard<'_, Connection>> {
+        self.connection
+            .as_ref()
+            .ok_or_else(|| fail("board_store", "hosted board cannot access local storage"))?
+            .lock()
+            .map_err(|_| fail("board_store", "board lock poisoned"))
+    }
+
+    fn hosted_call<T>(
+        &self,
+        future: impl std::future::Future<Output = BridgeResult<T>>,
+        _mutation: bool,
+    ) -> BridgeResult<T> {
+        let hosted = self
+            .hosted
+            .as_ref()
+            .ok_or_else(|| fail("board_store", "no hosted backend"))?;
+        // The Postgres listener reports committed events, including other hubs' writes.
+        // Successful no-ops must not wake board_wait or the lease reaper.
+        hosted.blocking(future)
     }
 
     /// Tell `activity` of every change this board commits from now on.
@@ -722,7 +772,10 @@ impl Board {
 
     /// When the first lease held on this board lapses, if any is held.
     pub fn next_lease_expiry(&self) -> BridgeResult<Option<i64>> {
-        let connection = self.connection.lock().expect("board lock");
+        if let Some(hosted) = &self.hosted {
+            return self.hosted_call(hosted.next_lease_expiry(), false);
+        }
+        let connection = self.local()?;
         connection
             .query_row(
                 "SELECT MIN(lease_expires_at) FROM tickets WHERE holder IS NOT NULL",
@@ -746,12 +799,18 @@ impl Board {
     }
 
     pub fn settings(&self) -> BridgeResult<Settings> {
-        let connection = self.connection.lock().expect("board lock");
+        if let Some(hosted) = &self.hosted {
+            return self.hosted_call(hosted.settings(), false);
+        }
+        let connection = self.local()?;
         load_settings(&connection)
     }
 
     pub fn workflow(&self) -> BridgeResult<Workflow> {
-        let connection = self.connection.lock().expect("board lock");
+        if let Some(hosted) = &self.hosted {
+            return self.hosted_call(hosted.workflow(), false);
+        }
+        let connection = self.local()?;
         load_workflow(&connection)
     }
 
@@ -760,6 +819,9 @@ impl Board {
     /// web board (increment 10) call these; until then only the tests do.
     #[allow(dead_code)]
     pub fn put_settings(&self, actor: &Actor<'_>, settings: &Settings) -> BridgeResult<()> {
+        if let Some(hosted) = &self.hosted {
+            return self.hosted_call(hosted.put_settings(actor, settings), true);
+        }
         if settings.lease_min_ttl_ms <= 0
             || settings.lease_max_ttl_ms < settings.lease_min_ttl_ms
             || settings.lease_ttl_ms < settings.lease_min_ttl_ms
@@ -784,7 +846,14 @@ impl Board {
     /// fields given replace the board's, after the same checks on every face; the other
     /// settings stay. Nothing given changes nothing and returns the settings as they are.
     /// A change is on the chain as `board.settings_changed`, naming what changed.
-    pub fn set_project(&self, actor: &Actor<'_>, patch: &ProjectSettings) -> BridgeResult<Settings> {
+    pub fn set_project(
+        &self,
+        actor: &Actor<'_>,
+        patch: &ProjectSettings,
+    ) -> BridgeResult<Settings> {
+        if let Some(hosted) = &self.hosted {
+            return self.hosted_call(hosted.set_project(actor, patch), true);
+        }
         let repo = patch.repo.as_deref().map(check_repo).transpose()?;
         let environments = patch
             .environments
@@ -823,6 +892,9 @@ impl Board {
     /// Replace the workflow. Every existing ticket's state must still exist in it.
     #[cfg_attr(not(test), allow(dead_code))]
     pub fn put_workflow(&self, actor: &Actor<'_>, workflow: &Workflow) -> BridgeResult<()> {
+        if let Some(hosted) = &self.hosted {
+            return self.hosted_call(hosted.put_workflow(actor, workflow), true);
+        }
         workflow.validate().map_err(invalid)?;
         self.write(actor, |w| {
             let mut statement =
@@ -856,8 +928,21 @@ impl Board {
 
     // ----- reads -------------------------------------------------------------
 
+    pub(crate) fn issue_source(
+        &self,
+        id: &str,
+    ) -> BridgeResult<Option<crate::issue_lifecycle::SourceIssue>> {
+        match &self.hosted {
+            Some(hosted) => self.hosted_call(hosted.issue_source(id), false),
+            None => Ok(None),
+        }
+    }
+
     pub fn get(&self, id: &str) -> BridgeResult<TicketView> {
-        let connection = self.connection.lock().expect("board lock");
+        if let Some(hosted) = &self.hosted {
+            return self.hosted_call(hosted.view(id), false);
+        }
+        let connection = self.local()?;
         let workflow = load_workflow(&connection)?;
         let ticket = read_ticket(&connection, &workflow, id, self.now())?;
         let deps = read_deps(&connection, "ticket", id)?;
@@ -882,14 +967,20 @@ impl Board {
     }
 
     pub fn list(&self, filter: &Filter) -> BridgeResult<Vec<Ticket>> {
-        let connection = self.connection.lock().expect("board lock");
+        if let Some(hosted) = &self.hosted {
+            return self.hosted_call(hosted.list(filter), false);
+        }
+        let connection = self.local()?;
         let workflow = load_workflow(&connection)?;
         list_tickets(&connection, &workflow, filter, self.now(), None)
     }
 
     /// What `actor` could claim right now, best first: assigned to them, then priority, then age.
     pub fn ready(&self, actor: &Actor<'_>, limit: usize) -> BridgeResult<Vec<Ticket>> {
-        let connection = self.connection.lock().expect("board lock");
+        if let Some(hosted) = &self.hosted {
+            return self.hosted_call(hosted.ready(actor, limit), false);
+        }
+        let connection = self.local()?;
         let workflow = load_workflow(&connection)?;
         let filter = Filter {
             ready: true,
@@ -928,7 +1019,10 @@ impl Board {
                 }
             }
         }
-        let now = self.now();
+        let now = match &self.hosted {
+            Some(hosted) => self.hosted_call(hosted.database_now(), false)?,
+            None => self.now(),
+        };
         let settings = self.settings()?;
         let summary = |t: &Ticket| Ready {
             id: t.id.clone(),
@@ -962,7 +1056,10 @@ impl Board {
     }
 
     pub fn events(&self, after_seq: i64, limit: usize) -> BridgeResult<Vec<Event>> {
-        let connection = self.connection.lock().expect("board lock");
+        if let Some(hosted) = &self.hosted {
+            return self.hosted_call(hosted.events_page(after_seq, limit), false);
+        }
+        let connection = self.local()?;
         let mut statement = connection
             .prepare(
                 "SELECT seq, at, actor, action, ticket, data, fence, prev_hash, hash
@@ -977,7 +1074,10 @@ impl Board {
 
     /// Recompute the event chain. The first broken seq, if any, is reported, never hidden.
     pub fn verify_chain(&self) -> BridgeResult<ChainStatus> {
-        let connection = self.connection.lock().expect("board lock");
+        if let Some(hosted) = &self.hosted {
+            return self.hosted_call(hosted.verify_chain(), false);
+        }
+        let connection = self.local()?;
         let mut statement = connection
             .prepare(
                 "SELECT seq, at, actor, action, ticket, data, fence, prev_hash, hash FROM events ORDER BY seq",
@@ -1011,6 +1111,9 @@ impl Board {
     // ----- writes ------------------------------------------------------------
 
     pub fn create(&self, actor: &Actor<'_>, new: NewTicket) -> BridgeResult<Ticket> {
+        if let Some(hosted) = &self.hosted {
+            return self.hosted_call(hosted.create(actor, &new), true);
+        }
         let title = new.title.trim().to_string();
         if title.is_empty() || title.chars().count() > 300 {
             return Err(invalid("title must be 1 to 300 characters"));
@@ -1033,17 +1136,17 @@ impl Board {
             return Err(invalid("occurrences must be at least 1"));
         }
         self.write(actor, |w| {
-            let workflow = load_workflow(w.tx)?;
-            let settings = load_settings(w.tx)?;
-            check_environment(&settings, anchors.environment.as_deref())?;
-            let now = w.now;
-            let id = match &new.parent {
-                Some(parent) => {
-                    let parent_row = read_ticket(w.tx, &workflow, parent, now)?;
-                    if workflow.is_done(&parent_row.state) {
-                        return Err(fail("parent_closed", format!("{parent} is closed")));
-                    }
-                    let next: i64 = w
+        let workflow = load_workflow(w.tx)?;
+        let settings = load_settings(w.tx)?;
+        check_environment(&settings, anchors.environment.as_deref())?;
+        let now = w.now;
+        let id = match &new.parent {
+            Some(parent) => {
+                let parent_row = read_ticket(w.tx, &workflow, parent, now)?;
+                if workflow.is_done(&parent_row.state) {
+                    return Err(fail("parent_closed", format!("{parent} is closed")));
+                }
+                let next: i64 = w
                         .tx
                         .query_row(
                             "UPDATE tickets SET child_seq = child_seq + 1 WHERE id = ?1 RETURNING child_seq",
@@ -1051,15 +1154,15 @@ impl Board {
                             |row| row.get(0),
                         )
                         .map_err(store_error)?;
-                    format!("{parent}.{next}")
-                }
-                None => w.fresh_id(&self.prefix, &self.project, &title, actor.id)?,
-            };
-            if let Some(from) = &new.discovered_from {
-                read_ticket(w.tx, &workflow, from, now)?;
+                format!("{parent}.{next}")
             }
-            let priority = new.priority.unwrap_or(settings.default_priority);
-            w.tx
+            None => w.fresh_id(&self.prefix, &self.project, &title, actor.id)?,
+        };
+        if let Some(from) = &new.discovered_from {
+            read_ticket(w.tx, &workflow, from, now)?;
+        }
+        let priority = new.priority.unwrap_or(settings.default_priority);
+        w.tx
                 .execute(
                     "INSERT INTO tickets (id, kind, title, description, state, priority, labels, parent,
                        assignee, created_by, created_at, updated_at, machine, repo, environment, agent,
@@ -1089,19 +1192,19 @@ impl Board {
                     ],
                 )
                 .map_err(store_error)?;
-            if let Some(parent) = &new.parent {
-                insert_dep(w.tx, &id, parent, DepKind::Parent, actor.id, now)?;
-            }
-            if let Some(from) = &new.discovered_from {
-                insert_dep(w.tx, &id, from, DepKind::DiscoveredFrom, actor.id, now)?;
-            }
-            w.event(
+        if let Some(parent) = &new.parent {
+            insert_dep(w.tx, &id, parent, DepKind::Parent, actor.id, now)?;
+        }
+        if let Some(from) = &new.discovered_from {
+            insert_dep(w.tx, &id, from, DepKind::DiscoveredFrom, actor.id, now)?;
+        }
+        w.event(
                 "ticket.created",
                 Some(&id),
                 None,
                 serde_json::json!({ "title": title, "state": workflow.initial_state, "parent": new.parent }),
             )?;
-            read_ticket(w.tx, &workflow, &id, now)
+        read_ticket(w.tx, &workflow, &id, now)
         })
     }
 
@@ -1114,6 +1217,9 @@ impl Board {
         version: i64,
         patch: Patch,
     ) -> BridgeResult<Ticket> {
+        if let Some(hosted) = &self.hosted {
+            return self.hosted_call(hosted.update(actor, id, version, &patch), true);
+        }
         self.write(actor, |w| {
             let workflow = load_workflow(w.tx)?;
             let now = w.now;
@@ -1248,6 +1354,9 @@ impl Board {
         depends_on: &str,
         kind: DepKind,
     ) -> BridgeResult<Vec<Dep>> {
+        if let Some(hosted) = &self.hosted {
+            return self.hosted_call(hosted.add_dep(actor, id, depends_on, kind), true);
+        }
         if id == depends_on {
             return Err(invalid("a ticket cannot depend on itself"));
         }
@@ -1280,6 +1389,9 @@ impl Board {
         depends_on: &str,
         kind: DepKind,
     ) -> BridgeResult<Vec<Dep>> {
+        if let Some(hosted) = &self.hosted {
+            return self.hosted_call(hosted.remove_dep(actor, id, depends_on, kind), true);
+        }
         self.write(actor, |w| {
             let removed =
                 w.tx.execute(
@@ -1311,6 +1423,12 @@ impl Board {
         to_principal: Option<&str>,
         fence: Option<i64>,
     ) -> BridgeResult<Note> {
+        if let Some(hosted) = &self.hosted {
+            return self.hosted_call(
+                hosted.add_note(actor, id, kind, body, to_principal, fence),
+                true,
+            );
+        }
         let body = body.trim();
         if body.is_empty() || body.chars().count() > 20_000 {
             return Err(invalid("note body must be 1 to 20000 characters"));
@@ -1345,7 +1463,7 @@ impl Board {
         body: impl FnOnce(&mut Writer<'_>) -> BridgeResult<T>,
     ) -> BridgeResult<T> {
         let now = self.now();
-        let mut connection = self.connection.lock().expect("board lock");
+        let mut connection = self.local()?;
         let tx = connection
             .transaction_with_behavior(TransactionBehavior::Immediate)
             .map_err(store_error)?;

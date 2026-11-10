@@ -36,6 +36,8 @@ parser.add_argument("--keep", action="store_true", help="keep the work directory
 # Two builds of this commit, DEVAGOTCHI_BUILD=ci-a and ci-b: machine_update takes a machine
 # from one to the other (tests/machine_update_probe.py --installer none; Linux).
 parser.add_argument("--update-builds", nargs=2, type=Path, metavar=("DIR_A", "DIR_B"))
+parser.add_argument("--no-hub", action="store_true",
+                    help="only the broker and the stdio adapter: a machine without a Postgres for the hub")
 args = parser.parse_args()
 bins = args.bin_dir.resolve()
 devagotchi = bins / f"devagotchi{EXE}"
@@ -50,6 +52,12 @@ link_cmd = [str(devagotchi), "link"]
 git = shutil.which("git")
 if not git:
     sys.exit("git not found on PATH")
+# The hub keeps accounts and boards in Postgres (docs/adr/0001); every hub this run starts
+# reads the database from this variable. A password may travel in it: it is the secret store.
+storage = os.environ.get("DEVAGOTCHI_HUB_STORAGE_URL", "")
+if not args.no_hub and not storage.startswith(("postgres://", "postgresql://")):
+    sys.exit("set DEVAGOTCHI_HUB_STORAGE_URL to an empty Postgres database the hubs may fill "
+             "(for example postgres://postgres@127.0.0.1:55432/e2e); the hub does not serve from SQLite")
 git = os.path.realpath(git)
 
 work = Path(tempfile.mkdtemp(prefix="dvg-e2e-"))
@@ -126,6 +134,10 @@ def run_cmd(argv, label, expect=0, env=None):
     return ok, result.stdout.strip()
 
 
+class SkipRest(Exception):
+    """Raised after the adapter probes under --no-hub: the rest needs the hub."""
+
+
 ok = False
 try:
     print(f"work dir {work}; git {git}", flush=True)
@@ -145,6 +157,10 @@ try:
          "--cwd", str(account_workspace), "--account"],
         "stdio adapter probe (account)",
     ) and adapter_ok
+    if args.no_hub:
+        print("--- hub, board, link, Nomen, web and OAuth probes: skipped (--no-hub)", flush=True)
+        ok = adapter_ok
+        raise SkipRest
 
     token = "e2e-dev-token-" + os.urandom(12).hex()
     # The board's subjects: a person, two agents, and one token that holds no board.
@@ -255,6 +271,8 @@ try:
         print("--- promote-hub dry-run: skipped on Windows (a Linux deploy script)", flush=True)
         promote_ok = True
     ok = adapter_ok and hub_ok and board_ok and link_ok and update_ok and nomen_ok and web_ok and oauth_ok and promote_ok
+except SkipRest:
+    pass
 finally:
     for process in reversed(processes):
         if process.poll() is None:

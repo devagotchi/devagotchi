@@ -95,7 +95,11 @@ pub trait Face {
     fn verify_chain(&self) -> BridgeResult<ChainStatus>;
     /// The board's settings after naming its repo and environments; nothing given reads
     /// them (`board settings`).
-    fn project_settings(&self, actor: &Actor<'_>, patch: &ProjectSettings) -> BridgeResult<Settings>;
+    fn project_settings(
+        &self,
+        actor: &Actor<'_>,
+        patch: &ProjectSettings,
+    ) -> BridgeResult<Settings>;
 }
 
 impl Face for Board {
@@ -241,7 +245,11 @@ impl Face for Board {
         Board::verify_chain(self)
     }
 
-    fn project_settings(&self, actor: &Actor<'_>, patch: &ProjectSettings) -> BridgeResult<Settings> {
+    fn project_settings(
+        &self,
+        actor: &Actor<'_>,
+        patch: &ProjectSettings,
+    ) -> BridgeResult<Settings> {
         Board::set_project(self, actor, patch)
     }
 }

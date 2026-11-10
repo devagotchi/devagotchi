@@ -79,7 +79,7 @@ def main() -> int:
     processes.append(hub)
     joined = False
     try:
-        wait_ready(url, hub)
+        wait_ready(url, hub, work / "hub.log")
         ai = Connector(url, "Claude")
         with sync_playwright() as p:
             browser = p.chromium.launch(channel=args.channel)

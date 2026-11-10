@@ -52,7 +52,7 @@ explicit `https_proxy` has to be set system-wide (`/etc/environment`) since `sud
 
 ```bash
 # inside the tenant, as hades
-cd /devspace/repos && git clone https://github.com/EonsofStupid/devagotchi && cd devagotchi
+cd /devspace/repos && git clone https://github.com/devagotchi/devagotchi && cd devagotchi
 cargo build --locked --release --bins
 ln -sf /devspace/repos/devagotchi/target/release/devagotchi /devspace/bin/devagotchi
 systemctl --user start devagotchi-broker && systemctl --user status devagotchi-broker

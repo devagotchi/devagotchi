@@ -28,7 +28,7 @@ track=$(env_get DEVAGOTCHI_TRACK)
 current=$(env_get DEVAGOTCHI_IMAGE)
 bind=$(env_get DEVAGOTCHI_HUB_BIND); [[ -z "$bind" || "$bind" == 0.0.0.0 ]] && bind=127.0.0.1
 health="http://$bind:$(env_get DEVAGOTCHI_HUB_PORT | grep . || echo 8787)/healthz"
-files_base="${DEVAGOTCHI_FILES_BASE:-https://raw.githubusercontent.com/$(env_get DEVAGOTCHI_REPO | grep . || echo EonsofStupid/devagotchi)}"
+files_base="${DEVAGOTCHI_FILES_BASE:-https://raw.githubusercontent.com/$(env_get DEVAGOTCHI_REPO | grep . || echo devagotchi/devagotchi)}"
 files=(compose.yaml update.sh backup.sh)
 [[ -n "$track" ]] || { log "no DEVAGOTCHI_TRACK in $dir/.env"; exit 2; }
 

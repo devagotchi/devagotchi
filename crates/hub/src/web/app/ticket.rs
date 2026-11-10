@@ -65,12 +65,18 @@ pub async fn page(
         Ok(subject) => subject,
         Err(response) => return response,
     };
-    let Some(board) = open_board(&state, &subject, &project) else {
-        return unknown();
+    let board = match open_board(&state, &subject, &project) {
+        Ok(Some(board)) => board,
+        Ok(None) => return unknown(),
+        Err(error) => {
+            eprintln!("devagotchi hub: open ticket board: {error}");
+            return crate::web::routes::unavailable();
+        }
     };
     let wanted = id.clone();
     let read = tokio::task::spawn_blocking(move || {
         let view = board.get(&wanted)?;
+        let source = board.issue_source(&wanted)?;
         // The ticket's own history: the board's chain, read a page at a time.
         let mut events = Vec::new();
         let mut after = 0;
@@ -83,11 +89,16 @@ pub async fn page(
                     .filter(|e| e.ticket.as_deref() == Some(wanted.as_str())),
             );
         }
-        BridgeResult::Ok((view, events))
+        BridgeResult::Ok((view, events, source))
     })
     .await;
-    let Ok(Ok((view, events))) = read else {
-        return unknown();
+    let (view, events, source) = match read {
+        Ok(Ok(value)) => value,
+        Ok(Err(error)) if error.code == "not_found" => return unknown(),
+        other => {
+            eprintln!("devagotchi hub: read ticket: {other:?}");
+            return crate::web::routes::unavailable();
+        }
     };
     let site = words();
     let copy = &site.messages.app;
@@ -215,11 +226,37 @@ value=\"{}\">{inner}</form>",
             )
         })
         .unwrap_or_default();
+    let source = source
+        .map(|source| {
+            let finalization = match source.finalization() {
+                "pending" => &copy.issue_finalization_pending,
+                "needs_reconciliation" => &copy.issue_finalization_reconcile,
+                _ => &copy.issue_finalization_none,
+            };
+            format!(
+                "<section class=\"card\" id=\"issue-source\"><h2>{}</h2>\
+<p><a href=\"{}\" rel=\"noreferrer\">{} #{}</a></p>\
+<dl class=\"facts\"><dt>{}</dt><dd>{}</dd><dt>{}</dt><dd>{} / {}</dd>\
+<dt>{}</dt><dd id=\"issue-finalization\">{}</dd></dl></section>",
+                escape(&copy.issue_source),
+                escape(&source.issue_url),
+                escape(&source.repository),
+                source.issue_number,
+                escape(&copy.issue_source_state),
+                escape(&source.source_state),
+                escape(&copy.issue_source_revision),
+                source.source_revision,
+                source.epoch,
+                escape(&copy.issue_finalization),
+                escape(finalization)
+            )
+        })
+        .unwrap_or_default();
     let body = format!(
         "<p class=\"meta\"><a href=\"/app/boards/{}\">{}</a> · {}</p><h1>{}</h1>{flash}{undo}\
 <section class=\"card\" id=\"ticket\"><dl class=\"facts\"><dt>{}</dt><dd id=\"state\">{}</dd>\
 <dt>{}</dt><dd>P{}</dd><dt>{}</dt><dd>{}</dd><dt>{}</dt><dd id=\"assignee\">{}</dd><dt>{}</dt><dd>{}</dd>{anchors}</dl>\
-<pre class=\"what\">{}</pre>{actions}</section><h2>{}</h2>{notes}{comment}<h2>{}</h2>\
+<pre class=\"what\">{}</pre>{actions}</section>{source}<h2>{}</h2>{notes}{comment}<h2>{}</h2>\
 <ul class=\"rows\" id=\"history\">{history}</ul>",
         encode(&project),
         escape(&project),

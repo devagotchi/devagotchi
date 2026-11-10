@@ -248,7 +248,7 @@ async fn a_hub_that_does_not_count_keeps_nothing_and_says_so() {
     assert!(privacy.contains("30 days"), "{privacy}");
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn each_milestone_is_written_once_where_it_happens() {
     for store in stores().await {
         let hub = hosted_with(store.as_deref(), |dir, _| {

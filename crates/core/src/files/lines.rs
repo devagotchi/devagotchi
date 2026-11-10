@@ -89,12 +89,7 @@ fn count_lines(file: &mut File, size: u64) -> std::io::Result<u64> {
 
 /// Byte offset where 1-based line `line` starts, scanning forward through at most `scan`
 /// bytes; `Ok(Err(lines))` with the line count when the file has fewer lines.
-fn line_start(
-    file: &mut File,
-    size: u64,
-    line: u64,
-    scan: u64,
-) -> BridgeResult<Result<u64, u64>> {
+fn line_start(file: &mut File, size: u64, line: u64, scan: u64) -> BridgeResult<Result<u64, u64>> {
     if line == 1 {
         return Ok(if size > 0 { Ok(0) } else { Err(0) });
     }
@@ -173,7 +168,9 @@ fn read_lines_within(
     scan: u64,
 ) -> BridgeResult<Lines> {
     if ask.start_line == 0 {
-        return Err(invalid("start_line counts from 1, or back from the end when negative"));
+        return Err(invalid(
+            "start_line counts from 1, or back from the end when negative",
+        ));
     }
     if ask
         .line_count

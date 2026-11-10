@@ -29,7 +29,7 @@ FROM ${RUNTIME_IMAGE}
 # fetches the deploy files of that same commit with the image. A local build leaves it
 # empty, and update.sh then keeps the deploy files it has.
 ARG REVISION=""
-LABEL org.opencontainers.image.source="https://github.com/EonsofStupid/devagotchi" \
+LABEL org.opencontainers.image.source="https://github.com/devagotchi/devagotchi" \
       org.opencontainers.image.revision="${REVISION}" \
       org.opencontainers.image.description="Devagotchi hub: authenticated MCP for AI clients, routed to the machines that link to it"
 COPY --from=build /out/devagotchi /usr/local/bin/devagotchi

@@ -21,6 +21,9 @@ impl Board {
         title: &str,
         steps: &str,
     ) -> BridgeResult<Option<String>> {
+        if let Some(hosted) = &self.hosted {
+            return self.hosted_call(hosted.welcome_if_new(actor, title, steps), true);
+        }
         self.write(actor, |w| {
             let tickets: i64 =
                 w.tx.query_row("SELECT count(*) FROM tickets", [], |row| row.get(0))

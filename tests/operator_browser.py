@@ -48,11 +48,12 @@ def free_port() -> int:
         return s.getsockname()[1]
 
 
-def wait_ready(url: str, process: subprocess.Popen) -> None:
+def wait_ready(url: str, process: subprocess.Popen, log: Path | None = None) -> None:
     deadline = time.time() + 30
     while time.time() < deadline:
         if process.poll() is not None:
-            raise SystemExit(f"the hub exited with {process.returncode}")
+            said = f":\n{log.read_text()}" if log and log.exists() else ""
+            raise SystemExit(f"the hub exited with {process.returncode}{said}")
         try:
             with urllib.request.urlopen(url + "/healthz", timeout=1) as answer:
                 if answer.status == 200:
@@ -223,7 +224,7 @@ def main() -> int:
         stderr=open(work / "hub.log", "w"),
     )
     try:
-        wait_ready(url, hub)
+        wait_ready(url, hub, work / "hub.log")
         link = subprocess.run(
             [args.devagotchi, "hub", "owner", "--state-dir", str(state), "--config", str(config),
              "--name", "Jesse"],

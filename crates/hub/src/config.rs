@@ -12,12 +12,14 @@ use devagotchi_contracts::{BridgeError, BridgeResult};
 use serde::Deserialize;
 
 pub(crate) mod analytics;
+pub(crate) mod github;
 pub(crate) mod machines;
 pub(crate) mod providers;
 pub(crate) mod shippin;
 pub(crate) mod tenancy;
 pub(crate) mod workflows;
 pub use analytics::AnalyticsConfig;
+pub use github::GithubConfig;
 pub use machines::MachinesConfig;
 pub use providers::{EmailConfig, ProviderConfig, ProviderKind};
 pub use shippin::ShippinConfig;
@@ -57,6 +59,9 @@ pub struct HubConfig {
     /// store answers the command line here and agents anywhere.
     #[serde(default)]
     pub boards: Vec<BoardEntry>,
+    /// GitHub repositories admitted to configured project boards. Disabled when empty.
+    #[serde(default)]
+    pub github: GithubConfig,
     /// Boards this hub hosts for accounts (D23, packet 15): one per account and project,
     /// made by `board_bind`, kept under `dir`. Absent: only the `boards` above exist here.
     #[serde(default)]
@@ -153,7 +158,7 @@ pub struct StorageConfig {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct AccountBoardsConfig {
-    /// Absolute directory for the stores; default `<state dir>/account-boards`.
+    /// Legacy local-fixture directory; hosted Postgres boards ignore it.
     #[serde(default)]
     pub dir: Option<String>,
     /// How many projects a free account may bind here (D21: realistically one). The owner
@@ -624,6 +629,7 @@ impl HubConfig {
     }
 
     fn validate(&self, env: &dyn Fn(&str) -> Option<String>) -> BridgeResult<()> {
+        self.github.check(&self.boards)?;
         let invalid = |message: String| BridgeError::new("invalid_config", message);
         if self.listen.parse::<std::net::SocketAddr>().is_err() {
             return Err(invalid(format!(

@@ -3,7 +3,7 @@
 # Postgres, deployed again by itself whenever a new image lands. Run it as root on the
 # Proxmox host:
 #
-#   curl -fsSL https://raw.githubusercontent.com/EonsofStupid/devagotchi/main/deploy/proxmox/hub-up.sh \
+#   curl -fsSL https://raw.githubusercontent.com/devagotchi/devagotchi/main/deploy/proxmox/hub-up.sh \
 #     | bash -s -- --ct 110 --domain hub.example.com
 #
 # 1. Snapshots the container (devagotchi-<time>), so `pct rollback` undoes all of this.
@@ -48,9 +48,9 @@ hub-up.sh --ct ID --domain NAME [options]
   --domain NAME      the name the hub answers at (required)
   --rp-id NAME       passkeys' relying party: NAME or a parent domain (default NAME)
   --port PORT        the hub's port on the container's loopback (default 8787)
-  --track IMAGE      the image tag the hub follows (default ghcr.io/eonsofstupid/devagotchi:main)
+  --track IMAGE      the image tag the hub follows (default ghcr.io/devagotchi/devagotchi:main)
   --repo OWNER/NAME --ref REF
-                     where the deploy files come from (default EonsofStupid/devagotchi at
+                     where the deploy files come from (default devagotchi/devagotchi at
                      main, resolved to one commit)
   --no-snapshot      do not snapshot the container first
 A hosted hub, who runs it, and how people sign in (passed to install.sh; see its --help):
@@ -65,8 +65,8 @@ The hub's site (crates/hub/README.md, "The site"):
 EOF
 }
 
-ct="" domain="" rp_id="" port=8787 track=ghcr.io/eonsofstupid/devagotchi:main
-repo=EonsofStupid/devagotchi ref=main snapshot=true
+ct="" domain="" rp_id="" port=8787 track=ghcr.io/devagotchi/devagotchi:main
+repo=devagotchi/devagotchi ref=main snapshot=true
 hosted=() env_file="" tenancy="" site="" site_only=false
 while [[ $# -gt 0 ]]; do
   case "$1" in

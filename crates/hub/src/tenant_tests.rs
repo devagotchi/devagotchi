@@ -44,6 +44,19 @@ pub(crate) async fn hosted_with(
     store: Option<&str>,
     extra: impl FnOnce(&std::path::Path, &str) -> Value,
 ) -> Hosted {
+    hosted_with_ingress(
+        store,
+        extra,
+        crate::issue_lifecycle::IssueLifecycleStore::disabled(),
+    )
+    .await
+}
+
+pub(crate) async fn hosted_with_ingress(
+    store: Option<&str>,
+    extra: impl FnOnce(&std::path::Path, &str) -> Value,
+    ingress: crate::issue_lifecycle::IssueLifecycleStore,
+) -> Hosted {
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let url = format!("http://{}", listener.local_addr().unwrap());
     let dir = tempfile::tempdir().unwrap();
@@ -102,6 +115,18 @@ pub(crate) async fn hosted_with(
         .downloads
         .as_ref()
         .map(|dir| Arc::new(crate::downloads::Downloads::open(std::path::Path::new(dir)).unwrap()));
+    let mut boards = board::mcp::Boards::from_config(&config, dir.path());
+    if accounts.store().backend() == store::Backend::Postgres {
+        boards = boards.using_postgres(accounts.store().clone()).unwrap();
+    }
+    let boards = Arc::new(boards);
+    if accounts.store().backend() == store::Backend::Postgres {
+        let listener = board::mcp::Boards::postgres_listener(&store_url)
+            .await
+            .unwrap();
+        tokio::spawn(boards.clone().listen_postgres(listener));
+        tokio::spawn(boards.clone().reap_on_time());
+    }
     let state = AppState {
         verifier: Arc::new(
             Verifier::from_hub_config(&config, dir.path(), Some(accounts.clone()))
@@ -109,7 +134,7 @@ pub(crate) async fn hosted_with(
                 .unwrap(),
         ),
         hub: Hub {
-            boards: Arc::new(board::mcp::Boards::from_config(&config, dir.path())),
+            boards,
             config: config.clone(),
             audit,
             links,
@@ -126,6 +151,7 @@ pub(crate) async fn hosted_with(
             )),
             routed: Default::default(),
         },
+        issue_store: Arc::new(ingress),
         web: None,
         passkeys: web::HubSignIn::new(config.clone(), accounts.clone())
             .map(|hub| hub.with_providers(web::Providers::from_config(&config).unwrap()))
@@ -423,7 +449,7 @@ pub(crate) fn fill(schema: &Value, root: &Value, ids: &Value) -> Value {
     }
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn tenant_a_reaches_nothing_of_tenant_bs_through_any_tool_or_page() {
     // On SQLite, and on Postgres when the test server is set (CI).
     isolation(hosted().await).await;

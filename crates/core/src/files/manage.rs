@@ -239,7 +239,9 @@ impl Scope<'_> {
                 if seen > MAX_CHECKED_ENTRIES {
                     return Err(BridgeError::new(
                         "too_large",
-                        format!("A directory with more than {MAX_CHECKED_ENTRIES} entries is not checked for links here; move it with run"),
+                        format!(
+                            "A directory with more than {MAX_CHECKED_ENTRIES} entries is not checked for links here; move it with run"
+                        ),
                     ));
                 }
                 let metadata = fs::symlink_metadata(&path).map_err(|e| io_error(&shown, e))?;
@@ -305,7 +307,9 @@ impl Scope<'_> {
                     if !input.overwrite {
                         return Err(BridgeError::new(
                             "already_exists",
-                            format!("{to} is the same file as {shown} under another name; pass overwrite to drop {shown}"),
+                            format!(
+                                "{to} is the same file as {shown} under another name; pass overwrite to drop {shown}"
+                            ),
                         ));
                     }
                     fs::remove_file(&source).map_err(|e| io_error(&shown, e))?;

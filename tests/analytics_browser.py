@@ -106,7 +106,7 @@ def main() -> int:
     )
     processes.append(hub)
     try:
-        wait_ready(url, hub)
+        wait_ready(url, hub, work / "hub.log")
         link = subprocess.run(
             [args.devagotchi, "hub", "owner", "--state-dir", str(state), "--config", str(config),
              "--name", "Jesse"],

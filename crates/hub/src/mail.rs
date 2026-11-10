@@ -255,13 +255,30 @@ pub async fn send(
         .map_err(|_| "the mail server did not answer in time".to_string())?
 }
 
-async fn deliver(
-    server: &Server,
-    password: Option<&str>,
-    message: &Message<'_>,
-) -> Result<(), String> {
-    let from = address_of(message.from).ok_or("the sender has no address")?;
-    let to = address_of(message.to).ok_or("the recipient is not an address")?;
+/// Connect to `server`, negotiate TLS and sign in as its user with `password`, sending
+/// nothing: what `devagotchi hub check-mail` does. `from` is the configured sender, whose
+/// domain is the name this hub greets the server with. An error names the step that
+/// refused, never the password.
+pub async fn check(server: &Server, password: Option<&str>, from: &str) -> Result<(), String> {
+    tokio::time::timeout(TIMEOUT, async {
+        let from = address_of(from).ok_or("the sender has no address")?;
+        let mut connection = open(server, password, &hello_of(&from)).await?;
+        let _ = connection.command("QUIT", &[221]).await;
+        Ok(())
+    })
+    .await
+    .map_err(|_| "the mail server did not answer in time".to_string())?
+}
+
+/// The name this hub greets the server with (EHLO): the sender's domain.
+fn hello_of(from: &str) -> String {
+    from.rsplit_once('@')
+        .map(|(_, domain)| domain.to_string())
+        .unwrap_or_default()
+}
+
+/// A connection with the greeting read, TLS up and the user signed in: ready for MAIL FROM.
+async fn open(server: &Server, password: Option<&str>, me: &str) -> Result<Connection, String> {
     let tcp = TcpStream::connect((server.host.as_str(), server.port))
         .await
         .map_err(|error| format!("{}:{}: {error}", server.host, server.port))?;
@@ -273,10 +290,6 @@ async fn deliver(
         stream: Some(stream),
         buffer: Vec::new(),
     };
-    let me = from
-        .rsplit_once('@')
-        .map(|(_, d)| d.to_string())
-        .unwrap_or_default();
     connection.reply(&[220]).await?;
     let mut offered = connection.command(&format!("EHLO {me}"), &[250]).await?;
     if server.tls == Tls::StartTls {
@@ -304,6 +317,18 @@ async fn deliver(
             .await
             .map_err(|_| "the mail server refused the user or password".to_string())?;
     }
+    Ok(connection)
+}
+
+async fn deliver(
+    server: &Server,
+    password: Option<&str>,
+    message: &Message<'_>,
+) -> Result<(), String> {
+    let from = address_of(message.from).ok_or("the sender has no address")?;
+    let to = address_of(message.to).ok_or("the recipient is not an address")?;
+    let me = hello_of(&from);
+    let mut connection = open(server, password, &me).await?;
     connection
         .command(&format!("MAIL FROM:<{from}>"), &[250])
         .await?;
@@ -486,5 +511,29 @@ mod tests {
         .await
         .unwrap_err();
         assert!(refused.contains("no password"), "{refused}");
+    }
+
+    #[tokio::test]
+    async fn check_signs_in_and_sends_nothing() {
+        let stub = stub::start("hub").await;
+        let server = Server::parse(&stub.url).unwrap();
+        check(
+            &server,
+            Some("secret"),
+            "Devagotchi <sign-in@devagotchi.com>",
+        )
+        .await
+        .unwrap();
+        assert!(stub.received.lock().unwrap().is_empty());
+        // The same refusals a send would meet, before anything is sent.
+        let refused = check(&server, None, "sign-in@devagotchi.com")
+            .await
+            .unwrap_err();
+        assert!(refused.contains("no password"), "{refused}");
+        let no_sender = check(&server, Some("secret"), "nobody").await.unwrap_err();
+        assert!(no_sender.contains("sender"), "{no_sender}");
+        let nobody_listens = Server::parse("smtp://127.0.0.1:1?tls=none").unwrap();
+        let down = check(&nobody_listens, None, "a@b.co").await.unwrap_err();
+        assert!(down.starts_with("127.0.0.1:1:"), "{down}");
     }
 }

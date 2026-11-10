@@ -389,7 +389,7 @@ async fn the_list_offers_each_workflow_and_says_plainly_what_cannot_be_done_here
     );
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn opening_the_link_needs_no_sign_in_spends_nothing_and_shows_no_code() {
     for store in stores().await {
         let hub = hub_on(store.as_deref(), json!({})).await;
@@ -470,7 +470,7 @@ async fn opening_the_link_needs_no_sign_in_spends_nothing_and_shows_no_code() {
     }
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn get_my_command_issues_the_line_and_the_step_ticks_once_online() {
     for store in stores().await {
         let hub = hub_on(store.as_deref(), json!({})).await;
@@ -670,7 +670,7 @@ async fn another_account_reaches_nothing_of_a_workflow_through_its_ai() {
     }
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn expiry_cancelling_and_a_new_link_each_end_the_old_one() {
     for store in stores().await {
         let hub = hub_on(
@@ -786,7 +786,7 @@ async fn expiry_cancelling_and_a_new_link_each_end_the_old_one() {
     }
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn keeping_the_account_is_offered_after_the_first_success_to_the_browser_that_did_it() {
     for store in stores().await {
         let hub = hub_on(store.as_deref(), json!({})).await;
@@ -984,7 +984,7 @@ async fn keeping_the_account_is_offered_after_the_first_success_to_the_browser_t
     assert_eq!(answer.status(), 303, "a way this page does not offer");
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn each_step_kind_is_done_when_the_hub_sees_it_and_a_wait_returns_the_moment_it_is() {
     // The built-in "Get started" is this computer and done (spec first-connect, B).
     let builtin = hub_on(None, json!({})).await;
@@ -1498,7 +1498,7 @@ async fn connect_in(hub: &Hosted, app: &str, cookie: &str) -> Person {
     }
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn an_ai_client_step_is_done_when_a_client_of_its_family_calls_for_the_tenant() {
     for store in stores().await {
         let hub = hub_on(store.as_deref(), json!({})).await;

@@ -34,7 +34,11 @@ pub struct Files {
 }
 
 /// Read the first `max_bytes` (1..=24576) of each of `paths` (1..=20) through `call`.
-pub async fn read_many<C, F>(call: C, paths: Vec<String>, max_bytes: usize) -> Result<Files, BridgeError>
+pub async fn read_many<C, F>(
+    call: C,
+    paths: Vec<String>,
+    max_bytes: usize,
+) -> Result<Files, BridgeError>
 where
     C: Fn(RequestBody) -> F,
     F: Future<Output = Result<ResponseBody, BridgeError>>,
@@ -103,7 +107,10 @@ mod tests {
             };
             assert_eq!(input.max_bytes, 100);
             match input.path.as_str() {
-                "/missing" => Err(BridgeError::new("path_not_found", "/missing does not exist")),
+                "/missing" => Err(BridgeError::new(
+                    "path_not_found",
+                    "/missing does not exist",
+                )),
                 path => Ok(ResponseBody::File(content(path, "hello"))),
             }
         };
@@ -111,7 +118,10 @@ mod tests {
         let files = read_many(call, paths, 100).await.unwrap().files;
         let asked: Vec<&str> = files.iter().map(|f| f.path.as_str()).collect();
         assert_eq!(asked, ["/a", "/missing", "/b"]);
-        assert_eq!(files[0].content.as_ref().unwrap().text.as_deref(), Some("hello"));
+        assert_eq!(
+            files[0].content.as_ref().unwrap().text.as_deref(),
+            Some("hello")
+        );
         assert_eq!(files[1].error.as_ref().unwrap().code, "path_not_found");
         assert!(files[1].content.is_none());
         assert!(files[2].content.is_some());
@@ -127,6 +137,10 @@ mod tests {
         let many = vec!["/a".to_owned(); MAX_FILES + 1];
         assert!(read_many(nothing_is_read, many, 100).await.is_err());
         let one = vec!["/a".to_owned()];
-        assert!(read_many(nothing_is_read, one, MAX_FILE_READ_BYTES + 1).await.is_err());
+        assert!(
+            read_many(nothing_is_read, one, MAX_FILE_READ_BYTES + 1)
+                .await
+                .is_err()
+        );
     }
 }

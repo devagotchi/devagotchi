@@ -592,7 +592,8 @@ impl Hub {
             boards: {
                 let mut boards = self
                     .boards
-                    .account_boards(&crate::board::mcp::Boards::owner_of(&subject));
+                    .account_boards(&crate::board::mcp::Boards::owner_of(&subject))
+                    .map_err(Json)?;
                 boards.extend(
                     self.config
                         .boards_for(&subject.id)

@@ -10,8 +10,8 @@
 // Native OS calls live here and nowhere else in this crate's dependents.
 #![allow(unsafe_code)]
 
-use devagotchi_contracts::{BridgeError, BridgeResult, OperationState};
 use crate::execution::GROUP_SETTLE;
+use devagotchi_contracts::{BridgeError, BridgeResult, OperationState};
 use std::fs::Metadata;
 use std::io;
 use std::os::fd::{FromRawFd, OwnedFd};
@@ -184,7 +184,8 @@ fn observation(error: io::Error) -> BridgeError {
 /// and naming that process only, whatever later happens to the number. None when no such
 /// process exists any more.
 fn pidfd(pid: u32) -> io::Result<Option<AsyncFd<OwnedFd>>> {
-    let pid = libc::pid_t::try_from(pid).map_err(|_| io::Error::from(io::ErrorKind::InvalidInput))?;
+    let pid =
+        libc::pid_t::try_from(pid).map_err(|_| io::Error::from(io::ErrorKind::InvalidInput))?;
     let fd = unsafe { libc::syscall(libc::SYS_pidfd_open, pid, 0) };
     if fd < 0 {
         let error = io::Error::last_os_error();
@@ -196,12 +197,17 @@ fn pidfd(pid: u32) -> io::Result<Option<AsyncFd<OwnedFd>>> {
     // pidfd_open returned a new descriptor that nothing else owns, and the OwnedFd keeps
     // it open, unreplaced, for as long as the runtime has it registered.
     let fd = unsafe { OwnedFd::from_raw_fd(fd as i32) };
-    Ok(Some(unsafe { AsyncFd::register_with_interest(fd, Interest::READABLE) }?))
+    Ok(Some(unsafe {
+        AsyncFd::register_with_interest(fd, Interest::READABLE)
+    }?))
 }
 
 /// No pidfd here: a kernel before 5.3, or a sandbox that filters the call.
 fn pidfd_unsupported(error: &io::Error) -> bool {
-    matches!(error.raw_os_error(), Some(libc::ENOSYS | libc::EPERM | libc::EACCES))
+    matches!(
+        error.raw_os_error(),
+        Some(libc::ENOSYS | libc::EPERM | libc::EACCES)
+    )
 }
 
 // WNOWAIT observes the root without releasing its PID. The same owned child is
@@ -322,7 +328,10 @@ mod tests {
 
     async fn owned(child: &mut Child) -> OwnedTree {
         let tree = OwnedTree::adopt(child).await.ok().unwrap();
-        assert!(tree.root.is_some(), "this kernel should offer pidfd_open (Linux 5.3+)");
+        assert!(
+            tree.root.is_some(),
+            "this kernel should offer pidfd_open (Linux 5.3+)"
+        );
         tree
     }
 
@@ -332,7 +341,9 @@ mod tests {
         let tree = owned(&mut child).await;
         let root = tree.root.as_ref().unwrap();
         assert!(
-            timeout(Duration::from_millis(100), root.readable()).await.is_err(),
+            timeout(Duration::from_millis(100), root.readable())
+                .await
+                .is_err(),
             "readable while the root still runs"
         );
         let began = Instant::now();
@@ -349,7 +360,10 @@ mod tests {
         let mut child = spawn("i=0; while [ $i -lt 100 ]; do sleep 0.4 & i=$((i+1)); done; exit 0");
         let tree = owned(&mut child).await;
         tree.root_exit(&mut child).await.unwrap();
-        assert!(!group_members(tree.pid).unwrap().is_empty(), "members outlive the root");
+        assert!(
+            !group_members(tree.pid).unwrap().is_empty(),
+            "members outlive the root"
+        );
         let began = Instant::now();
         timeout(Duration::from_secs(20), tree.members_settled())
             .await
@@ -395,7 +409,11 @@ mod tests {
         tree.root_exit(&mut child).await.unwrap();
         let began = Instant::now();
         tree.members_settled().await.unwrap();
-        assert!(began.elapsed() < Duration::from_secs(2), "{:?}", began.elapsed());
+        assert!(
+            began.elapsed() < Duration::from_secs(2),
+            "{:?}",
+            began.elapsed()
+        );
         child.wait().await.unwrap();
     }
 }
@@ -506,10 +524,17 @@ mod detached_tests {
         let out = std::fs::read_to_string(&log).unwrap();
         let lines: Vec<&str> = out.lines().map(str::trim).collect();
         assert_eq!(lines.len(), 4, "{out}");
-        assert_eq!(lines[0], "closed", "the caller's descriptor reached it: {out}");
+        assert_eq!(
+            lines[0], "closed",
+            "the caller's descriptor reached it: {out}"
+        );
         // SAFETY: getsid(0) reads this process's own session id.
         let ours = unsafe { libc::getsid(0) };
-        assert_ne!(lines[1], ours.to_string(), "it shares the caller's session: {out}");
+        assert_ne!(
+            lines[1],
+            ours.to_string(),
+            "it shares the caller's session: {out}"
+        );
         assert_eq!(lines[2], "secret=none", "only the given environment: {out}");
         assert_eq!(
             lines[3],

@@ -50,6 +50,14 @@ import secrets
 import socket
 import subprocess
 import sys
+
+
+def storage_url() -> str:
+    """The empty Postgres database the environment names for this script's hub (docs/adr/0001)."""
+    url = os.environ.get("DEVAGOTCHI_HUB_STORAGE_URL", "")
+    if not url.startswith(("postgres://", "postgresql://")):
+        sys.exit("set DEVAGOTCHI_HUB_STORAGE_URL to an empty Postgres database for this script's hub")
+    return url
 import tempfile
 import threading
 import time
@@ -291,6 +299,7 @@ def approve(page, url: str, authorize: str, sign_in: bool) -> str:
     page.goto(authorize)
     if sign_in:
         page.wait_for_url(re.compile(re.escape(url) + r"/auth/login\?return_to=%2Foauth%2Fauthorize.*"))
+        page.locator("details.ways summary").click()
         page.click("#passkey-sign-in")
         page.wait_for_url(re.compile(re.escape(url) + r"/oauth/authorize\?.*"), timeout=15_000)
     heading = page.inner_text("h1")
@@ -584,7 +593,7 @@ def serve(binary: str, work: Path, hub_port: int, url: str, extra: dict):
     config = work / "hub.json"
     config.write_text(json.dumps({
         "listen": f"127.0.0.1:{hub_port}", "public_url": url, "auth": {"mode": "hub"},
-        "storage": {"url": f"sqlite:{work / 'accounts.sqlite3'}"}, "brokers": [], "grants": [],
+        "storage": {"url": storage_url()}, "brokers": [], "grants": [],
         **extra}))
     env = {k: v for k, v in os.environ.items()
            if not k.startswith(("DEVAGOTCHI_HUB_STORAGE", "DEVAGOTCHI_HUB_TENANCY", "DEVAGOTCHI_HUB_OPERATORS"))}

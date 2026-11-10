@@ -1,5 +1,9 @@
 # Devagotchi: how to work in this repository
 
+The public home is `devagotchi/devagotchi`. The separate enterprise repository is
+`devagotchi/devagotchi-enterprise` (private). Never put enterprise code, secrets, or
+hosted-service deployment configurations in this public repository.
+
 Devagotchi is a Rust replacement for DesktopCommanderMCP: an independently running per-user
 broker that owns jobs, a thin stdio MCP adapter, and a Tauri inspector. The plan is canon;
 this file is how to work here. Read first:
@@ -29,7 +33,8 @@ behaviour goes in the library, never in the dispatcher),
 ```bash
 cargo build --locked --bins
 cargo nextest run --locked                         # every test binary, hub included
-python3 tests/e2e.py --bin-dir target/debug        # broker, stdio adapter, hub and link end to end
+DEVAGOTCHI_HUB_STORAGE_URL=postgres://postgres@127.0.0.1:55432/e2e \
+python3 tests/e2e.py --bin-dir target/debug        # broker, stdio adapter, hub and link end to end; the hubs need an empty Postgres
 cargo deny --all-features check                    # advisories, licenses, sources, no-network bans
 python3 tests/security_boundary.py --devagotchi "$PWD/target/debug/devagotchi"
 python3 tests/mcp_protocol.py --devagotchi "$PWD/target/debug/devagotchi" --socket /tmp/unused.sock
