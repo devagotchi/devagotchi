@@ -256,8 +256,8 @@ Tenant-scoped foreign keys and forced Postgres RLS apply. Before commit, every i
 column is compared with the source, not just row counts. Repeating the same snapshot is a
 no-op; a different snapshot for an already imported project is refused rather than merged.
 The source is never rewritten or deleted. Keep it and the receipt until cutover and recovery
-are independently verified. The outbox is durable groundwork; a ClickHouse exporter is not
-implemented by this command.
+are independently verified. The import's outbox row reaches ClickHouse through the running hub's
+exporter ("Statistics in ClickHouse"), not through this command.
 
 ## The site
 
