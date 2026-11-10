@@ -63,6 +63,8 @@ pub struct Boards {
     /// The export of these boards' events to ClickHouse (`crate::warehouse`), when the hub
     /// has one.
     warehouse: std::sync::OnceLock<Arc<crate::warehouse::Warehouse>>,
+    /// The hub's signal sinks (`crate::signals`), set once at start.
+    sinks: std::sync::OnceLock<Vec<Arc<crate::signals::Sink>>>,
     dirs: BTreeMap<String, PathBuf>,
     accounts: Option<Accounts>,
     /// The site a new board's getting-started ticket comes from, and the hub's address
@@ -150,6 +152,7 @@ impl Boards {
             hosted: None,
             orgs: None,
             warehouse: std::sync::OnceLock::new(),
+            sinks: std::sync::OnceLock::new(),
             dirs: config
                 .boards
                 .iter()
@@ -195,6 +198,16 @@ impl Boards {
     /// The ClickHouse export, when the hub has one.
     pub(crate) fn warehouse(&self) -> Option<&Arc<crate::warehouse::Warehouse>> {
         self.warehouse.get()
+    }
+
+    /// The signal sinks (set once, at start).
+    pub(crate) fn set_sinks(&self, sinks: Vec<Arc<crate::signals::Sink>>) {
+        let _ = self.sinks.set(sinks);
+    }
+
+    /// The signal sinks, none when the hub has none.
+    pub(crate) fn sinks(&self) -> &[Arc<crate::signals::Sink>] {
+        self.sinks.get().map(Vec::as_slice).unwrap_or_default()
     }
 
     /// Run a store call to the end from synchronous board code, as the hosted boards do.

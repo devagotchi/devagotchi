@@ -1,0 +1,105 @@
+{
+  "$defs": {
+    "Source": {
+      "description": "Where a signal comes from.",
+      "enum": [
+        "board",
+        "tenancy",
+        "audit"
+      ],
+      "type": "string"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "One thing that happened on the hub (contract `devagotchi.signal/v1`).",
+  "properties": {
+    "actor": {
+      "description": "Who did it: an account, an agent seat (`<account>/<seat>`), or `hub`.",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "at_ms": {
+      "description": "When, in milliseconds since the Unix epoch.",
+      "format": "int64",
+      "type": "integer"
+    },
+    "data": {
+      "description": "The rest, only to a sink that takes `full`: a board event's data, a tenant event's\ndetail, a tool call's `via`."
+    },
+    "id": {
+      "description": "Stable and unique: `board:<tenant>:<board>:<seq>:<hash>`, `tenancy:<tenant>:<seq>:<hash>`\nor `audit:<seq>:<hash>` (the hash's first 16 hex digits). Sent again, it is the same.",
+      "type": "string"
+    },
+    "kind": {
+      "description": "What happened: a board action (`ticket.claimed`, `approval.decided` …), a tenant\nevent (`org.member_set` …), or `tool.<name>` for a tool call.",
+      "type": "string"
+    },
+    "operation": {
+      "description": "The operation a tool call named.",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "outcome": {
+      "description": "How a tool call ended: `ok`, or the refusal's code (`read_only`, `not_granted` …).",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "owner": {
+      "description": "Whose board: an account, `org-<tenant>` for an organisation, `@shared` for a\nconfigured board.",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "project": {
+      "description": "The board's project name.",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "schema": {
+      "description": "Always `devagotchi.signal/v1` for this shape.",
+      "type": "string"
+    },
+    "source": {
+      "$ref": "#/$defs/Source"
+    },
+    "target": {
+      "description": "What a tool call was aimed at: a broker or a board's project name.",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "tenant": {
+      "description": "The tenant it happened in (`t-<uuid>`); absent for the hub's audit chain.",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "ticket": {
+      "description": "The ticket it concerns.",
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "required": [
+    "schema",
+    "id",
+    "source",
+    "kind",
+    "at_ms"
+  ],
+  "title": "Signal",
+  "type": "object"
+}

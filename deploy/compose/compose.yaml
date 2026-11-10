@@ -131,6 +131,10 @@ services:
       DEVAGOTCHI_CLICKHOUSE_USER: devagotchi
       DEVAGOTCHI_CLICKHOUSE_DATABASE: devagotchi
       DEVAGOTCHI_CLICKHOUSE_PASSWORD: ${DEVAGOTCHI_CLICKHOUSE_PASSWORD:-}
+      # A signal sink's token and signing secret (docs/signals.md): name these two as its
+      # token_env and secret_env in DEVAGOTCHI_HUB_SIGNAL_SINKS.
+      DEVAGOTCHI_SIGNAL_TOKEN: ${DEVAGOTCHI_SIGNAL_TOKEN:-}
+      DEVAGOTCHI_SIGNAL_SECRET: ${DEVAGOTCHI_SIGNAL_SECRET:-}
     restart: unless-stopped
 
   caddy:
@@ -172,6 +176,7 @@ configs:
         "account_boards": {},
         "boards": ${DEVAGOTCHI_HUB_BOARDS:-[]},
         "github": { "repositories": ${DEVAGOTCHI_GITHUB_REPOSITORIES:-[]} },
+        "signals": { "sinks": ${DEVAGOTCHI_HUB_SIGNAL_SINKS:-[]} },
         "brokers": [],
         "grants": ${DEVAGOTCHI_HUB_GRANTS:-[]}
       }
