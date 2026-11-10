@@ -412,6 +412,11 @@ fn lock_contention_fails_explicitly_with_a_bounded_wait_and_no_mutation() {
     let (_temp, repo, state, mut store) = setup();
     enable(&mut store, Capture::Metadata);
     let mut another = Journal::open(&repo, &state).unwrap();
+    let timeout_ms: u64 = another
+        .db
+        .query_row("PRAGMA busy_timeout", [], |row| row.get(0))
+        .unwrap();
+    assert_eq!(timeout_ms, 2000);
     let tx = store
         .db
         .transaction_with_behavior(TransactionBehavior::Immediate)
@@ -419,7 +424,8 @@ fn lock_contention_fails_explicitly_with_a_bounded_wait_and_no_mutation() {
     let start = std::time::Instant::now();
     let error = another.append(&event("blocked")).unwrap_err();
     assert!(error.to_string().contains("locked"), "{error}");
-    assert!(start.elapsed() < Duration::from_secs(4));
+    // Busy timeout bounds SQLite's wait, not descheduling on a shared CI runner.
+    assert!(start.elapsed() < Duration::from_secs(10));
     tx.rollback().unwrap();
     assert_eq!(another.verify().unwrap(), 0);
     another.append(&event("blocked")).unwrap();

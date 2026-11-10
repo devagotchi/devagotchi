@@ -2,7 +2,9 @@
 
 - Request: repository-neutral `.ai`, canonical instructions, provider adapters, alpha
   lifecycle, configurable operator autonomy, actual private runtime capture.
-- PR: not_verified; no PR created for this packet.
+- PR: [#164](https://github.com/devagotchi/devagotchi/pull/164). Its live checks/merge
+  state are authoritative; this file records candidate execution receipts, not an
+  automatically refreshed remote-status mirror.
 - Initial verification checkout: `increment-117/signal-contract`,
   `483e9380ec4a49f5f27f3ed53975c615b4dc9fba` plus dirty work. This shared checkout
   also contains independently changing, unrelated work; this packet does not own its
@@ -119,6 +121,14 @@ Canonical schema checks, 14 instruction/contract documents and 48 local links pa
 Worktree-generated broker artifacts initially differed only in checkout line endings;
 regenerating with the existing canonical tool resolved drift with no semantic/generated
 Git diff. The task-labelled disposable Postgres container was stopped and removed.
+
+First CI run: macOS completed **525/526 tests**, failing only the new contention test's
+four-second wall-clock assertion (observed 4.57 seconds under parallel runner load).
+The regression now verifies `PRAGMA busy_timeout` equals **2000 ms** exactly and checks
+the actual lock refusal/no-mutation/recovery with a separate ten-second hang guard.
+The contract explicitly distinguishes SQLite's configured timeout from OS scheduling;
+this is not a suppressed failure or a hard real-time guarantee. Remaining CI is required
+before merge.
 
 ## Delivery
 

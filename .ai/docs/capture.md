@@ -83,9 +83,10 @@ Do not claim automatic capture of assistant messages not present in the event.
   Symlink redirection of the archive directory/database is refused.
 - SQLite here is a **local evidence journal**, not a hosted board database, synchronization
   service or authority fallback. No schema/migration is added to hosted Postgres.
-- Immediate transactions, FULL synchronous writes and a bounded two-second lock wait
+- Immediate transactions, FULL synchronous writes and a configured two-second SQLite busy timeout
   serialize consent/capture and concurrent writers. Errors are explicit. A successfully
   acknowledged event survives process restart. No buffered shutdown-only archive.
+  OS scheduling can extend elapsed wall time; this is not a hard real-time deadline.
 - Canonical `capture append` requires a caller's stable event ID. Identical replay returns
   its original sequence; changed replay fails with no mutation. Native hooks have no
   universal invocation ID, so receive random IDs: repeated hook deliveries can duplicate.
