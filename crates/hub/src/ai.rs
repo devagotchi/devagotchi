@@ -324,14 +324,16 @@ fn run(args: Vec<OsString>, state: Option<PathBuf>) -> Result<()> {
             );
         }
         ["capture", "status"] => {
+            let policy = store.policy()?;
             let count: i64 = store
                 .db
                 .query_row("SELECT count(*) FROM events", [], |r| r.get(0))?;
             println!(
                 "{}",
                 json!({
-                    "policy":store.policy()?, "events":count, "storage":store.path,
-                    "coverage":"partial", "automatic_transcript_following":false,
+                    "automatic_transcript_following":policy.capture == Capture::Content && !policy.transcript_roots.is_empty(),
+                    "policy":policy, "events":count, "storage":store.path,
+                    "coverage":"partial",
                     "training_eligible":false
                 })
             );
@@ -881,8 +883,29 @@ fn check_contracts(repo: &Path) -> Result<()> {
         return Err("unknown project contract identifiers".into());
     }
     match project["stage"].as_str() {
-        Some("alpha") if project["production_promotion"].is_null() => {}
+        Some("alpha") if project["production_promotion"].is_null() => {
+            if project["release_mode"] != "pre_release"
+                || !matches!(
+                    project["alpha_readiness"].as_str(),
+                    Some("unconfirmed" | "confirmed")
+                )
+            {
+                return Err("alpha requires pre_release mode and explicit readiness state".into());
+            }
+            if project["alpha_readiness"] == "confirmed" {
+                bounded(
+                    project["alpha_acceptance"]
+                        .as_str()
+                        .ok_or("confirmed alpha requires a reviewed acceptance receipt")?,
+                    2048,
+                    "alpha_acceptance",
+                )?;
+            }
+        }
         Some("production") => {
+            if project["release_mode"] != "production" {
+                return Err("production stage requires explicit production release_mode".into());
+            }
             for field in ["approval", "candidate", "evidence", "date"] {
                 bounded(
                     project["production_promotion"][field]

@@ -182,6 +182,10 @@ fn operator_controls_and_native_provider_capture_work_without_a_board() {
         None,
     ));
     assert_eq!(configured["transcript_roots"].as_array().unwrap().len(), 1);
+    assert_eq!(
+        ok(run(&repo, &state, &["capture", "status"], None))["automatic_transcript_following"],
+        true
+    );
     let stop = || {
         run(
             &repo,
@@ -238,6 +242,10 @@ fn operator_controls_and_native_provider_capture_work_without_a_board() {
     assert_eq!(
         ok(run(&repo, &state, &["policy", "show"], None))["policy"]["transcript_roots"],
         json!([])
+    );
+    assert_eq!(
+        ok(run(&repo, &state, &["capture", "status"], None))["automatic_transcript_following"],
+        false
     );
     ok(run(
         &repo,
