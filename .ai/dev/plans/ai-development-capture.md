@@ -143,6 +143,23 @@ new pull-request checks while conflicted. Integrate current main without droppin
 incoming code or changelog entry, then revalidate the combined candidate and await its
 normal CI before merge; earlier receipts are not substituted for integration checks.
 
+Combined-candidate receipts after integrating main:
+
+- `cargo build --locked --bins`: passed; private candidate binary SHA-256
+  `f053b3029c9220bf7d938db4efba5892b457dcf17fb717bbc4614cc89b2d57f0`.
+- `cargo test --locked`: **600 passed**, zero failed/ignored, including **485 hub**
+  tests with isolated Postgres and the real pinned ClickHouse image enabled.
+- Real process E2E: **passed**, including organisation/role changes and ClickHouse
+  outage, retained Postgres backlog, restart, drain and exactly-once analytical counts.
+- MCP protocol: **11 passed**. Canonical broker/desktop contracts and `ai check`:
+  passed. Dependency deny: passed with existing duplicate warnings.
+- Local harness setup was corrected without source changes: runtime storage overrides
+  must not leak into unit fixtures; the outage container must survive `docker stop`
+  and retain an explicitly bound host port across restart. The MCP probe requires an
+  absolute executable path. Failed setup attempts were not counted as passed runs.
+- All task-labelled disposable database containers were removed after verification.
+  Actual provider-client acceptance remains unconfirmed; Linux-only checks remain CI gates.
+
 ## Delivery
 
 Implementation: implemented for this packet. Local validation: passed as scoped above.
