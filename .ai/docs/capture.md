@@ -87,6 +87,8 @@ Do not claim automatic capture of assistant messages not present in the event.
   serialize consent/capture and concurrent writers. Errors are explicit. A successfully
   acknowledged event survives process restart. No buffered shutdown-only archive.
   OS scheduling can extend elapsed wall time; this is not a hard real-time deadline.
+  Concurrent callers can receive an explicit busy error after that wait. Retry the
+  same canonical event ID after contention clears; never treat an error as a receipt.
 - Canonical `capture append` requires a caller's stable event ID. Identical replay returns
   its original sequence; changed replay fails with no mutation. Native hooks have no
   universal invocation ID, so receive random IDs: repeated hook deliveries can duplicate.

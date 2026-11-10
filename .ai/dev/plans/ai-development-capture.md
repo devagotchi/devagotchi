@@ -130,6 +130,13 @@ The contract explicitly distinguishes SQLite's configured timeout from OS schedu
 this is not a suppressed failure or a hard real-time guarantee. Remaining CI is required
 before merge.
 
+The corrected candidate's Windows 2025 run completed **586/587 tests**: a stress-test
+writer received the documented explicit `DatabaseBusy` result after its configured
+wait. The fixture now performs at most five attempts per canonical event, retries only
+the typed busy error with visible diagnostics, and still verifies all **41** unique
+events after reopen. Other errors and retry exhaustion remain failures; runtime lock
+timeout, consent serialization and hook error reporting are unchanged.
+
 ## Delivery
 
 Implementation: implemented for this packet. Local validation: passed as scoped above.

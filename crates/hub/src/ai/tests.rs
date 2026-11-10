@@ -443,10 +443,30 @@ fn concurrent_writers_and_replays_survive_reopen() {
         threads.push(std::thread::spawn(move || {
             let mut store = Journal::open(&repo, &state).unwrap();
             for n in 0..10 {
-                store
-                    .append(&event(&format!("worker-{worker}-{n}")))
-                    .unwrap();
-                store.append(&event("shared-retry")).unwrap();
+                for event in [
+                    event(&format!("worker-{worker}-{n}")),
+                    event("shared-retry"),
+                ] {
+                    for attempt in 0..5 {
+                        match store.append(&event) {
+                            Ok(_) => break,
+                            Err(error)
+                                if attempt < 4
+                                    && matches!(
+                                        error.downcast_ref::<rusqlite::Error>(),
+                                        Some(rusqlite::Error::SqliteFailure(code, _))
+                                            if code.code == rusqlite::ErrorCode::DatabaseBusy
+                                    ) =>
+                            {
+                                eprintln!(
+                                    "retrying explicitly reported archive contention: {error}"
+                                );
+                                std::thread::yield_now();
+                            }
+                            Err(error) => panic!("archive append failed: {error}"),
+                        }
+                    }
+                }
             }
         }));
     }
