@@ -137,6 +137,15 @@ to its tenant by forced row-level security; the three questions that cross tenan
 organisations a subject is in, which projects it was given, which tenant an invite belongs
 to) are `SECURITY DEFINER` functions that answer ids and roles only.
 
+## Signals to sinks
+
+`signals.sinks` in the config sends the hub's signals, `devagotchi.signal/v1`, to the
+operator's endpoints: every board event, every tenant event and every tool call with its
+outcome, at least once, in order within a board, a tenant or the audit chain, each with a
+stable id. A sink that is down falls behind alone; `/healthz` reports each one under
+`signals`. The contract, delivery, signing and configuration are in
+[docs/signals.md](../../docs/signals.md).
+
 ## Statistics in ClickHouse
 
 With `clickhouse.url` in the config (or `DEVAGOTCHI_CLICKHOUSE_URL`; `_DATABASE` and
@@ -247,8 +256,8 @@ Tenant-scoped foreign keys and forced Postgres RLS apply. Before commit, every i
 column is compared with the source, not just row counts. Repeating the same snapshot is a
 no-op; a different snapshot for an already imported project is refused rather than merged.
 The source is never rewritten or deleted. Keep it and the receipt until cutover and recovery
-are independently verified. The outbox is durable groundwork; a ClickHouse exporter is not
-implemented by this command.
+are independently verified. The import's outbox row reaches ClickHouse through the running hub's
+exporter ("Statistics in ClickHouse"), not through this command.
 
 ## The site
 

@@ -186,6 +186,12 @@ try:
     project_dir.mkdir()
     board_init, _ = run_cmd([devagotchi, "board", "init", "--dir", project_dir, "--project", "e2e-board", "--agents-md"], "board init")
     port = free_port()
+    # A signal sink nothing listens on until tests/signals_probe.py does, last: every probe
+    # before it works the hub with its sink down (docs/signals.md). Its token and secret
+    # reach the hub through its environment, named in the config, never in it.
+    sink_port = free_port()
+    os.environ["E2E_SIGNAL_TOKEN"] = "e2e-signal-token-" + os.urandom(12).hex()
+    os.environ["E2E_SIGNAL_SECRET"] = "e2e-signal-secret-" + os.urandom(12).hex()
     hub_config = work / "hub.json"
     hub_config.write_text(json.dumps({
         "listen": f"127.0.0.1:{port}",
@@ -195,6 +201,9 @@ try:
                     {"name": "account", "socket": account_endpoint}],
         "boards": [{"project": "e2e-board", "dir": str(project_dir)}],
         "account_boards": {"unlimited": ["e2e-operator"]},
+        "signals": {"sinks": [{"name": "e2e", "url": f"http://127.0.0.1:{sink_port}/signals",
+                               "token_env": "E2E_SIGNAL_TOKEN", "secret_env": "E2E_SIGNAL_SECRET",
+                               "fields": "metadata"}]},
         "grants": [
             {"subject": "e2e-operator", "brokers": ["local", "remote", "account"], "boards": ["e2e-board"], "human": True},
             {"subject": "e2e-claude", "boards": ["e2e-board"]},
@@ -233,6 +242,14 @@ try:
         [str(HERE / "orgs_probe.py"), hub_url, "--shared", "e2e-board",
          "--tokens", f"owner={team_tokens['ann']}", f"member={team_tokens['ben']}", f"operator={token}"],
         "orgs probe: an organisation, its roles, and a change that holds from the next call",
+    )
+
+    # The signal sink, down until now: the hub said so and kept serving; listening, it gets
+    # every board, tenant and audit signal once, signed, without data (docs/signals.md).
+    signals_ok = run_probe(
+        [str(HERE / "signals_probe.py"), hub_url, "--port", str(sink_port),
+         "--token", os.environ["E2E_SIGNAL_TOKEN"], "--secret", os.environ["E2E_SIGNAL_SECRET"]],
+        "signals probe: a sink down and then listening, every signal once", 300,
     )
 
     # The machine link: the same broker, reached the way gus or dabo would reach the hub.
@@ -295,7 +312,7 @@ try:
     else:
         print("--- promote-hub dry-run: skipped on Windows (a Linux deploy script)", flush=True)
         promote_ok = True
-    ok = adapter_ok and hub_ok and board_ok and orgs_ok and analytics_ok and link_ok and update_ok and nomen_ok and web_ok and oauth_ok and promote_ok
+    ok = adapter_ok and hub_ok and board_ok and orgs_ok and analytics_ok and signals_ok and link_ok and update_ok and nomen_ok and web_ok and oauth_ok and promote_ok
 except SkipRest:
     pass
 finally:
