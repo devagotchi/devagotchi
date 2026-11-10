@@ -36,6 +36,9 @@ parser.add_argument("--keep", action="store_true", help="keep the work directory
 # Two builds of this commit, DEVAGOTCHI_BUILD=ci-a and ci-b: machine_update takes a machine
 # from one to the other (tests/machine_update_probe.py --installer none; Linux).
 parser.add_argument("--update-builds", nargs=2, type=Path, metavar=("DIR_A", "DIR_B"))
+parser.add_argument("--clickhouse-container", default=None,
+                    help="a ClickHouse container this run may stop and start (tests/analytics_probe.py); "
+                         "the hub exports to DEVAGOTCHI_CLICKHOUSE_URL")
 parser.add_argument("--no-hub", action="store_true",
                     help="only the broker and the stdio adapter: a machine without a Postgres for the hub")
 args = parser.parse_args()
@@ -212,6 +215,20 @@ try:
          *[f"{who}={t}" for who, t in org_tokens.items()]],
         "board probe: three subscriptions, one board",
     )
+    # The export of board events to ClickHouse (R1 step 9), when a ClickHouse container
+    # this run may stop and start is named (CI: Linux; the hub reads DEVAGOTCHI_CLICKHOUSE_*).
+    if args.clickhouse_container and os.environ.get("DEVAGOTCHI_CLICKHOUSE_URL"):
+        analytics_ok = run_probe(
+            [str(HERE / "analytics_probe.py"), hub_url, "--token", token, "--project", "e2e-board",
+             "--clickhouse", os.environ["DEVAGOTCHI_CLICKHOUSE_URL"],
+             "--user", os.environ.get("DEVAGOTCHI_CLICKHOUSE_USER", "devagotchi"),
+             "--database", os.environ.get("DEVAGOTCHI_CLICKHOUSE_DATABASE", "devagotchi"),
+             "--container", args.clickhouse_container],
+            "analytics probe: ClickHouse down and back, every event once", 400,
+        )
+    else:
+        print("--- analytics probe: skipped (needs --clickhouse-container and DEVAGOTCHI_CLICKHOUSE_URL)", flush=True)
+        analytics_ok = True
     orgs_ok = run_probe(
         [str(HERE / "orgs_probe.py"), hub_url, "--shared", "e2e-board",
          "--tokens", f"owner={team_tokens['ann']}", f"member={team_tokens['ben']}", f"operator={token}"],
@@ -278,7 +295,7 @@ try:
     else:
         print("--- promote-hub dry-run: skipped on Windows (a Linux deploy script)", flush=True)
         promote_ok = True
-    ok = adapter_ok and hub_ok and board_ok and orgs_ok and link_ok and update_ok and nomen_ok and web_ok and oauth_ok and promote_ok
+    ok = adapter_ok and hub_ok and board_ok and orgs_ok and analytics_ok and link_ok and update_ok and nomen_ok and web_ok and oauth_ok and promote_ok
 except SkipRest:
     pass
 finally:

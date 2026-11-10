@@ -85,6 +85,12 @@ pub struct HubConfig {
     /// instead and overrides this (`DEVAGOTCHI_HUB_STORAGE_SCHEMA` the schema).
     #[serde(default)]
     pub storage: Option<StorageConfig>,
+    /// The ClickHouse the hub exports its board events to for statistics (ADR 0001,
+    /// `warehouse.rs`). `DEVAGOTCHI_CLICKHOUSE_URL` sets or overrides the URL and
+    /// `DEVAGOTCHI_CLICKHOUSE_DATABASE`/`_USER` the rest; the password is never here, only in
+    /// `DEVAGOTCHI_CLICKHOUSE_PASSWORD`. Absent: nothing is exported and `/healthz` says so.
+    #[serde(default)]
+    pub clickhouse: Option<ClickHouseConfig>,
     /// One owner's hub (`single`, the default) or a hosted service where everyone who
     /// connects gets an account and a tenant of their own (`multi`), with the limits on an
     /// account nobody has secured yet (`config/tenancy.rs`). `DEVAGOTCHI_HUB_TENANCY`
@@ -169,6 +175,29 @@ pub struct AccountBoardsConfig {
     #[serde(default)]
     pub unlimited: Vec<String>,
 }
+
+/// Where the hub exports its board events for statistics (`warehouse.rs`).
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ClickHouseConfig {
+    /// The HTTP interface, `http://host:8123` (https for a server elsewhere).
+    pub url: String,
+    /// The database the hub makes and keeps its tables in.
+    #[serde(default = "default_clickhouse_database")]
+    pub database: String,
+    /// The user it signs in as; the password comes from `DEVAGOTCHI_CLICKHOUSE_PASSWORD`.
+    #[serde(default)]
+    pub user: Option<String>,
+}
+
+fn default_clickhouse_database() -> String {
+    "devagotchi".into()
+}
+
+pub const CLICKHOUSE_URL_ENV: &str = "DEVAGOTCHI_CLICKHOUSE_URL";
+pub const CLICKHOUSE_DATABASE_ENV: &str = "DEVAGOTCHI_CLICKHOUSE_DATABASE";
+pub const CLICKHOUSE_USER_ENV: &str = "DEVAGOTCHI_CLICKHOUSE_USER";
+pub const CLICKHOUSE_PASSWORD_ENV: &str = "DEVAGOTCHI_CLICKHOUSE_PASSWORD";
 
 /// What a free account gets when the config does not say.
 pub const DEFAULT_FREE_LIMIT: u32 = 1;
@@ -596,6 +625,39 @@ impl HubConfig {
                 .collect();
         }
         config.analytics = config.analytics.from_env(&env).map_err(invalid)?;
+        if let Some(url) = env(CLICKHOUSE_URL_ENV).filter(|url| !url.trim().is_empty()) {
+            let url = url.trim().to_string();
+            match &mut config.clickhouse {
+                Some(clickhouse) => clickhouse.url = url,
+                None => {
+                    config.clickhouse = Some(ClickHouseConfig {
+                        url,
+                        database: default_clickhouse_database(),
+                        user: None,
+                    })
+                }
+            }
+        }
+        if let Some(clickhouse) = &mut config.clickhouse {
+            if let Some(database) = env(CLICKHOUSE_DATABASE_ENV).filter(|v| !v.trim().is_empty()) {
+                clickhouse.database = database.trim().to_string();
+            }
+            if let Some(user) = env(CLICKHOUSE_USER_ENV).filter(|v| !v.trim().is_empty()) {
+                clickhouse.user = Some(user.trim().to_string());
+            }
+            if !(clickhouse.url.starts_with("http://") || clickhouse.url.starts_with("https://")) {
+                return Err(invalid(format!(
+                    "clickhouse.url {:?}: the HTTP interface, http(s)://host:port",
+                    clickhouse.url
+                )));
+            }
+            if !crate::store::valid_schema(&clickhouse.database) {
+                return Err(invalid(format!(
+                    "clickhouse.database {:?}: 1 to 63 of [a-z0-9_], not starting with a digit",
+                    clickhouse.database
+                )));
+            }
+        }
         config.downloads = crate::downloads::choose(
             config.downloads.take(),
             env(crate::downloads::DOWNLOADS_ENV),

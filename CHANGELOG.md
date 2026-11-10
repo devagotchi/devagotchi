@@ -7,6 +7,30 @@ heading. Agents draft the fragments below; they never tag.
 
 ## Unreleased
 
+### Board events in ClickHouse (increment 115)
+- `clickhouse.url` (or `DEVAGOTCHI_CLICKHOUSE_URL`, `_DATABASE`, `_USER`; the password only
+  in `DEVAGOTCHI_CLICKHOUSE_PASSWORD`) turns on the export of every board event from the
+  Postgres outbox to ClickHouse (`warehouse.rs`): at least once, into a
+  `ReplacingMergeTree` keyed by tenant, board and event id, counted with
+  `uniqExact(event_id)`. The schema is made on first contact.
+- ClickHouse down: the boards work, the events wait in Postgres, and `/healthz` reports
+  `analytics` degraded with `pending` and `oldest_pending_secs`, never counted against the
+  hub's own health and never carrying the password. The exporter backs off up to a minute
+  and drains the backlog when ClickHouse is back. Postgres functions `outbox_pending_tenants`,
+  `outbox_backlog` and `outbox_resend` (migration 0018) answer across tenants without reading
+  any tenant's rows.
+- `GET /api/v1/projects/{project}/stats` and `/api/v1/orgs/{org}/projects/{project}/stats`:
+  events by day and action, actors, and created-to-completed times, for anyone who reads the
+  board. `devagotchi hub analytics-resend --config ABS_JSON` sends every event again.
+- Compose: a `clickhouse` service (25.8, pinned by digest) on the compose network only,
+  its password made once by `install.sh` and kept in `.env`; `check.sh` waits for the export
+  to be caught up; `backup.sh` says how ClickHouse is refilled after a restore.
+- Tests: `warehouse/tests.rs` against a stand-in ClickHouse (up, down, an answer lost) on
+  Postgres, and against a real ClickHouse when `DEVAGOTCHI_TEST_CLICKHOUSE_URL` is set (the
+  `hub (postgres)` job starts one with `tests/throwaway_clickhouse.sh`);
+  `tests/analytics_probe.py` in the Linux e2e job: R1 step 9 against the real binary, a
+  ClickHouse stopped and started mid-run, every event of the board in ClickHouse once.
+
 ### Organisations, members, teams and roles (increment 114)
 - An organisation is a tenant of its own in the hub's store (migration 0017, `orgs.rs`):
   members with a role (owner, admin, member, agent, viewer), teams, per-project roles for a

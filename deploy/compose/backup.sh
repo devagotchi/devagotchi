@@ -3,6 +3,10 @@
 # machine enrolments, audit), kept for DEVAGOTCHI_BACKUP_DAYS (14). install.sh's timer runs
 # it nightly. Restore: pg_restore --clean into the stack's Postgres, and untar the state
 # into the hub-state volume, with the hub stopped. Copy the directory off this host too.
+# ClickHouse is not backed up here: it holds what Postgres's board history already holds.
+# After a restore, or with an empty ClickHouse, `docker compose exec hub devagotchi hub
+# analytics-resend --config /etc/devagotchi/hub.json` sends every event again; ClickHouse
+# keeps one row per event.
 set -euo pipefail
 dir="${DEVAGOTCHI_DIR:-/opt/devagotchi-hub}"
 out="${DEVAGOTCHI_BACKUP_DIR:-/var/backups/devagotchi-hub}"

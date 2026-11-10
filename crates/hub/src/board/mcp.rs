@@ -60,6 +60,9 @@ pub struct Boards {
     /// Organisations, their members and who works which project (`crate::orgs`): in the
     /// hub's store, beside the hosted boards.
     orgs: Option<crate::orgs::Orgs>,
+    /// The export of these boards' events to ClickHouse (`crate::warehouse`), when the hub
+    /// has one.
+    warehouse: std::sync::OnceLock<Arc<crate::warehouse::Warehouse>>,
     dirs: BTreeMap<String, PathBuf>,
     accounts: Option<Accounts>,
     /// The site a new board's getting-started ticket comes from, and the hub's address
@@ -146,6 +149,7 @@ impl Boards {
         Self {
             hosted: None,
             orgs: None,
+            warehouse: std::sync::OnceLock::new(),
             dirs: config
                 .boards
                 .iter()
@@ -181,6 +185,16 @@ impl Boards {
     /// This hub's organisations, when it keeps them (always under `hub serve`).
     pub(crate) fn orgs(&self) -> Option<&crate::orgs::Orgs> {
         self.orgs.as_ref()
+    }
+
+    /// Export these boards' events to ClickHouse through `warehouse` (set once, at start).
+    pub(crate) fn set_warehouse(&self, warehouse: Arc<crate::warehouse::Warehouse>) {
+        let _ = self.warehouse.set(warehouse);
+    }
+
+    /// The ClickHouse export, when the hub has one.
+    pub(crate) fn warehouse(&self) -> Option<&Arc<crate::warehouse::Warehouse>> {
+        self.warehouse.get()
     }
 
     /// Run a store call to the end from synchronous board code, as the hosted boards do.

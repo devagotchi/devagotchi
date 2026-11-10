@@ -48,6 +48,7 @@ mod tenant_machines;
 mod tenant_tests;
 #[cfg(test)]
 mod test_keys;
+mod warehouse;
 mod web;
 #[cfg(test)]
 mod workflow_tests;
@@ -81,7 +82,7 @@ use crate::{
     link::Links,
 };
 
-pub const USAGE: &str = "Usage:\n  devagotchi hub serve --state-dir ABS_PATH --config ABS_JSON\n  devagotchi hub enroll --state-dir ABS_PATH --device NAME\n  devagotchi hub revoke --state-dir ABS_PATH --device NAME\n  devagotchi hub devices --state-dir ABS_PATH\n  devagotchi hub owner --state-dir ABS_PATH --config ABS_JSON [--name NAME] [--replace]\n  devagotchi hub setup-code --state-dir ABS_PATH --config ABS_JSON\n  devagotchi hub connect-nomen --state-dir ABS_PATH --config ABS_JSON --client-id ID --project ID [--issuer URL]\n  devagotchi hub check-site ABS_DIR\n  devagotchi hub check-mail --config ABS_JSON [--to ADDRESS]\n  devagotchi board <command> …            the agents' board in this project (board --help)\n\nserve starts the bastion: an authenticated Streamable HTTP MCP endpoint at /mcp that routes\nrun and operation_start/get/read/cancel to brokers by name, with whoami, /healthz and RFC 9728\nprotected-resource metadata, and /link where machines' `devagotchi link` connects out.\nWith a `web` section, people sign in with Shippin at /account to see their machines;\n/api/v1/me returns the same view for a session or a bearer token. Put it behind the edge for TLS.\n\nenroll prints a one-time code (15 minutes) that binds one machine's key to NAME;\nrevoke cuts that machine off within seconds; devices lists enrolled machines.\n\nowner (auth.mode hub) prints a one-time link (15 minutes) that makes the owner's passkey:\nthe first time it makes the owner's account, with the config's owner id if it names one;\nagain, it adds a passkey to the owner and ends the owner's other sessions; with --replace the\nlink also removes every other passkey of the owner (to take the account back).\n\nsetup-code (auth.mode devagotchi) prints a one-time code (15 minutes) that makes the account\nclaimed with it the hub's owner at /claim, or the owner already on file.\n\nconnect-nomen joins this hub to a Nomen with its owner's approval: it shows a code to confirm\non any device through the devagotchi-cli app (--client-id) of the hub's Nomen project (--project),\nthen adds the hub's own apps to that project (the key Nomen makes is written to the state\ndirectory, owner-only, and nowhere else), sets auth, owner and web in the config, and keeps a\ncopy of the old one. Issuer: https://id.shippin.cloud unless --issuer.\n\ncheck-site reads and checks a site directory (crates/hub/README.md, \"The site\") as serve would, and\nsays what is wrong and where; serve follows its site.dir and serves a change once it checks out.\n\ncheck-mail (auth.mode hub) connects to auth.email's mail server as serve would, negotiates TLS and\nsigns in as its user, sending nothing; with --to it also sends one email that says this hub's mail\nworks, to read in that mailbox. It prints the server's refusal and never the password; the running\nhub reports the same in /healthz under mail.";
+pub const USAGE: &str = "Usage:\n  devagotchi hub serve --state-dir ABS_PATH --config ABS_JSON\n  devagotchi hub enroll --state-dir ABS_PATH --device NAME\n  devagotchi hub revoke --state-dir ABS_PATH --device NAME\n  devagotchi hub devices --state-dir ABS_PATH\n  devagotchi hub owner --state-dir ABS_PATH --config ABS_JSON [--name NAME] [--replace]\n  devagotchi hub setup-code --state-dir ABS_PATH --config ABS_JSON\n  devagotchi hub connect-nomen --state-dir ABS_PATH --config ABS_JSON --client-id ID --project ID [--issuer URL]\n  devagotchi hub check-site ABS_DIR\n  devagotchi hub check-mail --config ABS_JSON [--to ADDRESS]\n  devagotchi hub analytics-resend --config ABS_JSON\n  devagotchi board <command> …            the agents' board in this project (board --help)\n\nserve starts the bastion: an authenticated Streamable HTTP MCP endpoint at /mcp that routes\nrun and operation_start/get/read/cancel to brokers by name, with whoami, /healthz and RFC 9728\nprotected-resource metadata, and /link where machines' `devagotchi link` connects out.\nWith a `web` section, people sign in with Shippin at /account to see their machines;\n/api/v1/me returns the same view for a session or a bearer token. Put it behind the edge for TLS.\n\nenroll prints a one-time code (15 minutes) that binds one machine's key to NAME;\nrevoke cuts that machine off within seconds; devices lists enrolled machines.\n\nowner (auth.mode hub) prints a one-time link (15 minutes) that makes the owner's passkey:\nthe first time it makes the owner's account, with the config's owner id if it names one;\nagain, it adds a passkey to the owner and ends the owner's other sessions; with --replace the\nlink also removes every other passkey of the owner (to take the account back).\n\nsetup-code (auth.mode devagotchi) prints a one-time code (15 minutes) that makes the account\nclaimed with it the hub's owner at /claim, or the owner already on file.\n\nconnect-nomen joins this hub to a Nomen with its owner's approval: it shows a code to confirm\non any device through the devagotchi-cli app (--client-id) of the hub's Nomen project (--project),\nthen adds the hub's own apps to that project (the key Nomen makes is written to the state\ndirectory, owner-only, and nowhere else), sets auth, owner and web in the config, and keeps a\ncopy of the old one. Issuer: https://id.shippin.cloud unless --issuer.\n\ncheck-site reads and checks a site directory (crates/hub/README.md, \"The site\") as serve would, and\nsays what is wrong and where; serve follows its site.dir and serves a change once it checks out.\n\ncheck-mail (auth.mode hub) connects to auth.email's mail server as serve would, negotiates TLS and\nsigns in as its user, sending nothing; with --to it also sends one email that says this hub's mail\nworks, to read in that mailbox. It prints the server's refusal and never the password; the running\nhub reports the same in /healthz under mail.\n\nanalytics-resend marks every board event in the hub's Postgres to be sent to ClickHouse again,\nas after a ClickHouse that lost its data: the running hub sends them, and ClickHouse keeps one\nrow per event. /healthz reports the export under analytics.";
 
 #[derive(Debug, PartialEq, Eq)]
 enum Command {
@@ -125,6 +126,11 @@ enum Command {
         config: PathBuf,
         to: Option<String>,
     },
+    /// Mark every board event to be sent to ClickHouse again (a ClickHouse that lost its
+    /// data); the running hub sends them.
+    AnalyticsResend {
+        config: PathBuf,
+    },
     ImportBoard {
         state: PathBuf,
         config: PathBuf,
@@ -165,6 +171,20 @@ fn parse_args(args: impl IntoIterator<Item = OsString>) -> BridgeResult<Command>
     }
     if args.first().is_some_and(|a| a == "import-board") {
         return parse_board_import(args.split_off(1));
+    }
+    if args.first().is_some_and(|a| a == "analytics-resend") {
+        let rest = args.split_off(1);
+        return match rest.as_slice() {
+            [flag, config] if flag == "--config" && std::path::Path::new(config).is_absolute() => {
+                Ok(Command::AnalyticsResend {
+                    config: PathBuf::from(config),
+                })
+            }
+            _ => Err(BridgeError::new(
+                "invalid_cli",
+                "analytics-resend needs --config ABS_JSON",
+            )),
+        };
     }
     if args.first().is_some_and(|a| a == "check-mail") {
         return parse_check_mail(args.split_off(1));
@@ -687,6 +707,29 @@ fn manage(command: Command) -> BridgeResult<()> {
                 dir.display()
             );
         }
+        Command::AnalyticsResend { config } => {
+            let config = read_config(&config)?;
+            let url = store::url_for(config.storage_url(), std::path::Path::new("."));
+            if !url.starts_with("postgres://") && !url.starts_with("postgresql://") {
+                return Err(BridgeError::new(
+                    "invalid_config",
+                    "analytics-resend reads the hub's Postgres: set storage.url or DEVAGOTCHI_HUB_STORAGE_URL",
+                ));
+            }
+            let runtime = tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()
+                .map_err(|error| BridgeError::new("runtime", error.to_string()))?;
+            runtime.block_on(async {
+                let schema = store::schema_for(config.storage_schema());
+                let store = store::Store::open_in(&url, schema.as_deref()).await?;
+                let marked = warehouse::resend(&store).await?;
+                println!(
+                    "marked {marked} board events to send again; the running hub sends them to ClickHouse, which keeps one row per event"
+                );
+                Ok::<_, BridgeError>(())
+            })?;
+        }
         Command::CheckMail { config, to } => {
             let config = read_config(&config)?;
             let Some(email) = config.sign_ins().1 else {
@@ -958,8 +1001,25 @@ async fn run(state_dir: PathBuf, config_path: PathBuf) -> BridgeResult<()> {
         .listen
         .parse()
         .map_err(|_| BridgeError::new("invalid_config", "listen"))?;
+    let warehouse_store = board_store.clone();
     let boards =
         Arc::new(board::mcp::Boards::from_config(&config, &state_dir).using_postgres(board_store)?);
+    // Board events to ClickHouse for statistics (ADR 0001): reported in /healthz, never
+    // required for the boards themselves.
+    if let Some(clickhouse) = &config.clickhouse {
+        let password = std::env::var(config::CLICKHOUSE_PASSWORD_ENV).ok();
+        let warehouse = Arc::new(warehouse::Warehouse::new(
+            clickhouse,
+            warehouse_store,
+            password,
+        )?);
+        tokio::spawn(warehouse.clone().run());
+        boards.set_warehouse(warehouse);
+        eprintln!(
+            "devagotchi hub: exporting board events to ClickHouse at {} (database {})",
+            clickhouse.url, clickhouse.database
+        );
+    }
     let listener = board::mcp::Boards::postgres_listener(&url).await?;
     tokio::spawn(boards.clone().listen_postgres(listener));
     if !boards.is_empty() {
@@ -1135,6 +1195,11 @@ fn app(state: AppState) -> Router {
                     require_bearer,
                 )),
         )
+        // Board statistics from ClickHouse (`warehouse`), for anyone who reads the board.
+        .merge(warehouse::routes().layer(middleware::from_fn_with_state(
+            state.clone(),
+            orgs::api::bearer_or_session,
+        )))
         // Organisations, members, teams, project roles and invites (`orgs::api`).
         .merge(
             orgs::api::routes()
@@ -1620,6 +1685,12 @@ async fn healthz(State(state): State<AppState>) -> Response {
         // the issuer. Without mail people still sign in by password, passkey and provider.
         body["mail"] = passkeys.mail_status();
     }
+    // The export to ClickHouse: reported, not counted. While ClickHouse is down the boards
+    // work, the events wait in Postgres, and this says how many and since when.
+    body["analytics"] = match state.hub.boards.warehouse() {
+        Some(warehouse) => warehouse.health().await,
+        None => serde_json::json!({ "configured": false }),
+    };
     // Only `auth.mode devagotchi` reports its authorization server's readiness here.
     if !auth.is_null() {
         body["auth"] = auth;
@@ -1685,6 +1756,23 @@ mod tests {
             ok,
             "the nested spelling and the bare one are the same command"
         );
+    }
+
+    #[test]
+    fn analytics_resend_takes_the_config_alone() {
+        assert_eq!(
+            parse_args(["analytics-resend", "--config", CONFIG].map(OsString::from)).unwrap(),
+            Command::AnalyticsResend {
+                config: PathBuf::from(CONFIG)
+            }
+        );
+        for bad in [
+            vec!["analytics-resend"],
+            vec!["analytics-resend", "--config", "c.json"],
+            vec!["analytics-resend", "--config", CONFIG, "--to", "x"],
+        ] {
+            assert!(parse_args(bad.into_iter().map(OsString::from)).is_err());
+        }
     }
 
     #[test]

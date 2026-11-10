@@ -80,9 +80,14 @@ jobs:
           tool: cargo-nextest
       - name: Start a throwaway Postgres
         run: tests/throwaway_postgres.sh
+      # The export's real-ClickHouse test (warehouse/tests.rs) runs against it.
+      - name: Start a throwaway ClickHouse
+        run: tests/throwaway_clickhouse.sh
       - run: cargo nextest run --locked --profile ci -p devagotchi-hub
         env:
           DEVAGOTCHI_TEST_POSTGRES_URL: postgres://postgres@127.0.0.1:55432/postgres
+          DEVAGOTCHI_TEST_CLICKHOUSE_URL: http://127.0.0.1:18123
+          DEVAGOTCHI_TEST_CLICKHOUSE_USER: devagotchi
 
   hub-compose:
     # The self-hosted stack (deploy/compose/): the hub image built from this commit, its own
@@ -110,7 +115,8 @@ jobs:
         run: |
           printf '%s\n' DEVAGOTCHI_DOMAIN=localhost DEVAGOTCHI_HTTP_PORT=8080 \
             DEVAGOTCHI_HTTPS_PORT=8443 DEVAGOTCHI_PUBLIC_URL=https://localhost:8443 \
-            DEVAGOTCHI_IMAGE=devagotchi-hub:ci > .env
+            DEVAGOTCHI_IMAGE=devagotchi-hub:ci \
+            "DEVAGOTCHI_CLICKHOUSE_PASSWORD=$(od -An -N24 -tx1 /dev/urandom | tr -d ' \n')" > .env
           docker compose up -d --no-build --wait --wait-timeout 180
       - name: Check it as a user would
         working-directory: deploy/compose
@@ -212,10 +218,16 @@ jobs:
           DEVAGOTCHI_HUB_STORAGE_URL: ${{ env.DEVAGOTCHI_PG }}/e2e
       - run: python tests/e2e.py --bin-dir target/debug --no-hub
         if: matrix.os == 'windows-11-arm'
-      - run: python tests/e2e.py --bin-dir target/debug --update-builds "$RUNNER_TEMP/build-a" "$RUNNER_TEMP/build-b"
+      # The export of board events to ClickHouse, stopped and started mid-run (R1 step 9).
+      - name: Start a throwaway ClickHouse
+        if: runner.os == 'Linux'
+        run: tests/throwaway_clickhouse.sh
+      - run: python tests/e2e.py --bin-dir target/debug --update-builds "$RUNNER_TEMP/build-a" "$RUNNER_TEMP/build-b" --clickhouse-container dvg-ch
         if: runner.os == 'Linux'
         env:
           DEVAGOTCHI_HUB_STORAGE_URL: ${{ env.DEVAGOTCHI_PG }}/e2e
+          DEVAGOTCHI_CLICKHOUSE_URL: http://127.0.0.1:18123
+          DEVAGOTCHI_CLICKHOUSE_USER: devagotchi
       # The hub's own sign-in pages in a real browser, the runner image's Chrome with a
       # virtual passkey: claiming a new hub from its log's link, the owner link, signing in,
       # `devagotchi login` approved on the hub's /device page, the operator letting a
