@@ -1,4 +1,5 @@
-# A self-hosted Devagotchi hub: the hub, its own Postgres, and Caddy for TLS.
+# A self-hosted Devagotchi hub: the hub, its own Postgres, its ClickHouse for statistics,
+# and Caddy for TLS.
 #   cp .env.example .env   # set DEVAGOTCHI_DOMAIN
 #   docker compose up -d
 # README.md beside this file says what each part does and how to change it.
@@ -49,6 +50,29 @@ services:
     shm_size: 128mb
     restart: unless-stopped
 
+  clickhouse:
+    container_name: ${COMPOSE_PROJECT_NAME}-clickhouse
+    image: ${DEVAGOTCHI_CLICKHOUSE_IMAGE:-clickhouse/clickhouse-server:25.8@sha256:0152dd511befe6a2c2ef53e930726179669b08116da78500b37c51c96ff5ee77}
+    # The hub's board events, for statistics (ADR 0001, crates/hub/src/warehouse.rs). On
+    # the compose network only, no published port: the hub alone talks to it, as the
+    # devagotchi user with the password install.sh keeps in .env (0600). The boards never
+    # need it; while it is down the events wait in Postgres and /healthz says so.
+    environment:
+      CLICKHOUSE_USER: devagotchi
+      CLICKHOUSE_PASSWORD: ${DEVAGOTCHI_CLICKHOUSE_PASSWORD:-}
+      CLICKHOUSE_DB: devagotchi
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 0
+    volumes:
+      - clickhouse-data:/var/lib/clickhouse
+    ulimits:
+      nofile: { soft: 262144, hard: 262144 }
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:8123/ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
   hub:
     container_name: ${COMPOSE_PROJECT_NAME}-hub
     image: ${DEVAGOTCHI_IMAGE:-ghcr.io/devagotchi/devagotchi:main}
@@ -58,6 +82,9 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      # Started, not healthy: the hub serves the boards whether ClickHouse answers or not.
+      clickhouse:
+        condition: service_started
     configs:
       - source: hub
         target: /etc/devagotchi/hub.json
@@ -99,6 +126,11 @@ services:
       DEVAGOTCHI_NOMEN_CLIENT_SECRET: ${DEVAGOTCHI_NOMEN_CLIENT_SECRET:-}
       DEVAGOTCHI_SMTP_URL: ${DEVAGOTCHI_SMTP_URL:-}
       DEVAGOTCHI_SMTP_PASSWORD: ${DEVAGOTCHI_SMTP_PASSWORD:-}
+      # The ClickHouse above, for the board statistics.
+      DEVAGOTCHI_CLICKHOUSE_URL: ${DEVAGOTCHI_CLICKHOUSE_URL:-http://clickhouse:8123}
+      DEVAGOTCHI_CLICKHOUSE_USER: devagotchi
+      DEVAGOTCHI_CLICKHOUSE_DATABASE: devagotchi
+      DEVAGOTCHI_CLICKHOUSE_PASSWORD: ${DEVAGOTCHI_CLICKHOUSE_PASSWORD:-}
     restart: unless-stopped
 
   caddy:
@@ -147,6 +179,7 @@ configs:
 volumes:
   postgres-data:
   postgres-socket:
+  clickhouse-data:
   hub-state:
   caddy-data:
   caddy-config:

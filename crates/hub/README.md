@@ -127,6 +127,30 @@ to its tenant by forced row-level security; the three questions that cross tenan
 organisations a subject is in, which projects it was given, which tenant an invite belongs
 to) are `SECURITY DEFINER` functions that answer ids and roles only.
 
+## Statistics in ClickHouse
+
+With `clickhouse.url` in the config (or `DEVAGOTCHI_CLICKHOUSE_URL`; `_DATABASE` and
+`_USER` beside it, the password only in `DEVAGOTCHI_CLICKHOUSE_PASSWORD`) the hub exports
+every board event from its Postgres outbox to ClickHouse (`src/warehouse.rs`, ADR 0001).
+The outbox row commits with the board change it records; the exporter sends what waits, at
+most 500 events per tenant and 50 tenants a round, and marks them delivered once ClickHouse
+has taken them. Delivery is at least once: the table is a `ReplacingMergeTree` ordered by
+tenant, board and event id, and every query counts `uniqExact(event_id)`.
+
+Nothing about a board needs ClickHouse. While it is down the events wait in Postgres, board
+writes are never refused, and `/healthz` reports `analytics`: `configured`, `ready`,
+`degraded`, `pending`, `oldest_pending_secs`, `sent`, `last_export_at` and `last_error`
+(never the password). Degraded means the last attempt failed or the oldest waiting event is
+older than five minutes. The exporter backs off from one second to a minute between
+attempts and drains the backlog when ClickHouse answers. `devagotchi hub analytics-resend
+--config ABS_JSON` marks every event waiting again, which is how a ClickHouse that lost its
+data is filled from Postgres's history.
+
+`GET /api/v1/projects/{project}/stats?days=N` (or `/api/v1/orgs/{org}/projects/{project}/stats`),
+for a bearer token or a session that reads the board, answers the last N days (30 by default):
+`events`, `throughput` by day and action, `actors` with their event counts and last act, and
+`completion` (how many tickets went from created to completed, mean and median seconds).
+
 ## Issue context
 
 Configure `github.repositories` with explicit `{repository_id, repository, project}`

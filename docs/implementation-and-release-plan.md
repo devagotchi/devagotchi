@@ -197,7 +197,7 @@ Inspected in this working copy, not inferred from old planning status:
 | Connector | `connect`/`setup` register Claude Code, Codex and Claude Desktop and probe tools | Integrate project lifecycle setup, capability/version checks and real client execution |
 | Existing hook pack | Board start/heartbeat/stop POSIX scripts and printed client snippets | Native Windows path, honest errors, issue context, actual installation, client-specific validation, durable stop/handoff behavior |
 | Inspector/hub UI | Native activity/workspace/connection views; hub board/ticket pages | Issue-source links, collaboration/evidence/finalization health, actionable connector errors |
-| Deployment | Compose (hub, Postgres, Caddy), install/update/backup scripts, `install.sh --email-from` for mail, existing probes | ClickHouse, the analytics outbox exporter and the sync endpoints do not exist yet; lifecycle configuration/state survives restart, backup/restore and upgrade; a mail check and `/healthz` `mail`; no cloud prerequisite |
+| Deployment | Compose (hub, Postgres, ClickHouse, Caddy), install/update/backup scripts, `install.sh --email-from` for mail, the outbox exporter and `/healthz` `analytics` (increment 115), existing probes | The sync endpoints do not exist yet; lifecycle configuration/state survives restart, backup/restore and upgrade; a mail check and `/healthz` `mail`; no cloud prerequisite |
 | Benchmark | Proposed workload/budget documents and correctness probes | Executable harness, raw outcomes, pinned comparison artifact and honest reports |
 | Commercial service | Planned only | Private repo, license/reuse clearance, infrastructure, billing, operations and launch gates |
 

@@ -40,6 +40,17 @@ health=$(curl_hub "$url/healthz") || fail "/healthz answers"
   || fail "the hub's queries are held to row-level security ($health)"
 ok "the hub's queries are held to row-level security (the devagotchi_hub role)"
 
+# The stack's ClickHouse: the hub made its table there and has nothing waiting to send
+# (a fresh stack's getting-started events at most, sent within seconds).
+analytics_ready() {
+  local health; health=$(curl_hub "$url/healthz") || return 1
+  [[ "$health" == *'"configured":true'* && "$health" == *'"ready":true'* \
+     && "$health" == *'"pending":0'* ]]
+}
+for _ in $(seq 1 60); do analytics_ready && break; sleep 1; done
+analytics_ready || fail "the hub exports to the stack's ClickHouse and is caught up ($(curl_hub "$url/healthz"))"
+ok "the hub exports its board events to the stack's ClickHouse, caught up"
+
 # Unclaimed (CI never makes a passkey): the hub printed a claim link to its log when it
 # started (the newest one works), its landing page offers the claim, and the code from the
 # log claims it through Caddy. The browser half is tests/claim_browser.py. Nothing below

@@ -227,7 +227,8 @@ $no_site && site_dir=""
 secret_names=(DEVAGOTCHI_GOOGLE_CLIENT_ID DEVAGOTCHI_GOOGLE_CLIENT_SECRET DEVAGOTCHI_GITHUB_CLIENT_ID
   DEVAGOTCHI_GITHUB_CLIENT_SECRET DEVAGOTCHI_NOMEN_CLIENT_ID DEVAGOTCHI_NOMEN_CLIENT_SECRET
   DEVAGOTCHI_SMTP_URL DEVAGOTCHI_SMTP_PASSWORD DEVAGOTCHI_GITHUB_WEBHOOK_SECRET
-  DEVAGOTCHI_HUB_BOARDS DEVAGOTCHI_HUB_GRANTS DEVAGOTCHI_GITHUB_REPOSITORIES)
+  DEVAGOTCHI_HUB_BOARDS DEVAGOTCHI_HUB_GRANTS DEVAGOTCHI_GITHUB_REPOSITORIES
+  DEVAGOTCHI_CLICKHOUSE_PASSWORD)
 declare -A secret=()
 unquote() { sed "s/^'\(.*\)'\$/\1/; s/^\"\(.*\)\"\$/\1/"; }
 from_file() { [[ -n "$env_file" ]] && sed -n "s/^\(export \)\{0,1\}$1=//p" "$env_file" | tail -1 | unquote; }
@@ -239,6 +240,9 @@ for name in "${secret_names[@]}"; do
   [[ "$value" != *"'"* && "$value" != *$'\n'* ]] || die "$name has a quote or a newline, which .env cannot hold"
   secret[$name]="$value"
 done
+# The stack's ClickHouse password: made once, kept in .env from then on.
+[[ -n "${secret[DEVAGOTCHI_CLICKHOUSE_PASSWORD]}" ]] \
+  || secret[DEVAGOTCHI_CLICKHOUSE_PASSWORD]=$(od -An -N24 -tx1 /dev/urandom | tr -d ' \n')
 need() { [[ -n "${secret[$1]}" ]] || die "$2 needs $1 (in the environment or --env-file)"; }
 providers=()
 if $google; then
@@ -300,7 +304,7 @@ umask 022
 
 # First start (or a re-run): the stack up, then update.sh pins the track's digest and
 # deploys it, health-checked, exactly as the timer will every few minutes.
-services=(postgres hub); [[ "$edge" == caddy ]] && services+=(caddy)
+services=(postgres clickhouse hub); [[ "$edge" == caddy ]] && services+=(caddy)
 # Behind an external edge, a Caddy an earlier run started here would only hold ports 80/443.
 [[ "$edge" == external ]] && (cd "$dir" && docker compose rm -sf caddy >/dev/null 2>&1 || true)
 say "starting ${services[*]} in $dir"

@@ -281,11 +281,25 @@ out: `/join` is off until the hub's config names a directory of them).
 | Service | What it is | Reached from |
 |---|---|---|
 | `postgres` | Postgres 18, the hub's store: accounts, passkeys, sessions, AI connections | Nothing over the network: it has no network (`network_mode: none`) and listens on a Unix socket in a volume only the hub mounts. With no TCP port there is no password to keep. Data checksums are on. |
+| `clickhouse` | ClickHouse 25.8, the board events for statistics (ADR 0001): the hub exports each event from its Postgres outbox, at least once, and ClickHouse keeps one row per event | The hub alone, on the compose network, as user `devagotchi` with the password `install.sh` made in `.env`; no published port |
 | `hub` | The one `devagotchi` binary (D20), built by GitHub from a known commit; no shell, runs as `nonroot` with no capabilities and no privilege escalation, writing only to its state volume | Caddy, on the compose network |
 | `caddy` | TLS for `DEVAGOTCHI_DOMAIN`, certificates from Let's Encrypt | Ports 80 and 443 (and 443/udp for HTTP/3) |
 
-State lives in named volumes: `postgres-data` (the database), `hub-state` (the hub's keys and
-machine enrolments), `caddy-data` (certificates). Back up `postgres-data` and `hub-state`.
+State lives in named volumes: `postgres-data` (the database), `clickhouse-data` (the
+statistics), `hub-state` (the hub's keys and machine enrolments), `caddy-data`
+(certificates). Back up `postgres-data` and `hub-state` (`backup.sh` does, nightly).
+ClickHouse holds nothing Postgres does not: after a restore, or with an empty
+`clickhouse-data`, send every event again and ClickHouse keeps one row per event:
+
+```bash
+docker compose exec hub devagotchi hub analytics-resend --config /etc/devagotchi/hub.json
+```
+
+While ClickHouse is down the boards work as before; the events wait in Postgres and
+`/healthz` reports `analytics` with `degraded: true`, how many wait (`pending`) and since
+when (`oldest_pending_secs`). The hub sends them when ClickHouse is back. A board's
+statistics are `GET /api/v1/projects/{project}/stats?days=30` (or
+`/api/v1/orgs/{org}/projects/{project}/stats`) for anyone who reads the board.
 
 ## Settings
 
@@ -310,6 +324,9 @@ Everything is in `.env`; each has a default (`.env.example` lists them).
 | `DEVAGOTCHI_HUB_TRUSTED_PROXIES` | private and loopback | JSON list of addresses or CIDR ranges. |
 | `DEVAGOTCHI_GOOGLE_CLIENT_ID` … `DEVAGOTCHI_SMTP_PASSWORD` | (none) | The providers' ids and secrets, from the secret store. |
 | `DEVAGOTCHI_SITE_DIR` | (none: the built-in site) | The hub's site directory on this host, mounted read-only; `install.sh --site` sets it. |
+| `DEVAGOTCHI_CLICKHOUSE_PASSWORD` | made by `install.sh` | The stack's ClickHouse password, made once and kept in `.env`. |
+| `DEVAGOTCHI_CLICKHOUSE_URL` | `http://clickhouse:8123` | Another ClickHouse instead of the stack's, with its own password above. |
+| `DEVAGOTCHI_CLICKHOUSE_IMAGE` | `clickhouse/clickhouse-server:25.8@sha256:…` | The ClickHouse image, pinned by digest. |
 
 The defaults suit a 2 GB box. The hub's own settings (token lifetimes, the claim code's, limits) go in its config,
 `configs.hub` in `compose.yaml` (`crates/hub/README.md`).
