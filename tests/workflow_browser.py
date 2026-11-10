@@ -148,7 +148,7 @@ def main() -> int:
     processes.append(hub)
     joined = False
     try:
-        wait_ready(url, hub)
+        wait_ready(url, hub, work / "hub.log")
 
         # 1. The AI starts "Get started" and gets one link. Previewing it spends nothing.
         ai = Person(url)

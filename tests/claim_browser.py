@@ -42,11 +42,12 @@ def free_port() -> int:
         return s.getsockname()[1]
 
 
-def wait_ready(url: str, process: subprocess.Popen, log: Path) -> None:
+def wait_ready(url: str, process: subprocess.Popen, log: Path | None = None) -> None:
     deadline = time.time() + 30
     while time.time() < deadline:
         if process.poll() is not None:
-            raise SystemExit(f"the hub exited with {process.returncode}:\n{log.read_text()}")
+            said = f":\n{log.read_text()}" if log and log.exists() else ""
+            raise SystemExit(f"the hub exited with {process.returncode}{said}")
         try:
             with urllib.request.urlopen(url + "/healthz", timeout=1) as answer:
                 if answer.status == 200:
