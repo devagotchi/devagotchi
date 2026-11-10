@@ -43,6 +43,7 @@ mod output_schema;
 mod provider_tests;
 mod push;
 mod run;
+mod signals;
 mod site;
 mod store;
 mod tenant_access;
@@ -1005,6 +1006,7 @@ async fn run(state_dir: PathBuf, config_path: PathBuf) -> BridgeResult<()> {
         .parse()
         .map_err(|_| BridgeError::new("invalid_config", "listen"))?;
     let warehouse_store = board_store.clone();
+    let signals_store = board_store.clone();
     let boards =
         Arc::new(board::mcp::Boards::from_config(&config, &state_dir).using_postgres(board_store)?);
     // Board events to ClickHouse for statistics (ADR 0001): reported in /healthz, never
@@ -1023,6 +1025,26 @@ async fn run(state_dir: PathBuf, config_path: PathBuf) -> BridgeResult<()> {
             clickhouse.url, clickhouse.database
         );
     }
+    // Signals to the operator's sinks (`signals.rs`, docs/signals.md): each on its own task,
+    // reported in /healthz, never holding back the hub or another sink.
+    let mut sinks = Vec::new();
+    for config in &config.signals.sinks {
+        let sink = Arc::new(signals::Sink::new(
+            config,
+            signals_store.clone(),
+            audit.clone(),
+            |name| env::var(name).ok(),
+        )?);
+        tokio::spawn(sink.clone().run());
+        eprintln!(
+            "devagotchi hub: signals ({}) to sink {} at {}",
+            signals::SCHEMA,
+            config.name,
+            config.url
+        );
+        sinks.push(sink);
+    }
+    boards.set_sinks(sinks);
     let listener = board::mcp::Boards::postgres_listener(&url).await?;
     tokio::spawn(boards.clone().listen_postgres(listener));
     if !boards.is_empty() {
@@ -1694,6 +1716,16 @@ async fn healthz(State(state): State<AppState>) -> Response {
         Some(warehouse) => warehouse.health().await,
         None => serde_json::json!({ "configured": false }),
     };
+    // The signal sinks: reported, not counted. One that refuses falls behind; nothing else does.
+    body["signals"] = serde_json::Value::Array(
+        state
+            .hub
+            .boards
+            .sinks()
+            .iter()
+            .map(|sink| sink.health())
+            .collect(),
+    );
     // Only `auth.mode devagotchi` reports its authorization server's readiness here.
     if !auth.is_null() {
         body["auth"] = auth;

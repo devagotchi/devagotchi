@@ -88,6 +88,63 @@ impl Audit {
         Ok(seq)
     }
 
+    /// Up to `limit` entries after `seq`, oldest first: `(seq, at, subject, via, tool,
+    /// broker, operation_id, outcome, hash)`. What the signal sinks read (`signals.rs`).
+    #[allow(clippy::type_complexity)]
+    pub fn after(
+        &self,
+        seq: u64,
+        limit: usize,
+    ) -> BridgeResult<
+        Vec<(
+            u64,
+            String,
+            String,
+            String,
+            String,
+            String,
+            String,
+            String,
+            String,
+        )>,
+    > {
+        let connection = self.connection.lock().expect("audit lock");
+        let mut statement = connection
+            .prepare(
+                "SELECT seq, at, subject, via, tool, broker, operation_id, outcome, hash
+                 FROM audit WHERE seq > ?1 ORDER BY seq LIMIT ?2",
+            )
+            .map_err(|error| BridgeError::new("audit_read", error.to_string()))?;
+        let rows = statement
+            .query_map(params![seq as i64, limit as i64], |row| {
+                Ok((
+                    row.get::<_, i64>(0)? as u64,
+                    row.get(1)?,
+                    row.get(2)?,
+                    row.get(3)?,
+                    row.get(4)?,
+                    row.get(5)?,
+                    row.get(6)?,
+                    row.get(7)?,
+                    row.get(8)?,
+                ))
+            })
+            .map_err(|error| BridgeError::new("audit_read", error.to_string()))?;
+        rows.collect::<Result<Vec<_>, _>>()
+            .map_err(|error| BridgeError::new("audit_read", error.to_string()))
+    }
+
+    /// The last entry's seq (0 for none): how far a signal sink can be behind.
+    pub fn last_seq(&self) -> BridgeResult<u64> {
+        let connection = self.connection.lock().expect("audit lock");
+        connection
+            .query_row("SELECT COALESCE(MAX(seq), 0) FROM audit", [], |row| {
+                row.get::<_, i64>(0)
+            })
+            .map(|seq| seq as u64)
+            .map_err(|error| BridgeError::new("audit_read", error.to_string()))
+    }
+
     /// Walk the whole chain. Small logs only; a paged walk arrives with the audit UI.
     pub fn verify(&self) -> BridgeResult<ChainStatus> {
         let connection = self.connection.lock().expect("audit lock");
