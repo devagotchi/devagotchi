@@ -34,7 +34,8 @@ heading. Agents draft the fragments below; they never tag.
   on Linux (the e2e, host-install and hub Postgres jobs), the runner image's own PostgreSQL
   serves windows-2022 and windows-2025, and `ci-install-check.sh` and `.ps1` take
   `DEVAGOTCHI_HUB_JOIN_STORAGE_URL` and `DEVAGOTCHI_HUB_UPDATE_STORAGE_URL` for the second
-  and third hub they start (and `_ROLE_` for the Linux installer's hub role). windows-11-arm
+  and third hub they start (and `_ROLE_` and `_IDP_` for the Linux installer's two hub
+  roles). windows-11-arm
   has no PostgreSQL and runs `--no-hub`, and
   `ci-install-check.ps1` ends before its hub parts when the storage URL is empty. The
   browser scripts print the hub's log when it exits before it is ready.

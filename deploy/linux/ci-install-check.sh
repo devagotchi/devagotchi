@@ -106,11 +106,13 @@ ok "restarted by systemd (pid $pid -> $(prop devagotchi-broker.service MainPID))
 
 echo "--- the link joins a hub"
 # Each hub keeps its accounts and boards in Postgres (docs/adr/0001) and a database holds
-# one hub (migration 0007): the four hubs this check starts (the one the link joins, the
-# one that hands out a build, the update probe's, the installed hub role's) need an empty
-# database each.
-[[ -n "${DEVAGOTCHI_HUB_STORAGE_URL:-}" && -n "${DEVAGOTCHI_HUB_JOIN_STORAGE_URL:-}" && -n "${DEVAGOTCHI_HUB_UPDATE_STORAGE_URL:-}" && -n "${DEVAGOTCHI_HUB_ROLE_STORAGE_URL:-}" ]] \
-    || fail "set DEVAGOTCHI_HUB_STORAGE_URL, DEVAGOTCHI_HUB_JOIN_STORAGE_URL, DEVAGOTCHI_HUB_UPDATE_STORAGE_URL and DEVAGOTCHI_HUB_ROLE_STORAGE_URL to four empty Postgres databases"
+# one hub (migration 0007): the five hubs this check starts (the one the link joins, the
+# one that hands out a build, the update probe's, the installed hub role's and the hub role
+# with an identity provider) need an empty database each.
+for name in DEVAGOTCHI_HUB_STORAGE_URL DEVAGOTCHI_HUB_JOIN_STORAGE_URL DEVAGOTCHI_HUB_UPDATE_STORAGE_URL \
+        DEVAGOTCHI_HUB_ROLE_STORAGE_URL DEVAGOTCHI_HUB_IDP_STORAGE_URL; do
+    [[ -n "${!name:-}" ]] || fail "set $name (one empty Postgres database per hub this check starts: link, join, update, hub role, identity-provider hub role)"
+done
 PORT=$(python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1",0)); print(s.getsockname()[1])')
 TOKEN=ci-host-$(python3 -c 'import secrets; print(secrets.token_hex(16))')
 install -m 0600 /dev/null "$WORK/tokens.json"
@@ -336,7 +338,8 @@ auth = {"auth": {"mode": "nomen", "issuer": "https://id.example", "audiences": [
         "owner": "300000000000000001"}
 json.dump(auth, open(f"{work}/auth.json", "w"))
 PY
-sudo "$INSTALL" "${IDP[@]}" --role hub --public-url https://hub.example --listen "127.0.0.1:$NPORT" \
+sudo env DEVAGOTCHI_HUB_STORAGE_URL="$DEVAGOTCHI_HUB_IDP_STORAGE_URL" \
+    "$INSTALL" "${IDP[@]}" --role hub --public-url https://hub.example --listen "127.0.0.1:$NPORT" \
     --auth-config "$WORK/auth.json" --person 300000000000000002 --board idp-project
 [ "$(sudo stat -c '%U %a' "$IDP_HOME/.config/devagotchi/idp-key.json")" = "$IDP_ACCOUNT 600" ] || fail "the identity provider key is not the account's private file"
 sudo grep -q '"mode": "nomen"' "$IDP_HOME/.config/devagotchi/hub.json" || fail "hub.json is not in nomen mode"

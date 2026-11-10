@@ -294,10 +294,11 @@ jobs:
       - run: rustup toolchain install
       - run: cargo build --locked --bins
       - name: Start a throwaway Postgres
-        run: tests/throwaway_postgres.sh install install_join install_update install_role
+        run: tests/throwaway_postgres.sh install install_join install_update install_role install_idp
       - run: deploy/linux/ci-install-check.sh
         env:
           DEVAGOTCHI_HUB_STORAGE_URL: postgres://postgres@127.0.0.1:55432/install
           DEVAGOTCHI_HUB_JOIN_STORAGE_URL: postgres://postgres@127.0.0.1:55432/install_join
           DEVAGOTCHI_HUB_UPDATE_STORAGE_URL: postgres://postgres@127.0.0.1:55432/install_update
           DEVAGOTCHI_HUB_ROLE_STORAGE_URL: postgres://postgres@127.0.0.1:55432/install_role
+          DEVAGOTCHI_HUB_IDP_STORAGE_URL: postgres://postgres@127.0.0.1:55432/install_idp
