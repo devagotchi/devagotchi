@@ -63,6 +63,7 @@ pub fn router(hub_authorization: bool) -> Router<AppState> {
         .merge(sign_in::routes())
         // The phone control app (`app/`).
         .merge(super::app::routes())
+        .merge(super::orgs::routes())
         .route("/auth/password/set", post(set_password))
         .route("/api/v1/me", get(me))
         .route("/api/v1/machines", post(machines::add_json))

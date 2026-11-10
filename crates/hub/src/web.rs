@@ -52,6 +52,7 @@ mod offers;
 mod operator;
 #[cfg(test)]
 mod operator_tests;
+mod orgs;
 mod pages;
 #[cfg(test)]
 mod passkey_tests;

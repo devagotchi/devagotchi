@@ -185,7 +185,7 @@ jobs:
           python-version: "3.13"
       - name: Start a throwaway Postgres
         if: runner.os == 'Linux'
-        run: tests/throwaway_postgres.sh e2e claim passkey device_login operator analytics workflow first_connect app clients
+        run: tests/throwaway_postgres.sh e2e claim passkey device_login operator analytics workflow first_connect app clients orgs
       - name: Start the runner's PostgreSQL service
         if: matrix.os == 'windows-2022' || matrix.os == 'windows-2025'
         shell: pwsh
@@ -250,6 +250,7 @@ jobs:
           DEVAGOTCHI_HUB_STORAGE_URL=$DEVAGOTCHI_PG/workflow python tests/workflow_browser.py --channel chrome --machine join --devagotchi "$PWD/target/debug/devagotchi"
           DEVAGOTCHI_HUB_STORAGE_URL=$DEVAGOTCHI_PG/first_connect python tests/first_connect_browser.py --channel chrome --machine join --devagotchi "$PWD/target/debug/devagotchi"
           DEVAGOTCHI_HUB_STORAGE_URL=$DEVAGOTCHI_PG/app python tests/app_browser.py --channel chrome --devagotchi "$PWD/target/debug/devagotchi"
+          DEVAGOTCHI_HUB_STORAGE_URL=$DEVAGOTCHI_PG/orgs python tests/orgs_browser.py --channel chrome --devagotchi "$PWD/target/debug/devagotchi"
       # Real AI clients connect through the hub's own OAuth server as a person connects them:
       # the official MCP TypeScript SDK and the Codex CLI (locked in tests/clients), each
       # registering, approved on the consent page in Chrome, then listing and calling tools.

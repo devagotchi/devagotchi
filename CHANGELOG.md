@@ -7,6 +7,23 @@ heading. Agents draft the fragments below; they never tag.
 
 ## Unreleased
 
+### Organisations on the hub's pages (increment 116)
+- `/orgs` lists a person's organisations and makes one; `/orgs/{org}` shows its projects
+  (who sees each, its own members, its events of the last 7 days when the hub exports to
+  ClickHouse), its members and roles, its teams and its invites, with a form for each change
+  an admin may make. The calls are `orgs.rs`'s, as the API makes them: the same checks, the
+  same chain. Every form posts from this hub's pages only; every word is the site's
+  (`messages.orgs`, with built-in defaults, so a site without them still loads).
+- An invite's link is shown once, on the answer that made it (`no-store`). `/invite` keeps
+  its token in the browser through signing in first (`/assets/invite.js`, session storage,
+  out of the address bar) and joins with one press. The Boards tab links to `/orgs`.
+- Fixed: the ticket page's actions acted as a person for anyone who could open the board.
+  They now ask `Hub::board_access`: a viewer or an agent's role is refused and told why.
+- Tests: `orgs_tests.rs` drives the pages through the whole router on SQLite and Postgres;
+  `tests/orgs_browser.py` in the Chrome job: two people sign up, an organisation, a project,
+  a team and an invite, the invite kept through signing up, the board and its ticket, a
+  viewer's next comment refused, and the page at a phone's width.
+
 ### Board events in ClickHouse (increment 115)
 - `clickhouse.url` (or `DEVAGOTCHI_CLICKHOUSE_URL`, `_DATABASE`, `_USER`; the password only
   in `DEVAGOTCHI_CLICKHOUSE_PASSWORD`) turns on the export of every board event from the
