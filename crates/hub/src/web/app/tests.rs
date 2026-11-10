@@ -137,7 +137,8 @@ async fn the_app_shows_only_the_accounts_own_machines_and_boards_in_one_frame() 
         "Needs you lists the ticket assigned to A"
     );
     assert!(home.contains("<body class=\"app\">"), "the app's frame");
-    assert!(home.contains("<nav class=\"tabs\"><a href=\"/app\" aria-current=\"page\">Home</a>"));
+    assert!(home.contains("<nav class=\"tabs\"><a href=\"/app\" aria-current=\"page\">"));
+    assert!(home.contains("<span class=\"tab-label\">Home</span>"));
     for tab in ["/app/machines", "/app/boards", "/approvals"] {
         assert!(
             home.contains(&format!("<a href=\"{tab}\">")),
@@ -159,7 +160,8 @@ async fn the_app_shows_only_the_accounts_own_machines_and_boards_in_one_frame() 
         let (status, html) = page(&hub, path, &alice).await;
         assert_eq!(status, 200, "{path}: {html}");
         assert!(
-            html.contains(&format!("aria-current=\"page\">{tab}</a>")),
+            html.contains(&format!("href=\"{path}\" aria-current=\"page\""))
+                && html.contains(&format!("<span class=\"tab-label\">{tab}</span>")),
             "{path}"
         );
     }
@@ -289,7 +291,7 @@ async fn a_machines_page_shows_its_state_and_jobs_and_updates_from_here_only() {
     }
     assert!(html.contains("action=\"/app/machines/desk/update\""));
     assert!(html.contains("No jobs through the hub yet."));
-    assert!(html.contains("aria-current=\"page\">Machines</a>"));
+    assert!(html.contains("href=\"/app/machines\" aria-current=\"page\""));
 
     // The ring: the last 20 operations routed to it, newest first, each moved by later answers.
     let links = &hub.hub.links;

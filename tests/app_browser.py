@@ -16,6 +16,11 @@ http://localhost (a secure context, so the service worker runs without TLS). The
 4. The same on a Pixel 7 (emulated), signed in there with the email and password.
 5. With the hub gone, reloading the app shows its offline page, not a browser error.
 
+Between 2 and 3, the phone as one person's: Home greets them by name, the bar has their mark,
+the Approvals tab counts what waits; a request reads at a glance with thumb-sized buttons, and
+"approve and allow" makes the AI's next one go through. On their own page they set a name, dark
+and a shorter "allow", and every screen follows.
+
 Needs Python Playwright with its Chromium (tests/requirements-browser.txt). CI runs it on
 ubuntu-24.04 (`e2e`, beside tests/workflow_browser.py); locally:
 
@@ -210,6 +215,60 @@ def main() -> int:
             assert [n["body"] for n in content["notes"]] == ["Looked at it from the phone"], content
             print("PASS a ticket from the board: commented, closed, undone; the AI sees it")
 
+            # The phone as one person's: greeted by name, their mark, what waits on the tab.
+            restart = {"project": "alpha", "title": "Restart the api", "what": "systemctl restart api",
+                       "why": "a new build", "undo": "start the old build", "kind": "restart",
+                       "target": "desk"}
+            asked = ai.tool("approval_request", restart)
+            assert not asked.get("isError"), asked
+            page.goto(f"{url}/app")
+            assert page.locator("#hello h1").inner_text() == "Hi Phone"
+            assert page.locator("header.bar #me-link .avatar").inner_text() == "P"
+            assert page.locator("nav.tabs a").count() == 5
+            badge = page.locator("#approvals-badge")
+            badge.wait_for(state="visible", timeout=5_000)
+            assert badge.inner_text() == "1", badge.inner_text()
+            no_sideways_scroll(page, 390)
+
+            # A request at a glance, the buttons big enough for a thumb; allowing it ahead of
+            # time lets the AI's next one through.
+            page.locator("#review").click()
+            page.wait_for_url(re.compile(r".*/approvals$"))
+            card = page.locator("section.ask")
+            assert card.locator(".tag.kind").inner_text() == "restart on desk"
+            assert card.locator("dd.cmd").inner_text() == "systemctl restart api"
+            assert "just now" in card.locator(".meta").inner_text()
+            assert card.locator("button.approve").first.bounding_box()["height"] >= 48
+            no_sideways_scroll(page, 390)
+            card.locator("form.allow button").click()
+            page.wait_for_url(re.compile(r".*/approvals\?done="))
+            again = ai.tool("approval_request", restart)["structuredContent"]
+            assert again["status"] == "approved", again
+            print("PASS greeted by name; the count on the tab; a request at a glance; allowed ahead of time")
+
+            # Their own page: who they are, and what they set is what every screen does.
+            page.locator("nav.tabs a", has_text="You").click()
+            page.wait_for_url(re.compile(r".*/app/me$"))
+            assert page.locator("nav.tabs a[aria-current=page]").inner_text() == "You"
+            assert page.locator("#login").inner_text() == EMAIL
+            no_sideways_scroll(page, 390)
+            light = page.evaluate("getComputedStyle(document.body).backgroundColor")
+            page.locator("#prefs input[name=name]").fill("Grace Hopper")
+            page.locator("#prefs select[name=theme]").select_option("dark")
+            page.locator("#prefs select[name=allow_days]").select_option("7")
+            page.locator("#prefs button[type=submit]").click()
+            page.wait_for_url(re.compile(r".*/app/me\?saved=1.*"))
+            assert page.locator("html").get_attribute("data-theme") == "dark"
+            assert page.evaluate("getComputedStyle(document.body).backgroundColor") != light
+            assert page.locator("#me-link .avatar").inner_text() == "GH"
+            no_sideways_scroll(page, 390)
+            ai.tool("approval_request", {**restart, "kind": "deploy", "title": "Deploy main"})
+            page.goto(f"{url}/approvals")
+            assert "for 7 days" in page.locator("form.allow button").inner_text()
+            page.goto(f"{url}/app")
+            assert page.locator("#hello h1").inner_text() == "Hi Grace"
+            print("PASS their own page: a name, dark and a shorter allow, and every screen follows")
+
             # 3. The installed app starts at /app, standalone.
             status, _, body = call(f"{url}/manifest.webmanifest")
             manifest = json.loads(body)
@@ -237,7 +296,7 @@ def main() -> int:
             page.wait_for_function("navigator.serviceWorker && navigator.serviceWorker.controller",
                                    timeout=15_000)
             page.wait_for_function(
-                "caches.open('devagotchi-app-1').then(c => c.match('/app/offline')).then(Boolean)",
+                "caches.open('devagotchi-app-2').then(c => c.match('/app/offline')).then(Boolean)",
                 timeout=15_000)
             hub.terminate()
             hub.wait(timeout=10)

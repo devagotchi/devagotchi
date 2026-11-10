@@ -1061,6 +1061,38 @@ person keeps approving: 3 or more approvals of one kind and target in the last 3
 denied, and not already allowed. A request without a kind always waits for a person. The forms
 post from the hub's own pages only, like every other form.
 
+## The phone app and a person's preferences
+
+`/app` is the installable phone app (`docs/spec-phone-app.md`): one frame with the person's mark
+in the bar, five tabs (Home, Approvals, Boards, Machines, You) and the page scrolling between. The
+Approvals tab and the installed icon show how many approvals wait (`GET /app/attention`, the
+count only, never kept). Home greets the person and its mascot's mood follows what waits. An
+approval leads with its kind, what, why and how to undo it, and buttons big enough for a thumb;
+the notification controls sit under it.
+
+`/app/me` is who is signed in, their organisations, this phone's notifications, what they want,
+and Sign out. `src/preferences.rs` keeps one row per person under their tenant's row-level
+security (migration 0020), as versioned JSON:
+
+| Preference | Default | What it does |
+|---|---|---|
+| `name` | none | What to call them; the first part of their login until they say. Decides nothing. |
+| `theme` | `system` | `light` or `dark` over the phone's setting, on the app's pages. |
+| `allow_days` | 30 | How long "approve and allow" and an offer last: 7, 30 or 90. |
+| `offer_ahead` | on | Offer the kinds they keep approving. |
+| `always_ask` | none | Kinds that always wait for them, in lowercase with dashes. |
+| `machine_pushes` | on | Machines may push to them about going offline or a failed update. |
+
+A kind on `always_ask` is never offered and that person cannot allow it ahead of time, by any
+form, and saving stops what they already allowed for it on every board they decide on. What
+someone else allowed on a shared board stays that person's to stop, from the same page.
+
+`SCHEMA` is the shape this hub writes. Reading goes through `upgrade`, so changing the shape is one
+step there and old rows need no migration; what this hub does not know stays in the row and is
+written back, so an older hub never loses what a newer one stored. Every change is a
+`preferences.changed` event on the tenant's chain, naming each field and value (a name only by the
+fact it changed), so a signals sink (`docs/signals.md`) sees people's choices as they evolve.
+
 ## Audit and health
 
 Every routed call appends one row to `audit.sqlite3` in the state directory: time, subject,

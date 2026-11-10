@@ -917,6 +917,95 @@ pub struct Messages {
     /// The organisation pages (`web/orgs.rs`). Plain text; `{n}`, `{why}` are filled in.
     #[serde(default)]
     pub orgs: OrgsCopy,
+    /// The person's own page and the app's greeting (`web/app/me.rs`, `web/app/home.rs`).
+    #[serde(default)]
+    pub me: MeCopy,
+}
+
+/// The words of the person's own page and of the greeting on the app's home.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields, default)]
+pub struct MeCopy {
+    pub tab: String,
+    pub title: String,
+    pub hello: String,
+    pub hello_nameless: String,
+    pub clear: String,
+    pub waiting_one: String,
+    pub waiting_many: String,
+    pub review_one: String,
+    pub review_many: String,
+    pub orgs_title: String,
+    pub orgs_none: String,
+    pub orgs_manage: String,
+    pub phone_title: String,
+    pub prefs_title: String,
+    pub name_label: String,
+    pub theme_label: String,
+    pub theme_system: String,
+    pub theme_light: String,
+    pub theme_dark: String,
+    pub loop_title: String,
+    pub days_label: String,
+    pub days: String,
+    pub offer_label: String,
+    pub always_label: String,
+    pub always_help: String,
+    pub pushes_label: String,
+    pub save: String,
+    pub saved: String,
+    pub saved_stopped: String,
+    pub not_saved: String,
+    pub not_kept: String,
+    pub account_link: String,
+    pub sign_out: String,
+}
+
+impl Default for MeCopy {
+    fn default() -> Self {
+        let s = |text: &str| text.to_string();
+        Self {
+            tab: s("You"),
+            title: s("You"),
+            hello: s("Hi {name}"),
+            hello_nameless: s("Hi"),
+            clear: s("All clear. Nothing needs you."),
+            waiting_one: s("1 thing needs you."),
+            waiting_many: s("{n} things need you."),
+            review_one: s("Review 1 approval"),
+            review_many: s("Review {n} approvals"),
+            orgs_title: s("Organisations"),
+            orgs_none: s("You are not in an organisation yet."),
+            orgs_manage: s("Manage organisations"),
+            phone_title: s("This phone"),
+            prefs_title: s("Your preferences"),
+            name_label: s("What should we call you?"),
+            theme_label: s("Appearance"),
+            theme_system: s("Same as this phone"),
+            theme_light: s("Light"),
+            theme_dark: s("Dark"),
+            loop_title: s("What needs you"),
+            days_label: s("\"Approve and allow\" lasts"),
+            days: s("{n} days"),
+            offer_label: s("Offer to approve ahead of time what I keep approving"),
+            always_label: s("Always ask me about these kinds of step"),
+            always_help: s(
+                "Separate them with commas, like deploy, delete. They are never offered and you cannot allow them ahead of time. Saving stops any you already allowed.",
+            ),
+            pushes_label: s(
+                "Tell this account's phones when a machine goes offline or an update fails",
+            ),
+            save: s("Save"),
+            saved: s("Saved."),
+            saved_stopped: s(
+                "Saved. Stopped {n} you had approved ahead of time: those need you again.",
+            ),
+            not_saved: s("Not saved"),
+            not_kept: s("This hub does not keep preferences for this account."),
+            account_link: s("Account and sign-ins"),
+            sign_out: s("Sign out"),
+        }
+    }
 }
 
 /// The organisation pages' words (`web/orgs.rs`): organisations, their projects, members,

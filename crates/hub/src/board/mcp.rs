@@ -60,6 +60,8 @@ pub struct Boards {
     /// Organisations, their members and who works which project (`crate::orgs`): in the
     /// hub's store, beside the hosted boards.
     orgs: Option<crate::orgs::Orgs>,
+    /// What people told the hub they want, kept beside the organisations.
+    preferences: Option<crate::preferences::PreferenceStore>,
     /// The export of these boards' events to ClickHouse (`crate::warehouse`), when the hub
     /// has one.
     warehouse: std::sync::OnceLock<Arc<crate::warehouse::Warehouse>>,
@@ -151,6 +153,7 @@ impl Boards {
         Self {
             hosted: None,
             orgs: None,
+            preferences: None,
             warehouse: std::sync::OnceLock::new(),
             sinks: std::sync::OnceLock::new(),
             dirs: config
@@ -173,6 +176,7 @@ impl Boards {
 
     pub(crate) fn using_postgres(mut self, store: crate::store::Store) -> BridgeResult<Self> {
         self.orgs = Some(crate::orgs::Orgs::new(store.clone()));
+        self.preferences = Some(crate::preferences::PreferenceStore::new(store.clone()));
         self.hosted = Some(super::hosted::registry::Registry::new(store)?);
         Ok(self)
     }
@@ -181,13 +185,19 @@ impl Boards {
     /// store with board files).
     #[cfg(test)]
     pub(crate) fn with_orgs(mut self, store: crate::store::Store) -> Self {
-        self.orgs = Some(crate::orgs::Orgs::new(store));
+        self.orgs = Some(crate::orgs::Orgs::new(store.clone()));
+        self.preferences = Some(crate::preferences::PreferenceStore::new(store));
         self
     }
 
     /// This hub's organisations, when it keeps them (always under `hub serve`).
     pub(crate) fn orgs(&self) -> Option<&crate::orgs::Orgs> {
         self.orgs.as_ref()
+    }
+
+    /// What people told this hub they want, when it keeps it (always under `hub serve`).
+    pub(crate) fn preferences(&self) -> Option<&crate::preferences::PreferenceStore> {
+        self.preferences.as_ref()
     }
 
     /// Export these boards' events to ClickHouse through `warehouse` (set once, at start).

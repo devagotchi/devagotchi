@@ -3,7 +3,7 @@
 // It keeps the phone app's frame (its offline page), its script and the stylesheet, so the
 // app opens offline with "You're offline" instead of a browser error; every page is still
 // fetched fresh whenever the hub can be reached.
-var FRAME = "devagotchi-app-1";
+var FRAME = "devagotchi-app-2";
 var KEPT = ["/app/offline", "/assets/hub.css", "/assets/app.js"];
 self.addEventListener("install", function (event) {
   event.waitUntil(caches.open(FRAME).then(function (cache) { return cache.addAll(KEPT); })
@@ -40,6 +40,8 @@ self.addEventListener("fetch", function (event) {
 self.addEventListener("push", function (event) {
   var data = {};
   try { data = event.data ? event.data.json() : {}; } catch (e) { data = {}; }
+  // A dot on the app's icon until the app opens and says how many.
+  if (self.navigator.setAppBadge) self.navigator.setAppBadge().catch(function () {});
   event.waitUntil(self.registration.showNotification(data.title || @TITLE@, {
     body: data.body || "Something is waiting for your approval.",
     data: { url: data.url || "/approvals" },

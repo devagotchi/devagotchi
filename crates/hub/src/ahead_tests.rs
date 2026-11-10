@@ -45,7 +45,7 @@ async fn run(store: Option<&str>) {
         .await;
     assert_eq!(bound["structuredContent"]["project"], "site", "{bound}");
 
-    // The AI asks; it waits for Alice, and her page names its kind.
+    // The AI asks; it waits for the person, and the approvals page names its kind.
     let first = restart(&hub, &mut alice).await;
     assert_eq!(first["status"], "pending", "{first}");
     assert_eq!(first["kind"], "restart");
@@ -57,7 +57,7 @@ async fn run(store: Option<&str>) {
         "{page}"
     );
 
-    // Alice approves it and allows restarts on dabo for 30 days.
+    // Approved, with restarts on dabo allowed for 30 days.
     let version = first["version"].as_i64().unwrap().to_string();
     let decided = form(
         &hub,
@@ -90,7 +90,7 @@ async fn run(store: Option<&str>) {
             .starts_with("standing:st-")
     );
 
-    // Her page lists it with Stop; stopping it makes the next one wait for her again.
+    // The page lists it with Stop; stopping it makes the next one wait for a person again.
     let (_, page) = Hosted::text(hub.get("/approvals", Some(&alice.cookie)).await).await;
     let id = standing["id"].as_str().unwrap();
     assert!(page.contains(&format!("id=\"standing-{id}\"")), "{page}");
@@ -107,7 +107,7 @@ async fn run(store: Option<&str>) {
     let third = restart(&hub, &mut alice).await;
     assert_eq!(third["status"], "pending", "{third}");
 
-    // Another site's form changes nothing, though the browser sends Alice's session.
+    // Another site's form changes nothing, though the browser sends the session.
     let cross = hub
         .http
         .post(format!("{}/approvals/standing", hub.url))

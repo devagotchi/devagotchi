@@ -29,6 +29,8 @@ mod join;
 mod link;
 mod machine_update;
 mod mail;
+#[cfg(test)]
+mod me_tests;
 mod nomen;
 mod oauth;
 mod offers;
@@ -39,6 +41,7 @@ mod orgs;
 mod orgs_tests;
 #[cfg(test)]
 mod output_schema;
+mod preferences;
 #[cfg(test)]
 mod provider_tests;
 mod push;
@@ -1009,6 +1012,9 @@ async fn run(state_dir: PathBuf, config_path: PathBuf) -> BridgeResult<()> {
     let signals_store = board_store.clone();
     let boards =
         Arc::new(board::mcp::Boards::from_config(&config, &state_dir).using_postgres(board_store)?);
+    if let Some(preferences) = boards.preferences() {
+        links.set_preferences(preferences.clone());
+    }
     // Board events to ClickHouse for statistics (ADR 0001): reported in /healthz, never
     // required for the boards themselves.
     if let Some(clickhouse) = &config.clickhouse {

@@ -7,6 +7,30 @@ heading. Agents draft the fragments below; they never tag.
 
 ## Unreleased
 
+### The phone, made for one person (increment 119)
+- The app's frame says who is signed in: the person's mark in the bar goes to their page, and
+  the bar no longer repeats the tabs. Five tabs with icons (Home, Approvals, Boards, Machines,
+  You); the Approvals tab and the installed app's icon count what waits (`GET /app/attention`,
+  the Badging API). The frame keeps clear of the phone's edges (`viewport-fit=cover`).
+- Home greets the person by name, its mascot's mood follows what waits, and one button reviews
+  the approvals. An approval leads with its kind and project, then what, why and how to undo
+  it in plain text, a time that reads "5 min ago", big Approve and Deny, and a note folded
+  away. Notification controls moved under the requests.
+- `/app/me`: who is signed in (their login, even on an account with no name), their
+  organisations and roles, this phone's notifications, preferences and Sign out.
+- Preferences (`preferences.rs`, migration 0020): what to call them, light or dark, how long
+  "approve and allow" lasts (7, 30 or 90 days), whether kinds are offered, which kinds always
+  wait for them, and whether machines may push to them. One row per person under row-level
+  security, versioned JSON read through `upgrade`, fields from a newer hub kept. Every change
+  is `preferences.changed` on the tenant's chain, so signals sinks see it.
+- A kind set to always ask is never offered, cannot be allowed by that person from any form,
+  and saving stops what they already allowed for it. "Allow" and offers last what they set.
+- Fixed: an approval from the account's own AI read "ai asks"; it reads "Your AI asks".
+- Tests: `preferences/tests.rs` on SQLite and under Postgres row-level security;
+  `me_tests.rs` over HTTP on both; `tests/app_browser.py` at iPhone size: greeted by name, the
+  count on the tab, a request at a glance, allowed ahead of time, and a name, dark and a
+  shorter allow followed by every screen.
+
 ### Approving ahead of time (increment 118)
 - `approval_request` takes `kind` (`restart`, `deploy`, `edit-file`, ...) and `target` (a
   machine, a service); the ticket carries them as labels and `/approvals` shows them.
