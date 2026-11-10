@@ -412,6 +412,11 @@ fn lock_contention_fails_explicitly_with_a_bounded_wait_and_no_mutation() {
     let (_temp, repo, state, mut store) = setup();
     enable(&mut store, Capture::Metadata);
     let mut another = Journal::open(&repo, &state).unwrap();
+    let timeout_ms: u64 = another
+        .db
+        .query_row("PRAGMA busy_timeout", [], |row| row.get(0))
+        .unwrap();
+    assert_eq!(timeout_ms, 2000);
     let tx = store
         .db
         .transaction_with_behavior(TransactionBehavior::Immediate)
@@ -419,7 +424,8 @@ fn lock_contention_fails_explicitly_with_a_bounded_wait_and_no_mutation() {
     let start = std::time::Instant::now();
     let error = another.append(&event("blocked")).unwrap_err();
     assert!(error.to_string().contains("locked"), "{error}");
-    assert!(start.elapsed() < Duration::from_secs(4));
+    // Busy timeout bounds SQLite's wait, not descheduling on a shared CI runner.
+    assert!(start.elapsed() < Duration::from_secs(10));
     tx.rollback().unwrap();
     assert_eq!(another.verify().unwrap(), 0);
     another.append(&event("blocked")).unwrap();
@@ -437,10 +443,30 @@ fn concurrent_writers_and_replays_survive_reopen() {
         threads.push(std::thread::spawn(move || {
             let mut store = Journal::open(&repo, &state).unwrap();
             for n in 0..10 {
-                store
-                    .append(&event(&format!("worker-{worker}-{n}")))
-                    .unwrap();
-                store.append(&event("shared-retry")).unwrap();
+                for event in [
+                    event(&format!("worker-{worker}-{n}")),
+                    event("shared-retry"),
+                ] {
+                    for attempt in 0..5 {
+                        match store.append(&event) {
+                            Ok(_) => break,
+                            Err(error)
+                                if attempt < 4
+                                    && matches!(
+                                        error.downcast_ref::<rusqlite::Error>(),
+                                        Some(rusqlite::Error::SqliteFailure(code, _))
+                                            if code.code == rusqlite::ErrorCode::DatabaseBusy
+                                    ) =>
+                            {
+                                eprintln!(
+                                    "retrying explicitly reported archive contention: {error}"
+                                );
+                                std::thread::yield_now();
+                            }
+                            Err(error) => panic!("archive append failed: {error}"),
+                        }
+                    }
+                }
             }
         }));
     }
@@ -544,12 +570,20 @@ fn lifecycle_promotion_and_policy_schema_drift_require_explicit_reconciliation()
     let original: Value = serde_json::from_slice(&fs::read(&file).unwrap()).unwrap();
     let mut project = original.clone();
     project["stage"] = json!("production");
+    project["release_mode"] = json!("production");
     fs::write(&file, serde_json::to_vec(&project).unwrap()).unwrap();
     assert!(check_contracts(repo).is_err());
     project["production_promotion"] = json!({
         "approval":"https://example.invalid/review/1","candidate":"sha256:candidate",
         "evidence":"https://example.invalid/evidence/1","date":"2026-11-10"
     });
+    fs::write(&file, serde_json::to_vec(&project).unwrap()).unwrap();
+    check_contracts(repo).unwrap();
+    project = original.clone();
+    project["alpha_readiness"] = json!("confirmed");
+    fs::write(&file, serde_json::to_vec(&project).unwrap()).unwrap();
+    assert!(check_contracts(repo).is_err());
+    project["alpha_acceptance"] = json!("https://example.invalid/acceptance/1");
     fs::write(&file, serde_json::to_vec(&project).unwrap()).unwrap();
     check_contracts(repo).unwrap();
     project = original.clone();

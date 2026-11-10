@@ -1,6 +1,8 @@
 {
   "contract": "DG-LIFECYCLE-1",
   "stage": "alpha",
+  "release_mode": "pre_release",
+  "alpha_readiness": "unconfirmed",
   "production_promotion": null,
   "delivery_contract": "DG-DELIVERY-1",
   "capture_contract": "DG-CAPTURE-1",
