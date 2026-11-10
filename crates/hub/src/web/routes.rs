@@ -40,6 +40,10 @@ pub fn router(hub_authorization: bool) -> Router<AppState> {
         .route("/auth/logout", post(logout))
         .route("/owner", get(passkeys::owner_page))
         .route(
+            "/owner/password",
+            get(passkeys::owner_password_page).post(passkeys::owner_password),
+        )
+        .route(
             "/passkey/register/options",
             post(passkeys::register_options),
         )
@@ -47,6 +51,10 @@ pub fn router(hub_authorization: bool) -> Router<AppState> {
         .route("/passkey/sign-in/options", post(passkeys::sign_in_options))
         .route("/passkey/sign-in", post(passkeys::sign_in))
         .route("/assets/passkey.js", get(passkeys::script))
+        .route(
+            "/assets/owner-password.js",
+            get(passkeys::owner_password_script),
+        )
         .route("/auth/provider/link", post(providers::link))
         .route("/auth/provider/{name}", get(providers::start))
         .route("/auth/provider/{name}/callback", get(providers::callback))
@@ -307,7 +315,7 @@ async fn login(
         } else {
             sign_in::Tab::In
         };
-        return sign_in::page(&hub, return_to, tab, None);
+        return sign_in::page(&hub, return_to, tab, None, true);
     }
     if state.passkeys.is_some() {
         return passkeys::login(State(state), headers, Query(query)).await;
@@ -421,18 +429,6 @@ async fn account(State(state): State<AppState>, headers: HeaderMap) -> Response 
                 }
                 _ => Vec::new(),
             };
-            let mut ways = state
-                .passkeys
-                .as_ref()
-                .map(|hub| hub.linking_ways())
-                .unwrap_or_default();
-            // A hosted hub's secured account: Set a password (`sign_in.rs`).
-            if state.passkeys.is_some()
-                && state.hub.config.multi_tenant()
-                && subject.provisional_until.is_none()
-            {
-                ways.push_str(&set_password_form());
-            }
             let linked = match &state.passkeys {
                 Some(hub) => hub
                     .accounts()
@@ -441,6 +437,16 @@ async fn account(State(state): State<AppState>, headers: HeaderMap) -> Response 
                     .unwrap_or_default(),
                 None => Vec::new(),
             };
+            let mut ways = state
+                .passkeys
+                .as_ref()
+                .map(|hub| hub.linking_ways())
+                .unwrap_or_default();
+            // A signed-in, durable account may create local credentials without an
+            // external identity provider or a verified mailbox.
+            if state.passkeys.is_some() && subject.provisional_until.is_none() {
+                ways.push_str(&set_password_form());
+            }
             // Early access and plans, on a hosted hub.
             let access = subject
                 .access
@@ -584,8 +590,11 @@ async fn me(State(state): State<AppState>, headers: HeaderMap) -> Response {
 fn set_password_form() -> String {
     let words = &pages::site().messages.sign_in;
     format!(
-        "<form method=\"post\" action=\"/auth/password/set\" id=\"password\"><label>{} \
-<input type=\"password\" name=\"password\" required autocomplete=\"new-password\"></label>\
+        "<form method=\"post\" action=\"/auth/password/set\" id=\"password\">\
+<label>Login email <input type=\"email\" name=\"email\" required autocomplete=\"email\" maxlength=\"254\"></label>\
+<p class=\"meta\">This is a login name, not a verified email address. Email recovery works only \
+after you prove mailbox access using a sign-in link.</p>\
+<label>{} <input type=\"password\" name=\"password\" required autocomplete=\"new-password\"></label>\
 <p class=\"actions\"><button class=\"button\" type=\"submit\">{}</button></p></form>",
         pages::escape(&words.password),
         pages::escape(&words.set_password)
@@ -594,6 +603,7 @@ fn set_password_form() -> String {
 
 #[derive(Deserialize)]
 struct NewPassword {
+    email: String,
     password: String,
 }
 
@@ -622,7 +632,7 @@ async fn set_password(
     let words = pages::site().messages.sign_in.clone();
     match hub
         .accounts()
-        .set_password(&person.id, &form.password)
+        .set_password_for_email(&person.id, &form.email, &form.password)
         .await
     {
         Ok(()) => pages::message(
@@ -641,6 +651,12 @@ async fn set_password(
             StatusCode::CONFLICT,
             &words.set_password,
             &words.taken,
+            Some(("/account", "Back")),
+        ),
+        Err(error) if error.code == "invalid_email" => pages::message(
+            StatusCode::BAD_REQUEST,
+            &words.set_password,
+            &error.message,
             Some(("/account", "Back")),
         ),
         Err(error) if error.code == "no_email" => pages::message(

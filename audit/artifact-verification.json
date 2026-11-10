@@ -16,7 +16,7 @@
   "page_preview": "No native Page rendering preview was available. Text, title, table and preserved original audit blocks were read back and checked.",
   "replacement_bridge": "Implemented and verified development foundation on Linux; not a signed release or full Desktop Commander parity.",
   "product": "Devagotchi",
-  "repo": "https://github.com/eonsofstupid/devagotchi",
+  "repo": "https://github.com/devagotchi/devagotchi",
   "planned_site": "https://devagotchi.net",
   "product_targets": [
     "Windows",

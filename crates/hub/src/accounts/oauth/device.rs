@@ -1,6 +1,6 @@
 //! Device authorization (RFC 8628) for the hub's own accounts: how `devagotchi login`
 //! signs a terminal in. The terminal asks for a code, the person opens `/device` on any
-//! device where they are signed in with their passkey, checks the code matches and
+//! device where they are signed in, checks the code matches and
 //! approves, and the terminal's next poll gets an access and a refresh token like any AI
 //! client's: for this hub's `/mcp`, in their own family, dying with the account.
 //!

@@ -201,6 +201,36 @@ impl Accounts {
     /// Set `account`'s password or change it, for the address its email sign-in proves,
     /// else the first address a provider verified for it.
     pub async fn set_password(&self, account: &str, password: &str) -> BridgeResult<()> {
+        let email = transaction!(&self.store, |connection| {
+            self.enter(connection, Lookup::Account(account)).await?;
+            let first = |sql| sqlx::query_scalar::<_, String>(sql).bind(account);
+            let local = first("SELECT subject FROM auth_identities WHERE account = $1 AND provider = 'email' ORDER BY created_at LIMIT 1")
+                .fetch_optional(&mut *connection).await?;
+            match local {
+                Some(email) => Ok(Some(email)),
+                None => Ok(first("SELECT email FROM auth_identities WHERE account = $1 AND email IS NOT NULL ORDER BY created_at LIMIT 1")
+                    .fetch_optional(&mut *connection).await?),
+            }
+        })?
+        .ok_or_else(|| {
+            BridgeError::new(
+                "no_email",
+                "choose a login email address for this account",
+            )
+        })?;
+        self.set_password_for_email(account, &email, password).await
+    }
+
+    /// Set a local email/password credential. The address is a login name, not a claim that
+    /// the mailbox is verified; email recovery separately proves mailbox access when enabled.
+    pub async fn set_password_for_email(
+        &self,
+        account: &str,
+        email: &str,
+        password: &str,
+    ) -> BridgeResult<()> {
+        let email = normalize_email(email)
+            .ok_or_else(|| BridgeError::new("invalid_email", "not an email address"))?;
         checked(password)?;
         let (hash, now) = (hash_of(password).await?, now_secs());
         transaction!(&self.store, |connection| {
@@ -208,42 +238,138 @@ impl Accounts {
             let holder = account_in(connection, account)
                 .await?
                 .ok_or_else(|| BridgeError::new("no_account", account))?;
-            let first = |sql| sqlx::query_scalar::<_, String>(sql).bind(account);
-            let mut email = first("SELECT subject FROM auth_identities WHERE account = $1 AND provider = 'email' ORDER BY created_at LIMIT 1")
-                .fetch_optional(&mut *connection).await?;
-            if email.is_none() {
-                let verified = first("SELECT email FROM auth_identities WHERE account = $1 AND email IS NOT NULL ORDER BY created_at LIMIT 1")
-                    .fetch_optional(&mut *connection).await?
-                    .ok_or_else(|| BridgeError::new("no_email", "this account has no email to sign in with"))?;
-                if self
-                    .store
-                    .tenant_of(connection, Lookup::Identity("email", &verified))
-                    .await?
-                    .is_some()
-                {
-                    return Err(taken().into());
-                }
-                let proven = Proven {
+            if self
+                .store
+                .tenant_of(connection, Lookup::Identity("email", &email))
+                .await?
+                .is_none()
+            {
+                let local_identity = Proven {
                     provider: "email".into(),
-                    subject: verified.clone(),
-                    verified_email: Some(verified.clone()),
+                    subject: email.clone(),
+                    verified_email: None,
                     name: None,
                 };
                 super::identities::insert_identity(
                     connection,
                     &holder,
-                    &proven,
+                    &local_identity,
                     self.counting,
                     now,
                 )
                 .await?;
-                email = Some(verified);
+            } else {
+                let belongs_to_account = sqlx::query_scalar::<_, i64>(
+                    "SELECT 1 FROM auth_identities WHERE provider = 'email' AND subject = $1 AND account = $2",
+                )
+                .bind(&email)
+                .bind(&holder.id)
+                .fetch_optional(&mut *connection)
+                .await?
+                .is_some();
+                if !belongs_to_account {
+                    return Err(taken().into());
+                }
             }
             sqlx::query("INSERT INTO passwords (account_id, tenant_id, email, hash, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $5)
-                 ON CONFLICT (account_id) DO UPDATE SET hash = excluded.hash, updated_at = excluded.updated_at")
+                 ON CONFLICT (account_id) DO UPDATE SET email = excluded.email, hash = excluded.hash, updated_at = excluded.updated_at")
             .bind(&holder.id).bind(&holder.tenant).bind(&email).bind(&hash).bind(secs(now))
             .execute(&mut *connection).await?;
             Ok(())
+        })
+    }
+
+    /// Redeem the owner's one-time setup link to establish local email/password access
+    /// without requiring a passkey, OAuth provider, or email server.
+    pub async fn set_password_from_owner_link(
+        &self,
+        token: &str,
+        email: &str,
+        password: &str,
+    ) -> BridgeResult<Account> {
+        let email = normalize_email(email)
+            .ok_or_else(|| BridgeError::new("invalid_email", "not an email address"))?;
+        checked(password)?;
+        let hash = hash_of(password).await?;
+        let now = now_secs();
+        transaction!(&self.store, |connection| {
+            self.enter(connection, Lookup::Link(&super::hash(token)))
+                .await?;
+            let link = super::live_link(connection, LinkPurpose::Owner, token, now).await?;
+            self.enter(connection, Lookup::Account(&link.account))
+                .await?;
+            let holder = account_in(connection, &link.account)
+                .await?
+                .ok_or_else(|| BridgeError::new("invalid_link", "owner link is no longer valid"))?;
+            if !holder.owner {
+                return Err(
+                    BridgeError::new("invalid_link", "owner link is no longer valid").into(),
+                );
+            }
+            if link.replaces {
+                sqlx::query("DELETE FROM auth_passkeys WHERE account = $1")
+                    .bind(&holder.id)
+                    .execute(&mut *connection)
+                    .await?;
+            }
+            if self
+                .store
+                .tenant_of(connection, Lookup::Identity("email", &email))
+                .await?
+                .is_some()
+            {
+                let belongs_to_account = sqlx::query_scalar::<_, i64>(
+                    "SELECT 1 FROM auth_identities WHERE provider = 'email' AND subject = $1 AND account = $2",
+                )
+                .bind(&email)
+                .bind(&holder.id)
+                .fetch_optional(&mut *connection)
+                .await?
+                .is_some();
+                if !belongs_to_account {
+                    return Err(taken().into());
+                }
+            } else {
+                let local_identity = Proven {
+                    provider: "email".into(),
+                    subject: email.clone(),
+                    verified_email: None,
+                    name: None,
+                };
+                super::identities::insert_identity(
+                    connection,
+                    &holder,
+                    &local_identity,
+                    self.counting,
+                    now,
+                )
+                .await?;
+            }
+            sqlx::query("INSERT INTO passwords (account_id, tenant_id, email, hash, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $5)
+                 ON CONFLICT (account_id) DO UPDATE SET email = excluded.email, hash = excluded.hash, updated_at = excluded.updated_at")
+            .bind(&holder.id).bind(&holder.tenant).bind(&email).bind(&hash).bind(secs(now))
+            .execute(&mut *connection).await?;
+            let spent = sqlx::query(
+                "UPDATE auth_links SET used_at = $1 WHERE hash = $2 AND used_at IS NULL",
+            )
+            .bind(secs(now))
+            .bind(super::hash(token))
+            .execute(&mut *connection)
+            .await?
+            .rows_affected();
+            if spent != 1 {
+                return Err(
+                    BridgeError::new("invalid_link", "owner link is no longer valid").into(),
+                );
+            }
+            sqlx::query("DELETE FROM auth_claim_codes")
+                .execute(&mut *connection)
+                .await?;
+            sqlx::query("DELETE FROM auth_sessions WHERE account = $1")
+                .bind(&holder.id)
+                .execute(&mut *connection)
+                .await?;
+            Ok(holder)
         })
     }
 }

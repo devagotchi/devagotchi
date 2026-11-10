@@ -352,7 +352,10 @@ mod tests {
         let mut write = input(Path::new(&climbing), "x", WriteMode::Overwrite);
         write.create_dirs = true;
         assert!(granted.write(write).is_err());
-        assert!(!root.join("made").exists(), "nothing made outside the workspace");
+        assert!(
+            !root.join("made").exists(),
+            "nothing made outside the workspace"
+        );
     }
 
     /// A link inside the workspace whose target is missing and outside: appending through it

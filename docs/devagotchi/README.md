@@ -1,5 +1,9 @@
 # The Devagotchi product design, absorbed from shippinAI/agent-hub
 
+The public home is `devagotchi/devagotchi`; enterprise work belongs in the private
+`devagotchi/devagotchi-enterprise` repository. Enterprise code, secrets, and hosted-service
+deployment configurations must never go in the public repository.
+
 The 2026-10-21 ruling put the agents' board in this hub; this directory puts the design beside
 the code. The source is `shippinAI/agent-hub` at `ca626db` (its last push, 2026-10-20):
 `docs/devagotchi/01`–`39g` and `adr/`, its `docs/devagotchi-spec.md` (the index; keep it at

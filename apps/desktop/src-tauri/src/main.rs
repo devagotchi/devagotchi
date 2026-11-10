@@ -1,7 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use devagotchi_desktop::{Launch, USAGE, parse_launch, run};
 use std::process::ExitCode;
-use devagotchi_desktop::{Launch, parse_launch, run, USAGE};
 
 fn main() -> ExitCode {
     let launch = parse_launch(

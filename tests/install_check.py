@@ -37,7 +37,7 @@ import threading
 import time
 import tomllib
 
-RELEASE = 'https://github.com/EonsofStupid/devagotchi/releases/latest/download/'
+RELEASE = 'https://github.com/devagotchi/devagotchi/releases/latest/download/'
 # curl's https-only flags, which a local server cannot meet.
 LINUX_TLS = '--proto =https --tlsv1.2 '
 WINDOWS = os.name == 'nt'

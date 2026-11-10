@@ -60,6 +60,14 @@
     takeLink();
     window.addEventListener("hashchange", takeLink);
   }
+  const ownerPasswordLink = document.getElementById("owner-password-link");
+  if (ownerPasswordLink) {
+    ownerPasswordLink.addEventListener("click", (event) => {
+      if (!link) return;
+      event.preventDefault();
+      location.assign(ownerPasswordLink.href + "#" + encodeURIComponent(link));
+    });
+  }
 
   async function register() {
     if (!link) {
@@ -124,6 +132,27 @@
     const { link: claimed, ...options } = await post("/claim", { code, name: name || null });
     link = claimed;
     await makePasskey(options);
+  }
+
+  const claimPasswordButton = document.getElementById("claim-password");
+  if (claimPasswordButton) {
+    claimPasswordButton.disabled = false;
+    claimPasswordButton.addEventListener("click", async () => {
+      claimPasswordButton.disabled = true;
+      try {
+        const code = claimCode.value.trim();
+        if (!code) {
+          claimCode.focus();
+          throw new Error("Enter the claim code from the hub's log.");
+        }
+        const name = document.getElementById("claim-name").value.trim();
+        const { link: claimed } = await post("/claim", { code, name: name || null });
+        location.assign("/owner/password#" + encodeURIComponent(claimed));
+      } catch (error) {
+        say(error.message);
+        claimPasswordButton.disabled = false;
+      }
+    });
   }
 
   async function makePasskey(options) {

@@ -37,6 +37,40 @@ pub struct Mailer {
     password: Option<String>,
     from: String,
     pub per_address: u32,
+    /// How the last send went, for `/healthz` `mail`; one record behind every clone.
+    last: Arc<std::sync::Mutex<Option<LastSend>>>,
+}
+
+/// One send's outcome: when (Unix seconds) and, when it failed, the whole reason as the
+/// log has it.
+#[derive(Debug, Clone)]
+struct LastSend {
+    at: u64,
+    error: Option<String>,
+}
+
+/// A failure as `/healthz` may show it: the server's reply code or our own step, never the
+/// server's text, which can carry the recipient's address.
+fn public_reason(error: &str) -> String {
+    match error.split_once("answered ") {
+        Some((_, rest)) => format!("the mail server answered {}", rest.get(..3).unwrap_or("")),
+        None => error.to_string(),
+    }
+}
+
+fn tls_name(tls: mail::Tls) -> &'static str {
+    match tls {
+        mail::Tls::Implicit => "implicit",
+        mail::Tls::StartTls => "starttls",
+        mail::Tls::Plain => "none",
+    }
+}
+
+fn unix_now() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs()
 }
 
 impl std::fmt::Debug for Mailer {
@@ -75,6 +109,67 @@ impl Mailer {
             password,
             from: config.from.clone(),
             per_address: config.per_address_per_hour,
+            last: Arc::new(std::sync::Mutex::new(None)),
+        })
+    }
+
+    /// Connect, negotiate TLS and sign in, sending nothing (`devagotchi hub check-mail`).
+    pub async fn check(&self) -> Result<(), String> {
+        mail::check(&self.server, self.password.as_deref(), &self.from).await
+    }
+
+    /// One email to `to` that says this hub's mail works, for the operator's own mailbox
+    /// (`check-mail --to`). It says plainly what it is, so nobody takes it for a sign-in link.
+    pub async fn send_check(
+        &self,
+        site: &crate::site::Site,
+        to: &str,
+        public_url: &str,
+    ) -> Result<(), String> {
+        let product = site.name();
+        let public_url = public_url.trim_end_matches('/');
+        let subject = format!("{product} mail check");
+        let body = format!(
+            "This is the mail check of the {product} hub at {public_url}: it can send email.\n\n\
+It was sent by `devagotchi hub check-mail --to {to}` on the hub's host. If you did not run \
+it, tell whoever operates the hub. Nothing in this email does anything.\n"
+        );
+        self.send_text(to, &subject, &body).await
+    }
+
+    /// The server and how it is protected, for a person; never the password.
+    pub fn describe(&self) -> String {
+        format!(
+            "{}:{} ({}){}",
+            self.server.host,
+            self.server.port,
+            tls_name(self.server.tls),
+            self.server
+                .user
+                .as_deref()
+                .map(|user| format!(", user {user}"))
+                .unwrap_or_default()
+        )
+    }
+
+    /// `/healthz` `mail`: that mail is configured, how the connection is protected, the
+    /// per-address limit and the last send's outcome. Never the server, the user, the
+    /// password or an address.
+    pub fn status(&self) -> serde_json::Value {
+        let last = self
+            .last
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .clone();
+        serde_json::json!({
+            "configured": true,
+            "tls": tls_name(self.server.tls),
+            "per_address_per_hour": self.per_address,
+            "last_send": last.map(|last| serde_json::json!({
+                "ok": last.error.is_none(),
+                "at": pages::utc(last.at),
+                "error": last.error.as_deref().map(public_reason),
+            })),
         })
     }
 
@@ -85,7 +180,7 @@ impl Mailer {
     }
 
     async fn send_text(&self, to: &str, subject: &str, body: &str) -> Result<(), String> {
-        mail::send(
+        let sent = mail::send(
             &self.server,
             self.password.as_deref(),
             &mail::Message {
@@ -95,7 +190,15 @@ impl Mailer {
                 body,
             },
         )
-        .await
+        .await;
+        *self
+            .last
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner()) = Some(LastSend {
+            at: unix_now(),
+            error: sent.as_ref().err().cloned(),
+        });
+        sent
     }
 }
 

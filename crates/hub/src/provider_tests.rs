@@ -497,6 +497,20 @@ async fn an_email_link_signs_in_once_and_secures_an_account() {
     wait_for_mail(&world, 1).await;
     let received = world.mail.received.lock().unwrap().clone();
     assert_eq!(received[0].to, "pat@example.com");
+    // The hub's health reports the send once the server has taken it, and never the address.
+    let mut health = Value::Null;
+    for _ in 0..50 {
+        let (_, text) = Hosted::text(world.hub.get("/healthz", None).await).await;
+        health = serde_json::from_str(&text).unwrap();
+        if !health["mail"]["last_send"].is_null() {
+            break;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    }
+    assert_eq!(health["mail"]["configured"], true, "{health}");
+    assert_eq!(health["mail"]["tls"], "none", "{health}");
+    assert_eq!(health["mail"]["last_send"]["ok"], true, "{health}");
+    assert!(!health.to_string().contains("example.com"), "{health}");
     assert!(
         received[0].auth.is_some(),
         "the mail server's user signed in"

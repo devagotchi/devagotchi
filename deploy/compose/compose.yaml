@@ -51,7 +51,7 @@ services:
 
   hub:
     container_name: ${COMPOSE_PROJECT_NAME}-hub
-    image: ${DEVAGOTCHI_IMAGE:-ghcr.io/eonsofstupid/devagotchi:main}
+    image: ${DEVAGOTCHI_IMAGE:-ghcr.io/devagotchi/devagotchi:main}
     build:
       context: ../..
       dockerfile: deploy/compose/Dockerfile
@@ -94,6 +94,7 @@ services:
       DEVAGOTCHI_GOOGLE_CLIENT_SECRET: ${DEVAGOTCHI_GOOGLE_CLIENT_SECRET:-}
       DEVAGOTCHI_GITHUB_CLIENT_ID: ${DEVAGOTCHI_GITHUB_CLIENT_ID:-}
       DEVAGOTCHI_GITHUB_CLIENT_SECRET: ${DEVAGOTCHI_GITHUB_CLIENT_SECRET:-}
+      DEVAGOTCHI_GITHUB_WEBHOOK_SECRET: ${DEVAGOTCHI_GITHUB_WEBHOOK_SECRET:-}
       DEVAGOTCHI_NOMEN_CLIENT_ID: ${DEVAGOTCHI_NOMEN_CLIENT_ID:-}
       DEVAGOTCHI_NOMEN_CLIENT_SECRET: ${DEVAGOTCHI_NOMEN_CLIENT_SECRET:-}
       DEVAGOTCHI_SMTP_URL: ${DEVAGOTCHI_SMTP_URL:-}
@@ -136,8 +137,11 @@ configs:
           "trusted_proxies": ${DEVAGOTCHI_HUB_TRUSTED_PROXIES:-["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "127.0.0.0/8", "::1", "fc00::/7"]}
         },
         "storage": { "url": "postgres://devagotchi@localhost/devagotchi?host=/var/run/postgresql" },
+        "account_boards": {},
+        "boards": ${DEVAGOTCHI_HUB_BOARDS:-[]},
+        "github": { "repositories": ${DEVAGOTCHI_GITHUB_REPOSITORIES:-[]} },
         "brokers": [],
-        "grants": []
+        "grants": ${DEVAGOTCHI_HUB_GRANTS:-[]}
       }
 
 volumes:

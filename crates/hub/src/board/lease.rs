@@ -68,6 +68,9 @@ impl Board {
     /// Take a lease on one ticket. Re-claiming a ticket you already hold returns the
     /// current lease; a lapsed lease held by someone else is expired first.
     pub fn claim(&self, actor: &Actor<'_>, id: &str, ttl_ms: Option<i64>) -> BridgeResult<Lease> {
+        if let Some(hosted) = &self.hosted {
+            return self.hosted_call(hosted.claim(actor, id, ttl_ms), true);
+        }
         self.write(actor, |w| {
             let workflow = load_workflow(w.tx)?;
             let settings = load_settings(w.tx)?;
@@ -129,6 +132,9 @@ impl Board {
         actor: &Actor<'_>,
         filter: &NextFilter,
     ) -> BridgeResult<Option<Lease>> {
+        if let Some(hosted) = &self.hosted {
+            return self.hosted_call(hosted.claim_next(actor, filter), true);
+        }
         self.write(actor, |w| {
             let workflow = load_workflow(w.tx)?;
             let settings = load_settings(w.tx)?;
@@ -170,6 +176,9 @@ impl Board {
         fence: i64,
         progress: Option<serde_json::Value>,
     ) -> BridgeResult<Lease> {
+        if let Some(hosted) = &self.hosted {
+            return self.hosted_call(hosted.heartbeat(actor, id, fence, progress), true);
+        }
         self.write(actor, |w| {
             let workflow = load_workflow(w.tx)?;
             let settings = load_settings(w.tx)?;
@@ -211,6 +220,9 @@ impl Board {
         fence: i64,
         reason: &str,
     ) -> BridgeResult<Ticket> {
+        if let Some(hosted) = &self.hosted {
+            return self.hosted_call(hosted.release(actor, id, fence, reason), true);
+        }
         self.write(actor, |w| {
             let workflow = load_workflow(w.tx)?;
             let ticket = read_ticket(w.tx, &workflow, id, w.now)?;
@@ -236,6 +248,9 @@ impl Board {
         fence: i64,
         summary: &str,
     ) -> BridgeResult<Ticket> {
+        if let Some(hosted) = &self.hosted {
+            return self.hosted_call(hosted.complete(actor, id, fence, summary), true);
+        }
         self.write(actor, |w| {
             let workflow = load_workflow(w.tx)?;
             let ticket = read_ticket(w.tx, &workflow, id, w.now)?;
@@ -274,6 +289,9 @@ impl Board {
         note: &str,
         to: Option<&str>,
     ) -> BridgeResult<Ticket> {
+        if let Some(hosted) = &self.hosted {
+            return self.hosted_call(hosted.handoff(actor, id, fence, note, to), true);
+        }
         let note = note.trim();
         if note.is_empty() {
             return Err(fail(
@@ -305,6 +323,9 @@ impl Board {
 
     /// A person takes a lease away. Code rule, not policy: only a human may, and only with a reason.
     pub fn force_release(&self, actor: &Actor<'_>, id: &str, reason: &str) -> BridgeResult<Ticket> {
+        if let Some(hosted) = &self.hosted {
+            return self.hosted_call(hosted.force_release(actor, id, reason), true);
+        }
         if !actor.human {
             return Err(fail("humans_only", "force-release needs a human principal"));
         }
@@ -333,6 +354,9 @@ impl Board {
     /// Expire every lapsed lease. Returns how many. Run it on an interval and lazily
     /// inside claims, as the Go hub did.
     pub fn reap(&self) -> BridgeResult<usize> {
+        if let Some(hosted) = &self.hosted {
+            return self.hosted_call(hosted.reap(), true);
+        }
         let system = Actor {
             id: "system",
             human: false,
@@ -362,18 +386,18 @@ impl Board {
     }
 }
 
-fn beat_every(ttl_ms: i64) -> i64 {
+pub(super) fn beat_every(ttl_ms: i64) -> i64 {
     (ttl_ms / 3).max(1_000)
 }
 
-fn clamp_ttl(settings: &Settings, asked: Option<i64>) -> i64 {
+pub(super) fn clamp_ttl(settings: &Settings, asked: Option<i64>) -> i64 {
     asked
         .filter(|ttl| *ttl > 0)
         .unwrap_or(settings.lease_ttl_ms)
         .clamp(settings.lease_min_ttl_ms, settings.lease_max_ttl_ms)
 }
 
-fn release_state(workflow: &Workflow, ticket: &Ticket) -> String {
+pub(super) fn release_state(workflow: &Workflow, ticket: &Ticket) -> String {
     workflow
         .lane_by_active(&ticket.state)
         .map(|l| l.release_to.clone())

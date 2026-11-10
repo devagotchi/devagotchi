@@ -1,13 +1,13 @@
 //! `/claim`: a new hub claimed from a browser (16c). Whoever has the claim code the hub
-//! printed to its log names the owner and makes the owner's passkey on one page; the code
+//! printed to its log names the owner and establishes a durable sign-in on one page; the code
 //! and why it is a code are in `accounts/claim.rs`.
 //!
 //! - The page takes the code from `/claim#<code>` (the link the log prints), which a browser
 //!   never sends, so it stays out of every request line and log; or it is typed in.
 //! - `POST /claim` answers only this hub's own page (the same origin checks as the passkey
-//!   endpoints), and answers a right code with the passkey's registration options and the
-//!   owner link they are for, so the browser asks for the passkey straight away.
-//! - Nothing a claim makes signs anyone in: the session comes with the passkey.
+//!   endpoints), and answers a right code with the passkey's registration options and a
+//!   one-time owner link. The browser may make a passkey or use that link to set a password.
+//! - Either credential path signs the owner in and ends the claim code.
 
 use axum::{
     extract::State,
@@ -39,7 +39,7 @@ fn decided() -> Response {
     pages::message(
         StatusCode::OK,
         "This hub has an owner",
-        "Its owner is decided already. If that is you, sign in with your passkey; on the hub's host, devagotchi hub owner makes one.",
+        "Its owner is decided already. If that is you, sign in with a configured provider, local password or passkey; on the hub's host, devagotchi hub owner issues a setup link.",
         Some(("/auth/login?return_to=/account", "Sign in")),
     )
 }
@@ -57,13 +57,12 @@ placeholder=\"XXXX-XXXX-XXXX-XXXX-XXXX-XXXX\"></label>\
 <label>Your name <input id=\"claim-name\" type=\"text\" maxlength=\"64\" autocomplete=\"name\" \
 placeholder=\"Owner\"></label>\
 <p class=\"actions\"><button class=\"button primary\" id=\"passkey-claim\" type=\"submit\" disabled>\
-Claim this hub and make my passkey</button></p></form>\
+Claim this hub and make my passkey</button>\
+<button class=\"button\" id=\"claim-password\" type=\"button\" disabled>Use a local email and password instead</button></p></form>\
 <p class=\"meta\" id=\"passkey-status\" role=\"status\"></p>\
-<p class=\"meta\">Your passkey is how you sign in from now on: your phone's or computer's \
-fingerprint, face or PIN, and your passkey manager can share it with your other devices. \
-The code stops working once you have made it. If the code has expired, restarting the hub \
-prints a new one.</p>\
-<noscript><p>Making a passkey needs JavaScript for this page.</p></noscript>";
+<p class=\"meta\">A passkey is optional. The claim code stops working after either sign-in \
+method is established. If the code has expired, restarting the hub prints a new one.</p>\
+<noscript><p>Claiming this hub needs JavaScript for this page.</p></noscript>";
 
 #[derive(Deserialize)]
 pub struct ClaimIn {
@@ -72,8 +71,8 @@ pub struct ClaimIn {
     name: Option<String>,
 }
 
-/// `POST /claim`: a right code makes the owner (once) and answers with the registration
-/// options for their passkey and the owner link they are for.
+/// `POST /claim`: a right code makes the owner (once) and answers with passkey options and
+/// the owner link used by either credential setup path.
 pub async fn claim(
     State(state): State<AppState>,
     headers: HeaderMap,
@@ -117,7 +116,7 @@ pub async fn claim(
     match done {
         Ok(Ok((owner, link))) => {
             eprintln!(
-                "devagotchi-hub: claimed by {:?} ({}); making their passkey",
+                "devagotchi-hub: claimed by {:?} ({}); preparing owner sign-in",
                 owner.name, owner.id
             );
             passkeys::registration(hub, link, true).await
@@ -144,6 +143,6 @@ fn refused_claimed() -> Response {
     passkeys::refuse(
         StatusCode::CONFLICT,
         "claimed",
-        "This hub already has an owner. If that is you, sign in with your passkey.",
+        "This hub already has an owner with a sign-in method.",
     )
 }

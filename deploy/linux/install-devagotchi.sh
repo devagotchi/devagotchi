@@ -31,7 +31,7 @@
 set -euo pipefail
 umask 022
 
-REPO=EonsofStupid/devagotchi
+REPO=devagotchi/devagotchi
 # The release build for this machine: the kernel's architecture, and a 64-bit userland (a
 # 32-bit ARM system on a 64-bit kernel reports aarch64 but cannot run aarch64 binaries).
 case $(uname -m) in

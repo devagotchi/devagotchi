@@ -89,7 +89,14 @@ pub async fn page(
     };
     let site = words();
     let copy = &site.messages.app;
-    let Some(board) = open_board(&state, &subject, &project) else {
+    let opened = match open_board(&state, &subject, &project) {
+        Ok(board) => board,
+        Err(error) => {
+            eprintln!("devagotchi hub: open board: {error}");
+            return crate::web::routes::unavailable();
+        }
+    };
+    let Some(board) = opened else {
         return pages::app_page(
             StatusCode::NOT_FOUND,
             &copy.board_unknown,
@@ -116,23 +123,28 @@ pub async fn page(
         },
         ..Filter::default()
     };
-    let (all, shown) = tokio::task::spawn_blocking(move || {
-        let open = |filter: &Filter| -> Vec<Ticket> {
-            board
-                .list(filter)
-                .unwrap_or_default()
+    let read = tokio::task::spawn_blocking(move || {
+        let open = |filter: &Filter| -> devagotchi_contracts::BridgeResult<Vec<Ticket>> {
+            Ok(board
+                .list(filter)?
                 .into_iter()
                 .filter(|ticket| ticket.kind != approval::KIND)
-                .collect()
+                .collect())
         };
         let all = open(&Filter {
             open_only: true,
             ..Filter::default()
-        });
-        (all, open(&filter))
+        })?;
+        devagotchi_contracts::BridgeResult::Ok((all, open(&filter)?))
     })
-    .await
-    .unwrap_or_default();
+    .await;
+    let (all, shown) = match read {
+        Ok(Ok(value)) => value,
+        other => {
+            eprintln!("devagotchi hub: read board page: {other:?}");
+            return crate::web::routes::unavailable();
+        }
+    };
     let me = subject.id.as_str();
     let who = |assignee: &str| {
         if assignee == me {

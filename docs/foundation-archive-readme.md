@@ -2,7 +2,7 @@
 
 Devagotchi bridges AI and a person's workspace through a locally installed MCP client and a styled native desktop app. Windows, macOS and Linux are the product targets; the current execution provider and completed native UI checks are Linux only.
 
-Start with `devagotchi/README.md` to build and run the working broker, MCP adapter and desktop inspector. `devagotchi/verification/README.md` explains the observed checks and their limits. The intended repository is https://github.com/eonsofstupid/devagotchi and the published site is https://devagotchi.justsayit.chatgpt.site; https://devagotchi.net is pending DNS validation. The GitHub connection returned 404, so this isolated source has not been reconciled with or pushed to that repository.
+Start with `devagotchi/README.md` to build and run the working broker, MCP adapter and desktop inspector. `devagotchi/verification/README.md` explains the observed checks and their limits. The intended repository is https://github.com/devagotchi/devagotchi and the published site is https://devagotchi.justsayit.chatgpt.site; https://devagotchi.net is pending DNS validation. The GitHub connection returned 404, so this isolated source has not been reconciled with or pushed to that repository.
 
 `desktop-bridge-audit-and-foundation.md` preserves the full reference audit and updates the architecture, confirmed choices, verification, acceptance criteria and next implementation steps. The `audit` directory contains original reproduction probes and captured results. `reference/DesktopCommanderMCP` is a partial, byte-verified source snapshot at commit f508e524469c26f6366e17dbfd3ee5a69d112127, with the upstream MIT license retained. It is not a full upstream checkout.
 

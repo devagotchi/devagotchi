@@ -97,8 +97,15 @@ struct Options {
 }
 
 fn parse(args: &[OsString]) -> Result<Option<Options>, String> {
-    let mut options = Options { clients: None, target: None, check: true };
-    let mut args = args.iter().map(|a| a.to_string_lossy().into_owned()).peekable();
+    let mut options = Options {
+        clients: None,
+        target: None,
+        check: true,
+    };
+    let mut args = args
+        .iter()
+        .map(|a| a.to_string_lossy().into_owned())
+        .peekable();
     while let Some(arg) = args.next() {
         let one = |client: Client, options: &mut Options| {
             options.clients.get_or_insert_with(Vec::new).push(client);
@@ -182,7 +189,10 @@ fn run(args: Vec<OsString>, machine: Machine, setup: bool) -> ExitCode {
     let explicit = options.clients.is_some();
     let clients: Vec<Client> = match options.clients {
         Some(clients) => clients,
-        None => Client::ALL.into_iter().filter(|c| present(*c, &machine)).collect(),
+        None => Client::ALL
+            .into_iter()
+            .filter(|c| present(*c, &machine))
+            .collect(),
     };
     // First, so a person with another MCP client has the absolute command to give it.
     let shown = format!("{} {}", machine.exe.display(), args.join(" "));
@@ -222,7 +232,11 @@ fn run(args: Vec<OsString>, machine: Machine, setup: bool) -> ExitCode {
             }
         }
     }
-    if failed { ExitCode::from(1) } else { ExitCode::SUCCESS }
+    if failed {
+        ExitCode::from(1)
+    } else {
+        ExitCode::SUCCESS
+    }
 }
 
 fn server_args(target: &Target) -> Vec<String> {
@@ -240,13 +254,19 @@ fn present(client: Client, machine: &Machine) -> bool {
             codex_dir(machine).is_some_and(|dir| dir.is_dir())
                 || find_command("codex", machine.path.as_deref()).is_some()
         }
-        Client::ClaudeDesktop => desktop_file(machine).and_then(|f| f.parent().map(Path::is_dir)).unwrap_or(false),
+        Client::ClaudeDesktop => desktop_file(machine)
+            .and_then(|f| f.parent().map(Path::is_dir))
+            .unwrap_or(false),
     }
 }
 
 /// A command on PATH, as the shell would find it (Windows: with its PATHEXT extension).
 fn find_command(name: &str, path: Option<&std::ffi::OsStr>) -> Option<PathBuf> {
-    let extensions: &[&str] = if cfg!(windows) { &[".exe", ".cmd", ".bat"] } else { &[""] };
+    let extensions: &[&str] = if cfg!(windows) {
+        &[".exe", ".cmd", ".bat"]
+    } else {
+        &[""]
+    };
     std::env::split_paths(path?).find_map(|dir| {
         extensions
             .iter()
@@ -256,11 +276,17 @@ fn find_command(name: &str, path: Option<&std::ffi::OsStr>) -> Option<PathBuf> {
 }
 
 fn codex_dir(machine: &Machine) -> Option<PathBuf> {
-    machine.codex_home.clone().or_else(|| machine.home.as_ref().map(|h| h.join(".codex")))
+    machine
+        .codex_home
+        .clone()
+        .or_else(|| machine.home.as_ref().map(|h| h.join(".codex")))
 }
 
 fn desktop_file(machine: &Machine) -> Option<PathBuf> {
-    machine.app_config.as_ref().map(|d| d.join("Claude").join("claude_desktop_config.json"))
+    machine
+        .app_config
+        .as_ref()
+        .map(|d| d.join("Claude").join("claude_desktop_config.json"))
 }
 
 fn claude_code(machine: &Machine, args: &[String]) -> Result<String, String> {
@@ -275,12 +301,22 @@ fn claude_code(machine: &Machine, args: &[String]) -> Result<String, String> {
             Command::new(&claude)
         };
         command.args(extra).stdin(Stdio::null());
-        command.output().map_err(|e| format!("could not run {}: {e}", claude.display()))
+        command
+            .output()
+            .map_err(|e| format!("could not run {}: {e}", claude.display()))
     };
     // Replace rather than add twice; a missing entry is not an error.
     let _ = run(&["mcp", "remove", "--scope", "user", "devagotchi"]);
     let exe = machine.exe.to_string_lossy().into_owned();
-    let mut add = vec!["mcp", "add", "--scope", "user", "devagotchi", "--", exe.as_str()];
+    let mut add = vec![
+        "mcp",
+        "add",
+        "--scope",
+        "user",
+        "devagotchi",
+        "--",
+        exe.as_str(),
+    ];
     add.extend(args.iter().map(String::as_str));
     let out = run(&add)?;
     if !out.status.success() {
@@ -302,7 +338,11 @@ fn codex(machine: &Machine, args: &[String]) -> Result<String, String> {
     };
     let new = codex_config(old.as_deref().unwrap_or(""), &machine.exe, args);
     let backup = replace(&file, &new, old.is_some())?;
-    Ok(format!("{} ([mcp_servers.devagotchi]{})", file.display(), backed_up(backup)))
+    Ok(format!(
+        "{} ([mcp_servers.devagotchi]{})",
+        file.display(),
+        backed_up(backup)
+    ))
 }
 
 fn claude_desktop(machine: &Machine, args: &[String]) -> Result<String, String> {
@@ -315,11 +355,17 @@ fn claude_desktop(machine: &Machine, args: &[String]) -> Result<String, String> 
     let new = desktop_config(old.as_deref(), &machine.exe, args)
         .map_err(|why| format!("{}: {why}; not changed", file.display()))?;
     let backup = replace(&file, &new, old.is_some())?;
-    Ok(format!("{} (mcpServers.devagotchi{})", file.display(), backed_up(backup)))
+    Ok(format!(
+        "{} (mcpServers.devagotchi{})",
+        file.display(),
+        backed_up(backup)
+    ))
 }
 
 fn backed_up(backup: Option<PathBuf>) -> String {
-    backup.map(|b| format!("; backup {}", b.display())).unwrap_or_default()
+    backup
+        .map(|b| format!("; backup {}", b.display()))
+        .unwrap_or_default()
 }
 
 /// Codex's config with Devagotchi's server table replaced (or added); every other line kept.
@@ -349,7 +395,11 @@ fn codex_config(existing: &str, exe: &Path, args: &[String]) -> String {
     if !out.is_empty() {
         out.push_str("\n\n");
     }
-    let args = args.iter().map(|a| toml_string(a)).collect::<Vec<_>>().join(", ");
+    let args = args
+        .iter()
+        .map(|a| toml_string(a))
+        .collect::<Vec<_>>()
+        .join(", ");
     out.push_str(&format!(
         "{CODEX_MARK}\n[mcp_servers.devagotchi]\ncommand = {}\nargs = [{args}]\n# Devagotchi holds a wait for up to 50 s before it answers.\ntool_timeout_sec = {TOOL_TIMEOUT_SECS}\n# Its first start may also start your broker, which can take longer than the default.\nstartup_timeout_sec = {STARTUP_TIMEOUT_SECS}\n",
         toml_string(&exe.to_string_lossy())
@@ -383,7 +433,10 @@ fn desktop_config(existing: Option<&str>, exe: &Path, args: &[String]) -> Result
         "devagotchi".into(),
         serde_json::json!({"command": exe.to_string_lossy(), "args": args}),
     );
-    Ok(format!("{}\n", serde_json::to_string_pretty(&config).expect("JSON serializes")))
+    Ok(format!(
+        "{}\n",
+        serde_json::to_string_pretty(&config).expect("JSON serializes")
+    ))
 }
 
 /// Write `text` to `file` whole (beside it, then renamed over it), backing up what was
@@ -392,7 +445,10 @@ fn replace(file: &Path, text: &str, existed: bool) -> Result<Option<PathBuf>, St
     let dir = file.parent().ok_or("no parent directory")?;
     std::fs::create_dir_all(dir).map_err(|e| format!("{}: {e}", dir.display()))?;
     let backup = if existed {
-        let stamp = SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0);
+        let stamp = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or(0);
         let backup = file.with_extension(format!(
             "{}.bak-{stamp}",
             file.extension().and_then(|e| e.to_str()).unwrap_or("")
@@ -408,7 +464,10 @@ fn replace(file: &Path, text: &str, existed: bool) -> Result<Option<PathBuf>, St
     if existed {
         use std::os::unix::fs::PermissionsExt;
         if let Ok(meta) = std::fs::metadata(file) {
-            let _ = std::fs::set_permissions(&temp, std::fs::Permissions::from_mode(meta.permissions().mode()));
+            let _ = std::fs::set_permissions(
+                &temp,
+                std::fs::Permissions::from_mode(meta.permissions().mode()),
+            );
         }
     }
     std::fs::rename(&temp, file).map_err(|e| format!("{}: {e}", file.display()))?;
@@ -438,7 +497,10 @@ fn check(exe: &Path, args: &[String]) -> Result<Vec<String>, String> {
     // What the server says on stderr is why it did not answer, when it did not.
     let (said_tx, said_rx) = mpsc::channel();
     std::thread::spawn(move || {
-        let lines: Vec<String> = BufReader::new(stderr).lines().map_while(Result::ok).collect();
+        let lines: Vec<String> = BufReader::new(stderr)
+            .lines()
+            .map_while(Result::ok)
+            .collect();
         let _ = said_tx.send(lines);
     });
     let mut send = |message: serde_json::Value| -> Result<(), String> {
@@ -447,16 +509,23 @@ fn check(exe: &Path, args: &[String]) -> Result<Vec<String>, String> {
             .map_err(|e| format!("it stopped before answering (writing to it: {e})"))
     };
     let result = (|| {
-        send(serde_json::json!({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {
+        send(
+            serde_json::json!({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {
             "protocolVersion": "2025-06-18", "capabilities": {},
-            "clientInfo": {"name": "devagotchi-connect", "version": env!("CARGO_PKG_VERSION")}}}))?;
+            "clientInfo": {"name": "devagotchi-connect", "version": env!("CARGO_PKG_VERSION")}}}),
+        )?;
         answer(&rx, 1)?;
         send(serde_json::json!({"jsonrpc": "2.0", "method": "notifications/initialized"}))?;
         send(serde_json::json!({"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}}))?;
         let list = answer(&rx, 2)?;
         let tools: Vec<String> = list["result"]["tools"]
             .as_array()
-            .map(|tools| tools.iter().filter_map(|t| t["name"].as_str().map(str::to_string)).collect())
+            .map(|tools| {
+                tools
+                    .iter()
+                    .filter_map(|t| t["name"].as_str().map(str::to_string))
+                    .collect()
+            })
             .unwrap_or_default();
         if tools.is_empty() {
             return Err("it listed no tools".to_string());
@@ -466,7 +535,9 @@ fn check(exe: &Path, args: &[String]) -> Result<Vec<String>, String> {
     let _ = child.kill();
     let _ = child.wait();
     result.map_err(|why| {
-        let said = said_rx.recv_timeout(Duration::from_secs(2)).unwrap_or_default();
+        let said = said_rx
+            .recv_timeout(Duration::from_secs(2))
+            .unwrap_or_default();
         let said = &said[said.len().saturating_sub(10)..];
         if said.is_empty() {
             why
@@ -511,7 +582,9 @@ mod tests {
     fn arguments_pick_clients_and_one_target() {
         let parse = |args: &[&str]| parse(&args.iter().map(OsString::from).collect::<Vec<_>>());
         assert_eq!(
-            parse(&["codex", "--hub", "https://hub.example"]).unwrap().unwrap(),
+            parse(&["codex", "--hub", "https://hub.example"])
+                .unwrap()
+                .unwrap(),
             Options {
                 clients: Some(vec![Client::Codex]),
                 target: Some(Target::Hub(Some("https://hub.example".into()))),
@@ -519,7 +592,10 @@ mod tests {
             }
         );
         let local = parse(&["--local", "--no-check"]).unwrap().unwrap();
-        assert_eq!((local.clients, local.target, local.check), (None, Some(Target::Local), false));
+        assert_eq!(
+            (local.clients, local.target, local.check),
+            (None, Some(Target::Local), false)
+        );
         assert!(parse(&["--hub", "--local"]).is_err());
         assert!(parse(&["--hub", "http://plain.example"]).is_err());
         assert!(parse(&["cursor"]).is_err());
@@ -530,20 +606,35 @@ mod tests {
     fn codex_keeps_every_other_line_and_replaces_only_its_own_table() {
         let existing = "model = \"gpt-5\"\n\n[mcp_servers.github]\ncommand = \"gh-mcp\"\n\n[mcp_servers.devagotchi]\ncommand = \"/old/devagotchi\"\nargs = [\"mcp\"]\n\n[mcp_servers.devagotchi.env]\nX = \"1\"\n\n[profiles.fast]\nmodel = \"o4-mini\"\n";
         let out = codex_config(existing, Path::new("/usr/local/bin/devagotchi"), &hub());
-        assert!(out.starts_with("model = \"gpt-5\"\n\n[mcp_servers.github]\ncommand = \"gh-mcp\"\n"), "{out}");
-        assert!(out.contains("[profiles.fast]\nmodel = \"o4-mini\""), "{out}");
-        assert!(!out.contains("/old/devagotchi") && !out.contains("X = \"1\""), "{out}");
+        assert!(
+            out.starts_with("model = \"gpt-5\"\n\n[mcp_servers.github]\ncommand = \"gh-mcp\"\n"),
+            "{out}"
+        );
+        assert!(
+            out.contains("[profiles.fast]\nmodel = \"o4-mini\""),
+            "{out}"
+        );
+        assert!(
+            !out.contains("/old/devagotchi") && !out.contains("X = \"1\""),
+            "{out}"
+        );
         assert_eq!(out.matches("[mcp_servers.devagotchi]").count(), 1, "{out}");
         assert!(out.ends_with("[mcp_servers.devagotchi]\ncommand = '/usr/local/bin/devagotchi'\nargs = ['mcp', '--hub']\n# Devagotchi holds a wait for up to 50 s before it answers.\ntool_timeout_sec = 120\n# Its first start may also start your broker, which can take longer than the default.\nstartup_timeout_sec = 30\n"), "{out}");
         // Running it again changes nothing.
-        assert_eq!(codex_config(&out, Path::new("/usr/local/bin/devagotchi"), &hub()), out);
+        assert_eq!(
+            codex_config(&out, Path::new("/usr/local/bin/devagotchi"), &hub()),
+            out
+        );
         // A new file holds only the server.
         assert!(codex_config("", Path::new("/d"), &hub()).starts_with("# Devagotchi"));
     }
 
     #[test]
     fn windows_paths_stay_as_typed_and_quotes_are_escaped() {
-        assert_eq!(toml_string(r"C:\Users\jesse\AppData\Local\devagotchi\devagotchi.exe"), r"'C:\Users\jesse\AppData\Local\devagotchi\devagotchi.exe'");
+        assert_eq!(
+            toml_string(r"C:\Users\jesse\AppData\Local\devagotchi\devagotchi.exe"),
+            r"'C:\Users\jesse\AppData\Local\devagotchi\devagotchi.exe'"
+        );
         assert_eq!(toml_string("it's"), "\"it's\"");
     }
 
@@ -554,9 +645,16 @@ mod tests {
         let value: serde_json::Value = serde_json::from_str(&out).unwrap();
         assert_eq!(value["globalShortcut"], "Ctrl+Space");
         assert_eq!(value["mcpServers"]["fs"]["command"], "npx");
-        assert_eq!(value["mcpServers"]["devagotchi"], serde_json::json!({"command": "/bin/devagotchi", "args": ["mcp", "--hub"]}));
+        assert_eq!(
+            value["mcpServers"]["devagotchi"],
+            serde_json::json!({"command": "/bin/devagotchi", "args": ["mcp", "--hub"]})
+        );
         assert!(desktop_config(Some("{not json"), Path::new("/d"), &hub()).is_err());
-        assert!(desktop_config(None, Path::new("/d"), &hub()).unwrap().contains("devagotchi"));
+        assert!(
+            desktop_config(None, Path::new("/d"), &hub())
+                .unwrap()
+                .contains("devagotchi")
+        );
     }
 
     #[test]
@@ -567,7 +665,13 @@ mod tests {
         let backup = replace(&file, "two\n", true).unwrap().unwrap();
         assert_eq!(std::fs::read_to_string(&file).unwrap(), "two\n");
         assert_eq!(std::fs::read_to_string(&backup).unwrap(), "one\n");
-        assert!(backup.file_name().unwrap().to_string_lossy().starts_with("config.toml.bak-"));
+        assert!(
+            backup
+                .file_name()
+                .unwrap()
+                .to_string_lossy()
+                .starts_with("config.toml.bak-")
+        );
     }
 
     #[cfg(unix)]
@@ -582,7 +686,11 @@ mod tests {
         ] {
             let begun = std::time::Instant::now();
             let why = check(Path::new("/bin/sh"), &["-c".into(), script.into()]).unwrap_err();
-            assert!(begun.elapsed() < Duration::from_secs(5), "{:?}", begun.elapsed());
+            assert!(
+                begun.elapsed() < Duration::from_secs(5),
+                "{:?}",
+                begun.elapsed()
+            );
             assert!(why.contains("stopped"), "{why}");
             assert!(why.contains("path must be shorter than SUN_LEN"), "{why}");
         }

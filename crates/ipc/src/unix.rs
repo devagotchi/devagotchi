@@ -5,7 +5,10 @@
 
 use super::{IO_TIMEOUT, exchange, io_error};
 use devagotchi_contracts::*;
-use std::{path::{Path, PathBuf}, time::Duration};
+use std::{
+    path::{Path, PathBuf},
+    time::Duration,
+};
 
 /// Accepts connections on the broker's bound socket.
 pub struct Listener(tokio::net::UnixListener);
@@ -15,7 +18,11 @@ pub type Connection = tokio::net::UnixStream;
 
 impl Listener {
     pub async fn accept(&mut self) -> BridgeResult<Connection> {
-        self.0.accept().await.map(|(stream, _)| stream).map_err(io_error)
+        self.0
+            .accept()
+            .await
+            .map(|(stream, _)| stream)
+            .map_err(io_error)
     }
 }
 
@@ -23,7 +30,10 @@ impl Listener {
 pub fn verify_peer(stream: &Connection) -> BridgeResult<()> {
     let uid = stream.peer_cred().map_err(io_error)?.uid();
     if uid != unsafe { libc::geteuid() } {
-        return Err(BridgeError::new("peer_identity", "Caller UID does not match the broker operator"));
+        return Err(BridgeError::new(
+            "peer_identity",
+            "Caller UID does not match the broker operator",
+        ));
     }
     Ok(())
 }
@@ -31,27 +41,48 @@ pub fn verify_peer(stream: &Connection) -> BridgeResult<()> {
 pub async fn request(socket: &Path, body: RequestBody) -> BridgeResult<ResponseBody> {
     use std::os::unix::fs::{FileTypeExt, MetadataExt};
     if !socket.is_absolute() {
-        return Err(BridgeError::new("socket_path", "The broker socket path must be absolute"));
+        return Err(BridgeError::new(
+            "socket_path",
+            "The broker socket path must be absolute",
+        ));
     }
-    let parent = socket.parent().ok_or_else(|| BridgeError::new("socket_path", "Missing socket directory"))?;
+    let parent = socket
+        .parent()
+        .ok_or_else(|| BridgeError::new("socket_path", "Missing socket directory"))?;
     validate_private_directory(parent)?;
     let metadata = std::fs::symlink_metadata(socket).map_err(io_error)?;
     let owner = unsafe { libc::geteuid() };
-    if !metadata.file_type().is_socket() || metadata.uid() != owner || metadata.mode() & 0o077 != 0 {
-        return Err(BridgeError::new("socket_permissions", "Broker socket must be an owner-only Unix socket"));
+    if !metadata.file_type().is_socket() || metadata.uid() != owner || metadata.mode() & 0o077 != 0
+    {
+        return Err(BridgeError::new(
+            "socket_permissions",
+            "Broker socket must be an owner-only Unix socket",
+        ));
     }
-    let mut stream = tokio::time::timeout(IO_TIMEOUT, tokio::net::UnixStream::connect(socket)).await
-        .map_err(|_| BridgeError::new("ipc_timeout", "Timed out connecting to broker"))?.map_err(io_error)?;
+    let mut stream = tokio::time::timeout(IO_TIMEOUT, tokio::net::UnixStream::connect(socket))
+        .await
+        .map_err(|_| BridgeError::new("ipc_timeout", "Timed out connecting to broker"))?
+        .map_err(io_error)?;
     if stream.peer_cred().map_err(io_error)?.uid() != owner {
-        return Err(BridgeError::new("peer_identity", "Broker peer UID does not match the local operator"));
+        return Err(BridgeError::new(
+            "peer_identity",
+            "Broker peer UID does not match the local operator",
+        ));
     }
     exchange(&mut stream, body).await
 }
 
 pub fn validate_private_directory(path: &Path) -> BridgeResult<()> {
     use std::os::unix::fs::MetadataExt;
-    if !path.is_absolute() || path.components().any(|p| matches!(p, std::path::Component::ParentDir)) {
-        return Err(BridgeError::new("state_path", "State directory must be absolute and contain no parent traversal"));
+    if !path.is_absolute()
+        || path
+            .components()
+            .any(|p| matches!(p, std::path::Component::ParentDir))
+    {
+        return Err(BridgeError::new(
+            "state_path",
+            "State directory must be absolute and contain no parent traversal",
+        ));
     }
     let owner = unsafe { libc::geteuid() };
     let mut current = PathBuf::new();
@@ -59,20 +90,32 @@ pub fn validate_private_directory(path: &Path) -> BridgeResult<()> {
         current.push(component.as_os_str());
         let metadata = std::fs::symlink_metadata(&current).map_err(io_error)?;
         if !metadata.is_dir() || metadata.file_type().is_symlink() {
-            return Err(BridgeError::new("state_path", "State directory and its ancestors must be actual directories"));
+            return Err(BridgeError::new(
+                "state_path",
+                "State directory and its ancestors must be actual directories",
+            ));
         }
         if metadata.uid() != owner && metadata.uid() != 0 {
-            return Err(BridgeError::new("state_owner", "State directory ancestors must belong to the operator or root"));
+            return Err(BridgeError::new(
+                "state_owner",
+                "State directory ancestors must belong to the operator or root",
+            ));
         }
         let writable = metadata.mode() & 0o022 != 0;
         let trusted_sticky = metadata.uid() == 0 && metadata.mode() & 0o1000 != 0;
         if current != path && writable && !trusted_sticky {
-            return Err(BridgeError::new("state_permissions", "A state directory ancestor is writable by another user"));
+            return Err(BridgeError::new(
+                "state_permissions",
+                "A state directory ancestor is writable by another user",
+            ));
         }
     }
     let metadata = std::fs::symlink_metadata(path).map_err(io_error)?;
     if metadata.uid() != owner || metadata.mode() & 0o777 != 0o700 {
-        return Err(BridgeError::new("state_permissions", "State directory must belong to the operator and have mode 0700"));
+        return Err(BridgeError::new(
+            "state_permissions",
+            "State directory must belong to the operator and have mode 0700",
+        ));
     }
     Ok(())
 }
@@ -85,59 +128,114 @@ pub struct StateGuard {
 
 impl StateGuard {
     pub fn acquire(directory: &Path) -> BridgeResult<Self> {
-        use std::os::{fd::AsRawFd, unix::fs::{DirBuilderExt, MetadataExt, OpenOptionsExt}};
-        if !directory.is_absolute() || directory.components().any(|p| matches!(p, std::path::Component::ParentDir)) {
-            return Err(BridgeError::new("state_path", "State directory must be an absolute path without parent traversal"));
+        use std::os::{
+            fd::AsRawFd,
+            unix::fs::{DirBuilderExt, MetadataExt, OpenOptionsExt},
+        };
+        if !directory.is_absolute()
+            || directory
+                .components()
+                .any(|p| matches!(p, std::path::Component::ParentDir))
+        {
+            return Err(BridgeError::new(
+                "state_path",
+                "State directory must be an absolute path without parent traversal",
+            ));
         }
         if !directory.try_exists().map_err(io_error)? {
-            let parent = directory.parent().ok_or_else(|| BridgeError::new("state_path", "Missing state parent"))?;
+            let parent = directory
+                .parent()
+                .ok_or_else(|| BridgeError::new("state_path", "Missing state parent"))?;
             // Validate all existing ancestors before creating anything. The leaf is checked below.
             validate_ancestors(parent)?;
-            std::fs::DirBuilder::new().mode(0o700).create(directory).map_err(io_error)?;
+            std::fs::DirBuilder::new()
+                .mode(0o700)
+                .create(directory)
+                .map_err(io_error)?;
         }
         validate_private_directory(directory)?;
-        let lock = std::fs::OpenOptions::new().read(true).write(true).create(true)
-            .mode(0o600).custom_flags(libc::O_NOFOLLOW | libc::O_CLOEXEC)
-            .open(directory.join("broker.lock")).map_err(io_error)?;
+        let lock = std::fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create(true)
+            .mode(0o600)
+            .custom_flags(libc::O_NOFOLLOW | libc::O_CLOEXEC)
+            .open(directory.join("broker.lock"))
+            .map_err(io_error)?;
         let metadata = lock.metadata().map_err(io_error)?;
-        if !metadata.is_file() || metadata.uid() != unsafe { libc::geteuid() } || metadata.mode() & 0o077 != 0 || metadata.nlink() != 1 {
-            return Err(BridgeError::new("lock_permissions", "Broker lock must be a private regular file with one link"));
+        if !metadata.is_file()
+            || metadata.uid() != unsafe { libc::geteuid() }
+            || metadata.mode() & 0o077 != 0
+            || metadata.nlink() != 1
+        {
+            return Err(BridgeError::new(
+                "lock_permissions",
+                "Broker lock must be a private regular file with one link",
+            ));
         }
         let result = unsafe { libc::flock(lock.as_raw_fd(), libc::LOCK_EX | libc::LOCK_NB) };
         if result != 0 {
-            return Err(BridgeError::new("broker_already_running", "Another broker holds this state directory; no socket or journal was changed"));
+            return Err(BridgeError::new(
+                "broker_already_running",
+                "Another broker holds this state directory; no socket or journal was changed",
+            ));
         }
-        Ok(Self { _lock: lock, socket: directory.join("broker.sock"), owned_socket: None })
+        Ok(Self {
+            _lock: lock,
+            socket: directory.join("broker.sock"),
+            owned_socket: None,
+        })
     }
 
     pub async fn bind(&mut self) -> BridgeResult<Listener> {
         use std::os::unix::fs::{FileTypeExt, MetadataExt, PermissionsExt};
         match std::fs::symlink_metadata(&self.socket) {
             Ok(metadata) => {
-                if !metadata.file_type().is_socket() || metadata.uid() != unsafe { libc::geteuid() } {
-                    return Err(BridgeError::new("socket_collision", "Existing socket path is not an owned Unix socket; refusing to remove it"));
+                if !metadata.file_type().is_socket() || metadata.uid() != unsafe { libc::geteuid() }
+                {
+                    return Err(BridgeError::new(
+                        "socket_collision",
+                        "Existing socket path is not an owned Unix socket; refusing to remove it",
+                    ));
                 }
                 // The exclusive state lock proves no conforming broker owns this endpoint.
                 // An accepting foreign socket must still never be unlinked.
-                match tokio::time::timeout(Duration::from_secs(1), tokio::net::UnixStream::connect(&self.socket)).await {
-                    Ok(Ok(_)) | Err(_) => return Err(BridgeError::new("socket_in_use", "Existing socket is active or unresponsive; refusing to replace it")),
-                    Ok(Err(e)) if matches!(e.kind(), std::io::ErrorKind::ConnectionRefused | std::io::ErrorKind::NotFound) => {},
+                match tokio::time::timeout(
+                    Duration::from_secs(1),
+                    tokio::net::UnixStream::connect(&self.socket),
+                )
+                .await
+                {
+                    Ok(Ok(_)) | Err(_) => {
+                        return Err(BridgeError::new(
+                            "socket_in_use",
+                            "Existing socket is active or unresponsive; refusing to replace it",
+                        ));
+                    }
+                    Ok(Err(e))
+                        if matches!(
+                            e.kind(),
+                            std::io::ErrorKind::ConnectionRefused | std::io::ErrorKind::NotFound
+                        ) => {}
                     Ok(Err(e)) => return Err(io_error(e)),
                 }
                 std::fs::remove_file(&self.socket).map_err(io_error)?;
             }
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {},
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
             Err(e) => return Err(io_error(e)),
         }
         let listener = tokio::net::UnixListener::bind(&self.socket).map_err(io_error)?;
         let metadata = std::fs::symlink_metadata(&self.socket).map_err(io_error)?;
         self.owned_socket = Some((metadata.dev(), metadata.ino()));
-        std::fs::set_permissions(&self.socket, std::fs::Permissions::from_mode(0o600)).map_err(io_error)?;
+        std::fs::set_permissions(&self.socket, std::fs::Permissions::from_mode(0o600))
+            .map_err(io_error)?;
         Ok(Listener(listener))
     }
 
     /// The endpoint clients pass to `request`: the broker's Unix socket path.
-    pub fn endpoint(&self) -> &Path { &self.socket }
+    pub fn endpoint(&self) -> &Path {
+        &self.socket
+    }
 }
 
 fn validate_ancestors(path: &Path) -> BridgeResult<()> {
@@ -147,9 +245,15 @@ fn validate_ancestors(path: &Path) -> BridgeResult<()> {
     for component in path.components() {
         current.push(component.as_os_str());
         let m = std::fs::symlink_metadata(&current).map_err(io_error)?;
-        if !m.is_dir() || m.file_type().is_symlink() || (m.uid() != owner && m.uid() != 0)
-            || (m.mode() & 0o022 != 0 && !(m.uid() == 0 && m.mode() & 0o1000 != 0)) {
-            return Err(BridgeError::new("state_path", "State directory has an untrusted or symbolic-link ancestor"));
+        if !m.is_dir()
+            || m.file_type().is_symlink()
+            || (m.uid() != owner && m.uid() != 0)
+            || (m.mode() & 0o022 != 0 && !(m.uid() == 0 && m.mode() & 0o1000 != 0))
+        {
+            return Err(BridgeError::new(
+                "state_path",
+                "State directory has an untrusted or symbolic-link ancestor",
+            ));
         }
     }
     Ok(())
@@ -158,7 +262,9 @@ fn validate_ancestors(path: &Path) -> BridgeResult<()> {
 impl Drop for StateGuard {
     fn drop(&mut self) {
         use std::os::unix::fs::{FileTypeExt, MetadataExt};
-        if let (Some(identity), Ok(metadata)) = (self.owned_socket, std::fs::symlink_metadata(&self.socket)) {
+        if let (Some(identity), Ok(metadata)) =
+            (self.owned_socket, std::fs::symlink_metadata(&self.socket))
+        {
             if metadata.file_type().is_socket() && identity == (metadata.dev(), metadata.ino()) {
                 if let Err(error) = std::fs::remove_file(&self.socket) {
                     eprintln!("Could not remove broker socket: {error}");

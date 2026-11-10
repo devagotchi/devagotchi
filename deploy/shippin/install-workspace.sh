@@ -10,7 +10,7 @@
 # Idempotent: re-run to move versions; the broker restarts on the new binary.
 set -euo pipefail
 
-REPO=${DEVAGOTCHI_REPO:-EonsofStupid/devagotchi}
+REPO=${DEVAGOTCHI_REPO:-devagotchi/devagotchi}
 VERSION=${DEVAGOTCHI_VERSION:-}
 ARTIFACT_DIR=${DEVAGOTCHI_ARTIFACT_DIR:-}
 TARGET=${DEVAGOTCHI_TARGET:-x86_64-unknown-linux-gnu}

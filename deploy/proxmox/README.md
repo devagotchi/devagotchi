@@ -5,7 +5,7 @@ image GitHub publishes, and leaves it deploying each new image by itself. As roo
 Proxmox host:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/EonsofStupid/devagotchi/main/deploy/proxmox/hub-up.sh \
+curl -fsSL https://raw.githubusercontent.com/devagotchi/devagotchi/main/deploy/proxmox/hub-up.sh \
   | bash -s -- --ct <id> --domain <name> [--rp-id <parent domain>]
 ```
 
@@ -28,7 +28,7 @@ operators and sign-ins, and a secrets file on the Proxmox host that is pushed in
 container 0600 for install.sh alone and removed after it:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/EonsofStupid/devagotchi/main/deploy/proxmox/hub-up.sh \
+curl -fsSL https://raw.githubusercontent.com/devagotchi/devagotchi/main/deploy/proxmox/hub-up.sh \
   | bash -s -- --ct 110 --domain app.devagotchi.com --rp-id devagotchi.com --tenancy multi \
       --operators email:you@example.com --google --github --nomen https://id.shippin.cloud \
       --email-from "Devagotchi <sign-in@devagotchi.com>" --env-file /root/devagotchi-hub.env
@@ -43,7 +43,7 @@ no snapshot, no reinstall, nothing else touched, and the running hub serves it w
 seconds:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/EonsofStupid/devagotchi/main/deploy/proxmox/hub-up.sh \
+curl -fsSL https://raw.githubusercontent.com/devagotchi/devagotchi/main/deploy/proxmox/hub-up.sh \
   | bash -s -- --ct <id> --site /root/hub-site --site-only
 ```
 

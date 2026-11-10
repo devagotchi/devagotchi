@@ -4,8 +4,8 @@
 //! - `POST /oauth/device` (the metadata's `device_authorization_endpoint`): a client asks
 //!   for a device code and a user code. The CLI's built-in client is `devagotchi-cli`; any
 //!   client registered at `/oauth/register` may ask too.
-//! - `GET /device`: the person, signed in with their passkey (or sent to sign in first and
-//!   brought back), enters or follows the code, sees which app asks and as whom, and checks
+//! - `GET /device`: the person, signed in (or sent to sign in first and brought back),
+//!   enters or follows the code, sees which app asks and as whom, and checks
 //!   the code matches their terminal (RFC 8628 §5.4).
 //! - `POST /device`: their answer, from this page alone (`Origin` and `Sec-Fetch-Site`, as
 //!   the consent page). The terminal's next poll at `/oauth/token` gets its tokens.

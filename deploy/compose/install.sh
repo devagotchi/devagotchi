@@ -26,11 +26,11 @@ install.sh --domain NAME [options]
                        external: a proxy elsewhere terminates TLS and reaches the hub's port
   --hub-bind ADDR      where the hub's HTTP port is published (default 127.0.0.1)
   --hub-port PORT      that port (default 8787)
-  --track IMAGE        the image tag to follow (default ghcr.io/eonsofstupid/devagotchi:main)
+  --track IMAGE        the image tag to follow (default ghcr.io/devagotchi/devagotchi:main)
   --dir DIR            where the stack lives (default /opt/devagotchi-hub)
   --source DIR|URL     where compose.yaml and update.sh come from (default: beside this
                        script, else https://raw.githubusercontent.com/<repo>/<ref>/deploy/compose)
-  --repo OWNER/NAME    (default EonsofStupid/devagotchi)   --ref REF  (default main)
+  --repo OWNER/NAME    (default devagotchi/devagotchi)   --ref REF  (default main)
   --no-timer           do not install the update and backup timers
 The hub's site: its name, copy, colours and pictures (crates/hub/README.md, "The site"):
   --site DIR           check the site directory DIR with the hub image and put it in place
@@ -64,8 +64,8 @@ EOF
 }
 
 domain="" public_url="" rp_id="" edge=caddy hub_bind=127.0.0.1 hub_port=8787
-track=ghcr.io/eonsofstupid/devagotchi:main dir=/opt/devagotchi-hub source=""
-repo=EonsofStupid/devagotchi ref=main timer=true site="" site_only=false no_site=false
+track=ghcr.io/devagotchi/devagotchi:main dir=/opt/devagotchi-hub source=""
+repo=devagotchi/devagotchi ref=main timer=true site="" site_only=false no_site=false
 tenancy="" operators="" proxies="" google=false github=false nomen="" email_from="" env_file=""
 analytics="" analytics_days=""
 while [[ $# -gt 0 ]]; do
@@ -222,11 +222,12 @@ if [[ -n "$site" ]]; then
 fi
 $no_site && site_dir=""
 
-# The sign-in providers' ids and secrets: from --env-file, else this command's environment,
+# Sign-in secrets and optional board/issue config: from --env-file, else this command's environment,
 # else what .env already holds (a re-run). Never printed; written single-quoted to .env (0600).
 secret_names=(DEVAGOTCHI_GOOGLE_CLIENT_ID DEVAGOTCHI_GOOGLE_CLIENT_SECRET DEVAGOTCHI_GITHUB_CLIENT_ID
   DEVAGOTCHI_GITHUB_CLIENT_SECRET DEVAGOTCHI_NOMEN_CLIENT_ID DEVAGOTCHI_NOMEN_CLIENT_SECRET
-  DEVAGOTCHI_SMTP_URL DEVAGOTCHI_SMTP_PASSWORD)
+  DEVAGOTCHI_SMTP_URL DEVAGOTCHI_SMTP_PASSWORD DEVAGOTCHI_GITHUB_WEBHOOK_SECRET
+  DEVAGOTCHI_HUB_BOARDS DEVAGOTCHI_HUB_GRANTS DEVAGOTCHI_GITHUB_REPOSITORIES)
 declare -A secret=()
 unquote() { sed "s/^'\(.*\)'\$/\1/; s/^\"\(.*\)\"\$/\1/"; }
 from_file() { [[ -n "$env_file" ]] && sed -n "s/^\(export \)\{0,1\}$1=//p" "$env_file" | tail -1 | unquote; }
@@ -305,6 +306,20 @@ services=(postgres hub); [[ "$edge" == caddy ]] && services+=(caddy)
 say "starting ${services[*]} in $dir"
 (cd "$dir" && docker compose up -d --pull missing --wait --wait-timeout 180 "${services[@]}")
 DEVAGOTCHI_DIR="$dir" "$dir/update.sh" --now || die "the hub did not come up healthy; see: cd $dir && docker compose logs hub"
+
+# Mail (--email-from): connect to the mail server and sign in as the hub does, sending
+# nothing. A refusal does not stop the hub, which signs people in by password, passkey and
+# provider without mail; it is shown, with the command that mails a check to read yourself.
+if [[ -n "$email_from" ]]; then
+  check_mail="docker compose run --rm --no-deps -T hub hub check-mail --config /etc/devagotchi/hub.json"
+  if checked=$(cd "$dir" && $check_mail 2>&1); then
+    say "$checked"
+    say "to read a check email yourself: cd $dir && $check_mail --to you@example.com"
+  else
+    printf '%s\n' "$checked" >&2
+    say "the mail server refused the hub (above): sign-in links by email will not go out until it accepts. Fix the SMTP values and re-run install.sh, or try again with: cd $dir && $check_mail --to you@example.com"
+  fi
+fi
 
 if $timer; then
   say "installing the update timer (every 5 minutes) and the nightly backup"

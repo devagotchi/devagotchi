@@ -48,8 +48,14 @@ fn own_page(title: &str, body: &str) -> Response {
     response
 }
 
-/// The page: the providers' buttons, "or", then one email and password form.
-pub fn page(hub: &HubSignIn, return_to: &str, tab: Tab, notice: Option<&str>) -> Response {
+/// The hosted page: provider buttons, "or", then email and password, with optional signup.
+pub fn page(
+    hub: &HubSignIn,
+    return_to: &str,
+    tab: Tab,
+    notice: Option<&str>,
+    allow_signup: bool,
+) -> Response {
     let (site, e) = (hub.site(), pages::escape);
     let words = &site.messages.sign_in;
     let return_to = safe_return_to(return_to);
@@ -64,28 +70,44 @@ pub fn page(hub: &HubSignIn, return_to: &str, tab: Tab, notice: Option<&str>) ->
     } else {
         or
     };
+    let tab = if allow_signup { tab } else { Tab::In };
     let (action, submit, complete) = match tab {
         Tab::In => ("/auth/password", &words.submit_in, "current-password"),
         Tab::Up => ("/auth/password/new", &words.submit_up, "new-password"),
     };
+    let tabs = if allow_signup {
+        format!(
+            "<p class=\"tabs\"><a href=\"/auth/login?tab=in&amp;return_to={back}\">{}</a> \
+<a href=\"/auth/login?tab=up&amp;return_to={back}\">{}</a></p>",
+            e(&words.tab_in),
+            e(&words.tab_up)
+        )
+    } else {
+        String::new()
+    };
     let notice = notice.map(|text| format!("<p class=\"notice\" role=\"alert\">{}</p>", e(text)));
     let body = format!(
-        "<h1>{title}</h1>{ways}<p class=\"tabs\"><a href=\"/auth/login?tab=in&amp;return_to={back}\">{tab_in}</a> \
-<a href=\"/auth/login?tab=up&amp;return_to={back}\">{tab_up}</a></p>{notice}\
+        "<h1>{title}</h1>{ways}{tabs}{notice}\
 <form method=\"post\" action=\"{action}\"><input type=\"hidden\" name=\"return_to\" value=\"{to}\">\
 <label>{email} <input type=\"email\" name=\"email\" required autocomplete=\"email\" maxlength=\"254\"></label>\
 <label>{password} <input type=\"password\" name=\"password\" required autocomplete=\"{complete}\"></label>\
 <p class=\"actions\"><button class=\"button primary\" type=\"submit\">{submit}</button></p></form>\
-<p><a href=\"/auth/password/forgot?return_to={back}\">{forgot}</a></p>",
+{forgot}",
         title = e(&words.title),
-        tab_in = e(&words.tab_in),
-        tab_up = e(&words.tab_up),
+        tabs = tabs,
         notice = notice.unwrap_or_default(),
         to = e(return_to),
         email = e(&words.email),
         password = e(&words.password),
         submit = e(submit),
-        forgot = e(&words.forgot),
+        forgot = if allow_signup || hub.providers.email.is_some() {
+            format!(
+                "<p><a href=\"/auth/password/forgot?return_to={back}\">{}</a></p>",
+                e(&words.forgot)
+            )
+        } else {
+            String::new()
+        },
     );
     let mut response = own_page(&words.title, &body);
     (
@@ -93,6 +115,32 @@ pub fn page(hub: &HubSignIn, return_to: &str, tab: Tab, notice: Option<&str>) ->
         response,
     )
         .1
+}
+
+/// Email/password sign-in form for an existing account, usable on a self-hosted hub too.
+pub(super) fn password_form(hub: &HubSignIn, return_to: &str) -> String {
+    let words = &hub.site().messages.sign_in;
+    let return_to = safe_return_to(return_to);
+    let forgot = if hub.providers.email.is_some() {
+        format!(
+            "<p><a href=\"/auth/password/forgot?return_to={}\">{}</a></p>",
+            super::encode(return_to),
+            pages::escape(&words.forgot)
+        )
+    } else {
+        String::new()
+    };
+    format!(
+        "<form method=\"post\" action=\"/auth/password\"><input type=\"hidden\" name=\"return_to\" value=\"{}\">\
+<label>{} <input type=\"email\" name=\"email\" required autocomplete=\"email\" maxlength=\"254\"></label>\
+<label>{} <input type=\"password\" name=\"password\" required autocomplete=\"current-password\"></label>\
+<p class=\"actions\"><button class=\"button\" type=\"submit\">{}</button></p></form>{}",
+        pages::escape(return_to),
+        pages::escape(&words.email),
+        pages::escape(&words.password),
+        pages::escape(&words.submit_in),
+        forgot
+    )
 }
 
 pub fn routes() -> Router<AppState> {
@@ -132,6 +180,14 @@ async fn answer(
             "Not from this hub",
             "Sign in on this hub's own page.",
             None,
+        );
+    }
+    if tab == Tab::Up && !state.hub.config.multi_tenant() {
+        return pages::message(
+            StatusCode::NOT_FOUND,
+            "Sign-up is not available",
+            "This is a single-owner hub. Ask its owner to create an account.",
+            Some(("/auth/login", "Sign in")),
         );
     }
     let return_to = safe_return_to(form.return_to.as_deref().unwrap_or("/account")).to_string();
@@ -175,7 +231,13 @@ async fn answer(
             }
         },
     };
-    let mut response = page(&hub, &return_to, tab, Some(&notice));
+    let mut response = page(
+        &hub,
+        &return_to,
+        tab,
+        Some(&notice),
+        state.hub.config.multi_tenant(),
+    );
     *response.status_mut() = status;
     response
 }

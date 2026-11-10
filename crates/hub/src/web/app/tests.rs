@@ -10,6 +10,65 @@ pub(super) async fn hosted() -> Hosted {
     hosted_with(None, |_, _| json!({})).await
 }
 
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn real_postgres_mcp_and_app_share_one_board_and_surface_storage_failures() {
+    let Some(test) = crate::store::testing::postgres().await else {
+        return;
+    };
+    let hub = hosted_with(Some(&test.url), |_, _| json!({})).await;
+    let mut alice = hub.first_connect("Claude").await;
+    let bob = hub.first_connect("Codex").await;
+    things_of(&hub, &mut alice).await;
+    for path in ["/app", "/app/boards", "/app/boards/alpha"] {
+        let (status, html) = page(&hub, path, &alice).await;
+        assert_eq!(status, 200, "{path}: {html}");
+        assert!(html.contains("alpha"), "{path}: {html}");
+        if path != "/app/boards" {
+            assert!(html.contains("A-PRIVATE-TICKET"), "{path}: {html}");
+        }
+        let (status, html) = page(&hub, path, &bob).await;
+        assert!([200, 404].contains(&status), "{path}: {status}");
+        assert!(!html.contains("A-PRIVATE-TICKET"));
+    }
+    let listed = hub
+        .call(&mut alice, "board_list", json!({"project":"alpha"}))
+        .await;
+    assert!(!refused(&listed), "{listed}");
+    let id = listed["structuredContent"]
+        .as_array()
+        .unwrap_or_else(|| panic!("board_list shape: {listed}"))
+        .iter()
+        .find(|ticket| ticket["title"] == "A-PRIVATE-TICKET")
+        .unwrap()["id"]
+        .as_str()
+        .unwrap();
+    let ticket_path = format!("/app/tickets/alpha/{id}");
+    assert_eq!(page(&hub, &ticket_path, &alice).await.0, 200);
+    assert!(!hub.dir.path().join("account-boards").exists());
+    sqlx::query("REVOKE SELECT ON devagotchi.board_tickets FROM devagotchi_hub")
+        .execute(hub.accounts.store().admin())
+        .await
+        .unwrap();
+    for path in [
+        "/app",
+        "/app/boards",
+        "/app/boards/alpha",
+        ticket_path.as_str(),
+    ] {
+        assert_eq!(page(&hub, path, &alice).await.0, 503, "{path}");
+    }
+    let refused_list = hub
+        .call(&mut alice, "board_list", json!({"project":"alpha"}))
+        .await;
+    assert!(refused(&refused_list), "{refused_list}");
+    sqlx::query("GRANT SELECT ON devagotchi.board_tickets TO devagotchi_hub")
+        .execute(hub.accounts.store().admin())
+        .await
+        .unwrap();
+    assert_eq!(page(&hub, &ticket_path, &alice).await.0, 200);
+    assert!(!hub.dir.path().join("account-boards").exists());
+}
+
 pub(super) async fn page(hub: &Hosted, path: &str, person: &Person) -> (u16, String) {
     Hosted::text(hub.get(path, Some(&person.cookie)).await).await
 }

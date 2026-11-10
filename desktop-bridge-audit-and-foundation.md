@@ -4,7 +4,7 @@ Prepared for Hades on October 16, 2026. Architecture, public adoption, task grap
 
 Devagotchi bridges AI and a person's workspace through an independently running local broker and a native desktop app. Its growth model represents every task as a graph, with explicit dependencies, attempts, execution ownership, and recovery evidence. Public documentation and connection contracts make the product accessible to humans and agents.
 
-The confirmed product targets are a locally installed MCP client, a styled native command inspector, Windows/macOS/Linux, the owned repository [eonsofstupid/devagotchi](https://github.com/eonsofstupid/devagotchi), and [devagotchi.net](https://devagotchi.net). The rebuilt [public site](https://devagotchi.justsayit.chatgpt.site) supplies connection docs, an HTTP/MCP reference, and a downloadable Linux source preview. The core includes a Rust broker, Tauri/React inspector, generated contracts, and recorded Linux checks; graph/mesh execution and native Windows/macOS remain implementation work.
+The confirmed product targets are a locally installed MCP client, a styled native command inspector, Windows/macOS/Linux, the owned repository [devagotchi/devagotchi](https://github.com/devagotchi/devagotchi), and [devagotchi.net](https://devagotchi.net). The rebuilt [public site](https://devagotchi.justsayit.chatgpt.site) supplies connection docs, an HTTP/MCP reference, and a downloadable Linux source preview. The core includes a Rust broker, Tauri/React inspector, generated contracts, and recorded Linux checks; graph/mesh execution and native Windows/macOS remain implementation work.
 
 # Outcome and authority
 
@@ -20,7 +20,7 @@ The GitHub connection again returned 404 for the supplied repository, so its con
 
 2. **App scope confirmed:** a styled native app showing commands, exact arguments, working directory, retained output, status, cancellation and connection health. File/search/edit capabilities remain part of the Desktop Commander improvement sequence. Screen capture, accessibility and mouse/keyboard automation have not been requested.
 
-3. **Product destinations confirmed:** Windows, macOS and Linux; [eonsofstupid/devagotchi](https://github.com/eonsofstupid/devagotchi); [devagotchi.net](https://devagotchi.net). The published [website and reference](https://devagotchi.justsayit.chatgpt.site) are available. Repository reconciliation and custom-domain validation remain pending; native execution is Linux only.
+3. **Product destinations confirmed:** Windows, macOS and Linux; [devagotchi/devagotchi](https://github.com/devagotchi/devagotchi); [devagotchi.net](https://devagotchi.net). The published [website and reference](https://devagotchi.justsayit.chatgpt.site) are available. Repository reconciliation and custom-domain validation remain pending; native execution is Linux only.
 
 The public website and reference service ship independently of the native installer release. The core's next packet establishes reproducible measurements and resolves sustained-admission, persistence, and contract limits. Local graph records and scheduling then extend that same foundation. Repository integration depends on inspecting its actual source; native support and named-client claims require their own acceptance evidence.
 
@@ -382,7 +382,7 @@ Source: [Microsoft UI Automation](https://learn.microsoft.com/en-us/windows/win3
 
 # Working repository organization
 
-The intended destination is eonsofstupid/devagotchi. These paths exist in the isolated implementation supplied with this foundation; they have not been compared with or pushed to the inaccessible GitHub repository.
+The intended destination is devagotchi/devagotchi. These paths exist in the isolated implementation supplied with this foundation; they have not been compared with or pushed to the inaccessible GitHub repository.
 
 | Path | Responsibility |
 |---|---|

@@ -30,7 +30,7 @@ env_get() { sed -n "s/^$1=//p" "$dir/.env" | tail -1; }
 out=$("$root/deploy/compose/install.sh" --domain hub.test.example --rp-id test.example \
   --edge external --hub-bind 127.0.0.1 --hub-port "$port" --dir "$dir" --no-timer 2>&1) \
   || { printf '%s\n' "$out" >&2; fail "install.sh brings the stack up"; }
-[[ "$(env_get DEVAGOTCHI_IMAGE)" == ghcr.io/eonsofstupid/devagotchi@sha256:* ]] || fail "the image is pinned by digest"
+[[ "$(env_get DEVAGOTCHI_IMAGE)" == ghcr.io/devagotchi/devagotchi@sha256:* ]] || fail "the image is pinned by digest"
 curl -fsS "http://127.0.0.1:$port/healthz" | grep -q '"ok":true' || fail "the hub answers healthy on its port"
 grep -q "https://hub.test.example/claim#" <<<"$out" || fail "install.sh prints the claim link"
 echo "PASS install.sh: stack up, image pinned by digest, claim link printed"

@@ -88,7 +88,7 @@ async fn page(hub: &Hosted, cookie: Option<&str>) -> (u16, String) {
     Hosted::text(hub.get("/operator", cookie).await).await
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn the_operator_lets_a_waiting_person_in_and_their_next_call_works() {
     let mut stores = vec![None];
     if let Some(url) = store::testing::empty_postgres().await {

@@ -33,11 +33,23 @@ pub async fn home(State(state): State<AppState>, headers: HeaderMap) -> Response
     };
     let machines = state.hub.machine_status(&subject).await;
     let approvals = if state.hub.may_approve(&subject) {
-        super::super::approvals::pending(&state, &subject).await
+        match super::super::approvals::pending(&state, &subject).await {
+            Ok(approvals) => approvals,
+            Err(error) => {
+                eprintln!("devagotchi hub: home approvals: {error}");
+                return crate::web::routes::unavailable();
+            }
+        }
     } else {
         Vec::new()
     };
-    let boards = summaries(&state, &subject).await;
+    let boards = match summaries(&state, &subject).await {
+        Ok(boards) => boards,
+        Err(error) => {
+            eprintln!("devagotchi hub: board summaries: {error}");
+            return crate::web::routes::unavailable();
+        }
+    };
     let site = words();
     let copy = &site.messages.app;
     // Needs you, newest first: a failed update has no time of its own, so it leads.
@@ -122,7 +134,13 @@ pub async fn boards(State(state): State<AppState>, headers: HeaderMap) -> Respon
         Ok(subject) => subject,
         Err(response) => return response,
     };
-    let boards = summaries(&state, &subject).await;
+    let boards = match summaries(&state, &subject).await {
+        Ok(boards) => boards,
+        Err(error) => {
+            eprintln!("devagotchi hub: board summaries: {error}");
+            return crate::web::routes::unavailable();
+        }
+    };
     let site = words();
     let title = &site.messages.app.boards_title;
     pages::app_page(StatusCode::OK, title, &boards_card(&boards), Tab::Boards)
@@ -130,11 +148,22 @@ pub async fn boards(State(state): State<AppState>, headers: HeaderMap) -> Respon
 
 /// Each of the person's boards: its open tickets and those assigned to the person.
 /// Approvals are not tickets here; Needs you lists them on their own.
-async fn summaries(state: &AppState, subject: &Subject) -> Vec<BoardSummary> {
-    let opened: Vec<_> = board_names(state, subject)
+async fn summaries(
+    state: &AppState,
+    subject: &Subject,
+) -> devagotchi_contracts::BridgeResult<Vec<BoardSummary>> {
+    let opened: Vec<_> = board_names(state, subject)?
         .into_iter()
-        .filter_map(|project| open_board(state, subject, &project).map(|board| (project, board)))
-        .collect();
+        .map(|project| {
+            let board = open_board(state, subject, &project)?.ok_or_else(|| {
+                devagotchi_contracts::BridgeError::new(
+                    "unknown_board",
+                    format!("board {project:?} is no longer available"),
+                )
+            })?;
+            Ok((project, board))
+        })
+        .collect::<devagotchi_contracts::BridgeResult<Vec<_>>>()?;
     let me = subject.id.clone();
     tokio::task::spawn_blocking(move || {
         opened
@@ -144,8 +173,7 @@ async fn summaries(state: &AppState, subject: &Subject) -> Vec<BoardSummary> {
                     .list(&Filter {
                         open_only: true,
                         ..Filter::default()
-                    })
-                    .unwrap_or_default()
+                    })?
                     .into_iter()
                     .filter(|ticket| ticket.kind != approval::KIND)
                     .collect();
@@ -154,16 +182,16 @@ async fn summaries(state: &AppState, subject: &Subject) -> Vec<BoardSummary> {
                     .filter(|ticket| ticket.assignee.as_deref() == Some(me.as_str()))
                     .map(|ticket| (ticket.updated_at, ticket.id.clone(), ticket.title.clone()))
                     .collect();
-                BoardSummary {
+                Ok(BoardSummary {
                     project,
                     open: open.len(),
                     assigned,
-                }
+                })
             })
             .collect()
     })
     .await
-    .unwrap_or_default()
+    .map_err(|error| devagotchi_contracts::BridgeError::new("board_store", error.to_string()))?
 }
 
 /// A machine's status as the app says it.

@@ -1,11 +1,14 @@
 //! A small native inspector. The independently running broker owns every job.
 
-use std::{ffi::OsString, path::{Path, PathBuf}};
 use devagotchi_contracts::{
-    BridgeError, BridgeResult, ChangesInput, GetInput, ListInput, OperationsPage, OperationView,
+    BridgeError, BridgeResult, ChangesInput, GetInput, ListInput, OperationView, OperationsPage,
     OutputPage, ReadInput, RequestBody, ResponseBody, Revision, WaitInput,
 };
 use serde::Serialize;
+use std::{
+    ffi::OsString,
+    path::{Path, PathBuf},
+};
 use tauri::{State, WebviewUrl, WebviewWindowBuilder};
 
 pub const USAGE: &str = "Usage:\n  devagotchi [--socket ABS_PATH]\n  devagotchi --help\n\nInspect an independently running local broker.\nDEVAGOTCHI_SOCKET supplies the socket path when --socket is omitted.\nWith neither set, the app opens its connection setup view.\nThe app does not start a broker or modify its grants.";
@@ -34,10 +37,18 @@ pub fn parse_launch(
             Some(path) => (Some(PathBuf::from(path)), "environment"),
             None => (None, "unconfigured"),
         },
-        _ => return Err(BridgeError::new("invalid_cli", "expected --socket ABS_PATH, --help, or no arguments")),
+        _ => {
+            return Err(BridgeError::new(
+                "invalid_cli",
+                "expected --socket ABS_PATH, --help, or no arguments",
+            ));
+        }
     };
     if socket.as_ref().is_some_and(|path| !path.is_absolute()) {
-        return Err(BridgeError::new("invalid_cli", "the broker socket path must be absolute"));
+        return Err(BridgeError::new(
+            "invalid_cli",
+            "the broker socket path must be absolute",
+        ));
     }
     Ok(Launch::Open(Connection { socket, source }))
 }
@@ -54,7 +65,10 @@ pub struct ConnectionInfo {
 impl Connection {
     fn info(&self) -> ConnectionInfo {
         ConnectionInfo {
-            socket_path: self.socket.as_ref().map(|path| path.to_string_lossy().into_owned()),
+            socket_path: self
+                .socket
+                .as_ref()
+                .map(|path| path.to_string_lossy().into_owned()),
             source: self.source,
             platform: std::env::consts::OS,
             app_version: env!("CARGO_PKG_VERSION"),
@@ -131,7 +145,10 @@ fn unexpected(expected: &str, actual: &ResponseBody) -> BridgeError {
         ResponseBody::Written(_) => "written",
         ResponseBody::Revision(_) => "revision",
     };
-    BridgeError::new("unexpected_broker_response", format!("Expected {expected}, received {actual}"))
+    BridgeError::new(
+        "unexpected_broker_response",
+        format!("Expected {expected}, received {actual}"),
+    )
 }
 
 #[tauri::command]
@@ -140,12 +157,18 @@ fn connection_info(state: State<'_, Connection>) -> ConnectionInfo {
 }
 
 #[tauri::command]
-async fn list_operations(state: State<'_, Connection>, input: ListInput) -> BridgeResult<OperationsPage> {
+async fn list_operations(
+    state: State<'_, Connection>,
+    input: ListInput,
+) -> BridgeResult<OperationsPage> {
     state.list(input).await
 }
 
 #[tauri::command]
-async fn get_operation(state: State<'_, Connection>, input: GetInput) -> BridgeResult<OperationView> {
+async fn get_operation(
+    state: State<'_, Connection>,
+    input: GetInput,
+) -> BridgeResult<OperationView> {
     state.get(input).await
 }
 
@@ -155,21 +178,35 @@ async fn read_output(state: State<'_, Connection>, input: ReadInput) -> BridgeRe
 }
 
 #[tauri::command]
-async fn cancel_operation(state: State<'_, Connection>, input: GetInput) -> BridgeResult<OperationView> {
+async fn cancel_operation(
+    state: State<'_, Connection>,
+    input: GetInput,
+) -> BridgeResult<OperationView> {
     state.cancel(input).await
 }
 
 #[tauri::command]
-async fn wait_operation(state: State<'_, Connection>, input: WaitInput) -> BridgeResult<OperationView> {
+async fn wait_operation(
+    state: State<'_, Connection>,
+    input: WaitInput,
+) -> BridgeResult<OperationView> {
     state.wait(input).await
 }
 
 #[tauri::command]
-async fn operations_changed(state: State<'_, Connection>, input: ChangesInput) -> BridgeResult<Revision> {
+async fn operations_changed(
+    state: State<'_, Connection>,
+    input: ChangesInput,
+) -> BridgeResult<Revision> {
     state.changes(input).await
 }
 
-fn local_navigation(scheme: &str, host: Option<&str>, port: Option<u16>, development: bool) -> bool {
+fn local_navigation(
+    scheme: &str,
+    host: Option<&str>,
+    port: Option<u16>,
+    development: bool,
+) -> bool {
     (scheme == "tauri" && host == Some("localhost") && port.is_none())
         || (scheme == "http" && host == Some("tauri.localhost") && port == Some(80))
         || (development && scheme == "http" && host == Some("127.0.0.1") && port == Some(1420))
@@ -179,8 +216,13 @@ pub fn run(connection: Connection) -> tauri::Result<()> {
     tauri::Builder::default()
         .manage(connection)
         .invoke_handler(tauri::generate_handler![
-            connection_info, list_operations, get_operation, read_output, cancel_operation,
-            wait_operation, operations_changed,
+            connection_info,
+            list_operations,
+            get_operation,
+            read_output,
+            cancel_operation,
+            wait_operation,
+            operations_changed,
         ])
         .setup(|app| {
             WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
@@ -189,9 +231,14 @@ pub fn run(connection: Connection) -> tauri::Result<()> {
                 .min_inner_size(960.0, 640.0)
                 .center()
                 .theme(Some(tauri::Theme::Dark))
-                .on_navigation(|url| local_navigation(
-                    url.scheme(), url.host_str(), url.port_or_known_default(), cfg!(debug_assertions),
-                ))
+                .on_navigation(|url| {
+                    local_navigation(
+                        url.scheme(),
+                        url.host_str(),
+                        url.port_or_known_default(),
+                        cfg!(debug_assertions),
+                    )
+                })
                 .on_new_window(|_, _| tauri::webview::NewWindowResponse::Deny)
                 .build()?;
             Ok(())
@@ -205,8 +252,13 @@ mod tests {
 
     #[test]
     fn cli_configuration_is_explicit() {
-        assert!(matches!(parse_launch([OsString::from("--help")], None).unwrap(), Launch::Help));
-        let Launch::Open(empty) = parse_launch([], None).unwrap() else { panic!("expected connection") };
+        assert!(matches!(
+            parse_launch([OsString::from("--help")], None).unwrap(),
+            Launch::Help
+        ));
+        let Launch::Open(empty) = parse_launch([], None).unwrap() else {
+            panic!("expected connection")
+        };
         assert_eq!(empty.info().source, "unconfigured");
         assert_eq!(empty.socket().unwrap_err().code, "socket_unconfigured");
         assert!(parse_launch(["--socket".into(), "relative.sock".into()], None).is_err());
@@ -216,10 +268,30 @@ mod tests {
     #[test]
     fn navigation_cannot_leave_the_app() {
         assert!(local_navigation("tauri", Some("localhost"), None, false));
-        assert!(local_navigation("http", Some("tauri.localhost"), Some(80), false));
-        assert!(local_navigation("http", Some("127.0.0.1"), Some(1420), true));
-        assert!(!local_navigation("http", Some("127.0.0.1"), Some(1420), false));
-        assert!(!local_navigation("https", Some("devagotchi.net"), Some(443), true));
+        assert!(local_navigation(
+            "http",
+            Some("tauri.localhost"),
+            Some(80),
+            false
+        ));
+        assert!(local_navigation(
+            "http",
+            Some("127.0.0.1"),
+            Some(1420),
+            true
+        ));
+        assert!(!local_navigation(
+            "http",
+            Some("127.0.0.1"),
+            Some(1420),
+            false
+        ));
+        assert!(!local_navigation(
+            "https",
+            Some("devagotchi.net"),
+            Some(443),
+            true
+        ));
         assert!(!local_navigation("file", None, None, true));
         assert!(!local_navigation("tauri", Some("elsewhere"), None, false));
     }
@@ -227,15 +299,18 @@ mod tests {
     #[cfg(unix)]
     #[tokio::test]
     async fn list_request_preserves_paging_and_rejects_wrong_response_kind() {
-        use std::os::unix::fs::PermissionsExt;
-        use devagotchi_contracts::{WireRequest, WireResponse, MAX_FRAME_BYTES};
+        use devagotchi_contracts::{MAX_FRAME_BYTES, WireRequest, WireResponse};
         use devagotchi_ipc as ipc;
+        use std::os::unix::fs::PermissionsExt;
         let directory = tempfile::tempdir().unwrap();
         std::fs::set_permissions(directory.path(), std::fs::Permissions::from_mode(0o700)).unwrap();
         let socket = directory.path().join("test.sock");
         let listener = tokio::net::UnixListener::bind(&socket).unwrap();
         std::fs::set_permissions(&socket, std::fs::Permissions::from_mode(0o600)).unwrap();
-        let connection = Connection { socket: Some(socket), source: "command_line" };
+        let connection = Connection {
+            socket: Some(socket),
+            source: "command_line",
+        };
         let server = tokio::spawn(async move {
             let (mut stream, _) = listener.accept().await.unwrap();
             let raw = ipc::read_frame(&mut stream, MAX_FRAME_BYTES).await.unwrap();
@@ -248,11 +323,24 @@ mod tests {
                 other => panic!("unexpected request: {other:?}"),
             }
             let result = WireResponse::Ok(ResponseBody::Operations(OperationsPage {
-                operations: vec![], next_offset: Some(80),
+                operations: vec![],
+                next_offset: Some(80),
             }));
-            ipc::write_frame(&mut stream, &serde_json::to_vec(&result).unwrap(), ipc::MAX_RESPONSE_BYTES).await.unwrap();
+            ipc::write_frame(
+                &mut stream,
+                &serde_json::to_vec(&result).unwrap(),
+                ipc::MAX_RESPONSE_BYTES,
+            )
+            .await
+            .unwrap();
         });
-        let output = connection.list(ListInput { offset: 64, limit: 16 }).await.unwrap();
+        let output = connection
+            .list(ListInput {
+                offset: 64,
+                limit: 16,
+            })
+            .await
+            .unwrap();
         assert_eq!(output.next_offset, Some(80));
         server.await.unwrap();
         let mismatch = unexpected("output", &ResponseBody::Operations(output));

@@ -21,6 +21,7 @@ mod downloads;
 mod files;
 mod hub;
 mod identity;
+mod issue_lifecycle;
 mod join;
 mod link;
 mod machine_update;
@@ -77,7 +78,7 @@ use crate::{
     link::Links,
 };
 
-pub const USAGE: &str = "Usage:\n  devagotchi hub serve --state-dir ABS_PATH --config ABS_JSON\n  devagotchi hub enroll --state-dir ABS_PATH --device NAME\n  devagotchi hub revoke --state-dir ABS_PATH --device NAME\n  devagotchi hub devices --state-dir ABS_PATH\n  devagotchi hub owner --state-dir ABS_PATH --config ABS_JSON [--name NAME] [--replace]\n  devagotchi hub setup-code --state-dir ABS_PATH --config ABS_JSON\n  devagotchi hub connect-nomen --state-dir ABS_PATH --config ABS_JSON --client-id ID --project ID [--issuer URL]\n  devagotchi hub check-site ABS_DIR\n  devagotchi board <command> …            the agents' board in this project (board --help)\n\nserve starts the bastion: an authenticated Streamable HTTP MCP endpoint at /mcp that routes\nrun and operation_start/get/read/cancel to brokers by name, with whoami, /healthz and RFC 9728\nprotected-resource metadata, and /link where machines' `devagotchi link` connects out.\nWith a `web` section, people sign in with Shippin at /account to see their machines;\n/api/v1/me returns the same view for a session or a bearer token. Put it behind the edge for TLS.\n\nenroll prints a one-time code (15 minutes) that binds one machine's key to NAME;\nrevoke cuts that machine off within seconds; devices lists enrolled machines.\n\nowner (auth.mode hub) prints a one-time link (15 minutes) that makes the owner's passkey:\nthe first time it makes the owner's account, with the config's owner id if it names one;\nagain, it adds a passkey to the owner and ends the owner's other sessions; with --replace the\nlink also removes every other passkey of the owner (to take the account back).\n\nsetup-code (auth.mode devagotchi) prints a one-time code (15 minutes) that makes the account\nclaimed with it the hub's owner at /claim, or the owner already on file.\n\nconnect-nomen joins this hub to a Nomen with its owner's approval: it shows a code to confirm\non any device through the devagotchi-cli app (--client-id) of the hub's Nomen project (--project),\nthen adds the hub's own apps to that project (the key Nomen makes is written to the state\ndirectory, owner-only, and nowhere else), sets auth, owner and web in the config, and keeps a\ncopy of the old one. Issuer: https://id.shippin.cloud unless --issuer.\n\ncheck-site reads and checks a site directory (crates/hub/README.md, \"The site\") as serve would, and\nsays what is wrong and where; serve follows its site.dir and serves a change once it checks out.";
+pub const USAGE: &str = "Usage:\n  devagotchi hub serve --state-dir ABS_PATH --config ABS_JSON\n  devagotchi hub enroll --state-dir ABS_PATH --device NAME\n  devagotchi hub revoke --state-dir ABS_PATH --device NAME\n  devagotchi hub devices --state-dir ABS_PATH\n  devagotchi hub owner --state-dir ABS_PATH --config ABS_JSON [--name NAME] [--replace]\n  devagotchi hub setup-code --state-dir ABS_PATH --config ABS_JSON\n  devagotchi hub connect-nomen --state-dir ABS_PATH --config ABS_JSON --client-id ID --project ID [--issuer URL]\n  devagotchi hub check-site ABS_DIR\n  devagotchi hub check-mail --config ABS_JSON [--to ADDRESS]\n  devagotchi board <command> …            the agents' board in this project (board --help)\n\nserve starts the bastion: an authenticated Streamable HTTP MCP endpoint at /mcp that routes\nrun and operation_start/get/read/cancel to brokers by name, with whoami, /healthz and RFC 9728\nprotected-resource metadata, and /link where machines' `devagotchi link` connects out.\nWith a `web` section, people sign in with Shippin at /account to see their machines;\n/api/v1/me returns the same view for a session or a bearer token. Put it behind the edge for TLS.\n\nenroll prints a one-time code (15 minutes) that binds one machine's key to NAME;\nrevoke cuts that machine off within seconds; devices lists enrolled machines.\n\nowner (auth.mode hub) prints a one-time link (15 minutes) that makes the owner's passkey:\nthe first time it makes the owner's account, with the config's owner id if it names one;\nagain, it adds a passkey to the owner and ends the owner's other sessions; with --replace the\nlink also removes every other passkey of the owner (to take the account back).\n\nsetup-code (auth.mode devagotchi) prints a one-time code (15 minutes) that makes the account\nclaimed with it the hub's owner at /claim, or the owner already on file.\n\nconnect-nomen joins this hub to a Nomen with its owner's approval: it shows a code to confirm\non any device through the devagotchi-cli app (--client-id) of the hub's Nomen project (--project),\nthen adds the hub's own apps to that project (the key Nomen makes is written to the state\ndirectory, owner-only, and nowhere else), sets auth, owner and web in the config, and keeps a\ncopy of the old one. Issuer: https://id.shippin.cloud unless --issuer.\n\ncheck-site reads and checks a site directory (crates/hub/README.md, \"The site\") as serve would, and\nsays what is wrong and where; serve follows its site.dir and serves a change once it checks out.\n\ncheck-mail (auth.mode hub) connects to auth.email's mail server as serve would, negotiates TLS and\nsigns in as its user, sending nothing; with --to it also sends one email that says this hub's mail\nworks, to read in that mailbox. It prints the server's refusal and never the password; the running\nhub reports the same in /healthz under mail.";
 
 #[derive(Debug, PartialEq, Eq)]
 enum Command {
@@ -115,12 +116,26 @@ enum Command {
     CheckSite {
         dir: PathBuf,
     },
+    /// Connect to `auth.email`'s mail server and sign in as `serve` would, sending nothing;
+    /// with `to`, also send one email that says this hub's mail works.
+    CheckMail {
+        config: PathBuf,
+        to: Option<String>,
+    },
+    ImportBoard {
+        state: PathBuf,
+        config: PathBuf,
+        source: PathBuf,
+        tenant: String,
+        apply: bool,
+    },
 }
 
 #[derive(Clone)]
 struct AppState {
     verifier: Arc<Verifier>,
     hub: Hub,
+    issue_store: Arc<issue_lifecycle::IssueLifecycleStore>,
     /// Browser sign-in through Nomen, when the config has a `web` section.
     web: Option<Arc<web::WebLogin>>,
     /// Browser sign-in with the hub's own accounts and passkeys (`auth.mode hub`).
@@ -144,6 +159,12 @@ fn parse_args(args: impl IntoIterator<Item = OsString>) -> BridgeResult<Command>
     }
     if args.first().is_some_and(|a| a == "setup-code") {
         return parse_setup_code(args.split_off(1));
+    }
+    if args.first().is_some_and(|a| a == "import-board") {
+        return parse_board_import(args.split_off(1));
+    }
+    if args.first().is_some_and(|a| a == "check-mail") {
+        return parse_check_mail(args.split_off(1));
     }
     if args.first().is_some_and(|a| a == "check-site") {
         return match args.get(1).map(PathBuf::from) {
@@ -190,6 +211,58 @@ fn parse_args(args: impl IntoIterator<Item = OsString>) -> BridgeResult<Command>
         _ => Err(BridgeError::new(
             "invalid_cli",
             "see --help for the accepted forms",
+        )),
+    }
+}
+
+fn parse_board_import(args: Vec<OsString>) -> BridgeResult<Command> {
+    if args.len() == 1 && (args[0] == "--help" || args[0] == "-h") {
+        return Ok(Command::Help);
+    }
+    let (mut state, mut config, mut source, mut tenant) = (None, None, None, None);
+    let mut apply = false;
+    let mut args = args.into_iter();
+    while let Some(flag) = args.next() {
+        if flag == "--apply" && !apply {
+            apply = true;
+            continue;
+        }
+        let value = args
+            .next()
+            .ok_or_else(|| BridgeError::new("invalid_cli", "flag without a value"))?;
+        match flag.to_str() {
+            Some("--state-dir") if state.is_none() => state = Some(PathBuf::from(value)),
+            Some("--config") if config.is_none() => config = Some(PathBuf::from(value)),
+            Some("--source") if source.is_none() => source = Some(PathBuf::from(value)),
+            Some("--tenant") if tenant.is_none() => {
+                tenant = Some(value.to_string_lossy().into_owned())
+            }
+            _ => {
+                return Err(BridgeError::new(
+                    "invalid_cli",
+                    "unexpected import-board flag",
+                ));
+            }
+        }
+    }
+    match (state, config, source, tenant) {
+        (Some(state), Some(config), Some(source), Some(tenant))
+            if state.is_absolute()
+                && config.is_absolute()
+                && source.is_absolute()
+                && accounts::tenants::valid_tenant_id(&tenant) =>
+        {
+            Ok(Command::ImportBoard {
+                state,
+                config,
+                source,
+                tenant,
+                apply,
+            })
+        }
+        _ => Err(BridgeError::new(
+            "invalid_cli",
+            "import-board needs --state-dir ABS_PATH --config ABS_JSON --source ABS_SQLITE --tenant t-UUID [--apply]",
         )),
     }
 }
@@ -290,6 +363,37 @@ fn parse_setup_code(args: Vec<OsString>) -> BridgeResult<Command> {
     }
 }
 
+fn parse_check_mail(args: Vec<OsString>) -> BridgeResult<Command> {
+    let (mut config, mut to) = (None, None);
+    let mut iter = args.into_iter();
+    while let Some(flag) = iter.next() {
+        let value = iter
+            .next()
+            .ok_or_else(|| BridgeError::new("invalid_cli", "flag without a value"))?;
+        match flag.to_str() {
+            Some("--config") if config.is_none() => config = Some(PathBuf::from(value)),
+            Some("--to") if to.is_none() => {
+                let address = value.to_string_lossy().into_owned();
+                if mail::address_of(&address).is_none() {
+                    return Err(BridgeError::new(
+                        "invalid_cli",
+                        "--to needs an email address",
+                    ));
+                }
+                to = Some(address);
+            }
+            _ => return Err(BridgeError::new("invalid_cli", "unexpected flag")),
+        }
+    }
+    match config {
+        Some(config) if config.is_absolute() => Ok(Command::CheckMail { config, to }),
+        _ => Err(BridgeError::new(
+            "invalid_cli",
+            "check-mail needs --config ABS_JSON [--to ADDRESS]",
+        )),
+    }
+}
+
 /// Lines for `devagotchi hub setup-code`. An owner already on file is reported as
 /// the Devagotchi account id plus `{public_url}/claim`. A new hub gets a code and
 /// that same claim URL. The config file is not rewritten.
@@ -337,6 +441,13 @@ async fn accounts_at(
     let url = store::url_for(config.storage_url(), state_dir);
     let schema = store::schema_for(config.storage_schema());
     let store = store::Store::open_in(&url, schema.as_deref()).await?;
+    configured_accounts(store, config).await
+}
+
+async fn configured_accounts(
+    store: store::Store,
+    config: &HubConfig,
+) -> BridgeResult<accounts::Accounts> {
     // A hosted hub on Postgres keeps its tenants apart in the database as well: its queries
     // run as a role row-level security holds, or it does not start.
     if config.multi_tenant() && store.backend() == store::Backend::Postgres && !store.enforced() {
@@ -394,6 +505,60 @@ fn operator_event(
 
 fn manage(command: Command) -> BridgeResult<()> {
     match command {
+        Command::ImportBoard {
+            state,
+            config,
+            source,
+            tenant,
+            apply,
+        } => {
+            let config = read_config(&config)?;
+            let snapshot = board::migration::Snapshot::read(&source)?;
+            let receipt = if apply {
+                let runtime = tokio::runtime::Builder::new_current_thread()
+                    .enable_all()
+                    .build()
+                    .map_err(|error| BridgeError::new("runtime", error.to_string()))?;
+                runtime.block_on(async {
+                    let url = store::url_for(
+                        config
+                            .storage
+                            .as_ref()
+                            .and_then(|storage| storage.url.as_deref()),
+                        &state,
+                    );
+                    if !url.starts_with("postgres://") && !url.starts_with("postgresql://") {
+                        return Err(BridgeError::new(
+                            "invalid_config",
+                            "import-board requires Postgres storage",
+                        ));
+                    }
+                    let schema = store::schema_for(
+                        config
+                            .storage
+                            .as_ref()
+                            .and_then(|storage| storage.schema.as_deref()),
+                    );
+                    let store = store::Store::open_in(&url, schema.as_deref()).await?;
+                    snapshot.import_postgres(&store, &tenant).await
+                })?
+            } else {
+                snapshot.receipt(&tenant)
+            };
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&receipt)
+                    .map_err(|error| BridgeError::new("board_import", error.to_string()))?
+            );
+            eprintln!(
+                "{}",
+                if apply {
+                    "Board rows imported into Postgres. Source retained; live board routing has NOT been switched."
+                } else {
+                    "Preview only; no destination opened or modified. Stop source writers and back up before --apply."
+                }
+            );
+        }
         Command::Enroll { state, device } => {
             if !config::valid_name(&device) {
                 return Err(BridgeError::new(
@@ -489,7 +654,7 @@ fn manage(command: Command) -> BridgeResult<()> {
             // The link is the one secret this prints; it goes to stdout only, once.
             println!("{}/owner#{token}", config.public_url.trim_end_matches('/'));
             eprintln!(
-                "One-time link for the owner ({}), valid {} minutes; any earlier unused one no longer works.\nOpen it on the phone or computer that will hold your passkey. Using it ends the owner's other sessions{}.",
+                "One-time link for the owner ({}), valid {} minutes; any earlier unused one no longer works.\nOpen it to make a passkey or set a local email and password. Using it ends the owner's other sessions{}.",
                 owner.id,
                 accounts::LINK_TTL_SECS / 60,
                 if replace {
@@ -519,6 +684,38 @@ fn manage(command: Command) -> BridgeResult<()> {
                 dir.display()
             );
         }
+        Command::CheckMail { config, to } => {
+            let config = read_config(&config)?;
+            let Some(email) = config.sign_ins().1 else {
+                return Err(BridgeError::new(
+                    "invalid_config",
+                    "check-mail is for a hub that sends mail (auth.mode hub with auth.email); this config names no mail server",
+                ));
+            };
+            // The URL and the password are read as serve reads them: a variable that is not
+            // set is the first thing this reports.
+            let mailer = web::Mailer::from_config(email)
+                .map_err(|why| BridgeError::new("invalid_config", why))?;
+            let runtime = tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()
+                .map_err(|error| BridgeError::new("runtime", error.to_string()))?;
+            runtime.block_on(async {
+                mailer
+                    .check()
+                    .await
+                    .map_err(|why| BridgeError::new("mail", why))?;
+                println!("mail server {} accepts this hub", mailer.describe());
+                if let Some(to) = &to {
+                    mailer
+                        .send_check(&config.site(), to, &config.public_url)
+                        .await
+                        .map_err(|why| BridgeError::new("mail", why))?;
+                    println!("sent the mail check to {to}: read it there");
+                }
+                Ok::<_, BridgeError>(())
+            })?;
+        }
         Command::Help | Command::Serve { .. } => unreachable!(),
     }
     Ok(())
@@ -529,7 +726,7 @@ pub fn cli(args: Vec<OsString>) -> ExitCode {
     let (state_dir, config_path) = match parse_args(args) {
         Ok(Command::Serve { state, config }) => (state, config),
         Ok(Command::Help) => {
-            println!("{USAGE}");
+            println!("{USAGE}\n\n{}", board::migration::USAGE);
             return ExitCode::SUCCESS;
         }
         Ok(command) => {
@@ -588,6 +785,15 @@ pub fn board_cli(args: Vec<OsString>, account_file: Option<PathBuf>) -> ExitCode
 
 async fn run(state_dir: PathBuf, config_path: PathBuf) -> BridgeResult<()> {
     let mut config = read_config(&config_path)?;
+    let url = store::url_for(config.storage_url(), &state_dir);
+    if !url.starts_with("postgres://") && !url.starts_with("postgresql://") {
+        return Err(BridgeError::new(
+            "invalid_config",
+            "hub serve requires Postgres for accounts and boards; set storage.url or DEVAGOTCHI_HUB_STORAGE_URL. SQLite is only for standalone local work and offline client storage.",
+        ));
+    }
+    let schema = store::schema_for(config.storage_schema());
+    let board_store = store::Store::open_in(&url, schema.as_deref()).await?;
     // Old owner and grant subjects (identity-provider subs) become Devagotchi
     // account ids in memory. The file is left as the operator wrote it.
     let rekey = if matches!(config.auth, config::AuthConfig::Devagotchi { .. }) {
@@ -619,7 +825,7 @@ async fn run(state_dir: PathBuf, config_path: PathBuf) -> BridgeResult<()> {
     // A hub with its own accounts knows its owner from them, and refuses to start when its
     // config names someone else.
     let accounts = if config.has_accounts() {
-        let accounts = Arc::new(accounts_at(&state_dir, &config).await?);
+        let accounts = Arc::new(configured_accounts(board_store.clone(), &config).await?);
         if let Some(owner) = accounts.owner().await? {
             config
                 .learn_owner(&owner.id)
@@ -749,12 +955,18 @@ async fn run(state_dir: PathBuf, config_path: PathBuf) -> BridgeResult<()> {
         .listen
         .parse()
         .map_err(|_| BridgeError::new("invalid_config", "listen"))?;
-    let boards = Arc::new(board::mcp::Boards::from_config(&config, &state_dir));
+    let boards =
+        Arc::new(board::mcp::Boards::from_config(&config, &state_dir).using_postgres(board_store)?);
+    let listener = board::mcp::Boards::postgres_listener(&url).await?;
+    tokio::spawn(boards.clone().listen_postgres(listener));
     if !boards.is_empty() {
         // Lapsed leases go back to their queue when they lapse: the reaper sleeps until
         // the next lease ends or a board changes. Claims also expire them lazily.
         tokio::spawn(boards.clone().reap_on_time());
     }
+    let issue_store = Arc::new(issue_lifecycle::IssueLifecycleStore::from_config(
+        &config.github,
+    )?);
     let state = AppState {
         verifier,
         hub: Hub {
@@ -769,6 +981,7 @@ async fn run(state_dir: PathBuf, config_path: PathBuf) -> BridgeResult<()> {
             offers,
             routed: Default::default(),
         },
+        issue_store,
         web,
         passkeys,
     };
@@ -894,6 +1107,31 @@ fn app(state: AppState) -> Router {
         .route("/healthz", get(healthz))
         .route("/enroll", axum::routing::post(enroll_with_code))
         .route("/link", get(link_upgrade))
+        .route(
+            "/webhooks/github/issues",
+            axum::routing::post(issue_lifecycle::webhooks_routes).layer(
+                axum::extract::DefaultBodyLimit::max(issue_lifecycle::MAX_BODY),
+            ),
+        )
+        .merge(
+            Router::new()
+                .route(
+                    "/api/v1/agenthub/issue",
+                    get(issue_lifecycle::issue_state_route),
+                )
+                .route(
+                    "/api/v1/agenthub/state",
+                    get(issue_lifecycle::shared_state_read_route)
+                        .post(issue_lifecycle::shared_state_write_route),
+                )
+                .layer(axum::extract::DefaultBodyLimit::max(
+                    issue_lifecycle::MAX_BODY,
+                ))
+                .layer(middleware::from_fn_with_state(
+                    state.clone(),
+                    require_bearer,
+                )),
+        )
         .merge(join::routes())
         .route(
             "/.well-known/oauth-protected-resource",
@@ -1366,6 +1604,9 @@ async fn healthz(State(state): State<AppState>) -> Response {
     // (Postgres row-level security; false on SQLite, a standalone hub's own file).
     if let Some(passkeys) = &state.passkeys {
         body["store"] = serde_json::json!({ "tenant_rls": passkeys.tenant_rls() });
+        // Whether it can send mail and how the last send went: reported, not counted, like
+        // the issuer. Without mail people still sign in by password, passkey and provider.
+        body["mail"] = passkeys.mail_status();
     }
     // Only `auth.mode devagotchi` reports its authorization server's readiness here.
     if !auth.is_null() {
@@ -1432,6 +1673,166 @@ mod tests {
             ok,
             "the nested spelling and the bare one are the same command"
         );
+    }
+
+    #[test]
+    fn check_mail_takes_the_config_and_one_address() {
+        assert_eq!(
+            parse_args(["check-mail", "--config", CONFIG].map(OsString::from)).unwrap(),
+            Command::CheckMail {
+                config: PathBuf::from(CONFIG),
+                to: None
+            }
+        );
+        assert_eq!(
+            parse_args(
+                ["check-mail", "--config", CONFIG, "--to", "you@example.com"].map(OsString::from)
+            )
+            .unwrap(),
+            Command::CheckMail {
+                config: PathBuf::from(CONFIG),
+                to: Some("you@example.com".into())
+            }
+        );
+        for wrong in [
+            vec!["check-mail", "--config", "c.json"],
+            vec!["check-mail", "--to", "you@example.com"],
+            vec!["check-mail", "--config", CONFIG, "--to", "nobody"],
+            vec!["check-mail", "--config", CONFIG, "--state-dir", STATE],
+        ] {
+            assert!(
+                parse_args(wrong.iter().map(OsString::from)).is_err(),
+                "{wrong:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn check_mail_signs_in_and_sends_the_check_to_one_address() {
+        // The stub mail server lives on its own runtime; `manage` builds one of its own.
+        let runtime = tokio::runtime::Runtime::new().unwrap();
+        let stub = runtime.block_on(mail::stub::start("hub"));
+        let dir = tempfile::tempdir().unwrap();
+        let password = dir.path().join("smtp-password");
+        std::fs::write(&password, "mail-pass\n").unwrap();
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(&password, std::fs::Permissions::from_mode(0o600)).unwrap();
+        }
+        let config_path = dir.path().join("hub.json");
+        let config = |email: serde_json::Value| {
+            std::fs::write(
+                &config_path,
+                serde_json::json!({
+                    "listen": "127.0.0.1:9",
+                    "public_url": "https://hub.example.com",
+                    "auth": { "mode": "hub", "rp_id": "hub.example.com", "email": email },
+                    "brokers": [],
+                    "grants": []
+                })
+                .to_string(),
+            )
+            .unwrap();
+        };
+        config(serde_json::json!({
+            "smtp_url": stub.url,
+            "password_file": password.to_string_lossy(),
+            "from": "Devagotchi <sign-in@hub.example.com>"
+        }));
+        manage(Command::CheckMail {
+            config: config_path.clone(),
+            to: None,
+        })
+        .unwrap();
+        assert!(
+            stub.received.lock().unwrap().is_empty(),
+            "check sends nothing"
+        );
+        manage(Command::CheckMail {
+            config: config_path.clone(),
+            to: Some("you@example.com".into()),
+        })
+        .unwrap();
+        let received = stub.received.lock().unwrap().clone();
+        assert_eq!(received.len(), 1);
+        assert_eq!(received[0].to, "you@example.com");
+        assert!(
+            received[0].data.contains("mail check"),
+            "{}",
+            received[0].data
+        );
+        assert!(
+            !received[0].data.contains("mail-pass"),
+            "{}",
+            received[0].data
+        );
+        // A variable the config names that is not set is reported first, by name.
+        config(serde_json::json!({
+            "smtp_url": stub.url,
+            "password_env": "DEVAGOTCHI_TEST_SMTP_PASSWORD_THAT_IS_NOT_SET",
+            "from": "Devagotchi <sign-in@hub.example.com>"
+        }));
+        let error = manage(Command::CheckMail {
+            config: config_path.clone(),
+            to: None,
+        })
+        .unwrap_err();
+        assert!(
+            error
+                .message
+                .contains("DEVAGOTCHI_TEST_SMTP_PASSWORD_THAT_IS_NOT_SET is not set"),
+            "{error}"
+        );
+        // A config without mail is told so.
+        config(serde_json::Value::Null);
+        let error = manage(Command::CheckMail {
+            config: config_path,
+            to: None,
+        })
+        .unwrap_err();
+        assert!(error.message.contains("no mail server"), "{error}");
+    }
+
+    #[test]
+    fn board_import_is_preview_first_and_requires_explicit_target_and_absolute_source() {
+        let tenant = "t-00000000-0000-4000-8000-000000000001";
+        let args = [
+            "import-board",
+            "--state-dir",
+            STATE,
+            "--config",
+            CONFIG,
+            "--source",
+            STATE,
+            "--tenant",
+            tenant,
+        ];
+        let parsed = parse_args(args.map(OsString::from)).unwrap();
+        assert!(matches!(parsed, Command::ImportBoard { apply: false, .. }));
+        let mut apply: Vec<_> = args.into_iter().map(OsString::from).collect();
+        apply.push("--apply".into());
+        assert!(matches!(
+            parse_args(apply).unwrap(),
+            Command::ImportBoard { apply: true, .. }
+        ));
+        let mut relative = args;
+        relative[6] = "relative.sqlite3";
+        assert!(parse_args(relative.map(OsString::from)).is_err());
+        let mut missing_tenant = args.to_vec();
+        missing_tenant.truncate(7);
+        assert!(parse_args(missing_tenant.into_iter().map(OsString::from)).is_err());
+        let mut bad_tenant = args;
+        bad_tenant[8] = "account-is-not-a-tenant";
+        assert!(parse_args(bad_tenant.map(OsString::from)).is_err());
+        for extra in [
+            vec!["--apply", "--apply"],
+            vec!["--source", STATE],
+            vec!["--unknown", "value"],
+        ] {
+            let arguments = args.into_iter().chain(extra).map(OsString::from);
+            assert!(parse_args(arguments).is_err());
+        }
     }
 
     #[test]
@@ -1737,6 +2138,7 @@ mod tests {
                 offers: None,
                 routed: Default::default(),
             },
+            issue_store: Arc::new(crate::issue_lifecycle::IssueLifecycleStore::disabled()),
             web: None,
             passkeys: None,
         };
@@ -1963,6 +2365,7 @@ mod tests {
                 offers: None,
                 routed: Default::default(),
             },
+            issue_store: Arc::new(crate::issue_lifecycle::IssueLifecycleStore::disabled()),
             web: None,
             passkeys,
         }

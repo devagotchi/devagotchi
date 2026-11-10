@@ -66,15 +66,26 @@ pub(super) async fn person(
 
 /// The boards the person may work on, by project, as `whoami` lists them: the account's
 /// own (or its org's) first, then the shared ones it holds a grant for.
-pub(super) fn board_names(state: &AppState, subject: &Subject) -> Vec<String> {
+pub(super) fn board_names(
+    state: &AppState,
+    subject: &Subject,
+) -> devagotchi_contracts::BridgeResult<Vec<String>> {
     state.hub.board_names(subject)
 }
 
 /// The board `project` names for this person, as the board tools open it
 /// (`Hub::board_for`): the account's own first, then a shared one by grant. None when it
 /// is not theirs.
-pub(super) fn open_board(state: &AppState, subject: &Subject, project: &str) -> Option<Arc<Board>> {
-    state.hub.board_for(subject, project).ok().map(|(board, _)| board)
+pub(super) fn open_board(
+    state: &AppState,
+    subject: &Subject,
+    project: &str,
+) -> devagotchi_contracts::BridgeResult<Option<Arc<Board>>> {
+    match state.hub.board_for(subject, project) {
+        Ok((board, _)) => Ok(Some(board)),
+        Err(error) if matches!(error.code.as_str(), "unknown_board" | "not_granted") => Ok(None),
+        Err(error) => Err(error),
+    }
 }
 
 /// The site's words for the app.

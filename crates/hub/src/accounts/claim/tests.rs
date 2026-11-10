@@ -102,7 +102,7 @@ fn a_claim_code_never_prints_itself() {
 }
 
 #[tokio::test]
-async fn the_code_claims_the_hub_until_the_owner_has_a_passkey() {
+async fn the_code_claims_the_hub_until_the_owner_has_a_sign_in() {
     for (_store, accounts) in stores().await {
         assert!(!accounts.claimed().await.unwrap());
         let printed = issue(&accounts, 1, NOW).await;
@@ -157,7 +157,7 @@ async fn the_code_claims_the_hub_until_the_owner_has_a_passkey() {
                 .is_err()
         );
 
-        // The owner's first passkey: claimed, the code gone, and no new one printed.
+        // The owner's first durable sign-in: claimed, the code gone, and no new one printed.
         let key = credential(&accounts, &owner.id, 1);
         accounts
             .register_with_link(&owner.id, &key, "phone", LinkPurpose::Owner, &second)

@@ -32,7 +32,7 @@ edition = "2024"
 rust-version = "1.94"
 publish = false
 license = "Apache-2.0"
-repository = "https://github.com/EonsofStupid/devagotchi"
+repository = "https://github.com/devagotchi/devagotchi"
 
 [workspace.dependencies]
 devagotchi-contracts = { path = "crates/contracts" }

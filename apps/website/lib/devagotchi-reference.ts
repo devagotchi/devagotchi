@@ -3,7 +3,7 @@ import contractSnapshot from "../public/reference/broker-contracts.schema.json";
 export const REFERENCE_VERSION = "2026.10.17-preview.1";
 export const MCP_VERSION = "2026-07-28";
 export const SITE_ORIGIN = "https://devagotchi.justsayit.chatgpt.site";
-export const PROJECT_REPOSITORY = "https://github.com/eonsofstupid/devagotchi";
+export const PROJECT_REPOSITORY = "https://github.com/devagotchi/devagotchi";
 
 export const platforms = [
   { name: "Linux", status: "Source preview", detail: "Broker, stdio MCP adapter, and native inspector. Tested on a Linux development host.", available: true },

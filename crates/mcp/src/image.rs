@@ -50,17 +50,35 @@ pub fn sniff(bytes: &[u8]) -> Option<&'static str> {
         [0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A, ..] => Some("image/png"),
         [0xFF, 0xD8, 0xFF, ..] => Some("image/jpeg"),
         [b'G', b'I', b'F', b'8', b'7' | b'9', b'a', ..] => Some("image/gif"),
-        [b'R', b'I', b'F', b'F', _, _, _, _, b'W', b'E', b'B', b'P', ..] => Some("image/webp"),
+        [
+            b'R',
+            b'I',
+            b'F',
+            b'F',
+            _,
+            _,
+            _,
+            _,
+            b'W',
+            b'E',
+            b'B',
+            b'P',
+            ..,
+        ] => Some("image/webp"),
         _ => None,
     }
 }
 
 fn be16(bytes: &[u8], at: usize) -> Option<u32> {
-    Some(u32::from(u16::from_be_bytes(bytes.get(at..at + 2)?.try_into().ok()?)))
+    Some(u32::from(u16::from_be_bytes(
+        bytes.get(at..at + 2)?.try_into().ok()?,
+    )))
 }
 
 fn le16(bytes: &[u8], at: usize) -> Option<u32> {
-    Some(u32::from(u16::from_le_bytes(bytes.get(at..at + 2)?.try_into().ok()?)))
+    Some(u32::from(u16::from_le_bytes(
+        bytes.get(at..at + 2)?.try_into().ok()?,
+    )))
 }
 
 fn le24(bytes: &[u8], at: usize) -> Option<u32> {
@@ -191,7 +209,9 @@ where
             let Some(mime_type) = sniff(&bytes) else {
                 return Err(BridgeError::new(
                     "not_an_image",
-                    format!("{shown} is not a PNG, JPEG, GIF or WebP image; read_file reads its bytes"),
+                    format!(
+                        "{shown} is not a PNG, JPEG, GIF or WebP image; read_file reads its bytes"
+                    ),
                 ));
             };
             if size > MAX_IMAGE_BYTES {

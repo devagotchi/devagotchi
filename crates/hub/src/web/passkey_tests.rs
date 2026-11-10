@@ -105,6 +105,7 @@ async fn world_configured(owner: Option<&str>, site: Option<&std::path::Path>) -
             audit: audit.clone(),
             links,
         },
+        issue_store: Arc::new(crate::issue_lifecycle::IssueLifecycleStore::disabled()),
         web: None,
         passkeys: HubSignIn::new(config.clone(), accounts.clone()).map(Arc::new),
     };
@@ -325,6 +326,183 @@ async fn the_owner_makes_a_passkey_from_the_link_and_signs_in_with_it() {
         ),
         (Some(owner.id.as_str()), Some("passkey"), Some(true))
     );
+}
+
+#[tokio::test]
+async fn a_self_hosted_owner_can_set_and_use_a_password_without_public_signup() {
+    let world = world().await;
+    let owner = world
+        .accounts
+        .ensure_owner(None, "Jesse", [2; 16])
+        .await
+        .unwrap();
+    let link = world
+        .accounts
+        .issue_link(LinkPurpose::Owner, &owner.id)
+        .await
+        .unwrap();
+    let mut phone = world.phone();
+    let session = world.make_passkey(&mut phone, &link).await;
+    let account = world.get("/account", Some(&session)).await;
+    let html = account.text().await.unwrap();
+    assert!(html.contains("/auth/password/set"), "{html}");
+    let set = world
+        .http
+        .post(format!("{}/auth/password/set", world.url))
+        .header(header::ORIGIN, &world.url)
+        .header(header::COOKIE, &session)
+        .form(&[
+            ("email", "owner@example.com"),
+            ("password", "correct horse battery staple"),
+        ])
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(set.status(), 200);
+
+    let page = world.get("/auth/login?return_to=/account", None).await;
+    let page = page.text().await.unwrap();
+    let password_form = page.find("action=\"/auth/password\"").unwrap();
+    let passkey_fallback = page
+        .find("<summary>Use a passkey instead</summary>")
+        .unwrap();
+    assert!(password_form < passkey_fallback, "{page}");
+    assert!(
+        !page.contains("tab=up"),
+        "single-owner signup is hidden: {page}"
+    );
+
+    let signup = world
+        .http
+        .post(format!("{}/auth/password/new", world.url))
+        .header(header::ORIGIN, &world.url)
+        .form(&[
+            ("email", "new@example.com"),
+            ("password", "another password"),
+            ("return_to", "/account"),
+        ])
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(signup.status(), 404);
+
+    let signed_in = world
+        .http
+        .post(format!("{}/auth/password", world.url))
+        .header(header::ORIGIN, &world.url)
+        .form(&[
+            ("email", "owner@example.com"),
+            ("password", "correct horse battery staple"),
+            ("return_to", "/account"),
+        ])
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(signed_in.status(), 303);
+    let session = cookie(&signed_in, "dg_session").unwrap();
+    let me: Value = world
+        .get("/api/v1/me", Some(&session))
+        .await
+        .json()
+        .await
+        .unwrap();
+    assert_eq!(me["subject"], owner.id);
+    assert_eq!(me["owner"], true);
+}
+
+#[tokio::test]
+async fn the_owner_link_can_set_a_local_password_without_a_passkey_or_external_provider() {
+    let world = world().await;
+    let claim_code = world.accounts.issue_claim_code().await.unwrap().unwrap();
+    let claim_page = world.get("/claim", None).await.text().await.unwrap();
+    assert!(
+        claim_page.contains("id=\"claim-password\"")
+            && claim_page.contains("Use a local email and password instead"),
+        "{claim_page}"
+    );
+    let claimed = world
+        .post(
+            "/claim",
+            None,
+            json!({ "code": claim_code.code.as_str(), "name": "Jesse" }),
+        )
+        .await;
+    assert_eq!(claimed.status(), 200);
+    let claim_result: Value = claimed.json().await.unwrap();
+    let link = claim_result["link"].as_str().unwrap();
+    let owner = world.accounts.owner().await.unwrap().unwrap();
+    let owner_page = world.get("/owner", None).await.text().await.unwrap();
+    assert!(owner_page.contains("/owner/password"), "{owner_page}");
+    let setup_page = world
+        .get("/owner/password", None)
+        .await
+        .text()
+        .await
+        .unwrap();
+    assert!(
+        setup_page.contains("/assets/owner-password.js")
+            && setup_page.contains("not verified")
+            && setup_page.contains("name=\"email\""),
+        "{setup_page}"
+    );
+
+    let setup = world
+        .http
+        .post(format!("{}/owner/password", world.url))
+        .header(header::ORIGIN, &world.url)
+        .form(&[
+            ("link", link),
+            ("email", "owner@example.com"),
+            ("password", "correct horse battery staple"),
+        ])
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(setup.status(), 303);
+    assert_eq!(setup.headers()[header::LOCATION], "/account");
+    let session = cookie(&setup, "dg_session").unwrap();
+    assert!(
+        world
+            .accounts
+            .passkeys_of(&owner.id)
+            .await
+            .unwrap()
+            .is_empty()
+    );
+    assert!(world.accounts.claimed().await.unwrap());
+    assert_eq!(
+        world
+            .accounts
+            .claim(&claim_code.code, None)
+            .await
+            .unwrap_err()
+            .code,
+        "claimed"
+    );
+
+    let sign_in = world
+        .http
+        .post(format!("{}/auth/password", world.url))
+        .header(header::ORIGIN, &world.url)
+        .form(&[
+            ("email", "owner@example.com"),
+            ("password", "correct horse battery staple"),
+            ("return_to", "/account"),
+        ])
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(sign_in.status(), 303);
+    let signed_in = cookie(&sign_in, "dg_session").unwrap();
+    let me: Value = world
+        .get("/api/v1/me", Some(&signed_in))
+        .await
+        .json()
+        .await
+        .unwrap();
+    assert_eq!(me["subject"], owner.id);
+    assert_eq!(me["owner"], true);
+    assert_ne!(session, signed_in);
 }
 
 #[tokio::test]

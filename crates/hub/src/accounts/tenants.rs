@@ -70,7 +70,7 @@ pub fn tag(tenant: &str) -> String {
 /// Make the home tenant (`home`, a new id) if there is none. Inside the caller's
 /// transaction; idempotent. Migration 0007 put the accounts made before tenants in it
 /// (making it when there was none); its chain says so the first time the hub opens it.
-pub(super) async fn settle_in(
+pub(crate) async fn settle_in(
     store: &Store,
     connection: &mut AnyConnection,
     home: &str,

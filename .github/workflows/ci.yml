@@ -13,6 +13,24 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  repository-owner:
+    name: Check repository owner references
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Reject historical owner outside recorded history
+        run: |
+          old_owner='eonsof''stupid'
+          status=0
+          git grep -in -F "$old_owner" -- . ':!CHANGELOG.md' ':!verification/**' || status=$?
+          if [ "$status" -eq 0 ]; then
+            echo "Historical owner found outside CHANGELOG.md and verification/" >&2
+            exit 1
+          fi
+          if [ "$status" -ne 1 ]; then exit "$status"; fi
+
   core:
     name: core (${{ matrix.os }})
     strategy:
@@ -139,6 +157,12 @@ jobs:
         os: [ubuntu-24.04, ubuntu-24.04-arm, windows-2025, windows-2022, windows-11-arm]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
+    env:
+      # Every hub these probes start keeps accounts and boards in Postgres (docs/adr/0001):
+      # a throwaway server on Linux, the runner image's own PostgreSQL on windows-2022 and
+      # windows-2025 (installed, disabled, user postgres/root). windows-11-arm has none, so
+      # it runs the broker and adapter only. Each step gets its own schema.
+      DEVAGOTCHI_HUB_STORAGE_URL: ${{ startsWith(matrix.os, 'ubuntu') && 'postgres://postgres@127.0.0.1:55432/postgres' || 'postgres://postgres:root@127.0.0.1:5432/postgres' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -147,6 +171,24 @@ jobs:
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.13"
+      - name: Start a throwaway Postgres
+        if: runner.os == 'Linux'
+        run: |
+          if ! ls /usr/lib/postgresql/*/bin/initdb >/dev/null 2>&1; then
+            sudo apt-get update -q && sudo apt-get install -yq postgresql
+          fi
+          bin=$(ls -d /usr/lib/postgresql/*/bin | sort -V | tail -1)
+          sudo install -d -o postgres -m 700 /var/tmp/dvg-pg
+          sudo -u postgres "$bin/initdb" -D /var/tmp/dvg-pg/data -U postgres --auth=trust -E UTF8 >/dev/null
+          sudo -u postgres "$bin/pg_ctl" -D /var/tmp/dvg-pg/data -l /var/tmp/dvg-pg/log -w \
+            -o "-k /var/tmp/dvg-pg -p 55432 -c listen_addresses=127.0.0.1" start
+      - name: Start the runner's PostgreSQL service
+        if: matrix.os == 'windows-2022' || matrix.os == 'windows-2025'
+        shell: pwsh
+        run: |
+          Get-Service postgresql* | Set-Service -StartupType Manual
+          Get-Service postgresql* | Start-Service
+          & "$env:PGBIN\pg_isready.exe" -h 127.0.0.1 -p 5432
       - run: cargo build --locked --bins
       # Two builds of this commit by name (crates/devagotchi/build.rs), for machine_update
       # from one to the other (tests/machine_update_probe.py); then target/debug as it was.
@@ -162,9 +204,15 @@ jobs:
       # MCP initialize and whoami for a new account, a returning subject, and a
       # second provider with the same verified email; on Linux, machine_update from ci-a to ci-b.
       - run: python tests/e2e.py --bin-dir target/debug
-        if: runner.os == 'Windows'
+        if: runner.os == 'Windows' && matrix.os != 'windows-11-arm'
+        env:
+          DEVAGOTCHI_HUB_STORAGE_SCHEMA: e2e
+      - run: python tests/e2e.py --bin-dir target/debug --no-hub
+        if: matrix.os == 'windows-11-arm'
       - run: python tests/e2e.py --bin-dir target/debug --update-builds "$RUNNER_TEMP/build-a" "$RUNNER_TEMP/build-b"
         if: runner.os == 'Linux'
+        env:
+          DEVAGOTCHI_HUB_STORAGE_SCHEMA: e2e
       # The hub's own sign-in pages in a real browser, the runner image's Chrome with a
       # virtual passkey: claiming a new hub from its log's link, the owner link, signing in,
       # `devagotchi login` approved on the hub's /device page, the operator letting a
@@ -178,14 +226,15 @@ jobs:
         if: matrix.os == 'ubuntu-24.04'
         run: |
           python -m pip install --require-hashes --no-deps -r tests/requirements-browser.txt
-          python tests/claim_browser.py --channel chrome --devagotchi "$PWD/target/debug/devagotchi"
-          python tests/passkey_browser.py --channel chrome --devagotchi "$PWD/target/debug/devagotchi"
-          python tests/device_login_browser.py --channel chrome --devagotchi "$PWD/target/debug/devagotchi"
-          python tests/operator_browser.py --channel chrome --devagotchi "$PWD/target/debug/devagotchi"
-          python tests/analytics_browser.py --channel chrome --devagotchi "$PWD/target/debug/devagotchi"
-          python tests/workflow_browser.py --channel chrome --machine join --devagotchi "$PWD/target/debug/devagotchi"
-          python tests/first_connect_browser.py --channel chrome --machine join --devagotchi "$PWD/target/debug/devagotchi"
-          python tests/app_browser.py --channel chrome --devagotchi "$PWD/target/debug/devagotchi"
+          # Each script's hub starts on an empty schema of its own.
+          DEVAGOTCHI_HUB_STORAGE_SCHEMA=claim python tests/claim_browser.py --channel chrome --devagotchi "$PWD/target/debug/devagotchi"
+          DEVAGOTCHI_HUB_STORAGE_SCHEMA=passkey python tests/passkey_browser.py --channel chrome --devagotchi "$PWD/target/debug/devagotchi"
+          DEVAGOTCHI_HUB_STORAGE_SCHEMA=device_login python tests/device_login_browser.py --channel chrome --devagotchi "$PWD/target/debug/devagotchi"
+          DEVAGOTCHI_HUB_STORAGE_SCHEMA=operator python tests/operator_browser.py --channel chrome --devagotchi "$PWD/target/debug/devagotchi"
+          DEVAGOTCHI_HUB_STORAGE_SCHEMA=analytics python tests/analytics_browser.py --channel chrome --devagotchi "$PWD/target/debug/devagotchi"
+          DEVAGOTCHI_HUB_STORAGE_SCHEMA=workflow python tests/workflow_browser.py --channel chrome --machine join --devagotchi "$PWD/target/debug/devagotchi"
+          DEVAGOTCHI_HUB_STORAGE_SCHEMA=first_connect python tests/first_connect_browser.py --channel chrome --machine join --devagotchi "$PWD/target/debug/devagotchi"
+          DEVAGOTCHI_HUB_STORAGE_SCHEMA=app python tests/app_browser.py --channel chrome --devagotchi "$PWD/target/debug/devagotchi"
       # Real AI clients connect through the hub's own OAuth server as a person connects them:
       # the official MCP TypeScript SDK and the Codex CLI (locked in tests/clients), each
       # registering, approved on the consent page in Chrome, then listing and calling tools.
@@ -193,14 +242,22 @@ jobs:
         if: matrix.os == 'ubuntu-24.04'
         run: |
           npm ci --prefix tests/clients --ignore-scripts --no-audit --no-fund
-          python tests/clients_oauth.py --channel chrome --devagotchi "$PWD/target/debug/devagotchi"
+          DEVAGOTCHI_HUB_STORAGE_SCHEMA=clients python tests/clients_oauth.py --channel chrome --devagotchi "$PWD/target/debug/devagotchi"
       # The Windows installer, as a user would run it: install from the build, start the
       # broker, register with a Claude Desktop config that already has Desktop Commander,
       # then use exactly the registered command. PowerShell 7 on 2025 and on Arm64
       # (windows-11-arm), 5.1 on 2022.
       - name: Windows installer (PowerShell 7)
-        if: matrix.os == 'windows-2025' || matrix.os == 'windows-11-arm'
+        if: matrix.os == 'windows-2025'
         shell: pwsh
+        run: ./deploy/windows/ci-install-check.ps1
+      # No Postgres on the Arm64 image: the installer, broker and uninstall are checked; the
+      # script skips the hub, link and join parts when the storage URL is empty.
+      - name: Windows installer (PowerShell 7, Arm64, no hub)
+        if: matrix.os == 'windows-11-arm'
+        shell: pwsh
+        env:
+          DEVAGOTCHI_HUB_STORAGE_URL: ''
         run: ./deploy/windows/ci-install-check.ps1
       - name: Windows installer (Windows PowerShell 5.1)
         if: matrix.os == 'windows-2022'

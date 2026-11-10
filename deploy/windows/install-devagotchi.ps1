@@ -41,7 +41,7 @@ param(
     [string]$BinDir = '',
     [string]$Root = 'D:\localdev\devagotchi',
     [string]$Workspace = '',
-    [string]$Repo = 'EonsofStupid/devagotchi',
+    [string]$Repo = 'devagotchi/devagotchi',
     [string]$ClaudeDesktopConfig = (Join-Path $env:APPDATA 'Claude\claude_desktop_config.json'),
     [switch]$Autostart,
     [switch]$RegisterClaudeDesktop,

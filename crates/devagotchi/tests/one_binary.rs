@@ -10,13 +10,244 @@ fn devagotchi() -> Command {
 }
 
 #[test]
+fn native_board_hooks_run_without_a_shell_with_spaces_and_never_complete_on_stop() {
+    use serde_json::{Value, json};
+    use std::{io::Write, process::Stdio};
+    let dir = tempfile::Builder::new()
+        .prefix("native hook path with spaces ")
+        .tempdir()
+        .unwrap();
+    for args in [
+        vec!["board", "init", "--project", "native"],
+        vec!["board", "new", "Carry evidence", "--as", "claude"],
+    ] {
+        let out = devagotchi()
+            .args(args)
+            .current_dir(dir.path())
+            .output()
+            .unwrap();
+        assert!(
+            out.status.success(),
+            "{}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+    }
+    let listed = devagotchi()
+        .args(["board", "ls", "--json"])
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
+    let tickets: Value = serde_json::from_slice(&listed.stdout).unwrap();
+    let id = tickets
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|t| t["title"] == "Carry evidence")
+        .unwrap()["id"]
+        .as_str()
+        .unwrap();
+    let claimed = devagotchi()
+        .args(["board", "claim", id, "--as", "claude"])
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
+    assert!(
+        claimed.status.success(),
+        "{}",
+        String::from_utf8_lossy(&claimed.stderr)
+    );
+    let env = dir.path().join("client environment");
+    let hook = |phase: &str, body: Value| {
+        let mut child = devagotchi()
+            .args(["board", "hook", phase, "--as", "claude"])
+            .current_dir(dir.path())
+            .env("CLAUDE_ENV_FILE", &env)
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .unwrap();
+        child
+            .stdin
+            .take()
+            .unwrap()
+            .write_all(&serde_json::to_vec(&body).unwrap())
+            .unwrap();
+        child.wait_with_output().unwrap()
+    };
+    let start = hook(
+        "session-start",
+        json!({
+            "hook_event_name":"SessionStart","session_id":"native-session-1",
+            "cwd":dir.path(),"source":"resume"
+        }),
+    );
+    assert!(
+        start.status.success(),
+        "{}",
+        String::from_utf8_lossy(&start.stderr)
+    );
+    let context: Value = serde_json::from_slice(&start.stdout).unwrap();
+    assert!(
+        context["hookSpecificOutput"]["additionalContext"]
+            .as_str()
+            .unwrap()
+            .contains(id)
+    );
+    assert_eq!(
+        std::fs::read_to_string(&env).unwrap(),
+        "export DEVAGOTCHI_SESSION=native-session-1\n"
+    );
+    let stop = hook(
+        "stop",
+        json!({"hook_event_name":"Stop","stop_hook_active":false}),
+    );
+    assert_eq!(stop.status.code(), Some(2));
+    assert!(String::from_utf8_lossy(&stop.stderr).contains(id));
+    let repeated = hook(
+        "stop",
+        json!({"hook_event_name":"Stop","stop_hook_active":true}),
+    );
+    assert_eq!(repeated.status.code(), Some(5));
+    assert!(
+        String::from_utf8_lossy(&repeated.stderr).contains("No completion or automatic release")
+    );
+    let ended = hook("session-end", json!({"hook_event_name":"SessionEnd"}));
+    assert_eq!(ended.status.code(), Some(5));
+    let view = devagotchi()
+        .args(["board", "show", id, "--json"])
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
+    let view: Value = serde_json::from_slice(&view.stdout).unwrap();
+    assert_eq!(view["ticket"]["holder"], "claude");
+    assert_ne!(view["ticket"]["state"], "done");
+    let bad = hook(
+        "session-start",
+        json!({"hook_event_name":"SessionStart","session_id":"bad;command"}),
+    );
+    assert!(!bad.status.success());
+    assert!(bad.stdout.is_empty());
+}
+
+#[test]
+fn hub_serve_refuses_default_or_explicit_sqlite_without_creating_state() {
+    let dir = tempfile::tempdir().unwrap();
+    for explicit in [false, true] {
+        let state = dir
+            .path()
+            .join(if explicit { "explicit" } else { "default" });
+        let config = dir.path().join("hub.json");
+        let mut value = serde_json::json!({
+            "listen":"127.0.0.1:8787","public_url":"http://127.0.0.1:8787",
+            "auth":{"mode":"dev","tokens_file":dir.path().join("unused-tokens.json")},
+            "brokers":[],"grants":[]
+        });
+        if explicit {
+            value["storage"] = serde_json::json!({"url":format!("sqlite:{}",dir.path().join("forbidden.sqlite3").display())});
+        }
+        std::fs::write(&config, serde_json::to_vec(&value).unwrap()).unwrap();
+        let out = devagotchi()
+            .args(["hub", "serve", "--state-dir"])
+            .arg(&state)
+            .arg("--config")
+            .arg(&config)
+            .env_remove("DEVAGOTCHI_HUB_STORAGE_URL")
+            .env_remove("DEVAGOTCHI_HUB_STORAGE_SCHEMA")
+            .output()
+            .unwrap();
+        assert!(!out.status.success());
+        assert!(
+            String::from_utf8_lossy(&out.stderr).contains("hub serve requires Postgres"),
+            "{}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+        assert!(!state.exists());
+        assert!(!dir.path().join("forbidden.sqlite3").exists());
+    }
+}
+
+#[test]
+fn hub_board_import_previews_without_opening_a_destination_and_refuses_sqlite_apply() {
+    let dir = tempfile::tempdir().unwrap();
+    for args in [
+        vec!["board", "init", "--project", "migration-demo"],
+        vec!["board", "new", "preserve this ticket"],
+    ] {
+        let out = devagotchi()
+            .args(args)
+            .current_dir(dir.path())
+            .output()
+            .unwrap();
+        assert!(
+            out.status.success(),
+            "{}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+    }
+    let source = dir.path().join(".devagotchi").join("board.sqlite3");
+    let state = dir.path().join("unopened-state");
+    let config = dir.path().join("hub.json");
+    let destination = dir.path().join("must-not-exist.sqlite3");
+    std::fs::write(
+        &config,
+        serde_json::to_vec(&serde_json::json!({
+            "listen": "127.0.0.1:8787",
+            "public_url": "http://127.0.0.1:8787",
+            "auth": {"mode": "dev", "tokens_file": dir.path().join("tokens.json")},
+            "brokers": [], "grants": [],
+            "storage": {"url": format!("sqlite:{}", destination.display())}
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    let invoke = |apply| {
+        let mut command = devagotchi();
+        command
+            .args(["hub", "import-board", "--state-dir"])
+            .arg(&state)
+            .arg("--config")
+            .arg(&config)
+            .arg("--source")
+            .arg(&source)
+            .args(["--tenant", "t-00000000-0000-4000-8000-000000000001"])
+            .env_remove("DEVAGOTCHI_HUB_STORAGE_URL")
+            .env_remove("DEVAGOTCHI_HUB_STORAGE_SCHEMA");
+        if apply {
+            command.arg("--apply");
+        }
+        command.output().unwrap()
+    };
+    let preview = invoke(false);
+    assert!(
+        preview.status.success(),
+        "{}",
+        String::from_utf8_lossy(&preview.stderr)
+    );
+    let receipt: serde_json::Value = serde_json::from_slice(&preview.stdout).unwrap();
+    assert_eq!(receipt["project"], "migration-demo");
+    assert_eq!(receipt["counts"]["tickets"], 1);
+    assert!(!state.exists());
+    assert!(!destination.exists());
+    let repeat = invoke(false);
+    assert!(repeat.status.success());
+    assert_eq!(preview.stdout, repeat.stdout);
+    let apply = invoke(true);
+    assert!(!apply.status.success());
+    assert!(String::from_utf8_lossy(&apply.stderr).contains("requires Postgres storage"));
+    assert!(!destination.exists());
+    assert!(!state.exists());
+    assert!(source.exists());
+}
+
+#[test]
 fn help_names_every_command_and_each_answers_help() {
     let out = devagotchi().arg("--help").output().unwrap();
     assert!(out.status.success());
     let text = String::from_utf8_lossy(&out.stdout);
     for word in [
-        "setup", "start", "mcp", "connect", "board", "broker", "hub", "link", "login", "logout", "whoami",
-        "version",
+        "setup", "start", "mcp", "connect", "board", "broker", "hub", "link", "login", "logout",
+        "whoami", "version",
     ] {
         assert!(
             text.contains(&format!("\n  {word}")),
@@ -24,7 +255,8 @@ fn help_names_every_command_and_each_answers_help() {
         );
     }
     for command in [
-        "setup", "start", "mcp", "connect", "board", "broker", "hub", "link", "login", "logout", "whoami",
+        "setup", "start", "mcp", "connect", "board", "broker", "hub", "link", "login", "logout",
+        "whoami",
     ] {
         let out = devagotchi().args([command, "--help"]).output().unwrap();
         assert!(
@@ -127,6 +359,9 @@ fn mcp_starts_this_users_broker_when_none_is_running() {
     let env = [
         ("DEVAGOTCHI_STATE_DIR", state.as_os_str().to_owned()),
         ("DEVAGOTCHI_CONFIG_DIR", config_dir.as_os_str().to_owned()),
+        // An installed Devagotchi names its own broker.json machine-wide; an empty value
+        // is not a path, so the fresh config directory above decides.
+        ("DEVAGOTCHI_BROKER_CONFIG", std::ffi::OsString::new()),
         ("HOME", home.path().as_os_str().to_owned()),
         ("USERPROFILE", home.path().as_os_str().to_owned()),
     ];
@@ -134,13 +369,19 @@ fn mcp_starts_this_users_broker_when_none_is_running() {
 
     let tools = tools_of_a_fresh_adapter(&env);
     assert!(tools.contains(&"operation_start".to_string()), "{tools:?}");
-    assert!(config_dir.join("broker.json").is_file(), "the first start wrote its config");
+    assert!(
+        config_dir.join("broker.json").is_file(),
+        "the first start wrote its config"
+    );
     let endpoint = std::fs::read_to_string(state.join("endpoint")).unwrap();
 
     // The adapter has exited; the broker it started has not. A second agent uses it.
     let tools = tools_of_a_fresh_adapter(&env);
     assert!(tools.contains(&"operation_start".to_string()), "{tools:?}");
-    assert_eq!(std::fs::read_to_string(state.join("endpoint")).unwrap(), endpoint);
+    assert_eq!(
+        std::fs::read_to_string(state.join("endpoint")).unwrap(),
+        endpoint
+    );
     let log = std::fs::read_to_string(state.join("broker.log")).unwrap();
     assert_eq!(
         log.matches("devagotchi broker ready").count(),
@@ -164,7 +405,10 @@ fn killing_the_clients_whole_process_group_leaves_the_broker_running() {
     let state = home.path().join("state");
     let env = [
         ("DEVAGOTCHI_STATE_DIR", state.as_os_str().to_owned()),
-        ("DEVAGOTCHI_CONFIG_DIR", home.path().join("config").into_os_string()),
+        (
+            "DEVAGOTCHI_CONFIG_DIR",
+            home.path().join("config").into_os_string(),
+        ),
         ("HOME", home.path().as_os_str().to_owned()),
     ];
     let stop = Broker(state.clone());
@@ -182,7 +426,10 @@ fn killing_the_clients_whole_process_group_leaves_the_broker_running() {
     let initialize = serde_json::json!({ "jsonrpc": "2.0", "id": 1, "method": "initialize", "params": { "protocolVersion": "2025-06-18", "capabilities": {}, "clientInfo": { "name": "group-kill", "version": "0" } } });
     writeln!(stdin, "{initialize}").unwrap();
     let mut line = String::new();
-    assert!(stdout.read_line(&mut line).unwrap() > 0, "the adapter never answered");
+    assert!(
+        stdout.read_line(&mut line).unwrap() > 0,
+        "the adapter never answered"
+    );
     let group = adapter.id().to_string();
     let killed = Command::new("kill")
         .args(["-s", "KILL", "--", &format!("-{group}")])
@@ -191,7 +438,10 @@ fn killing_the_clients_whole_process_group_leaves_the_broker_running() {
     assert!(killed.success(), "kill {killed}");
     drop(stdin);
     let status = adapter.wait().unwrap();
-    assert!(!status.success(), "the adapter was killed, not closed: {status}");
+    assert!(
+        !status.success(),
+        "the adapter was killed, not closed: {status}"
+    );
 
     let tools = tools_of_a_fresh_adapter(&env);
     assert!(tools.contains(&"operation_start".to_string()), "{tools:?}");
@@ -311,7 +561,11 @@ fn tools_of_a_fresh_adapter(env: &[(&str, std::ffi::OsString)]) -> Vec<String> {
         "{}",
         why("the adapter's pipes stayed open after it exited")
     );
-    assert!(status.success(), "{}", why(&format!("adapter exit {status}")));
+    assert!(
+        status.success(),
+        "{}",
+        why(&format!("adapter exit {status}"))
+    );
     tools["result"]["tools"]
         .as_array()
         .unwrap_or_else(|| panic!("{}", why(&format!("no tools: {tools}"))))
@@ -460,7 +714,12 @@ fn start_then_mcp_then_board_from_one_binary() {
     let output = ran["output"].as_str().unwrap();
     assert!(output.contains("devagotchi-ran"), "{ran}");
     assert!(
-        output.contains(std::fs::canonicalize(home.path()).unwrap().to_str().unwrap()),
+        output.contains(
+            std::fs::canonicalize(home.path())
+                .unwrap()
+                .to_str()
+                .unwrap()
+        ),
         "run starts in the workspace: {ran}"
     );
     let notes = home.path().join("notes").join("today.md");
@@ -482,7 +741,11 @@ fn start_then_mcp_then_board_from_one_binary() {
     );
     assert_eq!(listed["entries"][0]["path"], "today.md", "{listed}");
     let outside = tempfile::tempdir().unwrap();
-    std::fs::write(outside.path().join("elsewhere.txt"), "outside the workspace").unwrap();
+    std::fs::write(
+        outside.path().join("elsewhere.txt"),
+        "outside the workspace",
+    )
+    .unwrap();
     let read = tool(
         "read_file",
         serde_json::json!({ "path": outside.path().join("elsewhere.txt") }),
@@ -613,7 +876,10 @@ fn connect_wires_every_client_and_checks_the_server_answers() {
     std::fs::write(codex.join("config.toml"), "model = \"gpt-5\"\n").unwrap();
     let env = [
         ("DEVAGOTCHI_STATE_DIR", state.as_os_str().to_owned()),
-        ("DEVAGOTCHI_CONFIG_DIR", home.path().join("config").into_os_string()),
+        (
+            "DEVAGOTCHI_CONFIG_DIR",
+            home.path().join("config").into_os_string(),
+        ),
         ("HOME", home.path().as_os_str().to_owned()),
         ("CODEX_HOME", codex.as_os_str().to_owned()),
         ("XDG_CONFIG_HOME", xdg.as_os_str().to_owned()),
@@ -621,10 +887,17 @@ fn connect_wires_every_client_and_checks_the_server_answers() {
     ];
 
     // Not signed in and no target named: says what to run, changes nothing.
-    let out = devagotchi().arg("connect").envs(env.iter().cloned()).output().unwrap();
+    let out = devagotchi()
+        .arg("connect")
+        .envs(env.iter().cloned())
+        .output()
+        .unwrap();
     assert_eq!(out.status.code(), Some(64));
     assert!(String::from_utf8_lossy(&out.stderr).contains("devagotchi login"));
-    assert_eq!(std::fs::read_to_string(codex.join("config.toml")).unwrap(), "model = \"gpt-5\"\n");
+    assert_eq!(
+        std::fs::read_to_string(codex.join("config.toml")).unwrap(),
+        "model = \"gpt-5\"\n"
+    );
 
     let mut broker = devagotchi()
         .args(["start", "--workspace"])
@@ -639,7 +912,10 @@ fn connect_wires_every_client_and_checks_the_server_answers() {
     std::thread::spawn(move || for _ in BufReader::new(stderr).lines() {});
     let started = Instant::now();
     while !state.join("endpoint").is_file() {
-        assert!(started.elapsed() < Duration::from_secs(30), "broker never wrote its endpoint");
+        assert!(
+            started.elapsed() < Duration::from_secs(30),
+            "broker never wrote its endpoint"
+        );
         std::thread::sleep(Duration::from_millis(50));
     }
 
@@ -650,13 +926,31 @@ fn connect_wires_every_client_and_checks_the_server_answers() {
             .output()
             .unwrap();
         let text = String::from_utf8_lossy(&out.stdout);
-        assert!(out.status.success(), "{text}{}", String::from_utf8_lossy(&out.stderr));
+        assert!(
+            out.status.success(),
+            "{text}{}",
+            String::from_utf8_lossy(&out.stderr)
+        );
         // The check names what the server offered; the count follows the adapter's tool list.
-        assert!(text.contains("Devagotchi answered with ") && text.contains("operation_start") && text.contains("operation_wait"), "{text}");
-        assert!(text.contains("Claude Code: added") && text.contains("Codex: ") && text.contains("Claude Desktop: "), "{text}");
+        assert!(
+            text.contains("Devagotchi answered with ")
+                && text.contains("operation_start")
+                && text.contains("operation_wait"),
+            "{text}"
+        );
+        assert!(
+            text.contains("Claude Code: added")
+                && text.contains("Codex: ")
+                && text.contains("Claude Desktop: "),
+            "{text}"
+        );
         let config = std::fs::read_to_string(codex.join("config.toml")).unwrap();
         assert!(config.starts_with("model = \"gpt-5\"\n"), "{config}");
-        assert_eq!(config.matches("[mcp_servers.devagotchi]").count(), 1, "round {round}: {config}");
+        assert_eq!(
+            config.matches("[mcp_servers.devagotchi]").count(),
+            1,
+            "round {round}: {config}"
+        );
         assert!(config.contains("args = ['mcp']"), "{config}");
     }
     let exe = std::fs::canonicalize(env!("CARGO_BIN_EXE_devagotchi")).unwrap();
@@ -669,16 +963,23 @@ fn connect_wires_every_client_and_checks_the_server_answers() {
         serde_json::json!({"command": exe, "args": ["mcp"]})
     );
     let recorded = std::fs::read_to_string(&calls).unwrap();
-    assert!(recorded.contains("mcp remove --scope user devagotchi"), "{recorded}");
     assert!(
-        recorded.contains(&format!("mcp add --scope user devagotchi -- {} mcp", exe.display())),
+        recorded.contains("mcp remove --scope user devagotchi"),
         "{recorded}"
     );
-    assert!(std::fs::read_dir(&codex).unwrap().any(|e| e
-        .unwrap()
-        .file_name()
-        .to_string_lossy()
-        .starts_with("config.toml.bak-")));
+    assert!(
+        recorded.contains(&format!(
+            "mcp add --scope user devagotchi -- {} mcp",
+            exe.display()
+        )),
+        "{recorded}"
+    );
+    assert!(std::fs::read_dir(&codex).unwrap().any(|e| {
+        e.unwrap()
+            .file_name()
+            .to_string_lossy()
+            .starts_with("config.toml.bak-")
+    }));
 
     let _ = broker.kill();
     let _ = broker.wait();
@@ -736,7 +1037,10 @@ fn setup_needs_no_account_and_leaves_every_client_working() {
     std::fs::set_permissions(bin.join("claude"), std::fs::Permissions::from_mode(0o755)).unwrap();
     let env = [
         ("DEVAGOTCHI_STATE_DIR", state.as_os_str().to_owned()),
-        ("DEVAGOTCHI_CONFIG_DIR", home.path().join("config").into_os_string()),
+        (
+            "DEVAGOTCHI_CONFIG_DIR",
+            home.path().join("config").into_os_string(),
+        ),
         ("HOME", home.path().as_os_str().to_owned()),
         ("CODEX_HOME", codex.as_os_str().to_owned()),
         ("XDG_CONFIG_HOME", xdg.as_os_str().to_owned()),
@@ -744,7 +1048,11 @@ fn setup_needs_no_account_and_leaves_every_client_working() {
     ];
     let stop = Broker(state.clone());
 
-    let out = devagotchi().arg("setup").envs(env.iter().cloned()).output().unwrap();
+    let out = devagotchi()
+        .arg("setup")
+        .envs(env.iter().cloned())
+        .output()
+        .unwrap();
     let text = String::from_utf8_lossy(&out.stdout);
     assert!(
         out.status.success(),
@@ -752,10 +1060,15 @@ fn setup_needs_no_account_and_leaves_every_client_working() {
         String::from_utf8_lossy(&out.stderr)
     );
     assert!(
-        text.contains("Claude Code: added") && text.contains("Codex: ") && text.contains("Claude Desktop: "),
+        text.contains("Claude Code: added")
+            && text.contains("Codex: ")
+            && text.contains("Claude Desktop: "),
         "{text}"
     );
-    assert!(text.contains("Devagotchi answered with ") && text.contains("operation_start"), "{text}");
+    assert!(
+        text.contains("Devagotchi answered with ") && text.contains("operation_start"),
+        "{text}"
+    );
     let exe = std::fs::canonicalize(env!("CARGO_BIN_EXE_devagotchi")).unwrap();
     let desktop: serde_json::Value = serde_json::from_str(
         &std::fs::read_to_string(xdg.join("Claude").join("claude_desktop_config.json")).unwrap(),

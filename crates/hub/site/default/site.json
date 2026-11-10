@@ -8,12 +8,12 @@
   },
   "operator": {
     "name": "AngryVibes LLC",
-    "contact": "https://github.com/EonsofStupid/devagotchi/issues"
+    "contact": "https://github.com/devagotchi/devagotchi/issues"
   },
   "links": {
-    "source": "https://github.com/EonsofStupid/devagotchi",
-    "issues": "https://github.com/EonsofStupid/devagotchi/issues",
-    "security": "https://github.com/EonsofStupid/devagotchi/security/advisories/new",
+    "source": "https://github.com/devagotchi/devagotchi",
+    "issues": "https://github.com/devagotchi/devagotchi/issues",
+    "security": "https://github.com/devagotchi/devagotchi/security/advisories/new",
     "hosted_hub": "https://app.devagotchi.com"
   },
   "sign_in": {

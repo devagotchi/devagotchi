@@ -96,6 +96,13 @@ if (Get-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run'
 if (Get-CimInstance Win32_Process -Filter "Name = 'devagotchi.exe'" -ErrorAction SilentlyContinue | Where-Object { $_.ExecutablePath -and $_.ExecutablePath.StartsWith($root, [System.StringComparison]::OrdinalIgnoreCase) -and $_.CommandLine -match '\sbroker\s+run\b' }) { throw 'broker survived uninstall' }
 Write-Host 'ok   uninstall stopped the broker and removed the autostart entry'
 
+# Everything from here starts a hub on this runner, and a hub keeps its accounts and boards
+# in Postgres (docs/adr/0001): without a database to point it at, the check ends here.
+if (-not $env:DEVAGOTCHI_HUB_STORAGE_URL) {
+    Write-Host 'skip the hub, link and join checks: no Postgres on this runner (DEVAGOTCHI_HUB_STORAGE_URL is empty)'
+    exit 0
+}
+
 # The link: join a hub running on this runner the way gus or dabo joins one, by installer.
 $utf8 = New-Object System.Text.UTF8Encoding($false)
 $port = Get-Random -Minimum 20000 -Maximum 40000

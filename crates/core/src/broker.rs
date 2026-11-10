@@ -3,11 +3,11 @@
 //! bounded shutdown, and restart recovery. Each admitted operation's process
 //! is run by `crate::execution`. Executable grants are not a sandbox.
 
-use devagotchi_contracts::*;
 use crate::execution::platform::{self, SCOPE};
 use crate::execution::{ExecutionSpec, StopReason, run_job};
 use crate::journal::{Journal, JournalFrame, JournalOperation};
 use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
+use devagotchi_contracts::*;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::collections::{HashMap, HashSet, VecDeque};
@@ -273,30 +273,40 @@ impl Broker {
                 .cancel(&input.operation_id)
                 .map(ResponseBody::Operation),
             RequestBody::OperationList(input) => self.list(input).map(ResponseBody::Operations),
-            RequestBody::OperationWait(input) => self.wait(input).await.map(ResponseBody::Operation),
-            RequestBody::OperationsChanged(input) => {
-                self.operations_changed(input).await.map(ResponseBody::Revision)
+            RequestBody::OperationWait(input) => {
+                self.wait(input).await.map(ResponseBody::Operation)
             }
+            RequestBody::OperationsChanged(input) => self
+                .operations_changed(input)
+                .await
+                .map(ResponseBody::Revision),
             RequestBody::FileRead(input) => {
-                self.on_files(move |files| files.read(input).map(ResponseBody::File)).await
+                self.on_files(move |files| files.read(input).map(ResponseBody::File))
+                    .await
             }
             RequestBody::FileList(input) => {
-                self.on_files(move |files| files.list(input).map(ResponseBody::Listing)).await
+                self.on_files(move |files| files.list(input).map(ResponseBody::Listing))
+                    .await
             }
             RequestBody::FileWrite(input) => {
-                self.on_files(move |files| files.write(input).map(ResponseBody::Written)).await
+                self.on_files(move |files| files.write(input).map(ResponseBody::Written))
+                    .await
             }
             RequestBody::FileEdit(input) => {
-                self.on_files(move |files| files.edit(input).map(ResponseBody::Written)).await
+                self.on_files(move |files| files.edit(input).map(ResponseBody::Written))
+                    .await
             }
             RequestBody::FileInfo(input) => {
-                self.on_files(move |files| files.info(input).map(ResponseBody::Info)).await
+                self.on_files(move |files| files.info(input).map(ResponseBody::Info))
+                    .await
             }
             RequestBody::FileMkdir(input) => {
-                self.on_files(move |files| files.mkdir(input).map(ResponseBody::Info)).await
+                self.on_files(move |files| files.mkdir(input).map(ResponseBody::Info))
+                    .await
             }
             RequestBody::FileMove(input) => {
-                self.on_files(move |files| files.moved(input).map(ResponseBody::Info)).await
+                self.on_files(move |files| files.moved(input).map(ResponseBody::Info))
+                    .await
             }
         }
     }
@@ -458,15 +468,23 @@ impl Broker {
         let timestamp = now_ms();
         let id = uuid::Uuid::new_v4().to_string();
         let view = OperationView {
-            operation_id: id.clone(), executable: path_string(&spec.executable)?, args: spec.args.clone(),
-            cwd: path_string(&spec.cwd)?, deadline_ms: spec.deadline_ms, state: OperationState::Accepted,
-            created_at_ms: timestamp, updated_at_ms: timestamp, exit_code: None,
+            operation_id: id.clone(),
+            executable: path_string(&spec.executable)?,
+            args: spec.args.clone(),
+            cwd: path_string(&spec.cwd)?,
+            deadline_ms: spec.deadline_ms,
+            state: OperationState::Accepted,
+            created_at_ms: timestamp,
+            updated_at_ms: timestamp,
+            exit_code: None,
             detail: Some(if spec.account_environment {
                 "Admission committed; the independent broker job owns execution. It runs as the broker's own account with that account's environment; this is not a sandbox.".into()
             } else {
                 "Admission committed; the independent broker job owns execution. Executable grants and cwd checks do not sandbox the executable.".into()
             }),
-            ownership_scope: SCOPE.into(), cancellation_requested: false, output_complete: false,
+            ownership_scope: SCOPE.into(),
+            cancellation_requested: false,
+            output_complete: false,
         };
         let record = JournalOperation {
             key: input.idempotency_key.clone(),
@@ -527,7 +545,9 @@ impl Broker {
         let Ok(_waiting) = self.shared.waiters.try_acquire() else {
             return Err(BridgeError::new(
                 "wait_busy",
-                format!("this broker is already holding {MAX_WAITERS} waits; use operation_get, or wait again shortly"),
+                format!(
+                    "this broker is already holding {MAX_WAITERS} waits; use operation_get, or wait again shortly"
+                ),
             ));
         };
         let mut changes = self.shared.changes.subscribe();
@@ -859,13 +879,16 @@ impl Shared {
     /// Wake every wait: something about an operation changed.
     /// An operation was admitted or retired or changed state.
     pub(crate) fn changed(&self) {
-        self.changes.send_modify(|revision| *revision = revision.wrapping_add(1));
-        self.roster.send_modify(|revision| *revision = revision.wrapping_add(1));
+        self.changes
+            .send_modify(|revision| *revision = revision.wrapping_add(1));
+        self.roster
+            .send_modify(|revision| *revision = revision.wrapping_add(1));
     }
 
     /// An operation has new output.
     fn output_changed(&self) {
-        self.changes.send_modify(|revision| *revision = revision.wrapping_add(1));
+        self.changes
+            .send_modify(|revision| *revision = revision.wrapping_add(1));
     }
 
     pub(crate) fn running(&self, id: &str) {
@@ -1046,7 +1069,11 @@ mod tests {
             max_concurrent: 4,
             exec_policy: ExecPolicy::Granted,
         };
-        Broker::open(config, &devagotchi_ipc::private_test_state(directory.path())).unwrap()
+        Broker::open(
+            config,
+            &devagotchi_ipc::private_test_state(directory.path()),
+        )
+        .unwrap()
     }
 
     fn start(
@@ -1079,7 +1106,9 @@ mod tests {
     async fn settle_within(broker: &Broker, id: &str, seconds: u64) -> OperationView {
         let deadline = Instant::now() + Duration::from_secs(seconds);
         loop {
-            let left = deadline.saturating_duration_since(Instant::now()).as_millis() as u64;
+            let left = deadline
+                .saturating_duration_since(Instant::now())
+                .as_millis() as u64;
             let view = broker
                 .wait(WaitInput {
                     operation_id: id.into(),
@@ -1091,7 +1120,10 @@ mod tests {
             if view.state.terminal() {
                 return view;
             }
-            assert!(Instant::now() < deadline, "operation did not settle: {view:?}");
+            assert!(
+                Instant::now() < deadline,
+                "operation did not settle: {view:?}"
+            );
         }
     }
 
@@ -1132,7 +1164,11 @@ mod tests {
         let view = broker.wait(wait_for(&id, None, MAX_WAIT_MS)).await.unwrap();
         assert!(matches!(view.state, OperationState::Succeeded), "{view:?}");
         // Answered when the work ended, not at the end of the 50 s wait.
-        assert!(began.elapsed() < Duration::from_secs(30), "{:?}", began.elapsed());
+        assert!(
+            began.elapsed() < Duration::from_secs(30),
+            "{:?}",
+            began.elapsed()
+        );
         assert!(output_text(&broker, &id).contains("second"));
         broker.shutdown().await;
     }
@@ -1143,7 +1179,10 @@ mod tests {
         let (shell, args) = pause_between_lines();
         let broker = open_broker(&directory, &[&shell]);
         let id = start(&broker, "output", &shell, args, 20_000);
-        let first = broker.wait(wait_for(&id, Some(0), MAX_WAIT_MS)).await.unwrap();
+        let first = broker
+            .wait(wait_for(&id, Some(0), MAX_WAIT_MS))
+            .await
+            .unwrap();
         // Woken by `first`, while the command still pauses before `second`.
         assert!(!first.state.terminal(), "{first:?}");
         assert!(output_text(&broker, &id).contains("first"));
@@ -1167,7 +1206,10 @@ mod tests {
             assert_eq!(error.code, "invalid_request", "{error:?}");
         }
         let unknown = uuid::Uuid::new_v4().to_string();
-        let missing = broker.wait(wait_for(&unknown, None, 300)).await.unwrap_err();
+        let missing = broker
+            .wait(wait_for(&unknown, None, 300))
+            .await
+            .unwrap_err();
         assert_eq!(missing.code, "not_found", "{missing:?}");
         settle(&broker, &id).await;
         broker.shutdown().await;
@@ -1182,7 +1224,10 @@ mod tests {
             let broker = Arc::clone(&broker);
             async move {
                 broker
-                    .operations_changed(ChangesInput { after_revision: after, timeout_ms })
+                    .operations_changed(ChangesInput {
+                        after_revision: after,
+                        timeout_ms,
+                    })
                     .await
                     .unwrap()
                     .revision
@@ -1196,11 +1241,22 @@ mod tests {
         let admitted = changes(Some(quiet), MAX_WAIT_MS).await;
         assert_ne!(admitted, quiet, "an admission changes the list");
         // Woken by `first`; the command then pauses without changing state.
-        broker.wait(wait_for(&id, Some(0), MAX_WAIT_MS)).await.unwrap();
+        broker
+            .wait(wait_for(&id, Some(0), MAX_WAIT_MS))
+            .await
+            .unwrap();
         let printing = changes(None, 1).await;
-        assert_eq!(changes(Some(printing), 1_000).await, printing, "output alone is not a change");
+        assert_eq!(
+            changes(Some(printing), 1_000).await,
+            printing,
+            "output alone is not a change"
+        );
         settle(&broker, &id).await;
-        assert_ne!(changes(Some(printing), MAX_WAIT_MS).await, printing, "settling is a change");
+        assert_ne!(
+            changes(Some(printing), MAX_WAIT_MS).await,
+            printing,
+            "settling is a change"
+        );
         // A restarted broker counts from zero again: a stale revision answers at once.
         let began = Instant::now();
         changes(Some(u64::MAX), MAX_WAIT_MS).await;
@@ -1230,7 +1286,11 @@ mod tests {
             let view = answer.unwrap().unwrap();
             assert!(matches!(view.state, OperationState::Cancelled), "{view:?}");
         }
-        assert!(began.elapsed() < Duration::from_secs(20), "{:?}", began.elapsed());
+        assert!(
+            began.elapsed() < Duration::from_secs(20),
+            "{:?}",
+            began.elapsed()
+        );
         broker.shutdown().await;
     }
 
@@ -1275,7 +1335,11 @@ mod tests {
             max_operations: 8,
             max_concurrent: 4,
         };
-        Broker::open(config, &devagotchi_ipc::private_test_state(directory.path())).unwrap()
+        Broker::open(
+            config,
+            &devagotchi_ipc::private_test_state(directory.path()),
+        )
+        .unwrap()
     }
 
     fn command_line(key: &str, line: &str, cwd: Option<String>) -> StartInput {
@@ -1386,7 +1450,9 @@ mod tests {
     async fn only_the_account_policy_takes_a_command_line_and_never_with_a_program() {
         let directory = tempfile::tempdir().unwrap();
         let granted = open_broker(&directory, &[&test_executable()]);
-        let refused = granted.start(command_line("line", "echo hi", None)).unwrap_err();
+        let refused = granted
+            .start(command_line("line", "echo hi", None))
+            .unwrap_err();
         assert_eq!(refused.code, "command_not_allowed");
         granted.shutdown().await;
         let other = tempfile::tempdir().unwrap();
@@ -1394,7 +1460,9 @@ mod tests {
         let mut both = command_line("both", "echo hi", None);
         both.executable = test_executable().display().to_string();
         assert_eq!(account.start(both).unwrap_err().code, "invalid_request");
-        let blank = account.start(command_line("blank", "  ", None)).unwrap_err();
+        let blank = account
+            .start(command_line("blank", "  ", None))
+            .unwrap_err();
         assert_eq!(blank.code, "invalid_request");
         account.shutdown().await;
     }
@@ -1500,9 +1568,12 @@ mod tests {
             max_concurrent: 1,
             exec_policy: ExecPolicy::Granted,
         };
-        let error = Broker::open(config, &devagotchi_ipc::private_test_state(directory.path()))
-            .err()
-            .unwrap();
+        let error = Broker::open(
+            config,
+            &devagotchi_ipc::private_test_state(directory.path()),
+        )
+        .err()
+        .unwrap();
         assert_eq!(error.code, "invalid_config");
         assert!(error.message.contains("cmd.exe"));
     }

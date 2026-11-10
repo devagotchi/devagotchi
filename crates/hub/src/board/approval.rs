@@ -44,7 +44,7 @@ pub struct ApprovalStatus {
     pub note: Option<String>,
 }
 
-fn text(field: &str, value: &str, max: usize, required: bool) -> BridgeResult<String> {
+pub(super) fn text(field: &str, value: &str, max: usize, required: bool) -> BridgeResult<String> {
     let value = value.trim();
     if (required && value.is_empty()) || value.chars().count() > max {
         let need = if required { "1" } else { "0" };
@@ -57,7 +57,7 @@ fn text(field: &str, value: &str, max: usize, required: bool) -> BridgeResult<St
 
 /// The done state a verdict lands in: `done` / `cancelled` when the workflow has them as
 /// done states, else its first done state.
-fn landing(workflow: &Workflow, verdict: Verdict) -> BridgeResult<String> {
+pub(super) fn landing(workflow: &Workflow, verdict: Verdict) -> BridgeResult<String> {
     let preferred = match verdict {
         Verdict::Approved => "done",
         Verdict::Denied => "cancelled",
@@ -83,6 +83,9 @@ impl Board {
         why: &str,
         undo: &str,
     ) -> BridgeResult<ApprovalStatus> {
+        if let Some(hosted) = &self.hosted {
+            return self.hosted_call(hosted.request_approval(actor, title, what, why, undo), true);
+        }
         let title = text("title", title, 300, true)?;
         let what = text("what", what, 4000, true)?;
         let why = text("why", why, 4000, false)?;
@@ -118,6 +121,12 @@ impl Board {
         verdict: Verdict,
         note: &str,
     ) -> BridgeResult<ApprovalStatus> {
+        if let Some(hosted) = &self.hosted {
+            return self.hosted_call(
+                hosted.decide_approval(actor, id, version, verdict, note),
+                true,
+            );
+        }
         if !actor.human {
             return Err(fail("humans_only", "only a person can approve or deny"));
         }
@@ -159,7 +168,10 @@ impl Board {
     }
 
     pub fn approval_status(&self, id: &str) -> BridgeResult<ApprovalStatus> {
-        let connection = self.connection.lock().expect("board lock");
+        if let Some(hosted) = &self.hosted {
+            return self.hosted_call(hosted.approval_status(id), false);
+        }
+        let connection = self.local()?;
         let workflow = load_workflow(&connection)?;
         let ticket = read_ticket(&connection, &workflow, id, self.now())?;
         if ticket.kind != KIND {
@@ -179,8 +191,11 @@ impl Board {
 
     /// Approvals waiting for a person, oldest first.
     pub fn pending_approvals(&self) -> BridgeResult<Vec<ApprovalStatus>> {
+        if let Some(hosted) = &self.hosted {
+            return self.hosted_call(hosted.pending_approvals(), false);
+        }
         let ids: Vec<String> = {
-            let connection = self.connection.lock().expect("board lock");
+            let connection = self.local()?;
             let workflow = load_workflow(&connection)?;
             let mut statement = connection
                 .prepare(
