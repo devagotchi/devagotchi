@@ -64,7 +64,7 @@ Devagotchi-Signature: sha256=<hex HMAC-SHA256 of the body>   (when it names a se
 …
 ```
 
-Any 2xx answer takes the batch. Anything else, or no answer within 15 seconds, and the same
+Header names are case-insensitive; the hub sends them in lowercase. Any 2xx answer takes the batch. Anything else, or no answer within 15 seconds, and the same
 signals are sent again, after a wait that doubles from one second to a minute. Delivery is
 at least once and in order within a scope (one board, one tenant, the audit chain); there
 is no order between scopes. Each sink keeps its own position per scope in the hub's

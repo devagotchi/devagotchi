@@ -544,8 +544,8 @@ impl Sink {
             .http
             .post(&self.url)
             .header("Content-Type", "application/x-ndjson")
-            .header("Devagotchi-Signal-Schema", SCHEMA)
-            .header("Devagotchi-Sink", &self.name);
+            .header("devagotchi-signal-schema", SCHEMA)
+            .header("devagotchi-sink", &self.name);
         if let Some(token) = &self.token {
             request = request.bearer_auth(token);
         }
@@ -553,7 +553,7 @@ impl Sink {
             let mut mac = Hmac::<Sha256>::new_from_slice(secret.as_bytes()).expect("HMAC key");
             mac.update(body.as_bytes());
             request = request.header(
-                "Devagotchi-Signature",
+                "devagotchi-signature",
                 format!("sha256={}", hex::encode(mac.finalize().into_bytes())),
             );
         }
