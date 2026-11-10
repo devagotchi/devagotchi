@@ -19,6 +19,72 @@ heading. Agents draft the fragments below; they never tag.
 - Keep release mode pre-release and alpha readiness unconfirmed. Main integration does
   not promote production or replace actual-client acceptance.
 
+### Organisations on the hub's pages (increment 116)
+- `/orgs` lists a person's organisations and makes one; `/orgs/{org}` shows its projects
+  (who sees each, its own members, its events of the last 7 days when the hub exports to
+  ClickHouse), its members and roles, its teams and its invites, with a form for each change
+  an admin may make. The calls are `orgs.rs`'s, as the API makes them: the same checks, the
+  same chain. Every form posts from this hub's pages only; every word is the site's
+  (`messages.orgs`, with built-in defaults, so a site without them still loads).
+- An invite's link is shown once, on the answer that made it (`no-store`). `/invite` keeps
+  its token in the browser through signing in first (`/assets/invite.js`, session storage,
+  out of the address bar) and joins with one press. The Boards tab links to `/orgs`.
+- Fixed: the ticket page's actions acted as a person for anyone who could open the board.
+  They now ask `Hub::board_access`: a viewer or an agent's role is refused and told why.
+- Tests: `orgs_tests.rs` drives the pages through the whole router on SQLite and Postgres;
+  `tests/orgs_browser.py` in the Chrome job: two people sign up, an organisation, a project,
+  a team and an invite, the invite kept through signing up, the board and its ticket, a
+  viewer's next comment refused, and the page at a phone's width.
+
+### Board events in ClickHouse (increment 115)
+- `clickhouse.url` (or `DEVAGOTCHI_CLICKHOUSE_URL`, `_DATABASE`, `_USER`; the password only
+  in `DEVAGOTCHI_CLICKHOUSE_PASSWORD`) turns on the export of every board event from the
+  Postgres outbox to ClickHouse (`warehouse.rs`): at least once, into a
+  `ReplacingMergeTree` keyed by tenant, board and event id, counted with
+  `uniqExact(event_id)`. The schema is made on first contact.
+- ClickHouse down: the boards work, the events wait in Postgres, and `/healthz` reports
+  `analytics` degraded with `pending` and `oldest_pending_secs`, never counted against the
+  hub's own health and never carrying the password. The exporter backs off up to a minute
+  and drains the backlog when ClickHouse is back. Postgres functions `outbox_pending_tenants`,
+  `outbox_backlog` and `outbox_resend` (migration 0018) answer across tenants without reading
+  any tenant's rows.
+- `GET /api/v1/projects/{project}/stats` and `/api/v1/orgs/{org}/projects/{project}/stats`:
+  events by day and action, actors, and created-to-completed times, for anyone who reads the
+  board. `devagotchi hub analytics-resend --config ABS_JSON` sends every event again.
+- Compose: a `clickhouse` service (25.8, pinned by digest) on the compose network only,
+  its password made once by `install.sh` and kept in `.env`; `check.sh` waits for the export
+  to be caught up; `backup.sh` says how ClickHouse is refilled after a restore.
+- Tests: `warehouse/tests.rs` against a stand-in ClickHouse (up, down, an answer lost) on
+  Postgres, and against a real ClickHouse when `DEVAGOTCHI_TEST_CLICKHOUSE_URL` is set (the
+  `hub (postgres)` job starts one with `tests/throwaway_clickhouse.sh`);
+  `tests/analytics_probe.py` in the Linux e2e job: R1 step 9 against the real binary, a
+  ClickHouse stopped and started mid-run, every event of the board in ClickHouse once.
+
+### Organisations, members, teams and roles (increment 114)
+- An organisation is a tenant of its own in the hub's store (migration 0017, `orgs.rs`):
+  members with a role (owner, admin, member, agent, viewer), teams, per-project roles for a
+  subject or a team, project visibility (`org` or `members`) and one-time invites (7 days,
+  SHA-256 kept, never the token). Its projects are hosted boards named `<org>/<project>`;
+  `board_bind` with that name makes one for a member.
+- One resolver, `Hub::board_access`, answers every board tool, the web pages, the issue
+  routes and the new API with the caller's role, read from the store on each call: a
+  viewer's writes are refused `read_only`, an agent is never a person, a member and above
+  decides approvals, an admin configures. A configured board keeps its grants (owner:
+  owner, human grant: admin, other grant: agent) and can take more members from the store.
+- `/api/v1/orgs/…`, `/api/v1/invites/accept` and `/api/v1/projects/…/members`, for a
+  bearer token or a person's session (changes from this hub's own pages only). An AI
+  client's token or a seat is refused `people_only` on every change. Nobody grants above
+  their own role; only an owner makes an owner; the last owner stays. Every change is on
+  the organisation's `tenancy_events` chain and the audit chain.
+- Postgres: forced row-level security on every new table; `orgs_of`, `projects_of` and
+  `invite_tenant` are `SECURITY DEFINER` functions that answer ids and roles only.
+  `whoami` lists `orgs` and the organisation projects in `boards`.
+- Tests: `orgs/tests.rs` on SQLite and Postgres (roles, last owner, teams, visibility,
+  invites, the tenant chain, two owners demoting each other at once and two people taking
+  one invite at once, row-level security); `orgs_tests.rs` end to end over HTTP;
+  `tests/orgs_probe.py` in e2e against the real binary on Postgres, which proves a demoted
+  member's AI is refused on its next call on the session it already has.
+
 ### Mail check and health (increment 113)
 - `devagotchi hub check-mail --config ABS_JSON [--to ADDRESS]` (`auth.mode hub`) connects to
   `auth.email`'s mail server as `serve` would, negotiates TLS and signs in as its user,

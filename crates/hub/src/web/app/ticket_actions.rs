@@ -12,7 +12,7 @@ use devagotchi_contracts::BridgeResult;
 use serde::Deserialize;
 
 use super::{
-    open_board, person,
+    person,
     ticket::{UNDO_MS, now_ms, unknown},
     words,
 };
@@ -62,9 +62,22 @@ pub async fn act(
             &[],
         );
     }
-    let board = match open_board(&state, &subject, &project) {
-        Ok(Some(board)) => board,
-        Ok(None) => return unknown(),
+    // What the person is on this board decides what they may do from here: every action
+    // on this page is a person's (`Actor::human`), so a viewer or an agent's role changes
+    // nothing, as the board tools refuse them (`Hub::board_access`).
+    let board = match state.hub.board_access(&subject, &project) {
+        Ok((board, _, role)) if role.is_person() => board,
+        Ok((_, _, role)) => {
+            let why = format!(
+                "{} is {} on this board; a member or above acts on its tickets",
+                subject.id,
+                role.as_str()
+            );
+            return see_other(&format!("{here}?done=no&why={}", encode(&why)), &[]);
+        }
+        Err(error) if matches!(error.code.as_str(), "unknown_board" | "not_granted") => {
+            return unknown();
+        }
         Err(error) => {
             eprintln!("devagotchi hub: open ticket action board: {error}");
             return crate::web::routes::unavailable();

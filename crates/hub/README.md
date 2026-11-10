@@ -79,6 +79,88 @@ they are not another authority for a hub-bound board. The older auxiliary hub SQ
 (audit and devices) have not been migrated by this board cutover. Issue ingress no longer
 opens a prototype SQLite store.
 
+## Organisations, members and roles
+
+An organisation is a tenant of its own in the hub's store (migration 0017, `src/orgs.rs`).
+Its projects are hosted boards named `<org>/<project>` wherever a board is named: in every
+`board_*` tool, `whoami`'s `boards`, the web pages and the issue routes. Every caller is
+resolved by one function (`board::mcp::Hub::board_access`), which reads the caller's role
+from the store on each call, so a change of role holds from the caller's next call.
+
+| Role | On a project |
+|---|---|
+| `viewer` | reads the board; any write is refused `read_only` |
+| `agent` | works tickets; never a person (no force-release, no moving by hand, no approvals) |
+| `member` | a person: an agent's work, plus force-release, moving by hand, deciding approvals |
+| `admin` | a member who configures projects and manages members, teams and invites |
+| `owner` | an admin who makes and unmakes owners; an organisation keeps at least one |
+
+An organisation role applies to each of its projects whose visibility is `org` (the
+default); on a `members` project only admins and owners reach it through the organisation.
+A project's own rows give a subject or a team a role there, and the higher of the two counts.
+A configured board (`boards` in hub.json) keeps working by grant (owner: owner, a grant
+marked human: admin, any other grant: agent) and can take more members from the store.
+
+The API takes a bearer token checked as `/mcp` checks it, or a person's browser session
+whose changes must come from this hub's own pages. A token the hub issued to an AI client,
+or a call with `X-Devagotchi-Seat`, is refused `people_only` on every change: people manage
+people.
+
+| Route | What it does |
+|---|---|
+| `GET /api/v1/orgs` · `POST /api/v1/orgs {org, name}` | your organisations · make one (you own it) |
+| `GET /api/v1/orgs/{org}` | members, teams and the projects you reach |
+| `PUT`/`DELETE /api/v1/orgs/{org}/members/{subject}` `{role}` | set a role · remove (a member may leave) |
+| `POST /api/v1/orgs/{org}/teams {team, name}` · `DELETE …/teams/{team}` | make · delete a team |
+| `PUT`/`DELETE /api/v1/orgs/{org}/teams/{team}/members/{subject}` | put a member on a team · take them off |
+| `POST /api/v1/orgs/{org}/projects {project, visibility?}` | make a project (a member may); `board_bind` with `<org>/<project>` does the same |
+| `PUT /api/v1/orgs/{org}/projects/{project} {visibility}` | `org` or `members` |
+| `PUT`/`DELETE /api/v1/orgs/{org}/projects/{project}/members/{kind}/{id}` `{role}` | a project's own members; `kind` is `subject` or `team` |
+| `PUT`/`DELETE /api/v1/projects/{project}/members/{kind}/{id}` · `GET …/members` | the same on a configured board |
+| `POST`/`GET /api/v1/orgs/{org}/invites` `{role, note?}` · `DELETE …/invites/{id}` | a one-time invite (7 days; the token is shown once, only its SHA-256 is kept) · list · withdraw |
+| `POST /api/v1/invites/accept {token}` | take an invite |
+
+The same is on the hub's pages for a person signed in (`src/web/orgs.rs`): `/orgs` lists
+their organisations and makes one; `/orgs/{org}` shows its projects (who sees each, its own
+members, and its events of the last 7 days when the hub exports to ClickHouse), members,
+teams and invites, with a form for each change an admin may make; a new invite's link is
+shown on that one answer (`no-store`), its token after `#`. `/invite` takes the link: the
+token stays in the browser (`/assets/invite.js` keeps it in the tab's session storage
+through signing in first) and joins with one press. Every form posts from this hub's pages
+only. The ticket page's actions (`/app/tickets/…`) are a person's: a viewer or an agent's
+role there is refused and told why.
+
+Nobody grants a role above their own; only an owner makes or unmakes an owner; the last
+owner stays (`last_owner`). Every change lands on the organisation's own hash chain
+(`tenancy_events`) and on the hub's audit chain. On Postgres every organisation row is held
+to its tenant by forced row-level security; the three questions that cross tenants (which
+organisations a subject is in, which projects it was given, which tenant an invite belongs
+to) are `SECURITY DEFINER` functions that answer ids and roles only.
+
+## Statistics in ClickHouse
+
+With `clickhouse.url` in the config (or `DEVAGOTCHI_CLICKHOUSE_URL`; `_DATABASE` and
+`_USER` beside it, the password only in `DEVAGOTCHI_CLICKHOUSE_PASSWORD`) the hub exports
+every board event from its Postgres outbox to ClickHouse (`src/warehouse.rs`, ADR 0001).
+The outbox row commits with the board change it records; the exporter sends what waits, at
+most 500 events per tenant and 50 tenants a round, and marks them delivered once ClickHouse
+has taken them. Delivery is at least once: the table is a `ReplacingMergeTree` ordered by
+tenant, board and event id, and every query counts `uniqExact(event_id)`.
+
+Nothing about a board needs ClickHouse. While it is down the events wait in Postgres, board
+writes are never refused, and `/healthz` reports `analytics`: `configured`, `ready`,
+`degraded`, `pending`, `oldest_pending_secs`, `sent`, `last_export_at` and `last_error`
+(never the password). Degraded means the last attempt failed or the oldest waiting event is
+older than five minutes. The exporter backs off from one second to a minute between
+attempts and drains the backlog when ClickHouse answers. `devagotchi hub analytics-resend
+--config ABS_JSON` marks every event waiting again, which is how a ClickHouse that lost its
+data is filled from Postgres's history.
+
+`GET /api/v1/projects/{project}/stats?days=N` (or `/api/v1/orgs/{org}/projects/{project}/stats`),
+for a bearer token or a session that reads the board, answers the last N days (30 by default):
+`events`, `throughput` by day and action, `actors` with their event counts and last act, and
+`completion` (how many tickets went from created to completed, mean and median seconds).
+
 ## Issue context
 
 Configure `github.repositories` with explicit `{repository_id, repository, project}`

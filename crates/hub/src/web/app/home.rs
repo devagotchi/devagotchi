@@ -143,7 +143,21 @@ pub async fn boards(State(state): State<AppState>, headers: HeaderMap) -> Respon
     };
     let site = words();
     let title = &site.messages.app.boards_title;
-    pages::app_page(StatusCode::OK, title, &boards_card(&boards), Tab::Boards)
+    // The organisations a person's boards come from, and where they make one (`web/orgs.rs`).
+    let orgs = if state.hub.boards.orgs().is_some() {
+        format!(
+            "<p><a href=\"/orgs\" id=\"orgs-link\">{}</a></p>",
+            pages::escape(&site.messages.orgs.link)
+        )
+    } else {
+        String::new()
+    };
+    pages::app_page(
+        StatusCode::OK,
+        title,
+        &format!("{}{orgs}", boards_card(&boards)),
+        Tab::Boards,
+    )
 }
 
 /// Each of the person's boards: its open tickets and those assigned to the person.

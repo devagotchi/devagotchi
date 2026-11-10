@@ -43,16 +43,26 @@ use crate::{
     auth::Subject,
     config::{DEFAULT_FREE_LIMIT, HubConfig, valid_name},
     hub::Hub,
+    orgs::Role,
     site::Cap,
 };
 
 /// The header a caller names its seat in: the account's own agent on that machine.
 pub const SEAT_HEADER: &str = "x-devagotchi-seat";
 
+/// The owner every configured board has in the store (`hosted::registry`, `crate::orgs`).
+pub(crate) const SHARED_OWNER: &str = "@shared";
+
 /// The boards a hub serves, opened on first use and kept open; plus the last fence
 /// handed to each subject per ticket, so a caller may omit it.
 pub struct Boards {
     hosted: Option<super::hosted::registry::Registry>,
+    /// Organisations, their members and who works which project (`crate::orgs`): in the
+    /// hub's store, beside the hosted boards.
+    orgs: Option<crate::orgs::Orgs>,
+    /// The export of these boards' events to ClickHouse (`crate::warehouse`), when the hub
+    /// has one.
+    warehouse: std::sync::OnceLock<Arc<crate::warehouse::Warehouse>>,
     dirs: BTreeMap<String, PathBuf>,
     accounts: Option<Accounts>,
     /// The site a new board's getting-started ticket comes from, and the hub's address
@@ -102,7 +112,24 @@ pub enum Kind {
     Org,
     /// A board from the hub config, shared by grant.
     Shared,
+    /// A project of an organisation of this hub (`crate::orgs`), named `<slug>/<project>`:
+    /// what the caller may do there is its role, from the store.
+    Workspace,
 }
+
+/// The board tools that change nothing: a viewer may call these and no other.
+const READ_ONLY_TOOLS: &[&str] = &[
+    "board_attach",
+    "board_issue_context",
+    "board_prime",
+    "board_ready",
+    "board_list",
+    "board_get",
+    "board_events",
+    "board_wait",
+    "board_verify",
+    "approval_wait",
+];
 
 impl Boards {
     pub fn from_config(config: &HubConfig, state_dir: &Path) -> Self {
@@ -121,6 +148,8 @@ impl Boards {
         });
         Self {
             hosted: None,
+            orgs: None,
+            warehouse: std::sync::OnceLock::new(),
             dirs: config
                 .boards
                 .iter()
@@ -140,8 +169,42 @@ impl Boards {
     }
 
     pub(crate) fn using_postgres(mut self, store: crate::store::Store) -> BridgeResult<Self> {
+        self.orgs = Some(crate::orgs::Orgs::new(store.clone()));
         self.hosted = Some(super::hosted::registry::Registry::new(store)?);
         Ok(self)
+    }
+
+    /// Organisations kept in `store` while the boards stay where they are (tests: a SQLite
+    /// store with board files).
+    #[cfg(test)]
+    pub(crate) fn with_orgs(mut self, store: crate::store::Store) -> Self {
+        self.orgs = Some(crate::orgs::Orgs::new(store));
+        self
+    }
+
+    /// This hub's organisations, when it keeps them (always under `hub serve`).
+    pub(crate) fn orgs(&self) -> Option<&crate::orgs::Orgs> {
+        self.orgs.as_ref()
+    }
+
+    /// Export these boards' events to ClickHouse through `warehouse` (set once, at start).
+    pub(crate) fn set_warehouse(&self, warehouse: Arc<crate::warehouse::Warehouse>) {
+        let _ = self.warehouse.set(warehouse);
+    }
+
+    /// The ClickHouse export, when the hub has one.
+    pub(crate) fn warehouse(&self) -> Option<&Arc<crate::warehouse::Warehouse>> {
+        self.warehouse.get()
+    }
+
+    /// Run a store call to the end from synchronous board code, as the hosted boards do.
+    pub(crate) fn block<T>(
+        &self,
+        future: impl std::future::Future<Output = BridgeResult<T>>,
+    ) -> BridgeResult<T> {
+        let handle = tokio::runtime::Handle::try_current()
+            .map_err(|error| BridgeError::new("board_runtime", error.to_string()))?;
+        super::hosted::registry::blocking(&handle, future)
     }
 
     pub(crate) async fn postgres_listener(url: &str) -> BridgeResult<sqlx::postgres::PgListener> {
@@ -354,55 +417,7 @@ impl Boards {
                 ),
             ));
         }
-        let mut created = false;
-        if !existed {
-            if let Some(hosted) = &self.hosted {
-                let (board, fresh) = hosted
-                    .blocking(hosted.open(subject, project, true, limit))?
-                    .ok_or_else(|| {
-                        BridgeError::new("board_store", "created board was not returned")
-                    })?;
-                created = fresh;
-                let (title, steps) = self.site.get().welcome(&self.public_url);
-                board.welcome_if_new(&Actor::agent("devagotchi"), &title, &steps)?;
-                self.open
-                    .lock()
-                    .expect("boards lock")
-                    .entry(format!("{subject}/{project}"))
-                    .or_insert(board);
-            } else {
-                created = true;
-                let dir = accounts.dir.join(subject);
-                std::fs::create_dir_all(&dir)
-                    .map_err(|e| BridgeError::new("board_io", format!("{}: {e}", dir.display())))?;
-                #[cfg(unix)]
-                {
-                    use std::os::unix::fs::PermissionsExt;
-                    let _ = std::fs::set_permissions(
-                        &accounts.dir,
-                        std::fs::Permissions::from_mode(0o700),
-                    );
-                    let _ = std::fs::set_permissions(&dir, std::fs::Permissions::from_mode(0o700));
-                }
-                let file = Self::account_file(accounts, subject, project);
-                let board = Board::open(&file, project)?.reporting_to(self.activity.clone());
-                // A new account board starts with the getting-started steps (B12).
-                let (title, steps) = self.site.get().welcome(&self.public_url);
-                if let Err(error) =
-                    board.welcome_if_new(&Actor::agent("devagotchi"), &title, &steps)
-                {
-                    eprintln!(
-                        "devagotchi hub: board {project}: getting-started ticket: {}",
-                        error.message
-                    );
-                }
-                let board = Arc::new(board);
-                self.open
-                    .lock()
-                    .expect("boards lock")
-                    .insert(format!("{subject}/{project}"), board);
-            }
-        }
+        let created = !existed && self.make_owned(subject, project, limit)?;
         let mut boards = self.account_boards(subject)?;
         boards.extend(shared.iter().cloned());
         Ok(Bound {
@@ -411,6 +426,73 @@ impl Boards {
             boards,
             limit,
         })
+    }
+
+    /// Make `owner`'s board for `project` (an account, an identity provider's `org-<id>`
+    /// or an organisation's `org-t-<uuid>`) with its getting-started ticket; whether it was
+    /// new. `limit` caps how many `owner` holds (hosted boards check it in the store).
+    fn make_owned(&self, owner: &str, project: &str, limit: Option<usize>) -> BridgeResult<bool> {
+        if let Some(hosted) = &self.hosted {
+            let (board, fresh) = hosted
+                .blocking(hosted.open(owner, project, true, limit))?
+                .ok_or_else(|| BridgeError::new("board_store", "created board was not returned"))?;
+            let (title, steps) = self.site.get().welcome(&self.public_url);
+            board.welcome_if_new(&Actor::agent("devagotchi"), &title, &steps)?;
+            self.open
+                .lock()
+                .expect("boards lock")
+                .entry(format!("{owner}/{project}"))
+                .or_insert(board);
+            return Ok(fresh);
+        }
+        let Some(accounts) = &self.accounts else {
+            return Err(BridgeError::new(
+                "not_offered",
+                "this hub does not host account boards; its boards are the ones its operator configured",
+            ));
+        };
+        let file = Self::account_file(accounts, owner, project);
+        if file.is_file() {
+            return Ok(false);
+        }
+        let dir = accounts.dir.join(owner);
+        std::fs::create_dir_all(&dir)
+            .map_err(|e| BridgeError::new("board_io", format!("{}: {e}", dir.display())))?;
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let _ = std::fs::set_permissions(&accounts.dir, std::fs::Permissions::from_mode(0o700));
+            let _ = std::fs::set_permissions(&dir, std::fs::Permissions::from_mode(0o700));
+        }
+        let board = Board::open(&file, project)?.reporting_to(self.activity.clone());
+        // A new board starts with the getting-started steps (B12).
+        let (title, steps) = self.site.get().welcome(&self.public_url);
+        if let Err(error) = board.welcome_if_new(&Actor::agent("devagotchi"), &title, &steps) {
+            eprintln!(
+                "devagotchi hub: board {project}: getting-started ticket: {}",
+                error.message
+            );
+        }
+        self.open
+            .lock()
+            .expect("boards lock")
+            .insert(format!("{owner}/{project}"), Arc::new(board));
+        Ok(true)
+    }
+
+    /// Make (or find) an organisation's board for `project`: no free limit, since an
+    /// organisation's plan is its own (`crate::orgs`). Whether it was new.
+    pub(crate) fn make_for_org(&self, owner: &str, project: &str) -> BridgeResult<bool> {
+        if !valid_name(project) {
+            return Err(BridgeError::new(
+                "invalid",
+                format!("project {project:?} is not [a-z0-9][a-z0-9-]{{0,62}}"),
+            ));
+        }
+        if self.open_account(owner, project)?.is_some() {
+            return Ok(false);
+        }
+        self.make_owned(owner, project, None)
     }
 
     /// The board named `project`, opened if this is its first use. A directory that was
@@ -429,7 +511,7 @@ impl Boards {
         if let Some(hosted) = &self.hosted {
             drop(open);
             let (board, _) = hosted
-                .blocking(hosted.open("@shared", project, true, None))?
+                .blocking(hosted.open(SHARED_OWNER, project, true, None))?
                 .ok_or_else(|| {
                     BridgeError::new("board_store", "configured board was not returned")
                 })?;
@@ -1086,33 +1168,44 @@ impl Hub {
         }
     }
 
-    /// The board `project` names for this account: its own first, then a shared one by
-    /// grant. An account board and a shared board never share a name (`bind` refuses).
-    /// The one resolver: the board tools and the web pages (`/approvals`, the app) both
-    /// open boards through it.
-    pub(crate) fn board_for(
+    /// The board `project` names for this account and what the account is on it: its own
+    /// board first, then an organisation's project (`<slug>/<project>`), then a shared one by
+    /// grant or by a role the store holds. An account board and a shared board never share
+    /// a name (`bind` refuses). The one resolver: the board tools, the web pages
+    /// (`/approvals`, the app), the issue routes and the organisations API all open boards
+    /// through it, and it reads roles from the store on every call, so a change of role
+    /// holds from the caller's next call.
+    pub(crate) fn board_access(
         &self,
         subject: &Subject,
         project: &str,
-    ) -> BridgeResult<(Arc<Board>, Kind)> {
+    ) -> BridgeResult<(Arc<Board>, Kind, Role)> {
+        if let Some((slug, name)) = project.split_once('/') {
+            return self.workspace_board(subject, slug, name);
+        }
         if let Some(board) = self
             .boards
             .open_account(&Boards::owner_of(subject), project)?
         {
-            let kind = if subject.org.is_some() {
-                Kind::Org
+            return Ok(if subject.org.is_some() {
+                (board, Kind::Org, Role::Admin)
             } else {
-                Kind::Account
-            };
-            return Ok((board, kind));
+                (board, Kind::Account, Role::Owner)
+            });
         }
-        let granted = self
-            .config
-            .boards_for(&subject.id)
-            .iter()
-            .any(|b| b.project == project);
-        if !granted {
-            return Err(if self.config.board(project).is_none() {
+        let configured = self.config.board(project).is_some();
+        let granted = self.config_role(&subject.id, project);
+        let stored = if configured {
+            self.shared_role(&subject.id, project)?
+        } else {
+            None
+        };
+        let role = match (granted, stored) {
+            (Some(a), Some(b)) => Some(a.max(b)),
+            (a, b) => a.or(b),
+        };
+        let Some(role) = role else {
+            return Err(if !configured {
                 BridgeError::new(
                     "unknown_board",
                     if self.boards.hosts_accounts() {
@@ -1129,39 +1222,206 @@ impl Hub {
                     format!("{} holds no grant for board {project:?}", subject.id),
                 )
             });
+        };
+        Ok((self.boards.open(project)?, Kind::Shared, role))
+    }
+
+    /// `board_access` without the role, for callers that only open the board.
+    pub(crate) fn board_for(
+        &self,
+        subject: &Subject,
+        project: &str,
+    ) -> BridgeResult<(Arc<Board>, Kind)> {
+        self.board_access(subject, project)
+            .map(|(board, kind, _)| (board, kind))
+    }
+
+    /// What the hub config makes `subject` on the configured board `project`: its owner
+    /// owns every board; a grant marked human is an admin there, any other grant an agent.
+    fn config_role(&self, subject: &str, project: &str) -> Option<Role> {
+        if self.config.is_owner(subject) {
+            return self.config.board(project).map(|_| Role::Owner);
         }
-        Ok((self.boards.open(project)?, Kind::Shared))
+        let granted = self
+            .config
+            .boards_for(subject)
+            .iter()
+            .any(|b| b.project == project);
+        granted.then(|| {
+            if self.config.is_human(subject) {
+                Role::Admin
+            } else {
+                Role::Agent
+            }
+        })
+    }
+
+    /// Where a configured board keeps the members the store gives it: the home tenant,
+    /// under the owner every configured board has (`@shared`).
+    fn shared_ref(&self, project: &str) -> BridgeResult<Option<crate::orgs::ProjectRef>> {
+        let Some(orgs) = self.boards.orgs() else {
+            return Ok(None);
+        };
+        Ok(self
+            .boards
+            .block(orgs.home_tenant())?
+            .map(|tenant| crate::orgs::ProjectRef {
+                tenant,
+                owner: SHARED_OWNER.to_string(),
+                project: project.to_string(),
+            }))
+    }
+
+    /// `subject`'s role on the configured board `project` from the store, if any.
+    fn shared_role(&self, subject: &str, project: &str) -> BridgeResult<Option<Role>> {
+        let (Some(orgs), Some(at)) = (self.boards.orgs(), self.shared_ref(project)?) else {
+            return Ok(None);
+        };
+        self.boards.block(orgs.project_role(&at, subject))
+    }
+
+    /// An organisation's project, `<slug>/<name>`, and the caller's role on it. A caller
+    /// who is not in the organisation learns no more than that there is no such board.
+    fn workspace_board(
+        &self,
+        subject: &Subject,
+        slug: &str,
+        name: &str,
+    ) -> BridgeResult<(Arc<Board>, Kind, Role)> {
+        let unknown = || {
+            BridgeError::new(
+                "unknown_board",
+                format!("no board {slug}/{name} that you can reach on this hub"),
+            )
+        };
+        let (Some(orgs), true) = (self.boards.orgs(), valid_name(name)) else {
+            return Err(unknown());
+        };
+        let org = self.boards.block(orgs.by_slug(slug))?.ok_or_else(unknown)?;
+        let at = crate::orgs::ProjectRef {
+            tenant: org.id.clone(),
+            owner: crate::orgs::owner_of(&org.id),
+            project: name.to_string(),
+        };
+        let Some(role) = self.boards.block(orgs.project_role(&at, &subject.id))? else {
+            let member = self
+                .boards
+                .block(orgs.role_in(&org, &subject.id))?
+                .is_some();
+            return Err(if member {
+                BridgeError::new(
+                    "not_granted",
+                    format!("{} holds no role on {slug}/{name}", subject.id),
+                )
+            } else {
+                unknown()
+            });
+        };
+        let board = self
+            .boards
+            .open_account(&at.owner, name)?
+            .ok_or_else(unknown)?;
+        Ok((board, Kind::Workspace, role))
+    }
+
+    /// Where the store keeps who works `project`: an organisation's project, or a
+    /// configured board. None for an account's own board, which is its account's alone.
+    pub(crate) fn project_ref(
+        &self,
+        project: &str,
+    ) -> BridgeResult<Option<crate::orgs::ProjectRef>> {
+        let Some(orgs) = self.boards.orgs() else {
+            return Ok(None);
+        };
+        if let Some((slug, name)) = project.split_once('/') {
+            return Ok(self
+                .boards
+                .block(orgs.by_slug(slug))?
+                .map(|org| crate::orgs::ProjectRef {
+                    owner: crate::orgs::owner_of(&org.id),
+                    tenant: org.id,
+                    project: name.to_string(),
+                }));
+        }
+        if self.config.board(project).is_some() {
+            return self.shared_ref(project);
+        }
+        Ok(None)
     }
 
     /// The boards `subject` reaches, by project, as `whoami` lists them: the account's own
-    /// (or its org's) first, then the shared ones it holds a grant for.
+    /// (or its org's) first, then the shared ones it holds a grant or a stored role for,
+    /// then its organisations' projects and those it was added to, as `<slug>/<project>`.
     pub(crate) fn board_names(&self, subject: &Subject) -> BridgeResult<Vec<String>> {
         let mut names = self.boards.account_boards(&Boards::owner_of(subject))?;
+        let add = |names: &mut Vec<String>, name: String| {
+            if !names.contains(&name) {
+                names.push(name);
+            }
+        };
         for entry in self.config.boards_for(&subject.id) {
-            if !names.contains(&entry.project) {
-                names.push(entry.project.clone());
+            add(&mut names, entry.project.clone());
+        }
+        let Some(orgs) = self.boards.orgs() else {
+            return Ok(names);
+        };
+        let given = self.boards.block(orgs.projects_of(&subject.id))?;
+        let home = self.boards.block(orgs.home_tenant())?;
+        for (at, _) in &given {
+            if Some(&at.tenant) == home.as_ref()
+                && at.owner == SHARED_OWNER
+                && self.config.board(&at.project).is_some()
+            {
+                add(&mut names, at.project.clone());
+            }
+        }
+        for (org, _) in self.boards.block(orgs.of_subject(&subject.id))? {
+            let projects = self
+                .boards
+                .account_boards(&crate::orgs::owner_of(&org.id))?;
+            for (project, _) in self
+                .boards
+                .block(orgs.visible(&org, &projects, &subject.id))?
+            {
+                add(&mut names, format!("{}/{project}", org.slug));
+            }
+        }
+        for (at, _) in given {
+            if crate::orgs::tenant_of_owner(&at.owner) == Some(at.tenant.as_str())
+                && let Some(org) = self.boards.block(orgs.by_id(&at.tenant))?
+            {
+                add(&mut names, format!("{}/{}", org.slug, at.project));
             }
         }
         Ok(names)
     }
 
-    /// Whether `subject`, signed in to this hub's web pages as a person, decides approvals
-    /// on a board of `kind`: on its account's own board (or its org's) always; on a shared
-    /// one when the config makes it a person there (the owner, or a grant marked human).
-    /// Agents decide nothing: no board tool decides, and only a browser session reaches
-    /// here.
-    pub(crate) fn person_decides(&self, subject: &Subject, kind: Kind) -> bool {
-        match kind {
-            Kind::Account | Kind::Org => true,
-            Kind::Shared => self.config.is_human(&subject.id),
-        }
+    /// Whether a signed-in person with `role` decides approvals: a member and above. Agents
+    /// decide nothing: no board tool decides, and only a browser session reaches here.
+    pub(crate) fn person_decides(&self, role: Role) -> bool {
+        role.is_person()
     }
 
     /// Whether the signed-in `subject` is a person who approves on this hub at all: on a
-    /// hub that hosts account boards everyone is, on their own; on a hub of configured
-    /// boards only, the people the config names are.
+    /// hub that hosts account boards everyone is, on their own; elsewhere the people the
+    /// config names are, and anyone the store makes a person on an organisation or a
+    /// project.
     pub(crate) fn may_approve(&self, subject: &Subject) -> bool {
-        self.boards.hosts_accounts() || self.config.is_human(&subject.id)
+        if self.boards.hosts_accounts() || self.config.is_human(&subject.id) {
+            return true;
+        }
+        let Some(orgs) = self.boards.orgs() else {
+            return false;
+        };
+        let in_org = self
+            .boards
+            .block(orgs.of_subject(&subject.id))
+            .is_ok_and(|held| held.iter().any(|(_, role)| role.is_person()));
+        in_org
+            || self
+                .boards
+                .block(orgs.projects_of(&subject.id))
+                .is_ok_and(|held| held.iter().any(|(_, role)| role.is_person()))
     }
 
     /// The board named `project` on which the signed-in person `subject` decides
@@ -1171,8 +1431,8 @@ impl Hub {
         subject: &Subject,
         project: &str,
     ) -> BridgeResult<Arc<Board>> {
-        let (board, kind) = self.board_for(subject, project)?;
-        if !self.person_decides(subject, kind) {
+        let (board, _, role) = self.board_access(subject, project)?;
+        if !self.person_decides(role) {
             return Err(BridgeError::new(
                 "humans_only",
                 format!("{} is not a person on board {project:?}", subject.id),
@@ -1190,19 +1450,105 @@ impl Hub {
             .into_iter()
             .filter_map(|project| match self.approval_board(subject, &project) {
                 Ok(board) => Some(Ok((project, board))),
-                Err(error) if error.code == "humans_only" => None,
+                Err(error) if matches!(error.code.as_str(), "humans_only" | "not_granted") => None,
                 Err(error) => Some(Err(error)),
             })
             .collect()
     }
 
     /// The people an approval on `project` goes to: the account that owns the board on
-    /// the account's own (or org's) board, the configured people on a shared one.
+    /// the account's own (or org's) board; the configured people and the store's on a
+    /// shared one; the people of an organisation's project.
     fn approvers(&self, subject: &Subject, project: &str, kind: Kind) -> Vec<String> {
+        let stored = || -> Vec<String> {
+            let (Some(orgs), Ok(Some(at))) = (self.boards.orgs(), self.project_ref(project)) else {
+                return Vec::new();
+            };
+            self.boards.block(orgs.people(&at)).unwrap_or_default()
+        };
         match kind {
             Kind::Account | Kind::Org => vec![subject.id.clone()],
-            Kind::Shared => self.config.people_for_board(project),
+            Kind::Shared => {
+                let mut people = self.config.people_for_board(project);
+                for person in stored() {
+                    if !people.contains(&person) {
+                        people.push(person);
+                    }
+                }
+                people
+            }
+            Kind::Workspace => stored(),
         }
+    }
+
+    /// `board_bind` for `<slug>/<project>`: make (or find) the organisation's project. The
+    /// account must be a person in the organisation (member or above); its AI may ask for
+    /// it. A new project is visible to the whole organisation.
+    pub(crate) async fn bind_org(
+        &self,
+        subject: &Subject,
+        slug: &str,
+        name: &str,
+    ) -> BridgeResult<Bound> {
+        let Some(orgs) = self.boards.orgs().cloned() else {
+            return Err(BridgeError::new(
+                "not_offered",
+                "this hub keeps no organisations",
+            ));
+        };
+        let org = orgs.by_slug(slug).await?.ok_or_else(|| {
+            BridgeError::new(
+                "unknown_board",
+                format!("no organisation {slug:?} that you belong to on this hub"),
+            )
+        })?;
+        match orgs.role_in(&org, &subject.id).await? {
+            Some(role) if role.is_person() => {}
+            Some(role) => {
+                return Err(BridgeError::new(
+                    "not_permitted",
+                    format!(
+                        "you are {} of {slug}; a member or above makes its projects",
+                        role.as_str()
+                    ),
+                ));
+            }
+            None => {
+                return Err(BridgeError::new(
+                    "unknown_board",
+                    format!("no organisation {slug:?} that you belong to on this hub"),
+                ));
+            }
+        }
+        let owner = crate::orgs::owner_of(&org.id);
+        let boards = self.boards.clone();
+        let project = name.to_string();
+        let created = tokio::task::spawn_blocking(move || boards.make_for_org(&owner, &project))
+            .await
+            .unwrap_or_else(|join| {
+                Err(BridgeError::new(
+                    "board_store",
+                    format!("board call did not complete: {join}"),
+                ))
+            })?;
+        orgs.register_project(&org, &subject.id, name, crate::orgs::Visibility::Org)
+            .await?;
+        let hub = self.clone();
+        let who = subject.clone();
+        let boards = tokio::task::spawn_blocking(move || hub.board_names(&who))
+            .await
+            .unwrap_or_else(|join| {
+                Err(BridgeError::new(
+                    "board_store",
+                    format!("board call did not complete: {join}"),
+                ))
+            })?;
+        Ok(Bound {
+            project: format!("{slug}/{name}"),
+            created,
+            boards,
+            limit: None,
+        })
     }
 
     /// The seat the caller named (`X-Devagotchi-Seat`), checked like any board name.
@@ -1238,6 +1584,7 @@ impl Hub {
         subject: &Subject,
         seat: Option<&str>,
         kind: Kind,
+        role: Role,
     ) -> (String, bool) {
         // An AI the hub connected itself (`via: hub`) is never the person: without a seat
         // of its own it works as the account's "ai" seat.
@@ -1247,9 +1594,8 @@ impl Hub {
         };
         match (seat, kind) {
             (Some(seat), Kind::Account) => (seat.to_string(), false),
-            (Some(seat), Kind::Org | Kind::Shared) => (format!("{}/{seat}", subject.id), false),
-            (None, Kind::Account | Kind::Org) => (subject.id.clone(), true),
-            (None, Kind::Shared) => (subject.id.clone(), self.config.is_human(&subject.id)),
+            (Some(seat), _) => (format!("{}/{seat}", subject.id), false),
+            (None, _) => (subject.id.clone(), role.is_person()),
         }
     }
 
@@ -1286,15 +1632,24 @@ impl Hub {
     {
         let subject = self.board_subject(context)?;
         let seat = self.seat(context)?;
-        let result = match self.board_for(&subject, project) {
-            Ok((_, kind)) if required_kind.is_some_and(|required| kind != required) => {
+        let result = match self.board_access(&subject, project) {
+            Ok((_, kind, _)) if required_kind.is_some_and(|required| kind != required) => {
                 Err(BridgeError::new(
                     "not_granted",
                     "issue repository belongs to the configured shared board",
                 ))
             }
-            Ok((board, kind)) => {
-                let (id, human) = self.actor_for(&subject, seat.as_deref(), kind);
+            Ok((_, _, role)) if !role.may_work() && !READ_ONLY_TOOLS.contains(&tool) => {
+                Err(BridgeError::new(
+                    "read_only",
+                    format!(
+                        "{} is a viewer on {project:?}: it reads this board and changes nothing",
+                        subject.id
+                    ),
+                ))
+            }
+            Ok((board, kind, role)) => {
+                let (id, human) = self.actor_for(&subject, seat.as_deref(), kind, role);
                 tokio::task::spawn_blocking(move || {
                     let actor = Actor {
                         id: &id,
@@ -2149,8 +2504,8 @@ impl Hub {
         // On the account's own board the push goes to that account's phones; never to
         // the people of a configured board that shares no more than the name.
         let subject = self.board_subject(&context)?;
-        let people = match self.board_for(&subject, &project) {
-            Ok((_, kind)) => self.approvers(&subject, &project, kind),
+        let people = match self.board_access(&subject, &project) {
+            Ok((_, kind, _)) => self.approvers(&subject, &project, kind),
             Err(_) => Vec::new(),
         };
         let phones = self.announce_approval_to(people, &project, &approval);
@@ -2266,9 +2621,8 @@ impl Hub {
         // Whose settings these are: the owning account's, and its AI's, on its own board
         // (or its org's); the people the config names on a shared one. Unknown boards are
         // refused by the call itself, as every board tool refuses them.
-        let owner = match self.board_for(&subject, &input.project) {
-            Ok((_, Kind::Account | Kind::Org)) => true,
-            Ok((_, Kind::Shared)) => self.config.is_human(&subject.id),
+        let owner = match self.board_access(&subject, &input.project) {
+            Ok((_, _, role)) => role.may_configure(),
             Err(_) => true,
         };
         let patch = super::ProjectSettings {
@@ -2311,6 +2665,25 @@ impl Hub {
         context: RequestContext<RoleServer>,
     ) -> BoardOut<Bound> {
         let subject = self.board_subject(&context)?;
+        if let Some((slug, name)) = input.project.split_once('/') {
+            let result = self.bind_org(&subject, slug, name).await;
+            let outcome = match &result {
+                Ok(bound) if bound.created => "created".to_string(),
+                Ok(_) => "ok".to_string(),
+                Err(error) => error.code.clone(),
+            };
+            if let Err(error) = self.audit.record(&AuditEntry {
+                subject: &subject.id,
+                via: subject.via,
+                tool: "board_bind",
+                broker: &input.project,
+                operation_id: "",
+                outcome: &outcome,
+            }) {
+                return Err(refuse(error, None));
+            }
+            return result.map(Json).map_err(|error| refuse(error, None));
+        }
         let shared: Vec<String> = self
             .config
             .boards_for(&subject.id)

@@ -52,6 +52,7 @@ mod offers;
 mod operator;
 #[cfg(test)]
 mod operator_tests;
+mod orgs;
 mod pages;
 #[cfg(test)]
 mod passkey_tests;
@@ -91,6 +92,23 @@ pub(crate) use landing::render as landing_for;
 pub use passkeys::HubSignIn;
 pub use providers::Providers;
 pub use routes::router;
+
+/// The person signed in on this browser, for routes outside the web pages (`orgs::api`).
+pub(crate) async fn session_subject(
+    state: &crate::AppState,
+    headers: &axum::http::HeaderMap,
+) -> Option<crate::auth::Subject> {
+    match routes::who(state, headers).await {
+        routes::Who::Person(subject) => Some(subject),
+        _ => None,
+    }
+}
+
+/// Whether a request that changes something came from this hub's own pages, as every form
+/// here requires (`approvals::same_origin`).
+pub(crate) fn from_this_hub(headers: &axum::http::HeaderMap, public_url: &str) -> bool {
+    approvals::same_origin(headers, public_url)
+}
 
 /// Every web page's top bar says whether the browser is signed in: the account and a
 /// one-tap Sign out, or Sign in back to this page (`pages::Bar`). On a hub waiting to be

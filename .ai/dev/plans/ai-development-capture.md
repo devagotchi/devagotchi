@@ -137,6 +137,12 @@ the typed busy error with visible diagnostics, and still verifies all **41** uni
 events after reopen. Other errors and retry exhaustion remain failures; runtime lock
 timeout, consent serialization and hook error reporting are unchanged.
 
+Main subsequently absorbed increments 114–116 (organisations, ClickHouse analytics and
+organisation pages), creating a changelog-only merge conflict. GitHub did not register
+new pull-request checks while conflicted. Integrate current main without dropping any
+incoming code or changelog entry, then revalidate the combined candidate and await its
+normal CI before merge; earlier receipts are not substituted for integration checks.
+
 ## Delivery
 
 Implementation: implemented for this packet. Local validation: passed as scoped above.

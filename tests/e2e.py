@@ -36,6 +36,9 @@ parser.add_argument("--keep", action="store_true", help="keep the work directory
 # Two builds of this commit, DEVAGOTCHI_BUILD=ci-a and ci-b: machine_update takes a machine
 # from one to the other (tests/machine_update_probe.py --installer none; Linux).
 parser.add_argument("--update-builds", nargs=2, type=Path, metavar=("DIR_A", "DIR_B"))
+parser.add_argument("--clickhouse-container", default=None,
+                    help="a ClickHouse container this run may stop and start (tests/analytics_probe.py); "
+                         "the hub exports to DEVAGOTCHI_CLICKHOUSE_URL")
 parser.add_argument("--no-hub", action="store_true",
                     help="only the broker and the stdio adapter: a machine without a Postgres for the hub")
 args = parser.parse_args()
@@ -169,10 +172,13 @@ try:
     # token's subject names its org after an @.
     org_tokens = {who: f"e2e-{who}-" + os.urandom(12).hex() for who in ("alice", "bob", "carol")}
     org_of = {"alice": "e2e-acme", "bob": "e2e-acme", "carol": "e2e-other"}
+    # Two people with no grants for the hub's own organisations (tests/orgs_probe.py).
+    team_tokens = {who: f"e2e-{who}-" + os.urandom(12).hex() for who in ("ann", "ben")}
     tokens = work / "tokens.json"
     tokens.write_text(json.dumps({token: "e2e-operator",
                                   **{t: f"e2e-{who}" for who, t in board_tokens.items()},
-                                  **{t: f"e2e-{who}@{org_of[who]}" for who, t in org_tokens.items()}}))
+                                  **{t: f"e2e-{who}@{org_of[who]}" for who, t in org_tokens.items()},
+                                  **{t: f"e2e-{who}" for who, t in team_tokens.items()}}))
     if os.name != "nt":
         tokens.chmod(0o600)
     # One project's board on the hub's host, initialised the way an operator would.
@@ -208,6 +214,25 @@ try:
          *[f"{who}={t}" for who, t in board_tokens.items()],
          *[f"{who}={t}" for who, t in org_tokens.items()]],
         "board probe: three subscriptions, one board",
+    )
+    # The export of board events to ClickHouse (R1 step 9), when a ClickHouse container
+    # this run may stop and start is named (CI: Linux; the hub reads DEVAGOTCHI_CLICKHOUSE_*).
+    if args.clickhouse_container and os.environ.get("DEVAGOTCHI_CLICKHOUSE_URL"):
+        analytics_ok = run_probe(
+            [str(HERE / "analytics_probe.py"), hub_url, "--token", token, "--project", "e2e-board",
+             "--clickhouse", os.environ["DEVAGOTCHI_CLICKHOUSE_URL"],
+             "--user", os.environ.get("DEVAGOTCHI_CLICKHOUSE_USER", "devagotchi"),
+             "--database", os.environ.get("DEVAGOTCHI_CLICKHOUSE_DATABASE", "devagotchi"),
+             "--container", args.clickhouse_container],
+            "analytics probe: ClickHouse down and back, every event once", 400,
+        )
+    else:
+        print("--- analytics probe: skipped (needs --clickhouse-container and DEVAGOTCHI_CLICKHOUSE_URL)", flush=True)
+        analytics_ok = True
+    orgs_ok = run_probe(
+        [str(HERE / "orgs_probe.py"), hub_url, "--shared", "e2e-board",
+         "--tokens", f"owner={team_tokens['ann']}", f"member={team_tokens['ben']}", f"operator={token}"],
+        "orgs probe: an organisation, its roles, and a change that holds from the next call",
     )
 
     # The machine link: the same broker, reached the way gus or dabo would reach the hub.
@@ -270,7 +295,7 @@ try:
     else:
         print("--- promote-hub dry-run: skipped on Windows (a Linux deploy script)", flush=True)
         promote_ok = True
-    ok = adapter_ok and hub_ok and board_ok and link_ok and update_ok and nomen_ok and web_ok and oauth_ok and promote_ok
+    ok = adapter_ok and hub_ok and board_ok and orgs_ok and analytics_ok and link_ok and update_ok and nomen_ok and web_ok and oauth_ok and promote_ok
 except SkipRest:
     pass
 finally:

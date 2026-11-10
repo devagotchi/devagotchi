@@ -28,6 +28,18 @@ pub(crate) struct HostedBoard {
 
 type DbResult<T> = std::result::Result<T, Failed>;
 
+impl HostedBoard {
+    /// The tenant whose rows this board's are.
+    pub(crate) fn tenant(&self) -> &str {
+        &self.tenant
+    }
+
+    /// The board's id in its tenant: what its events carry (`board_id`).
+    pub(crate) fn board_id(&self) -> &str {
+        &self.project
+    }
+}
+
 fn decode<T: DeserializeOwned>(text: &str) -> BridgeResult<T> {
     serde_json::from_str(text).map_err(|error| {
         fail(

@@ -197,7 +197,7 @@ Inspected in this working copy, not inferred from old planning status:
 | Connector | `connect`/`setup` register Claude Code, Codex and Claude Desktop and probe tools | Integrate project lifecycle setup, capability/version checks and real client execution |
 | Existing hook pack | Board start/heartbeat/stop POSIX scripts and printed client snippets | Native Windows path, honest errors, issue context, actual installation, client-specific validation, durable stop/handoff behavior |
 | Inspector/hub UI | Native activity/workspace/connection views; hub board/ticket pages | Issue-source links, collaboration/evidence/finalization health, actionable connector errors |
-| Deployment | Compose (hub, Postgres, Caddy), install/update/backup scripts, `install.sh --email-from` for mail, existing probes | ClickHouse, the analytics outbox exporter and the sync endpoints do not exist yet; lifecycle configuration/state survives restart, backup/restore and upgrade; a mail check and `/healthz` `mail`; no cloud prerequisite |
+| Deployment | Compose (hub, Postgres, ClickHouse, Caddy), install/update/backup scripts, `install.sh --email-from` for mail, the outbox exporter and `/healthz` `analytics` (increment 115), existing probes | The sync endpoints do not exist yet; lifecycle configuration/state survives restart, backup/restore and upgrade; a mail check and `/healthz` `mail`; no cloud prerequisite |
 | Benchmark | Proposed workload/budget documents and correctness probes | Executable harness, raw outcomes, pinned comparison artifact and honest reports |
 | Commercial service | Planned only | Private repo, license/reuse clearance, infrastructure, billing, operations and launch gates |
 
@@ -443,6 +443,16 @@ Storage/sync amendment to the packets above:
   It also owns the mail check, `/healthz` `mail` and the mail walkthrough (§3, "Mail").
 - P07 includes duplicate-safe analytical counts, backlog recovery and offline/reconnect
   correctness, not merely online latency.
+
+AgentHub product sequence (agreed with the user 2026-11-10; each ends on a CI gate and
+the next does not start on a red one):
+
+| Increment | Work | Gate |
+|---|---|---|
+| 114 | Organisations, members, teams, roles (owner, admin, member, agent, viewer) and project access in Postgres; one server-side resolver for MCP, web, issue routes and the API; invites | Concurrent owner changes and invite takes on Postgres; `tests/orgs_probe.py` in e2e: a demoted member's AI is refused on its next call on the same session |
+| 115 | ClickHouse in the compose stack; outbox exporter with stable event ids and replacing-merge deduplication; `/healthz` analytics with pending count and oldest lag; bounded backpressure; backup; first per-project queries | R1 walkthrough step 9 (stop ClickHouse, hub serves and reports degraded, restart drains, each event counted once) and the compose job |
+| 116 | The board on the web as the primary surface: projects, board, ticket with evidence and history, workflow/settings, members and organisation pages, server-rendered on the same resolver | A browser probe per page in the Chrome job |
+| 117 | One versioned signal contract (board events, audit, operations, approvals, auth, mail), exportable from ClickHouse and over a push endpoint; external consumers such as rrflow attach to it as sinks, never as a dependency | Contract tests; a sink that is down never blocks the hub and its lag is reported |
 
 P08 is not permission to implement every deferred feature speculatively. Begin with an
 inventory of the declared comparison surface, reuse existing mechanisms, and route missing
