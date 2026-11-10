@@ -32,6 +32,7 @@ Usage: devagotchi <command> [options]
                (mcp --hub [URL]: the hosted hub instead, as the account you signed in with)
   connect      point Claude Code, Codex and Claude Desktop at Devagotchi, then check it answers
   board        the project's ticket board: prime, claim, beat, note, done, handoff … (board --help)
+  ai           local operator policy, private session capture and delivery status (ai --help)
   broker       the broker with explicit paths: broker run --state-dir DIR --config FILE
   hub          the hub: hub serve | enroll | revoke | devices (hub --help)
   link         this machine's outbound link to a hub: link enroll | run (link --help)
@@ -59,6 +60,7 @@ fn run(args: Vec<OsString>) -> ExitCode {
         Some("mcp") => mcp(args),
         Some("connect") => connect(args, false),
         Some("setup") => connect(args, true),
+        Some("ai") => devagotchi_hub::ai::cli(args, paths::state_dir()),
         Some("board") => devagotchi_hub::board_cli(
             args,
             paths::config_dir().map(|d| d.join(devagotchi_hub::account::FILE_NAME)),

@@ -50,6 +50,15 @@ terminates TLS at `public_url`, which is also the RFC 9728 resource identifier. 
 either local (`socket`: the hub must run as the same OS user, since the IPC refuses
 endpoints owned by anyone else) or linked (`"link": true`: a machine that dials out to `/link`).
 
+## Local AI development capture
+
+`devagotchi ai` uses this library for provider-neutral local policy and private session
+evidence; it does not start the hub or require an initialized board/account.
+See [DG-CAPTURE-1](../../.ai/docs/capture.md) for consent, source authorization, replay,
+import/export and privacy boundaries, and [the harness matrix](../../.ai/docs/adapters.md)
+for actual Claude Code/Codex/Copilot coverage. Its local SQLite journal is not hosted
+board storage, cloud sync, or automatic training permission.
+
 ## Hosted boards
 
 `devagotchi hub serve` requires Postgres. Account/org and configured shared boards use

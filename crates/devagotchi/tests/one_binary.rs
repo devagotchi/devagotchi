@@ -246,8 +246,8 @@ fn help_names_every_command_and_each_answers_help() {
     assert!(out.status.success());
     let text = String::from_utf8_lossy(&out.stdout);
     for word in [
-        "setup", "start", "mcp", "connect", "board", "broker", "hub", "link", "login", "logout",
-        "whoami", "version",
+        "setup", "start", "mcp", "connect", "board", "ai", "broker", "hub", "link", "login",
+        "logout", "whoami", "version",
     ] {
         assert!(
             text.contains(&format!("\n  {word}")),
@@ -255,8 +255,8 @@ fn help_names_every_command_and_each_answers_help() {
         );
     }
     for command in [
-        "setup", "start", "mcp", "connect", "board", "broker", "hub", "link", "login", "logout",
-        "whoami",
+        "setup", "start", "mcp", "connect", "board", "ai", "broker", "hub", "link", "login",
+        "logout", "whoami",
     ] {
         let out = devagotchi().args([command, "--help"]).output().unwrap();
         assert!(

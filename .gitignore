@@ -9,3 +9,11 @@ __pycache__/
 
 # A compose stack's own settings (deploy/compose/.env.example is the template)
 deploy/compose/.env
+
+# AI policy overrides, conversations and evidence are private runtime state, never source.
+/.ai/runtime/
+/.ai/private/
+/.ai/exports/
+/.ai/policy.local.json
+/.claude/settings.local.json
+/.github/copilot/settings.local.json
