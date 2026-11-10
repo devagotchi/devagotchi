@@ -7,6 +7,18 @@ heading. Agents draft the fragments below; they never tag.
 
 ## Unreleased
 
+### AI development contracts and private session capture (increment 118)
+- Add canonical root instructions, provider discovery/hook adapters, PR/plan templates
+  and versioned `.ai` lifecycle, policy, capture and evaluation guidance.
+- Add `devagotchi ai` local operator controls, opt-in private journal, native lifecycle
+  capture, authorized incremental JSONL import, paged export and integrity verification.
+  Raw content requires separate informed consent; exports remain partial and are not
+  automatically eligible for training.
+- Record a researched cross-project training-data standard and the remaining curation,
+  rights, reproducibility and evaluation work; do not imply those pipelines are built.
+- Keep release mode pre-release and alpha readiness unconfirmed. Main integration does
+  not promote production or replace actual-client acceptance.
+
 ### Organisations on the hub's pages (increment 116)
 - `/orgs` lists a person's organisations and makes one; `/orgs/{org}` shows its projects
   (who sees each, its own members, its events of the last 7 days when the hub exports to
