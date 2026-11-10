@@ -84,6 +84,12 @@ download one from the release page and run
 
 ## Project status and source preview
 
+The canonical lifecycle is **alpha** ([DG-LIFECYCLE-1](.ai/docs/lifecycle.md)).
+Contributors and AI clients start at [AGENTS.md](AGENTS.md).
+The [.ai contracts](.ai/README.md) define PR plans, configurable operator autonomy,
+private opt-in session capture and explicit production promotion.
+`devagotchi ai --help` exposes the native controls; capture is off until authorized.
+
 | Surface | Current status | What its evidence establishes |
 |---|---|---|
 | Desktop broker, local stdio MCP, and inspector | Linux and Windows broker source; historical Linux verification; lifecycle, journal, and IPC tests on Linux and Windows in [CI](.github/workflows/ci.yml) | The recorded process/protocol/native UI scenarios and the CI test results; no macOS, Windows installer, or named-host certification. |

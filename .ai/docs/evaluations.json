@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "contract": "DG-CAPTURE-1",
+  "claim_policy": "Definitions are not passing receipts. Tests must measure the exact claim.",
+  "checks": [
+    {"id": "consent", "metric": "events stored before opt-in; raw payload fields stored in metadata mode", "required": "both zero"},
+    {"id": "policy", "metric": "managed merges without actual approval; advanced capabilities without acknowledgment", "required": "denied by local cooperative gate; server enforcement tested separately"},
+    {"id": "durability", "metric": "acknowledged unique events after reopen and concurrent writers", "required": "100% retained; stable append replay one effect; changed replay rejected"},
+    {"id": "adapter", "metric": "supported native fixture mappings and unsupported payload rejection", "required": "all configured event names tested; no cross-harness guessing"},
+    {"id": "coverage", "metric": "exports misrepresented as complete conversations or automatically training-eligible", "required": "zero"},
+    {"id": "evidence", "metric": "curated examples with base/task/action/observation/patch/test/review/outcome and rights records", "required": "100% before a curated release; not automatically implemented by capture"},
+    {"id": "privacy", "metric": "unreviewed secret/PII or unlicensed content in a curated dataset", "required": "zero before release; raw archive remains restricted"},
+    {"id": "leakage", "metric": "task/repository duplicates crossing training/evaluation splits", "required": "zero before published evaluation"},
+    {"id": "delivery", "metric": "reports claiming pushed/merged from only local Git facts", "required": "zero; actual remote PR/main confirmation required"}
+  ]
+}

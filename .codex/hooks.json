@@ -1,0 +1,11 @@
+{
+  "description": "DG-ADAPTER-1 Codex lifecycle translation into the opt-in DG-CAPTURE-1 local archive.",
+  "hooks": {
+    "SessionStart": [{"hooks": [{"type": "command", "command": "devagotchi ai hook codex SessionStart", "timeout": 3}]}],
+    "UserPromptSubmit": [{"hooks": [{"type": "command", "command": "devagotchi ai hook codex UserPromptSubmit", "timeout": 3}]}],
+    "PreToolUse": [{"hooks": [{"type": "command", "command": "devagotchi ai hook codex PreToolUse", "timeout": 3}]}],
+    "PostToolUse": [{"hooks": [{"type": "command", "command": "devagotchi ai hook codex PostToolUse", "timeout": 3}]}],
+    "Stop": [{"hooks": [{"type": "command", "command": "devagotchi ai hook codex Stop", "timeout": 3}]}],
+    "SessionEnd": [{"hooks": [{"type": "command", "command": "devagotchi ai hook codex SessionEnd", "timeout": 3}]}]
+  }
+}

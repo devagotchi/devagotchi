@@ -1,0 +1,13 @@
+{
+  "contract": "DG-LIFECYCLE-1",
+  "stage": "alpha",
+  "production_promotion": null,
+  "delivery_contract": "DG-DELIVERY-1",
+  "capture_contract": "DG-CAPTURE-1",
+  "policy_defaults": {
+    "mode": "managed",
+    "push": "validated",
+    "merge": "approval",
+    "capture": "off"
+  }
+}

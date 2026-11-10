@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AiCaptureEvent",
+  "description": "Private local archive input, not a hosted-board mutation or a training grant.\nRuntime validation additionally enforces bounds and policy consent.",
+  "type": "object",
+  "properties": {
+    "content": {
+      "description": "Native opaque hook/transcript payload. Requires separate content consent."
+    },
+    "event_id": {
+      "description": "Stable caller retry key within (harness, session). Changed replay is rejected.",
+      "type": "string"
+    },
+    "harness": {
+      "$ref": "#/$defs/AiHarness"
+    },
+    "issue": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "kind": {
+      "$ref": "#/$defs/AiEventKind"
+    },
+    "model": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "schema_version": {
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0
+    },
+    "session_id": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "event_id",
+    "session_id",
+    "harness",
+    "kind"
+  ],
+  "$defs": {
+    "AiEventKind": {
+      "type": "string",
+      "enum": [
+        "session_start",
+        "session_end",
+        "turn_end",
+        "user_prompt",
+        "tool_before",
+        "tool_after",
+        "error",
+        "checkpoint",
+        "transcript_record"
+      ]
+    },
+    "AiHarness": {
+      "description": "DG-CAPTURE-1. A harness identifies the adapter, not the model vendor.",
+      "type": "string",
+      "enum": [
+        "claude-code",
+        "codex",
+        "copilot",
+        "manual"
+      ]
+    }
+  }
+}

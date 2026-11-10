@@ -1,6 +1,12 @@
 # Devagotchi and WardenMesh: implementation and release plan
 
-Updated: **2026-11-09 UTC**. Status: **execution plan; incomplete work is not a product guarantee**.
+Updated: **2026-11-10 UTC**. Status: **alpha execution plan; incomplete work is not a product guarantee**.
+
+Lifecycle authority: [DG-LIFECYCLE-1](../.ai/docs/lifecycle.md), with machine state in
+[`.ai/project.json`](../.ai/project.json). Production promotion is explicit, never inferred.
+AI development/capture execution is tracked in the
+[linked task plan](../.ai/dev/plans/ai-development-capture.md); it does not replace this
+product plan or turn local session capture into hosted project transcript synchronization.
 
 Delivery decision: finish a complete self-hosted Devagotchi release first, then create and
 build the separate private commercial WardenMesh repository. The commercial repository
@@ -14,6 +20,17 @@ It does not override locked decisions in [the architecture master](product-and-p
 Changes requiring a ruling remain explicit blockers, not silently implemented alternatives.
 
 ### Current implementation receipt
+
+The repository AI-development packet implements
+[canonical instructions](../AGENTS.md), the requested `.ai` plans/docs/patterns,
+an explicit **alpha** lifecycle, thin Claude/Codex/Copilot discovery/hook adapters,
+and native `devagotchi ai` operator policy/private capture/import/export controls.
+Managed defaults permit validated branch pushes and require merge approval; advanced
+capabilities require explicit operator acknowledgment. Capture defaults off, raw content
+requires separate informed consent, and native hook metadata is never called a full chat.
+See the [packet receipt](../.ai/dev/plans/ai-development-capture.md) for validation,
+actual-client acceptance and delivery state. This is not completion of hosted project
+transcript sharing or the product's release gates.
 
 The Postgres migration foundation and native live-board cutover are implemented:
 
