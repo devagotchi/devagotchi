@@ -34,9 +34,16 @@ heading. Agents draft the fragments below; they never tag.
   on Linux (the e2e, host-install and hub Postgres jobs), the runner image's own PostgreSQL
   serves windows-2022 and windows-2025, and `ci-install-check.sh` and `.ps1` take
   `DEVAGOTCHI_HUB_JOIN_STORAGE_URL` and `DEVAGOTCHI_HUB_UPDATE_STORAGE_URL` for the second
-  and third hub they start. windows-11-arm has no PostgreSQL and runs `--no-hub`, and
+  and third hub they start (and `_ROLE_` for the Linux installer's hub role). windows-11-arm
+  has no PostgreSQL and runs `--no-hub`, and
   `ci-install-check.ps1` ends before its hub parts when the storage URL is empty. The
   browser scripts print the hub's log when it exits before it is ready.
+- `deploy/linux/install-devagotchi.sh --role hub` takes the hub's Postgres from
+  `DEVAGOTCHI_HUB_STORAGE_URL` in its environment the first time (`sudo env …`, never the
+  command line) and writes it into `hub.json` as `storage.url`; without it the installed
+  hub could no longer start. `deploy/linux/README.md` says so. The browser scripts open
+  "Use a passkey instead" before pressing the passkey button, as the sign-in page now keeps
+  it behind that summary.
 - Hosted boards: a unique violation inside a SERIALIZABLE transaction counts as a collision
   and the transaction runs again (`store.rs` `collided`). Two agents writing issue context at
   once both computed the next note `seq` from the snapshot they began with; Postgres reports

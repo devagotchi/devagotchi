@@ -291,6 +291,7 @@ def approve(page, url: str, authorize: str, sign_in: bool) -> str:
     page.goto(authorize)
     if sign_in:
         page.wait_for_url(re.compile(re.escape(url) + r"/auth/login\?return_to=%2Foauth%2Fauthorize.*"))
+        page.locator("details.ways summary").click()
         page.click("#passkey-sign-in")
         page.wait_for_url(re.compile(re.escape(url) + r"/oauth/authorize\?.*"), timeout=15_000)
     heading = page.inner_text("h1")

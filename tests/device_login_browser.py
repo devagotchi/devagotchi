@@ -150,6 +150,7 @@ def main() -> int:
             link, code = login.link(url)
             page.goto(link)
             page.wait_for_url(re.compile(re.escape(url) + r"/auth/login\?return_to=.*"))
+            page.locator("details.ways summary").click()
             page.click("#passkey-sign-in")
             page.wait_for_url(re.compile(re.escape(url) + r"/device\?code=.*"), timeout=15_000)
             text = page.inner_text("main")

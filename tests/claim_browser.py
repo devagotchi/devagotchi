@@ -179,6 +179,7 @@ def main() -> int:
             text = page.inner_text("main")
             assert f"{url}/mcp" in text and "Nobody owns" not in text, text
             page.goto(f"{url}/auth/login?return_to=/account")
+            page.locator("details.ways summary").click()
             page.click("#passkey-sign-in")
             page.wait_for_url(f"{url}/account", timeout=15_000)
             print("PASS signed out, the landing page says where AIs connect; back in with the passkey")
