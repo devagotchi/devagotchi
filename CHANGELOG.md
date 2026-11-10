@@ -7,6 +7,31 @@ heading. Agents draft the fragments below; they never tag.
 
 ## Unreleased
 
+### Organisations, members, teams and roles (increment 114)
+- An organisation is a tenant of its own in the hub's store (migration 0017, `orgs.rs`):
+  members with a role (owner, admin, member, agent, viewer), teams, per-project roles for a
+  subject or a team, project visibility (`org` or `members`) and one-time invites (7 days,
+  SHA-256 kept, never the token). Its projects are hosted boards named `<org>/<project>`;
+  `board_bind` with that name makes one for a member.
+- One resolver, `Hub::board_access`, answers every board tool, the web pages, the issue
+  routes and the new API with the caller's role, read from the store on each call: a
+  viewer's writes are refused `read_only`, an agent is never a person, a member and above
+  decides approvals, an admin configures. A configured board keeps its grants (owner:
+  owner, human grant: admin, other grant: agent) and can take more members from the store.
+- `/api/v1/orgs/…`, `/api/v1/invites/accept` and `/api/v1/projects/…/members`, for a
+  bearer token or a person's session (changes from this hub's own pages only). An AI
+  client's token or a seat is refused `people_only` on every change. Nobody grants above
+  their own role; only an owner makes an owner; the last owner stays. Every change is on
+  the organisation's `tenancy_events` chain and the audit chain.
+- Postgres: forced row-level security on every new table; `orgs_of`, `projects_of` and
+  `invite_tenant` are `SECURITY DEFINER` functions that answer ids and roles only.
+  `whoami` lists `orgs` and the organisation projects in `boards`.
+- Tests: `orgs/tests.rs` on SQLite and Postgres (roles, last owner, teams, visibility,
+  invites, the tenant chain, two owners demoting each other at once and two people taking
+  one invite at once, row-level security); `orgs_tests.rs` end to end over HTTP;
+  `tests/orgs_probe.py` in e2e against the real binary on Postgres, which proves a demoted
+  member's AI is refused on its next call on the session it already has.
+
 ### Mail check and health (increment 113)
 - `devagotchi hub check-mail --config ABS_JSON [--to ADDRESS]` (`auth.mode hub`) connects to
   `auth.email`'s mail server as `serve` would, negotiates TLS and signs in as its user,

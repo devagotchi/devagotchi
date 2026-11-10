@@ -27,6 +27,10 @@ impl Registry {
     }
 
     async fn tenant(&self, owner: &str) -> BridgeResult<String> {
+        // An organisation's boards live in the organisation's own tenant (`crate::orgs`).
+        if let Some(tenant) = crate::orgs::tenant_of_owner(owner) {
+            return Ok(tenant.to_string());
+        }
         let mut connection = self.store.read().await?;
         if let Some(tenant) = self
             .store
@@ -143,7 +147,7 @@ impl Registry {
     }
 }
 
-pub(super) fn blocking<T>(
+pub(crate) fn blocking<T>(
     runtime: &tokio::runtime::Handle,
     future: impl std::future::Future<Output = BridgeResult<T>>,
 ) -> BridgeResult<T> {

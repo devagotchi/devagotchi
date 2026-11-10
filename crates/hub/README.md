@@ -70,6 +70,54 @@ they are not another authority for a hub-bound board. The older auxiliary hub SQ
 (audit and devices) have not been migrated by this board cutover. Issue ingress no longer
 opens a prototype SQLite store.
 
+## Organisations, members and roles
+
+An organisation is a tenant of its own in the hub's store (migration 0017, `src/orgs.rs`).
+Its projects are hosted boards named `<org>/<project>` wherever a board is named: in every
+`board_*` tool, `whoami`'s `boards`, the web pages and the issue routes. Every caller is
+resolved by one function (`board::mcp::Hub::board_access`), which reads the caller's role
+from the store on each call, so a change of role holds from the caller's next call.
+
+| Role | On a project |
+|---|---|
+| `viewer` | reads the board; any write is refused `read_only` |
+| `agent` | works tickets; never a person (no force-release, no moving by hand, no approvals) |
+| `member` | a person: an agent's work, plus force-release, moving by hand, deciding approvals |
+| `admin` | a member who configures projects and manages members, teams and invites |
+| `owner` | an admin who makes and unmakes owners; an organisation keeps at least one |
+
+An organisation role applies to each of its projects whose visibility is `org` (the
+default); on a `members` project only admins and owners reach it through the organisation.
+A project's own rows give a subject or a team a role there, and the higher of the two counts.
+A configured board (`boards` in hub.json) keeps working by grant (owner: owner, a grant
+marked human: admin, any other grant: agent) and can take more members from the store.
+
+The API takes a bearer token checked as `/mcp` checks it, or a person's browser session
+whose changes must come from this hub's own pages. A token the hub issued to an AI client,
+or a call with `X-Devagotchi-Seat`, is refused `people_only` on every change: people manage
+people.
+
+| Route | What it does |
+|---|---|
+| `GET /api/v1/orgs` · `POST /api/v1/orgs {org, name}` | your organisations · make one (you own it) |
+| `GET /api/v1/orgs/{org}` | members, teams and the projects you reach |
+| `PUT`/`DELETE /api/v1/orgs/{org}/members/{subject}` `{role}` | set a role · remove (a member may leave) |
+| `POST /api/v1/orgs/{org}/teams {team, name}` · `DELETE …/teams/{team}` | make · delete a team |
+| `PUT`/`DELETE /api/v1/orgs/{org}/teams/{team}/members/{subject}` | put a member on a team · take them off |
+| `POST /api/v1/orgs/{org}/projects {project, visibility?}` | make a project (a member may); `board_bind` with `<org>/<project>` does the same |
+| `PUT /api/v1/orgs/{org}/projects/{project} {visibility}` | `org` or `members` |
+| `PUT`/`DELETE /api/v1/orgs/{org}/projects/{project}/members/{kind}/{id}` `{role}` | a project's own members; `kind` is `subject` or `team` |
+| `PUT`/`DELETE /api/v1/projects/{project}/members/{kind}/{id}` · `GET …/members` | the same on a configured board |
+| `POST`/`GET /api/v1/orgs/{org}/invites` `{role, note?}` · `DELETE …/invites/{id}` | a one-time invite (7 days; the token is shown once, only its SHA-256 is kept) · list · withdraw |
+| `POST /api/v1/invites/accept {token}` | take an invite |
+
+Nobody grants a role above their own; only an owner makes or unmakes an owner; the last
+owner stays (`last_owner`). Every change lands on the organisation's own hash chain
+(`tenancy_events`) and on the hub's audit chain. On Postgres every organisation row is held
+to its tenant by forced row-level security; the three questions that cross tenants (which
+organisations a subject is in, which projects it was given, which tenant an invite belongs
+to) are `SECURITY DEFINER` functions that answer ids and roles only.
+
 ## Issue context
 
 Configure `github.repositories` with explicit `{repository_id, repository, project}`
