@@ -111,6 +111,16 @@ people.
 | `POST`/`GET /api/v1/orgs/{org}/invites` `{role, note?}` · `DELETE …/invites/{id}` | a one-time invite (7 days; the token is shown once, only its SHA-256 is kept) · list · withdraw |
 | `POST /api/v1/invites/accept {token}` | take an invite |
 
+The same is on the hub's pages for a person signed in (`src/web/orgs.rs`): `/orgs` lists
+their organisations and makes one; `/orgs/{org}` shows its projects (who sees each, its own
+members, and its events of the last 7 days when the hub exports to ClickHouse), members,
+teams and invites, with a form for each change an admin may make; a new invite's link is
+shown on that one answer (`no-store`), its token after `#`. `/invite` takes the link: the
+token stays in the browser (`/assets/invite.js` keeps it in the tab's session storage
+through signing in first) and joins with one press. Every form posts from this hub's pages
+only. The ticket page's actions (`/app/tickets/…`) are a person's: a viewer or an agent's
+role there is refused and told why.
+
 Nobody grants a role above their own; only an owner makes or unmakes an owner; the last
 owner stays (`last_owner`). Every change lands on the organisation's own hash chain
 (`tenancy_events`) and on the hub's audit chain. On Postgres every organisation row is held

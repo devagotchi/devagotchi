@@ -255,3 +255,187 @@ async fn a_change_of_role_holds_from_the_ais_next_call() {
         run(Some(&url)).await;
     }
 }
+
+/// The organisation pages in a browser's place (`web/orgs.rs`): forms from this hub only, an
+/// invite shown once and taken on `/invite`, the organisation's board in the app, and a
+/// person made viewer refused on the ticket page's actions.
+async fn pages(store: Option<&str>) {
+    let hub = hosted_with(store, |_, _| json!({})).await;
+    let alice = hub.first_connect("Claude").await;
+    let mut bob = hub.first_connect("Codex").await;
+    let bob_id = subject_of(&hub, &mut bob).await;
+    let form = |path: &str, cookie: &str, fields: &[(&str, &str)]| {
+        hub.http
+            .post(format!("{}{path}", hub.url))
+            .header(axum::http::header::COOKIE, cookie)
+            .header(axum::http::header::ORIGIN, &hub.url)
+            .form(fields)
+            .send()
+    };
+    let location = |response: &reqwest::Response| {
+        response.headers()[axum::http::header::LOCATION]
+            .to_str()
+            .unwrap()
+            .to_string()
+    };
+
+    let (status, list) = Hosted::text(hub.get("/orgs", Some(&alice.cookie)).await).await;
+    assert_eq!(status, 200);
+    assert!(list.contains("id=\"new-org\""), "{list}");
+    let made = form("/orgs", &alice.cookie, &[("org", "acme"), ("name", "Acme")])
+        .await
+        .unwrap();
+    assert_eq!(made.status(), 303);
+    assert_eq!(location(&made), "/orgs/acme?done=1");
+    let cross = hub
+        .http
+        .post(format!("{}/orgs", hub.url))
+        .header(axum::http::header::COOKIE, &alice.cookie)
+        .header(axum::http::header::ORIGIN, "https://elsewhere.example")
+        .form(&[("org", "evil"), ("name", "Evil")])
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(cross.status(), 403);
+
+    let made = form(
+        "/orgs/acme/projects",
+        &alice.cookie,
+        &[("project", "site"), ("visibility", "org")],
+    )
+    .await
+    .unwrap();
+    assert_eq!(location(&made), "/orgs/acme?done=1");
+    let (status, page) = Hosted::text(hub.get("/orgs/acme", Some(&alice.cookie)).await).await;
+    assert_eq!(status, 200);
+    for part in [
+        "id=\"projects\"",
+        "id=\"members\"",
+        "id=\"teams\"",
+        "id=\"invites\"",
+        "/app/boards/acme%2Fsite",
+    ] {
+        assert!(page.contains(part), "{part}: {page}");
+    }
+
+    // The invite: its link shown on the one answer, never in a URL the browser keeps.
+    let invited = form(
+        "/orgs/acme/invites",
+        &alice.cookie,
+        &[("role", "member"), ("note", "Bob")],
+    )
+    .await
+    .unwrap();
+    assert_eq!(invited.status(), 200);
+    assert_eq!(
+        invited.headers()[axum::http::header::CACHE_CONTROL],
+        "no-store"
+    );
+    let shown = invited.text().await.unwrap();
+    let link = shown
+        .split("id=\"invite-link\" value=\"")
+        .nth(1)
+        .and_then(|rest| rest.split('"').next())
+        .expect("the invite link")
+        .to_string();
+    let token = link.split_once('#').unwrap().1.to_string();
+    let (status, join) = Hosted::text(hub.get("/invite", Some(&bob.cookie)).await).await;
+    assert_eq!(status, 200);
+    assert!(join.contains("id=\"invite-form\""), "{join}");
+    let (status, signed_out) = Hosted::text(hub.get("/invite", None).await).await;
+    assert_eq!(status, 200);
+    assert!(signed_out.contains("id=\"invite-sign-in\""), "{signed_out}");
+    let joined = form("/invite", &bob.cookie, &[("token", &token)])
+        .await
+        .unwrap();
+    assert_eq!(location(&joined), "/orgs/acme?done=1");
+    let (status, again) = Hosted::text(
+        form("/invite", &bob.cookie, &[("token", &token)])
+            .await
+            .unwrap(),
+    )
+    .await;
+    assert_eq!(status, 409, "{again}");
+
+    // Bob's board in the app, and its ticket page; then made viewer, he acts on nothing.
+    let (status, board) =
+        Hosted::text(hub.get("/app/boards/acme%2Fsite", Some(&bob.cookie)).await).await;
+    assert_eq!(status, 200, "{board}");
+    let made = hub
+        .call(
+            &mut bob,
+            "board_create",
+            json!({ "project": "acme/site", "title": "Landing page" }),
+        )
+        .await;
+    let ticket = made["structuredContent"]["id"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    let here = format!("/app/tickets/acme%2Fsite/{ticket}");
+    let (status, _) = Hosted::text(hub.get(&here, Some(&bob.cookie)).await).await;
+    assert_eq!(status, 200);
+    let commented = form(
+        &format!("{here}/comment"),
+        &bob.cookie,
+        &[("version", "1"), ("body", "on it")],
+    )
+    .await
+    .unwrap();
+    assert!(
+        location(&commented).contains("done=comment"),
+        "{}",
+        location(&commented)
+    );
+    let demoted = form(
+        "/orgs/acme/members",
+        &alice.cookie,
+        &[("subject", &bob_id), ("role", "viewer")],
+    )
+    .await
+    .unwrap();
+    assert_eq!(location(&demoted), "/orgs/acme?done=1");
+    let refused = form(
+        &format!("{here}/comment"),
+        &bob.cookie,
+        &[("version", "2"), ("body", "not now")],
+    )
+    .await
+    .unwrap();
+    assert!(
+        location(&refused).contains("done=no"),
+        "{}",
+        location(&refused)
+    );
+    assert!(
+        location(&refused).contains("viewer"),
+        "{}",
+        location(&refused)
+    );
+    let (status, as_viewer) = Hosted::text(hub.get("/orgs/acme", Some(&bob.cookie)).await).await;
+    assert_eq!(status, 200);
+    assert!(
+        !as_viewer.contains("id=\"invites\""),
+        "viewers see no invites"
+    );
+
+    // Bob leaves: back to his list, and the organisation is no longer his to open.
+    let left = form(
+        "/orgs/acme/members/remove",
+        &bob.cookie,
+        &[("subject", &bob_id)],
+    )
+    .await
+    .unwrap();
+    assert_eq!(location(&left), "/orgs?done=1");
+    let (status, _) = Hosted::text(hub.get("/orgs/acme", Some(&bob.cookie)).await).await;
+    assert_eq!(status, 404);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn the_organisation_pages_do_what_the_api_does_from_this_hubs_own_forms() {
+    pages(None).await;
+    if let Some(url) = crate::store::testing::empty_postgres().await {
+        pages(Some(&url)).await;
+    }
+}
