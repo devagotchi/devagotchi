@@ -1,9 +1,10 @@
 //! Approving ahead of time end to end over HTTP, the whole router as it serves
 //! (`board::approval`, `web/approvals.rs`, `approval_request`): a person's AI asks to
-//! restart a machine and the person taps "Approve, and allow"; the AI's next restart there
-//! is approved the moment it asks and no phone is notified; the approvals page lists it with
-//! Stop, and once stopped the next one waits for the person again. Only the person's page
-//! changes any of it. On SQLite, and on Postgres when the test server is set (CI).
+//! restart a machine and the person taps "Approve, and allow"; the same command there is
+//! approved the moment it is asked and no phone is notified; another command under the same
+//! label waits for the person; the approvals page lists it with Stop, and once stopped the
+//! next one waits for the person again. Only the person's page changes any of it. On SQLite,
+//! and on Postgres when the test server is set (CI).
 
 use serde_json::{Value, json};
 
@@ -23,13 +24,17 @@ fn form(
 }
 
 async fn restart(hub: &Hosted, ai: &mut Person) -> Value {
+    labelled_restart(hub, ai, "systemctl restart api").await
+}
+
+async fn labelled_restart(hub: &Hosted, ai: &mut Person, what: &str) -> Value {
     let answer = hub
         .call(
             ai,
             "approval_request",
             json!({
                 "project": "site", "title": "Restart the api on dabo",
-                "what": "systemctl restart api", "why": "a new build", "undo": "start the old build",
+                "what": what, "why": "a new build", "undo": "start the old build",
                 "kind": "restart", "target": "dabo"
             }),
         )
@@ -53,7 +58,7 @@ async fn run(store: Option<&str>) {
     let (status, page) = Hosted::text(hub.get("/approvals", Some(&alice.cookie)).await).await;
     assert_eq!(status, 200);
     assert!(
-        page.contains("Approve, and allow restart on dabo for 30 days"),
+        page.contains("Approve, and allow this exact restart on dabo for 30 days"),
         "{page}"
     );
 
@@ -83,12 +88,18 @@ async fn run(store: Option<&str>) {
     let standing = second["standing"].clone();
     assert_eq!(standing["kind"], "restart");
     assert_eq!(standing["target"], "dabo");
+    assert_eq!(standing["what"], "systemctl restart api");
     assert!(
         second["decided_by"]
             .as_str()
             .unwrap()
             .starts_with("standing:st-")
     );
+
+    // The same label on another command is not what was approved: it waits for the person.
+    let other = labelled_restart(&hub, &mut alice, "rm -rf /var/lib/everything").await;
+    assert_eq!(other["status"], "pending", "{other}");
+    assert!(other.get("standing").is_none(), "{other}");
 
     // The page lists it with Stop; stopping it makes the next one wait for a person again.
     let (_, page) = Hosted::text(hub.get("/approvals", Some(&alice.cookie)).await).await;
@@ -113,7 +124,12 @@ async fn run(store: Option<&str>) {
         .post(format!("{}/approvals/standing", hub.url))
         .header(axum::http::header::COOKIE, &alice.cookie)
         .header(axum::http::header::ORIGIN, "https://elsewhere.example")
-        .form(&[("project", "site"), ("kind", "restart"), ("target", "dabo")])
+        .form(&[
+            ("project", "site"),
+            ("kind", "restart"),
+            ("target", "dabo"),
+            ("what", "systemctl restart api"),
+        ])
         .send()
         .await
         .unwrap();

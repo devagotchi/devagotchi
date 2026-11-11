@@ -1107,8 +1107,8 @@ pub struct ApprovalRequestIn {
     #[serde(default)]
     pub undo: Option<String>,
     /// The kind of step, in a word or two with dashes: `restart`, `deploy`, `edit-file`,
-    /// `install-package`. Name it every time: a person can approve a kind ahead of time,
-    /// and then a request of it is approved at once.
+    /// `install-package`. Name it every time: a person can approve one exact step ahead of
+    /// time, and then the same kind, target and `what` is approved at once.
     #[serde(default)]
     pub kind: Option<String>,
     /// What it is aimed at, when that matters: the machine or the service (`dabo`, `api`).
@@ -2504,7 +2504,7 @@ impl Hub {
 
     #[tool(
         name = "approval_request",
-        description = "Ask the user to approve one step before you take it: what will run or change, why, how to undo it, and the kind of step (kind: restart, deploy, edit-file …) with its target when that matters. When the user approved that kind ahead of time it comes back approved at once with `standing`: take the step. Otherwise it reaches them where they approve (their phone) and returns at once with the approval's id, status pending and phones (how many phones were notified; if 0, give the user the url yourself); then call approval_wait with that id and act only when it says approved. A denial means do not take the step.",
+        description = "Ask the user to approve one step before you take it: what will run or change, why, how to undo it, and the kind of step (kind: restart, deploy, edit-file …) with its target when that matters. When the user approved exactly that step ahead of time (the same kind, target and what) it comes back approved at once with `standing`: take the step, and only that step. Anything else waits for them. Otherwise it reaches them where they approve (their phone) and returns at once with the approval's id, status pending and phones (how many phones were notified; if 0, give the user the url yourself); then call approval_wait with that id and act only when it says approved. A denial means do not take the step.",
         title = "Ask the user to approve a step",
         annotations(
             title = "Ask the user to approve a step",

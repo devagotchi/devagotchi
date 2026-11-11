@@ -8,12 +8,12 @@
 //! only, so the whole loop is checked with one tap and no AI.
 //!
 //! Approving ahead of time (`board::approval`, standing authorizations): a request that
-//! names its kind gets a third button, approve it and allow that kind (on that target) for
-//! as long as the person set (`crate::preferences`, 30 days until they say). Each board's live
-//! ones are listed with a button to end each at once, and a kind the person kept approving and
-//! never denied is offered with one button, unless they turned offers off or set that kind to
-//! always ask them. Every one of these is a person's act from this hub's own page, as
-//! deciding is.
+//! names its kind gets a third button, approve it and allow this exact step (kind, target and
+//! command) for as long as the person set (`crate::preferences`, 30 days until they say). Each
+//! board's live ones are listed with their command and a button to end each at once, and a
+//! step the person kept approving and never denied is offered with one button, unless they
+//! turned offers off or set that kind to always ask them. Every one of these is a person's
+//! act from this hub's own page, as deciding is.
 
 use axum::{
     Form,
@@ -31,7 +31,7 @@ use crate::{
     AppState,
     board::{
         Actor,
-        approval::{ApprovalStatus, MAX_STANDING_DAYS, Standing, Suggestion, Verdict},
+        approval::{self, ApprovalStatus, MAX_STANDING_DAYS, Standing, Suggestion, Verdict},
     },
     preferences::Preferences,
 };
@@ -55,7 +55,7 @@ pub struct Decide {
     verdict: Verdict,
     #[serde(default)]
     note: String,
-    /// "Approve and allow": approve this one, and its kind ahead of time for this many days.
+    /// "Approve and allow": approve this one, and this exact step ahead of time for this many days.
     #[serde(default)]
     allow_days: Option<u32>,
 }
@@ -66,6 +66,7 @@ pub struct Grant {
     kind: String,
     #[serde(default)]
     target: Option<String>,
+    what: String,
 }
 
 #[derive(Deserialize)]
@@ -248,6 +249,8 @@ pub async fn grant(
         );
     }
     let days = preferences.allow_days;
+    // A browser sends a multi-line field with CRLF; the command was stored with LF.
+    let what = form.what.replace("\r\n", "\n");
     let id = subject.id.clone();
     let result = tokio::task::spawn_blocking(move || {
         board.grant_standing(
@@ -258,6 +261,7 @@ pub async fn grant(
             },
             &form.kind,
             form.target.as_deref().filter(|t| !t.is_empty()),
+            &what,
             days,
         )
     })
@@ -444,15 +448,19 @@ pub async fn decide(
         };
         let decided =
             board.decide_approval(&actor, &form.id, form.version, form.verdict, &form.note)?;
-        // "Approve and allow": the kind this one named, ahead of time from now on.
-        if let (Some(days), Verdict::Approved, Some(kind)) =
-            (form.allow_days, form.verdict, decided.kind.as_deref())
-            && !preferences.always_asks(kind)
+        // "Approve and allow": this exact step, ahead of time from now on.
+        if let (Some(days), Verdict::Approved, Some(kind), Some(what)) = (
+            form.allow_days,
+            form.verdict,
+            decided.kind.as_deref(),
+            decided.what(),
+        ) && !preferences.always_asks(kind)
         {
             board.grant_standing(
                 &actor,
                 kind,
                 decided.target.as_deref(),
+                what,
                 days.min(MAX_STANDING_DAYS),
             )?;
         }
@@ -501,15 +509,10 @@ fn asker(requested_by: &str, viewer: &str) -> String {
     }
 }
 
-/// What, why and how to undo it, as the person reads them; a description in another shape
-/// as it was written.
+/// What, why and how to undo it, as the person reads them; a description that does not read
+/// only one way, whole, as it was written.
 fn facts(description: &str) -> String {
-    let parts = description.strip_prefix("What: ").and_then(|rest| {
-        let (what, rest) = rest.split_once("\n\nWhy: ")?;
-        let (why, undo) = rest.rsplit_once("\n\nUndo: ")?;
-        Some((what, why, undo))
-    });
-    match parts {
+    match approval::parts(description) {
         Some((what, why, undo)) => format!(
             "<dl class=\"ask-facts\"><dt>What</dt><dd class=\"cmd\">{}</dd><dt>Why</dt><dd>{}</dd>\
 <dt>Undo</dt><dd>{}</dd></dl>",
@@ -571,7 +574,7 @@ fn page(
     };
     let changed = match flash.ahead {
         Some("granted") => format!(
-            "<p class=\"note\">Done: that kind is approved ahead of time for {allow_days} days. You can stop it below.</p>"
+            "<p class=\"note\">Done: that exact step is approved ahead of time for {allow_days} days. You can stop it below.</p>"
         ),
         Some("revoked") => "<p class=\"note\">Stopped: it needs you again.</p>".to_string(),
         _ => String::new(),
@@ -612,12 +615,14 @@ fn page(
                             "<p class=\"note always\">You always decide {} yourself.</p>",
                             escape(kind)
                         )
+                    } else if a.what().is_none() {
+                        String::new()
                     } else { format!(
                         "<form method=\"post\" action=\"/approvals/decide\" class=\"allow\">\
 <input type=\"hidden\" name=\"project\" value=\"{p}\"><input type=\"hidden\" name=\"id\" value=\"{i}\">\
 <input type=\"hidden\" name=\"version\" value=\"{v}\"><input type=\"hidden\" name=\"verdict\" value=\"approved\">\
 <input type=\"hidden\" name=\"allow_days\" value=\"{allow_days}\">\
-<p class=\"actions\"><button class=\"approve allow\" type=\"submit\">Approve, and allow {k} for {allow_days} days</button></p></form>",
+<p class=\"actions\"><button class=\"approve allow\" type=\"submit\">Approve, and allow this exact {k} for {allow_days} days</button></p></form>",
                         p = escape(project),
                         i = escape(&a.id),
                         v = a.version,
@@ -647,12 +652,13 @@ fn page(
                 .iter()
                 .map(|s| {
                     format!(
-                        "<li id=\"standing-{id}\">{k} <span class=\"meta\">by {by}, until {until}</span>\
+                        "<li id=\"standing-{id}\">{k} <code>{what}</code> <span class=\"meta\">by {by}, until {until}</span>\
 <form method=\"post\" action=\"/approvals/standing/revoke\" class=\"inline\">\
 <input type=\"hidden\" name=\"project\" value=\"{p}\"><input type=\"hidden\" name=\"id\" value=\"{id}\">\
 <button class=\"deny\" type=\"submit\">Stop</button></form></li>",
                         id = escape(&s.id),
                         k = escape(&kind_words(&s.kind, s.target.as_deref())),
+                        what = escape(&s.what),
                         by = escape(&s.granted_by),
                         until = pages::utc((s.expires_at / 1000).max(0) as u64),
                     )
@@ -663,13 +669,14 @@ fn page(
                 .iter()
                 .map(|s| {
                     format!(
-                        "<li class=\"suggestion\">You approved {k} {n} times in 30 days and never denied it.\
+                        "<li class=\"suggestion\">You approved {k} {n} times in 30 days and never denied it: <code>{what}</code>\
 <form method=\"post\" action=\"/approvals/standing\" class=\"inline\">\
 <input type=\"hidden\" name=\"project\" value=\"{p}\"><input type=\"hidden\" name=\"kind\" value=\"{kind}\">\
-<input type=\"hidden\" name=\"target\" value=\"{target}\">\
+<input type=\"hidden\" name=\"target\" value=\"{target}\"><input type=\"hidden\" name=\"what\" value=\"{what}\">\
 <button class=\"approve\" type=\"submit\">Approve it automatically for {allow_days} days</button></form></li>",
                         k = escape(&kind_words(&s.kind, s.target.as_deref())),
                         n = s.approved,
+                        what = escape(&s.what),
                         kind = escape(&s.kind),
                         target = escape(s.target.as_deref().unwrap_or_default()),
                     )

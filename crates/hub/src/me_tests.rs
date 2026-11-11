@@ -109,7 +109,7 @@ async fn run(store: Option<&str>) {
     let first = ask(&hub, &mut person, "restart").await;
     let approvals = page(&hub, "/approvals", &person).await;
     assert!(
-        approvals.contains("Approve, and allow restart for 30 days"),
+        approvals.contains("Approve, and allow this exact restart for 30 days"),
         "{approvals}"
     );
     let attention = hub.get("/app/attention", Some(&person.cookie)).await;
@@ -151,7 +151,7 @@ async fn run(store: Option<&str>) {
     let second = ask(&hub, &mut person, "restart").await;
     let approvals = page(&hub, "/approvals", &person).await;
     assert!(
-        approvals.contains("Approve, and allow restart for 7 days"),
+        approvals.contains("Approve, and allow this exact restart for 7 days"),
         "{approvals}"
     );
     decide(&hub, &person, &second, Some("7")).await;
@@ -171,7 +171,7 @@ async fn run(store: Option<&str>) {
         "{approvals}"
     );
     assert!(
-        !approvals.contains("Approve, and allow deploy"),
+        !approvals.contains("Approve, and allow this exact deploy"),
         "{approvals}"
     );
     decide(&hub, &person, &deploy, Some("30")).await;
@@ -181,7 +181,7 @@ async fn run(store: Option<&str>) {
         &hub,
         "/approvals/standing",
         &person,
-        &[("project", "site"), ("kind", "deploy")],
+        &[("project", "site"), ("kind", "deploy"), ("what", "a thing")],
     )
     .send()
     .await
