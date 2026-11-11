@@ -25,7 +25,8 @@
     "ui_steps": [
       "IDE: Cline panel > MCP Servers icon > Configure tab > Configure MCP Servers",
       "CLI file: ~/.cline/data/settings/cline_mcp_settings.json (override CLINE_MCP_SETTINGS_PATH); wizard has Authorize OAuth action"
-    ]
+    ],
+    "key_snippet": "{\n  \"mcpServers\": {\n    \"{name}\": {\n      \"type\": \"streamableHttp\",\n      \"url\": \"{url}\",\n      \"headers\": {\n        \"Authorization\": \"Bearer {key}\"\n      },\n      \"disabled\": false,\n      \"autoApprove\": []\n    }\n  }\n}"
   },
   "instructions_file": null,
   "hooks": null,

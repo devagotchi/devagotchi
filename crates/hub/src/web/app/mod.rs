@@ -7,6 +7,7 @@
 
 mod board;
 mod home;
+mod keys;
 mod machine;
 pub(super) mod me;
 mod ticket;
@@ -44,6 +45,9 @@ pub fn routes() -> Router<AppState> {
             axum::routing::post(ticket_actions::act),
         )
         .route("/app/me", get(me::page).post(me::save))
+        .route("/app/keys", get(keys::page).post(keys::create))
+        .route("/app/keys/{id}/revoke", axum::routing::post(keys::revoke))
+        .route("/app/keys/{id}/rotate", axum::routing::post(keys::rotate))
         .route("/app/attention", get(attention))
         .route("/app/offline", get(offline))
         .route("/assets/app.js", get(script))

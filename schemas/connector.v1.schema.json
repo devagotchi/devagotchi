@@ -90,6 +90,14 @@
           ],
           "default": null
         },
+        "key_snippet": {
+          "default": null,
+          "description": "The configuration with an API key instead of OAuth, with `{name}`, `{url}` and `{key}`.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "kind": {
           "$ref": "#/$defs/InstallKind"
         },

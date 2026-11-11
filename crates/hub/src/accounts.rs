@@ -11,6 +11,7 @@
 //! the one-time link.
 
 pub mod access;
+pub mod api_keys;
 pub mod claim;
 pub mod clients;
 pub mod email;

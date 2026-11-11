@@ -1743,7 +1743,7 @@ impl Hub {
         // An AI the hub connected itself (`via: hub`) is never the person: without a seat
         // of its own it works as the account's "ai" seat.
         let seat = match (seat, subject.via) {
-            (None, "hub") => Some("ai"),
+            (None, "hub" | "key") => Some("ai"),
             (seat, _) => seat,
         };
         match (seat, kind) {
@@ -2221,7 +2221,7 @@ impl Hub {
                     subject
                         .agent
                         .or_else(|| self.seat(&context).ok().flatten())
-                        .or_else(|| (subject.via == "hub").then(|| "ai".to_string()))
+                        .or_else(|| matches!(subject.via, "hub" | "key").then(|| "ai".to_string()))
                 }),
                 session: given_or(input.session, || mcp_session(&context)),
                 fingerprint: input.fingerprint,

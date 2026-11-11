@@ -29,7 +29,8 @@
     "ui_steps": [
       "Customize in sidebar; install marketplace entries with Add to Cursor (runs OAuth)",
       "Toggle servers in Customize"
-    ]
+    ],
+    "key_snippet": "{\n  \"mcpServers\": {\n    \"{name}\": {\n      \"url\": \"{url}\",\n      \"headers\": {\n        \"Authorization\": \"Bearer {key}\"\n      }\n    }\n  }\n}"
   },
   "instructions_file": ".cursor/rules/*.mdc and AGENTS.md",
   "hooks": null,

@@ -20,7 +20,7 @@
     "config_path": null,
     "project_config_path": null,
     "format": "json",
-    "snippet": "{\"type\":\"mcp\",\"server_url\":\"{url}\",\"server_label\":\"{name}\",\"authorization\":\"TOKEN\"}",
+    "snippet": "{\n  \"type\": \"mcp\",\n  \"server_url\": \"{url}\",\n  \"server_label\": \"{name}\",\n  \"authorization\": \"{key}\"\n}",
     "ui_steps": [
       "Add as an entry in the tools array of a Responses API / xAI SDK request",
       "Optional: server_description, allowed_tools (SDK: allowed_tool_names), headers (SDK: extra_headers)"

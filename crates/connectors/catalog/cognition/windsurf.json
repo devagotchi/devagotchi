@@ -30,7 +30,8 @@
       "Settings > Tools > Windsurf Settings > Add Server, or Cascade MCP menu",
       "Select server, click + Add Server",
       "Press refresh"
-    ]
+    ],
+    "key_snippet": "{\n  \"mcpServers\": {\n    \"{name}\": {\n      \"serverUrl\": \"{url}\",\n      \"headers\": {\n        \"Authorization\": \"Bearer {key}\"\n      }\n    }\n  }\n}"
   },
   "instructions_file": null,
   "hooks": null,
