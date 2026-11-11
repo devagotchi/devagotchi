@@ -641,6 +641,11 @@ impl Store {
             Err(Failed::Refused(error)) => Some(Err(error)),
             Err(Failed::Store(error)) if collided(&error) && *tries < RETRIES => {
                 *tries += 1;
+                // Run again at once, two transactions that collided collide again, until
+                // the retries are gone: a short wait, longer each time, different for each.
+                let jitter = u64::from(crate::link::random::<1>()[0]) / 4;
+                let wait = (1u64 << (*tries).min(6)) + jitter;
+                tokio::time::sleep(std::time::Duration::from_millis(wait)).await;
                 None
             }
             Err(Failed::Store(error)) => Some(Err(store_error(error))),
