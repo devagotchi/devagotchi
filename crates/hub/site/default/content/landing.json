@@ -1,7 +1,7 @@
 {
   "title": {
     "unclaimed": "A new {product} hub",
-    "default": "{tagline}"
+    "default": "Give Claude, ChatGPT and Codex your own servers"
   },
   "rail_label": "On this page",
   "sign_in": {
@@ -119,7 +119,7 @@
           },
           {
             "term": "A board your agents share",
-            "text": "Claude and Codex coordinate on one ticket board: claim work, leave notes, hand off. Bring your team: organisations with members and teams, a role on each project (owner, admin, member, agent or viewer) and invites by link. A viewer reads, an agent works, and only people approve."
+            "text": "Claude and Codex coordinate on one ticket board: claim work, leave notes, hand off. Bring your team: organisations with members and teams, a role on each project (owner, admin, member, agent or viewer) and invites by link. A viewer reads, an agent works, and only people approve. Leave a note for Claude, Codex, Grok or your own agent and it arrives whole on their next call. Custom agents get it by signed webhook."
           },
           {
             "term": "Every machine you have",
@@ -276,6 +276,18 @@
     "rail": "Questions",
     "title": "Questions",
     "questions": [
+      {
+        "q": "What is a remote MCP server?",
+        "a": "MCP is the protocol AI apps use to reach tools. A remote MCP server is one address on the web that an AI app connects to. {product} is that address for your own machines: your AI signs in once and can then work on each one."
+      },
+      {
+        "q": "Can different AIs work on the same project?",
+        "a": "Yes. Claude, ChatGPT, Codex, Grok and your own agents share one ticket board: they claim work, hand it off and leave notes for each other. A note left for one of them arrives whole on its next call, and it is reminded until it marks the note read."
+      },
+      {
+        "q": "Can I approve what my AI does from my phone?",
+        "a": "Yes. Add {product} to your home screen and approvals reach it as a push, with what will run, why, and how to undo it. You can also allow one exact command ahead of time for as long as you choose."
+      },
       {
         "q": "Do I have to sign up?",
         "a": "No. On the hosted hub your account is made the first time your AI connects. Add a {term:passkey} on your account page afterwards, so you can sign in from anywhere and nothing is lost with one browser."

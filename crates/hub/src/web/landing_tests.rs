@@ -49,10 +49,17 @@ fn a_claimed_hub_shows_the_whole_product_page() {
     ] {
         assert!(html.contains(needle), "{what}: {needle} missing");
     }
-    // Three steps, a sequence; eight questions that open without script.
+    // Three steps, a sequence; eleven questions that open without script.
     let how = section(&html, "id=\"how\"");
     assert_eq!(how.matches("<li>").count(), 3, "{how}");
-    assert_eq!(html.matches("<details>").count(), 8);
+    assert_eq!(html.matches("<details>").count(), 11);
+    // What a search result shows: the name of what it does, and an icon.
+    assert!(
+        html.contains("<title>Give Claude, ChatGPT and Codex your own servers"),
+        "{html}"
+    );
+    assert!(html.contains("<link rel=\"icon\""), "{html}");
+    assert!(html.contains("What is a remote MCP server?"), "{html}");
     // The order the page reads in.
     let order: Vec<usize> = [
         "<h1>",

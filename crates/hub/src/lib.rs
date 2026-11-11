@@ -32,6 +32,8 @@ mod mail;
 #[cfg(test)]
 mod me_tests;
 mod nomen;
+#[cfg(test)]
+mod notes_tests;
 mod oauth;
 mod offers;
 #[cfg(test)]

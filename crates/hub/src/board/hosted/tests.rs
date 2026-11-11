@@ -869,3 +869,18 @@ async fn a_hosted_board_approves_a_kind_ahead_of_time() {
     .await
     .unwrap();
 }
+
+/// A note reaching who it is for on a hosted board (`board::inbox`).
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_hosted_board_delivers_a_note_once() {
+    let Some(test) = testing::postgres().await else {
+        return;
+    };
+    seed(&test.store).await;
+    let hosted = HostedBoard::new(test.store.clone(), TENANT, "inbox").unwrap();
+    hosted.initialize().await.unwrap();
+    let board = crate::board::Board::from_hosted(hosted).await.unwrap();
+    tokio::task::spawn_blocking(move || crate::board::inbox_tests::inbox_holds(&board))
+        .await
+        .unwrap();
+}
