@@ -308,6 +308,15 @@ jobs:
       - run: cargo build --locked --bins
       - name: Start a throwaway Postgres
         run: tests/throwaway_postgres.sh install install_join install_update install_role install_idp
+      # The installer gets Caddy from apt. GitHub's x64 runners use an Azure mirror whose name
+      # has stopped resolving for minutes at a time; Ubuntu's own archive serves the same files.
+      - name: Ubuntu's own mirror when the runner's does not resolve
+        run: |
+          if [ -f /etc/apt/apt-mirrors.txt ] && grep -q azure.archive.ubuntu.com /etc/apt/apt-mirrors.txt \
+            && ! getent hosts azure.archive.ubuntu.com >/dev/null; then
+            echo "::warning::azure.archive.ubuntu.com does not resolve; using archive.ubuntu.com"
+            sudo sed -i 's|azure.archive.ubuntu.com|archive.ubuntu.com|g' /etc/apt/apt-mirrors.txt
+          fi
       - run: deploy/linux/ci-install-check.sh
         env:
           DEVAGOTCHI_HUB_STORAGE_URL: postgres://postgres@127.0.0.1:55432/install
