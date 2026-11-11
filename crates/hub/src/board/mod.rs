@@ -21,6 +21,8 @@ pub mod workflow;
 #[cfg(test)]
 mod settings_tests;
 #[cfg(test)]
+pub(crate) mod standing_tests;
+#[cfg(test)]
 mod tests;
 
 use std::{
@@ -395,6 +397,10 @@ pub struct Settings {
     /// The environments a ticket's `environment` may name.
     #[serde(default = "default_environments")]
     pub environments: Vec<String>,
+    /// Kinds of step a person approved ahead of time on this board (`approval.rs`): an
+    /// approval of a kind one of these covers is approved the moment it is asked.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub standing: Vec<approval::Standing>,
 }
 
 /// What `board_settings` changes: the project's repo, its environments, or both.
@@ -476,6 +482,7 @@ impl Default for Settings {
             default_priority: 2,
             repo: None,
             environments: default_environments(),
+            standing: Vec::new(),
         }
     }
 }
@@ -812,6 +819,34 @@ impl Board {
         }
         let connection = self.local()?;
         load_workflow(&connection)
+    }
+
+    /// Change the settings in one transaction: `edit` sees them as they are now and says
+    /// what it changed, which lands on the chain as `action`. Never a stale overwrite of a
+    /// change made meanwhile, as replacing them whole (`put_settings`) could be.
+    pub(crate) fn edit_settings<F>(
+        &self,
+        actor: &Actor<'_>,
+        action: &str,
+        edit: F,
+    ) -> BridgeResult<Settings>
+    where
+        F: Fn(&mut Settings) -> BridgeResult<serde_json::Value>,
+    {
+        if let Some(hosted) = &self.hosted {
+            return self.hosted_call(hosted.edit_settings(actor, action, &edit), true);
+        }
+        self.write(actor, |w| {
+            let mut settings = load_settings(w.tx)?;
+            let data = edit(&mut settings)?;
+            w.tx.execute(
+                "UPDATE settings SET value = ?1 WHERE key = 'settings'",
+                params![serde_json::to_string(&settings).expect("settings json")],
+            )
+            .map_err(store_error)?;
+            w.event(action, None, None, data)?;
+            Ok(settings)
+        })
     }
 
     /// Replace the settings. Validated before it lands; recorded as an admin event.

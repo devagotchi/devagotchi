@@ -1041,6 +1041,26 @@ harmless approval on the person's first board and pushes it to their own phones 
 whole loop is checked with one tap and no AI. Approvals read "Your AI asks" when the person's
 own account asked, and "Devagotchi asks" for the test.
 
+## Approving ahead of time
+
+Not every step needs a buzz. An AI names the kind of step it asks about (`approval_request`'s
+`kind`, a word or two with dashes such as `restart` or `deploy`, and optionally the `target`,
+such as a machine's name); the ticket carries them as labels and `/approvals` shows them. Under
+the usual Approve, a second button reads **Approve, and allow restart on dabo for 30 days**: it
+approves this one and records a standing approval on the board's settings
+(`board/approval.rs`). From then on a request of that kind and target is approved the moment
+it is asked, decided by `standing:<id>` with a note naming the person who allowed it, and no
+phone is notified (`phones` is 0 and the answer carries the `standing` that covered it). A
+standing approval without a target covers the kind everywhere on the board.
+
+Only a person grants or ends one; an agent's attempt is refused with `humans_only`. One lasts
+1 to 90 days, a board holds at most 50 live, and each grant and end is an event on the board's
+chain (`approval.standing_granted`, `approval.standing_revoked`). `/approvals` lists the live
+ones per project under **Approved ahead of time**, each with **Stop**, and offers the kinds the
+person keeps approving: 3 or more approvals of one kind and target in the last 30 days, none
+denied, and not already allowed. A request without a kind always waits for a person. The forms
+post from the hub's own pages only, like every other form.
+
 ## Audit and health
 
 Every routed call appends one row to `audit.sqlite3` in the state directory: time, subject,

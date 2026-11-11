@@ -6,6 +6,12 @@
 //! on push for the browser it is tapped in (`notify.rs`); "Send me a test approval" then
 //! puts a harmless approval on the person's first board and pushes it to their phones
 //! only, so the whole loop is checked with one tap and no AI.
+//!
+//! Approving ahead of time (`board::approval`, standing authorizations): a request that
+//! names its kind gets a third button, approve it and allow that kind (on that target) for
+//! 30 days. Each board's live ones are listed with a button to end each at once, and a kind
+//! the person kept approving and never denied is offered with one button. Every one of
+//! these is a person's act from this hub's own page, as deciding is.
 
 use axum::{
     Form,
@@ -23,14 +29,18 @@ use crate::{
     AppState,
     board::{
         Actor,
-        approval::{ApprovalStatus, Verdict},
+        approval::{ApprovalStatus, Standing, Suggestion, Verdict},
     },
 };
+
+/// How long "approve and allow" and a suggestion approve a kind for.
+const ALLOW_DAYS: u32 = 30;
 
 #[derive(Deserialize)]
 pub struct Shown {
     done: Option<String>,
     test: Option<String>,
+    ahead: Option<String>,
 }
 
 const TEST_TITLE: &str = "Test: tap Approve";
@@ -45,6 +55,30 @@ pub struct Decide {
     verdict: Verdict,
     #[serde(default)]
     note: String,
+    /// "Approve and allow": approve this one, and its kind ahead of time for this many days.
+    #[serde(default)]
+    allow_days: Option<u32>,
+}
+
+#[derive(Deserialize)]
+pub struct Grant {
+    project: String,
+    kind: String,
+    #[serde(default)]
+    target: Option<String>,
+}
+
+#[derive(Deserialize)]
+pub struct Revoke {
+    project: String,
+    id: String,
+}
+
+/// One board's approvals given ahead of time, and the kinds worth giving.
+pub(super) struct Ahead {
+    project: String,
+    standing: Vec<Standing>,
+    suggestions: Vec<Suggestion>,
 }
 
 /// A decision must come from this hub's own page, not another site's form.
@@ -89,6 +123,7 @@ pub async fn list(
     let flash = Flash {
         done: shown.done.as_deref(),
         test: shown.test.as_deref(),
+        ahead: shown.ahead.as_deref(),
     };
     let can_test = !pending.is_empty()
         || match state.hub.approval_boards(&subject) {
@@ -98,7 +133,157 @@ pub async fn list(
                 return unavailable();
             }
         };
-    page(&pending, &flash, key.as_deref(), &subject.id, can_test)
+    let ahead = match ahead(&state, &subject).await {
+        Ok(ahead) => ahead,
+        Err(error) => {
+            eprintln!("devagotchi hub: approvals ahead of time: {error}");
+            return unavailable();
+        }
+    };
+    page(
+        &pending,
+        &flash,
+        key.as_deref(),
+        &subject.id,
+        can_test,
+        &ahead,
+    )
+}
+
+/// On every board `subject` decides on: what is approved ahead of time there now, and what
+/// the person keeps approving.
+async fn ahead(
+    state: &AppState,
+    subject: &crate::auth::Subject,
+) -> devagotchi_contracts::BridgeResult<Vec<Ahead>> {
+    let boards = state.hub.approval_boards(subject)?;
+    tokio::task::spawn_blocking(move || {
+        let mut all = Vec::new();
+        for (project, board) in boards {
+            let now = board.now();
+            let standing: Vec<Standing> = board
+                .standing()?
+                .into_iter()
+                .filter(|s| s.live(now))
+                .collect();
+            let suggestions = board.suggestions()?;
+            if !standing.is_empty() || !suggestions.is_empty() {
+                all.push(Ahead {
+                    project,
+                    standing,
+                    suggestions,
+                });
+            }
+        }
+        Ok(all)
+    })
+    .await
+    .map_err(|error| devagotchi_contracts::BridgeError::new("board_store", error.to_string()))?
+}
+
+/// The person on a board they decide on, for a change to what is approved ahead of time:
+/// from this hub's page, signed in, let in. The page that answers instead otherwise.
+async fn decider(
+    state: &AppState,
+    headers: &HeaderMap,
+    project: &str,
+) -> Result<(crate::auth::Subject, std::sync::Arc<crate::board::Board>), Response> {
+    if !same_origin(headers, &state.hub.config.public_url) {
+        return Err(pages::message(
+            StatusCode::FORBIDDEN,
+            "Not from this hub",
+            "Change this from the approvals page itself.",
+            Some(("/approvals", "Approvals")),
+        ));
+    }
+    let subject = match who(state, headers).await {
+        Who::Person(subject) => subject,
+        Who::SignedOut => return Err(see_other("/auth/login?return_to=/approvals", &[])),
+        Who::Unavailable => return Err(unavailable()),
+        Who::NotSetUp => return Err(not_set_up()),
+    };
+    if let Some(refused) = state.hub.waiting_refusal(&subject) {
+        return Err(waiting_page(&refused));
+    }
+    match state.hub.approval_board(&subject, project) {
+        Ok(board) => Ok((subject, board)),
+        Err(_) => Err(pages::message(
+            StatusCode::FORBIDDEN,
+            "Not yours to decide",
+            "This account cannot decide approvals on that board.",
+            Some(("/approvals", "Approvals")),
+        )),
+    }
+}
+
+/// "Approve automatically for 30 days": a suggestion taken.
+pub async fn grant(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Form(form): Form<Grant>,
+) -> Response {
+    let (subject, board) = match decider(&state, &headers, &form.project).await {
+        Ok(found) => found,
+        Err(response) => return response,
+    };
+    let id = subject.id.clone();
+    let result = tokio::task::spawn_blocking(move || {
+        board.grant_standing(
+            &Actor {
+                id: &id,
+                human: true,
+                wip_limit: None,
+            },
+            &form.kind,
+            form.target.as_deref().filter(|t| !t.is_empty()),
+            ALLOW_DAYS,
+        )
+    })
+    .await;
+    match result {
+        Ok(Ok(_)) => see_other("/approvals?ahead=granted", &[]),
+        Ok(Err(error)) => pages::message(
+            StatusCode::CONFLICT,
+            "Not changed",
+            &error.message,
+            Some(("/approvals", "Back to approvals")),
+        ),
+        Err(_) => unavailable(),
+    }
+}
+
+/// "Stop": a standing authorization ended at once.
+pub async fn revoke(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Form(form): Form<Revoke>,
+) -> Response {
+    let (subject, board) = match decider(&state, &headers, &form.project).await {
+        Ok(found) => found,
+        Err(response) => return response,
+    };
+    let id = subject.id.clone();
+    let result = tokio::task::spawn_blocking(move || {
+        board.revoke_standing(
+            &Actor {
+                id: &id,
+                human: true,
+                wip_limit: None,
+            },
+            &form.id,
+        )
+    })
+    .await;
+    match result {
+        Ok(Ok(_)) => see_other("/approvals?ahead=revoked", &[]),
+        Ok(Err(error)) => pages::message(
+            StatusCode::CONFLICT,
+            "Not changed",
+            &error.message,
+            Some(("/approvals", "Back to approvals")),
+        ),
+        Err(_) => unavailable(),
+    }
 }
 
 /// The approvals waiting for `subject`, by project: on every board it decides on, its
@@ -234,7 +419,20 @@ pub async fn decide(
             human: true,
             wip_limit: None,
         };
-        board.decide_approval(&actor, &form.id, form.version, form.verdict, &form.note)
+        let decided =
+            board.decide_approval(&actor, &form.id, form.version, form.verdict, &form.note)?;
+        // "Approve and allow": the kind this one named, ahead of time from now on.
+        if let (Some(days), Verdict::Approved, Some(kind)) =
+            (form.allow_days, form.verdict, decided.kind.as_deref())
+        {
+            board.grant_standing(
+                &actor,
+                kind,
+                decided.target.as_deref(),
+                days.min(ALLOW_DAYS),
+            )?;
+        }
+        Ok::<_, devagotchi_contracts::BridgeError>(decided)
     })
     .await;
     match result {
@@ -257,6 +455,15 @@ pub async fn decide(
 struct Flash<'a> {
     done: Option<&'a str>,
     test: Option<&'a str>,
+    ahead: Option<&'a str>,
+}
+
+/// "restart", or "restart on dabo".
+fn kind_words(kind: &str, target: Option<&str>) -> String {
+    match target {
+        Some(target) => format!("{kind} on {target}"),
+        None => kind.to_string(),
+    }
 }
 
 /// Who asked, as the person reads it: their own account asking is their AI.
@@ -276,6 +483,7 @@ fn page(
     push_key: Option<&str>,
     viewer: &str,
     can_test: bool,
+    ahead: &[Ahead],
 ) -> Response {
     let decided = flash
         .done
@@ -295,7 +503,14 @@ fn page(
         }
         _ => "",
     };
-    let flash = format!("{decided}{tested}");
+    let changed = match flash.ahead {
+        Some("granted") => {
+            "<p class=\"note\">Done: that kind is approved ahead of time for 30 days. You can stop it below.</p>"
+        }
+        Some("revoked") => "<p class=\"note\">Stopped: it needs you again.</p>",
+        _ => "",
+    };
+    let flash = format!("{decided}{tested}{changed}");
     let cards: String = pending
         .iter()
         .map(|(project, a)| {
@@ -306,14 +521,36 @@ fn page(
 <input type=\"hidden\" name=\"version\" value=\"{v}\">\
 <label>Note (optional)<input type=\"text\" name=\"note\" maxlength=\"2000\"></label>\
 <p class=\"actions\"><button class=\"approve\" name=\"verdict\" value=\"approved\">Approve</button> \
-<button class=\"deny\" name=\"verdict\" value=\"denied\">Deny</button></p></form></section>",
+<button class=\"deny\" name=\"verdict\" value=\"denied\">Deny</button></p></form>{allow}</section>",
                 p = escape(project),
                 i = escape(&a.id),
                 t = escape(&a.title),
-                by = asker(&a.requested_by, viewer),
+                by = format!(
+                    "{}{}",
+                    asker(&a.requested_by, viewer),
+                    a.kind
+                        .as_deref()
+                        .map(|kind| format!(" · {}", escape(&kind_words(kind, a.target.as_deref()))))
+                        .unwrap_or_default()
+                ),
                 when = pages::utc((a.requested_at / 1000).max(0) as u64),
                 d = escape(&a.description),
                 v = a.version,
+                allow = a
+                    .kind
+                    .as_deref()
+                    .map(|kind| format!(
+                        "<form method=\"post\" action=\"/approvals/decide\" class=\"allow\">\
+<input type=\"hidden\" name=\"project\" value=\"{p}\"><input type=\"hidden\" name=\"id\" value=\"{i}\">\
+<input type=\"hidden\" name=\"version\" value=\"{v}\"><input type=\"hidden\" name=\"verdict\" value=\"approved\">\
+<input type=\"hidden\" name=\"allow_days\" value=\"{ALLOW_DAYS}\">\
+<p class=\"actions\"><button class=\"approve allow\" type=\"submit\">Approve, and allow {k} for {ALLOW_DAYS} days</button></p></form>",
+                        p = escape(project),
+                        i = escape(&a.id),
+                        v = a.version,
+                        k = escape(&kind_words(kind, a.target.as_deref()))
+                    ))
+                    .unwrap_or_default(),
             )
         })
         .collect();
@@ -337,10 +574,62 @@ Send me a test approval</button></p></form>"
             )
         })
         .unwrap_or_default();
+    let ahead_cards: String = ahead
+        .iter()
+        .map(|board| {
+            let p = escape(&board.project);
+            let live: String = board
+                .standing
+                .iter()
+                .map(|s| {
+                    format!(
+                        "<li id=\"standing-{id}\">{k} <span class=\"meta\">by {by}, until {until}</span>\
+<form method=\"post\" action=\"/approvals/standing/revoke\" class=\"inline\">\
+<input type=\"hidden\" name=\"project\" value=\"{p}\"><input type=\"hidden\" name=\"id\" value=\"{id}\">\
+<button class=\"deny\" type=\"submit\">Stop</button></form></li>",
+                        id = escape(&s.id),
+                        k = escape(&kind_words(&s.kind, s.target.as_deref())),
+                        by = escape(&s.granted_by),
+                        until = pages::utc((s.expires_at / 1000).max(0) as u64),
+                    )
+                })
+                .collect();
+            let offered: String = board
+                .suggestions
+                .iter()
+                .map(|s| {
+                    format!(
+                        "<li class=\"suggestion\">You approved {k} {n} times in 30 days and never denied it.\
+<form method=\"post\" action=\"/approvals/standing\" class=\"inline\">\
+<input type=\"hidden\" name=\"project\" value=\"{p}\"><input type=\"hidden\" name=\"kind\" value=\"{kind}\">\
+<input type=\"hidden\" name=\"target\" value=\"{target}\">\
+<button class=\"approve\" type=\"submit\">Approve it automatically for {ALLOW_DAYS} days</button></form></li>",
+                        k = escape(&kind_words(&s.kind, s.target.as_deref())),
+                        n = s.approved,
+                        kind = escape(&s.kind),
+                        target = escape(s.target.as_deref().unwrap_or_default()),
+                    )
+                })
+                .collect();
+            format!(
+                "<section class=\"card\" id=\"ahead-{p}\"><h2>Approved ahead of time · {p}</h2>{}{}</section>",
+                if live.is_empty() {
+                    "<p class=\"empty\">Nothing yet: every step here asks you.</p>".to_string()
+                } else {
+                    format!("<ul class=\"rows\">{live}</ul>")
+                },
+                if offered.is_empty() {
+                    String::new()
+                } else {
+                    format!("<ul class=\"rows\">{offered}</ul>")
+                }
+            )
+        })
+        .collect();
     pages::app(
         StatusCode::OK,
         "Approvals",
-        &format!("<h1>Approvals</h1>{notify}{flash}{body}"),
+        &format!("<h1>Approvals</h1>{notify}{flash}{body}{ahead_cards}"),
     )
 }
 

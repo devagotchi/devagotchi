@@ -223,6 +223,7 @@ async fn native_board_graph_filters_versions_handoff_and_approval_rules() {
                 "Change config",
                 "Testing",
                 "Restore backup",
+                &["approval".to_string()],
             )
             .await
             .unwrap();
@@ -849,4 +850,22 @@ async fn concurrent_native_claims_have_one_winner_and_reclaim_burns_fences() {
             "stale_fence"
         );
     }
+}
+
+/// Approving ahead of time on a hosted board: granted, used and ended in Postgres
+/// transactions, on the board's chain.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_hosted_board_approves_a_kind_ahead_of_time() {
+    let Some(test) = testing::postgres().await else {
+        return;
+    };
+    seed(&test.store).await;
+    let hosted = HostedBoard::new(test.store.clone(), TENANT, "ahead").unwrap();
+    hosted.initialize().await.unwrap();
+    let board = crate::board::Board::from_hosted(hosted).await.unwrap();
+    tokio::task::spawn_blocking(move || {
+        crate::board::standing_tests::standing_approvals_hold(&board, None)
+    })
+    .await
+    .unwrap();
 }

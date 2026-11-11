@@ -8,6 +8,8 @@
 mod access_tests;
 pub mod account;
 mod accounts;
+#[cfg(test)]
+mod ahead_tests;
 pub mod ai;
 mod analytics;
 #[cfg(test)]

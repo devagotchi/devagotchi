@@ -1096,6 +1096,14 @@ pub struct ApprovalRequestIn {
     /// How to undo it if it goes wrong.
     #[serde(default)]
     pub undo: Option<String>,
+    /// The kind of step, in a word or two with dashes: `restart`, `deploy`, `edit-file`,
+    /// `install-package`. Name it every time: a person can approve a kind ahead of time,
+    /// and then a request of it is approved at once.
+    #[serde(default)]
+    pub kind: Option<String>,
+    /// What it is aimed at, when that matters: the machine or the service (`dabo`, `api`).
+    #[serde(default)]
+    pub target: Option<String>,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -1129,6 +1137,10 @@ pub struct ApprovalOut {
     /// board has turned on notifications: give the user the url yourself.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub phones: Option<usize>,
+    /// On a request a person approved ahead of time: what approved it. The status is then
+    /// already `approved`; take the step without waiting.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub standing: Option<super::approval::Standing>,
 }
 
 // ----- the tools ---------------------------------------------------------------
@@ -1178,6 +1190,7 @@ impl Hub {
             approval,
             url,
             phones: None,
+            standing: None,
         }
     }
 
@@ -2481,7 +2494,7 @@ impl Hub {
 
     #[tool(
         name = "approval_request",
-        description = "Ask the user to approve one step before you take it: what will run or change, why, and how to undo it. It reaches them where they approve (their phone) and returns at once with the approval's id, status pending and phones (how many phones were notified; if 0, give the user the url yourself); then call approval_wait with that id and act only when it says approved. A denial means do not take the step.",
+        description = "Ask the user to approve one step before you take it: what will run or change, why, how to undo it, and the kind of step (kind: restart, deploy, edit-file …) with its target when that matters. When the user approved that kind ahead of time it comes back approved at once with `standing`: take the step. Otherwise it reaches them where they approve (their phone) and returns at once with the approval's id, status pending and phones (how many phones were notified; if 0, give the user the url yourself); then call approval_wait with that id and act only when it says approved. A denial means do not take the step.",
         title = "Ask the user to approve a step",
         annotations(
             title = "Ask the user to approve a step",
@@ -2497,23 +2510,34 @@ impl Hub {
         context: RequestContext<RoleServer>,
     ) -> BoardOut<ApprovalOut> {
         let project = input.project.clone();
-        let Json(approval) = self
+        let Json((approval, standing)) = self
             .board_call(
                 "approval_request",
                 &input.project,
                 None,
                 &context,
                 move |board, actor| {
-                    board.request_approval(
+                    board.ask(
                         actor,
-                        &input.title,
-                        &input.what,
-                        input.why.as_deref().unwrap_or_default(),
-                        input.undo.as_deref().unwrap_or_default(),
+                        &super::approval::Ask {
+                            title: &input.title,
+                            what: &input.what,
+                            why: input.why.as_deref().unwrap_or_default(),
+                            undo: input.undo.as_deref().unwrap_or_default(),
+                            kind: input.kind.as_deref().filter(|k| !k.trim().is_empty()),
+                            target: input.target.as_deref().filter(|t| !t.trim().is_empty()),
+                        },
                     )
                 },
             )
             .await?;
+        // Approved ahead of time: nobody is asked, so nobody is notified.
+        if standing.is_some() {
+            let mut out = self.approval_out(&project, approval);
+            out.phones = Some(0);
+            out.standing = standing;
+            return Ok(Json(out));
+        }
         // On the account's own board the push goes to that account's phones; never to
         // the people of a configured board that shares no more than the name.
         let subject = self.board_subject(&context)?;
