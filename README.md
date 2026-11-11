@@ -277,6 +277,14 @@ Output and command arguments can contain sensitive or hostile text. The broker a
 
 The current engine uses pipes, not a PTY. It clears inherited environment variables and closes stdin. On Windows it keeps only `SystemRoot`, which Windows system libraries require. Programs that need environment configuration, interactive input, or a real terminal are outside this initial execution contract and must receive explicit future support.
 
+## License
+
+Devagotchi is source-available under the [Business Source License 1.1](LICENSE), held by
+AngryVibes LLC. You may run it in production for yourself and your organization, self-hosted,
+at no cost. You may not offer it to others as a hosted or managed service. Each version
+becomes available under the GNU Affero General Public License v3.0 four years after it is
+published.
+
 ## Source and release status
 
 The implementation here is a new foundation written from scratch in Rust. It makes no claim of benchmarked superiority over any other project.

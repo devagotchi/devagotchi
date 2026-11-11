@@ -94,7 +94,7 @@ alpha source checkout is not evidence about the stable release.
 
 This should be run against both:
 
-- the open-source Devagotchi self-hosted path
+- the source-available Devagotchi self-hosted path
 - a hosted WardenMesh cloud variant using the same contract
 
 The benchmark report must call out differences in startup cost, tenant isolation, and multi-agent continuity. Only then can the product claim parity or superiority over Desktop Commander.

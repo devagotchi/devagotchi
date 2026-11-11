@@ -319,6 +319,10 @@
       {
         "q": "What does it cost?",
         "a": "Self-hosting runs on your own hardware, with no limit on calls. The hosted hub is free during its alpha."
+      },
+      {
+        "q": "Is Devagotchi open source?",
+        "a": "It is source-available under the Business Source License 1.1. You can read the code, run your own hub in production for yourself or your organization at no cost, and change it. You cannot offer it to others as a hosted service. Each version becomes open source under the AGPL-3.0 four years after it is published."
       }
     ],
     "meta": "The source is on GitHub: [devagotchi/devagotchi]({link:source})."

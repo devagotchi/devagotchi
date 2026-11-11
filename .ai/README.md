@@ -31,7 +31,7 @@ its versioned contracts, not another agent or task engine.
 | DG-ADAPTER-1 | [Harness-specific adapters and capability limits](docs/adapters.md) |
 
 - [Plans](dev/plans/README.md): maintained task/PR plans, with [template](dev/plans/TEMPLATE.md).
-- [Editions](docs/editions.md): what is open core and what is cloud.
+- [Editions](docs/editions.md): what is core, what is cloud, and the license.
 - [Patterns](patterns/README.md): reusable guidance, not duplicated architecture decisions.
 - [Connector pattern](patterns/connectors.md): how an AI client is defined, proven and added.
 - [Capture schema](docs/capture-event.schema.json): generated from canonical Rust types.
