@@ -1,0 +1,48 @@
+{
+  "schema": "devagotchi.connector/v1",
+  "id": "goose",
+  "name": "Goose",
+  "vendor": "block",
+  "surface": "desktop",
+  "remote_mcp": true,
+  "transports": [
+    "streamable-http",
+    "stdio"
+  ],
+  "auth": {
+    "oauth": true,
+    "dynamic_client_registration": true,
+    "bearer_header": null
+  },
+  "install": {
+    "kind": "config-file",
+    "command": "goose session --with-streamable-http-extension \"{url}\"",
+    "config_path": {
+      "macos": "~/.config/goose/config.yaml",
+      "linux": "~/.config/goose/config.yaml",
+      "windows": null
+    },
+    "project_config_path": null,
+    "format": "yaml",
+    "snippet": "extensions:\n  {name}:\n    name: {name}\n    type: streamable_http\n    uri: {url}\n    enabled: true\n    timeout: 300",
+    "ui_steps": [
+      "Desktop: sidebar > Extensions > Add custom extension (remote type option not shown on page)",
+      "CLI: goose configure > Add Extension > Remote Extension (Streamable HTTP)"
+    ]
+  },
+  "instructions_file": null,
+  "hooks": null,
+  "plan_limits": null,
+  "aliases": [
+    "goose"
+  ],
+  "verification": {
+    "level": "docs",
+    "on": "2026-11-10",
+    "docs": [
+      "https://goose-docs.ai/docs/getting-started/using-extensions"
+    ],
+    "test": null,
+    "gaps": "Page says OAuth client id comes via CIMD or Dynamic Client Registration automatically. Custom headers not documented on page (bearer_header null). Page shows macOS path only (Linux assumed same, not stated). Surface is both desktop and CLI. .goosehints and hooks not researched. Vendor attribution not verified from page."
+  }
+}

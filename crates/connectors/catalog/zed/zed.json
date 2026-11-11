@@ -1,0 +1,41 @@
+{
+  "schema": "devagotchi.connector/v1",
+  "id": "zed",
+  "name": "Zed",
+  "vendor": "zed",
+  "surface": "ide",
+  "remote_mcp": true,
+  "transports": [],
+  "auth": {
+    "oauth": true,
+    "dynamic_client_registration": null,
+    "bearer_header": true
+  },
+  "install": {
+    "kind": "config-file",
+    "command": null,
+    "config_path": null,
+    "project_config_path": null,
+    "format": "json",
+    "snippet": "{\n  \"context_servers\": {\n    \"{name}\": {\n      \"url\": \"{url}\"\n    }\n  }\n}",
+    "ui_steps": [
+      "Command Palette: zed: open settings file",
+      "Or Settings > AI > MCP Servers"
+    ]
+  },
+  "instructions_file": null,
+  "hooks": null,
+  "plan_limits": null,
+  "aliases": [
+    "zed"
+  ],
+  "verification": {
+    "level": "docs",
+    "on": "2026-11-10",
+    "docs": [
+      "https://zed.dev/docs/ai/mcp"
+    ],
+    "test": null,
+    "gaps": "settings.json per-OS paths, transports, DCR, rules file, hooks not stated on fetched page. Without an Authorization header Zed prompts for the standard MCP OAuth flow. Shown without a token so the client signs in with OAuth, as this hub expects."
+  }
+}

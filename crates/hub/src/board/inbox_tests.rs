@@ -81,16 +81,20 @@ fn a_burst_comes_in_pieces_and_none_is_lost() {
 
 #[test]
 fn an_ai_answers_to_its_family_and_its_own_name() {
-    assert_eq!(
-        inbox::client_aliases("Claude Code"),
-        ["claude", "claude-code"]
-    );
-    assert_eq!(
-        inbox::client_aliases("OpenAI Codex"),
-        ["chatgpt", "codex", "openai-codex"]
-    );
-    assert_eq!(inbox::client_aliases("Hermes"), ["hermes"]);
-    assert_eq!(inbox::client_aliases("grok"), ["grok"]);
+    for (client, name) in [
+        ("Claude Code", "claude"),
+        ("Claude Code", "claude-code"),
+        ("OpenAI Codex", "chatgpt"),
+        ("OpenAI Codex", "codex"),
+        ("Hermes", "hermes"),
+        ("grok", "grok"),
+        ("Cursor", "cursor"),
+    ] {
+        assert!(
+            inbox::client_aliases(client).contains(&name.to_string()),
+            "{client} answers to {name}"
+        );
+    }
 }
 
 #[test]

@@ -1,0 +1,45 @@
+{
+  "schema": "devagotchi.connector/v1",
+  "id": "continue",
+  "name": "Continue",
+  "vendor": "continue",
+  "surface": "ide",
+  "remote_mcp": true,
+  "transports": [
+    "streamable-http",
+    "sse",
+    "stdio"
+  ],
+  "auth": {
+    "oauth": null,
+    "dynamic_client_registration": null,
+    "bearer_header": null
+  },
+  "install": {
+    "kind": "config-file",
+    "command": null,
+    "config_path": null,
+    "project_config_path": ".continue/mcpServers/*.yaml",
+    "format": "yaml",
+    "snippet": "name: {name}\nversion: 0.0.1\nschema: v1\nmcpServers:\n  - name: {name}\n    type: streamable-http\n    url: {url}",
+    "ui_steps": [
+      "Create a YAML file in .continue/mcpServers/ at workspace top level with name, version, schema metadata",
+      "MCP works only in agent mode"
+    ]
+  },
+  "instructions_file": null,
+  "hooks": null,
+  "plan_limits": null,
+  "aliases": [
+    "continue"
+  ],
+  "verification": {
+    "level": "docs",
+    "on": "2026-11-10",
+    "docs": [
+      "https://docs.continue.dev/customize/deep-dives/mcp"
+    ],
+    "test": null,
+    "gaps": "OAuth, headers/requestOptions, rules file, hooks, user-level path NOT covered on the fetched page. Page requires name/version/schema metadata but the values 0.0.1 and v1 in the snippet are not stated on the page: verify."
+  }
+}

@@ -237,7 +237,7 @@
         }
       ]
     },
-    "meta": "{pop:tools|What the AI can do}: every tool it gets, and what each does. More in the [docs](/docs)."
+    "meta": "{pop:tools|What the AI can do}: every tool it gets, and what each does. [Exact setup for every client](/connect), and more in the [docs](/docs)."
   },
   "self_host": {
     "rail": "Self-host",

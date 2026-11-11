@@ -1,0 +1,51 @@
+{
+  "schema": "devagotchi.connector/v1",
+  "id": "hermes-agent",
+  "name": "Hermes Agent",
+  "vendor": "nous-research",
+  "surface": "agent-framework",
+  "remote_mcp": true,
+  "transports": [
+    "streamable-http",
+    "sse",
+    "stdio"
+  ],
+  "auth": {
+    "oauth": true,
+    "dynamic_client_registration": null,
+    "bearer_header": true
+  },
+  "install": {
+    "kind": "config-file",
+    "command": null,
+    "config_path": {
+      "macos": "~/.hermes/config.yaml",
+      "linux": "~/.hermes/config.yaml",
+      "windows": "~/.hermes/config.yaml"
+    },
+    "project_config_path": null,
+    "format": "yaml",
+    "snippet": "mcp_servers:\n  {name}:\n    url: \"{url}\"\n    auth: oauth",
+    "ui_steps": [
+      "OAuth variant: add `auth: oauth` to the server entry (discovery, PKCE, refresh handled; tokens cached in ~/.hermes/mcp-tokens/<server>.json)",
+      "Legacy SSE: add transport: sse",
+      "In session: /reload-mcp; hermes mcp login <server>"
+    ]
+  },
+  "instructions_file": null,
+  "hooks": null,
+  "plan_limits": null,
+  "aliases": [
+    "hermes",
+    "hermes-agent"
+  ],
+  "verification": {
+    "level": "docs",
+    "on": "2026-11-10",
+    "docs": [
+      "https://hermes-agent.nousresearch.com/docs/user-guide/features/mcp"
+    ],
+    "test": null,
+    "gaps": "hermes mcp add syntax for a URL server not shown (only --preset), so command=null. DCR not stated. Instruction files and hooks not covered on page. Windows path not stated. Streamable HTTP is implied default, page does not name it. Shown without a token so the client signs in with OAuth, as this hub expects."
+  }
+}
