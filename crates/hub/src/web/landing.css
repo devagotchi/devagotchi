@@ -143,7 +143,7 @@ html:has(> body.landing) { scroll-snap-type: y proximity; }
   color: var(--on-deep); font-size: clamp(1rem, .9rem + .5vw, 1.25rem); user-select: all; -webkit-user-select: all; }
 .clients { margin-bottom: 20px; }
 
-.split { display: grid; gap: 28px; }
+.split { display: grid; grid-template-columns: minmax(0, 1fr); gap: 28px; }
 .terminal { min-width: 0; margin: 0; padding: 20px 22px; overflow-x: auto; border-radius: 14px;
   background: var(--deep); color: var(--on-deep); font: .9rem/1.7 var(--font-mono); }
 .terminal .c { color: var(--on-deep-muted); }

@@ -133,9 +133,20 @@ def main() -> int:
             iphone = browser.new_context(**device(p, "iPhone 13"))
             page = iphone.new_page()
 
+            # 0. The landing page fits the phone.
+            page.goto(url + "/")
+            seen = page.evaluate("document.documentElement.scrollWidth")
+            assert seen <= 390, f"the landing page is {seen} px wide at 390 px: it scrolls sideways"
+            print("PASS the landing page fits an iPhone 13 (no sideways scroll at 390 px)")
+
             # 1. Sign up from the AI's sign-in page; the AI adds a machine and a board.
             page.goto(ai.authorize_url)
             page.locator("a[href*='tab=up']").click()
+            assert page.locator("a[href*='tab=up'][aria-current=page]").count() == 1
+            for field in ("email", "password"):
+                box = page.locator(f"input[name={field}]").bounding_box()
+                size = page.locator(f"input[name={field}]").evaluate("e => parseFloat(getComputedStyle(e).fontSize)")
+                assert box["height"] >= 44 and box["width"] >= 300 and size >= 16, (field, box, size)
             page.locator("input[name=email]").fill(EMAIL)
             page.locator("input[name=password]").fill(PASSWORD)
             page.locator("form[action='/auth/password/new'] button[type=submit]").click()

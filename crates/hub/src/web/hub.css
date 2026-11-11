@@ -68,8 +68,11 @@ button:hover, .button:hover { border-color: var(--accent); }
   background: var(--bg); padding: 12px; border-radius: var(--radius-s); margin: 12px 0; }
 .card form { margin-top: 12px; }
 form label { display: block; color: var(--muted); font-size: .9rem; margin-top: 12px; }
-form input[type=text] { display: block; width: 100%; font: inherit; padding: 10px; margin-top: 4px;
-  border: 1px solid var(--line); border-radius: var(--radius-s); background: var(--bg); color: var(--text); }
+/* Every field a person types in: full width, a thumb's height, and 16px so a phone does not zoom. */
+form input:is([type=text], [type=email], [type=password], [type=url], [type=search], [type=number], [type=tel]) {
+  display: block; box-sizing: border-box; width: 100%; min-height: 44px; font: inherit; font-size: max(1rem, 16px);
+  padding: 10px; margin-top: 4px; border: 1px solid var(--line); border-radius: var(--radius-s);
+  background: var(--bg); color: var(--text); }
 .actions { display: flex; gap: 12px; margin: 12px 0 0; }
 .actions button { flex: 1; padding: 14px; font-weight: 600; }
 button.approve { background: var(--online); border-color: var(--online); color: #fff; }
@@ -215,10 +218,11 @@ body.app > main { flex: 1; min-height: 0; overflow-x: hidden; overflow-y: auto;
 @media (prefers-reduced-motion: no-preference) and (scripting: enabled) {
   ::view-transition-group(shell-tabs) { animation: none; }
 }
-/* A machine's page: its facts in two columns, its recent jobs in a table that wraps. */
-.facts { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; margin: 0; }
-.facts dt { color: var(--muted); }
-.facts dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+/* A machine's page: its facts in two columns, its recent jobs in a table that wraps. Only a
+   `dl`: the landing page's `ul.facts` shares this stylesheet and must stay a list. */
+dl.facts { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; margin: 0; }
+dl.facts dt { color: var(--muted); }
+dl.facts dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
 table.jobs { table-layout: fixed; font-size: .9rem; }
 table.jobs td, table.jobs th { padding: 8px; overflow-wrap: anywhere; }
 table.jobs th:nth-child(1) { width: 27%; }
