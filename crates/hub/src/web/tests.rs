@@ -226,7 +226,10 @@ async fn world_with(downloads: Option<Arc<crate::downloads::Downloads>>) -> Worl
             offers: None,
             routed: Default::default(),
             push: Some(push),
-            boards: Arc::new(crate::agenthub::mcp::Boards::from_config(&config, dir.path())),
+            boards: Arc::new(crate::agenthub::mcp::Boards::from_config(
+                &config,
+                dir.path(),
+            )),
             config,
             audit,
             links,
@@ -798,9 +801,10 @@ async fn a_person_approves_on_the_phone_page_and_the_agent_sees_it() {
     assert!(body.contains(&format!("value=\"{}\"", asked.id)));
     assert_eq!(
         body.matches("<script").count(),
-        2,
-        "the app's two scripts, the hub's own files; nothing inline"
+        3,
+        "the app's three scripts, the hub's own files; nothing inline"
     );
+    assert!(body.contains("<script src=\"/assets/reveal.js\"></script>"));
     assert!(body.contains("<script src=\"/assets/push.js\" defer></script>"));
 
     let form = [
@@ -859,8 +863,8 @@ async fn a_person_approves_on_the_phone_page_and_the_agent_sees_it() {
 #[tokio::test]
 async fn configured_boards_decide_for_the_owner_and_human_grants_only() {
     use crate::{
-        auth::Subject,
         agenthub::{Actor, open_project},
+        auth::Subject,
     };
     let w = world().await;
     let (_, board) = open_project(&w.board_dir).unwrap();

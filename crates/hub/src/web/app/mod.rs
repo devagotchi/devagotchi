@@ -49,6 +49,8 @@ pub fn routes() -> Router<AppState> {
         .route("/app/attention", get(attention))
         .route("/app/offline", get(offline))
         .route("/assets/app.js", get(script))
+        .route("/assets/reveal.js", get(reveal))
+        .route("/app/focus", get(focus))
 }
 
 /// The person signed in to this browser, or the page that answers instead: signed out,
@@ -140,6 +142,44 @@ async fn attention(
         .into_response()
 }
 
+/// `/app/focus`: what the Go to sheet lists for this person (`app.js`): their boards, their
+/// machines with how each is, and whether they own the hub (Hub settings).
+async fn focus(
+    axum::extract::State(state): axum::extract::State<AppState>,
+    headers: HeaderMap,
+) -> Response {
+    use axum::response::IntoResponse;
+    let subject = match who(&state, &headers).await {
+        Who::Person(subject) => subject,
+        _ => return StatusCode::UNAUTHORIZED.into_response(),
+    };
+    let boards = match board_names(&state, &subject) {
+        Ok(boards) => boards,
+        Err(error) => {
+            eprintln!("devagotchi hub: focus boards: {error}");
+            return unavailable();
+        }
+    };
+    let machines: Vec<serde_json::Value> = state
+        .hub
+        .machine_status(&subject)
+        .await
+        .iter()
+        .map(|machine| {
+            serde_json::json!({
+                "name": machine.name,
+                "status": home::status_word(machine.status),
+            })
+        })
+        .collect();
+    let owner = super::hub_settings::is_owner(&state, &subject);
+    (
+        [(axum::http::header::CACHE_CONTROL, "no-store")],
+        axum::Json(serde_json::json!({ "boards": boards, "machines": machines, "owner": owner })),
+    )
+        .into_response()
+}
+
 /// `/app/offline`: what the service worker shows when the hub cannot be reached.
 async fn offline() -> Response {
     let site = words();
@@ -160,6 +200,16 @@ async fn offline() -> Response {
 async fn script() -> Response {
     super::notify::asset(
         include_str!("../assets/app.js").to_string(),
+        "text/javascript; charset=utf-8",
+        "no-cache",
+    )
+}
+
+/// `/assets/reveal.js`: run before an app page is first drawn, so it slides in from the side
+/// the person swiped or tapped towards.
+async fn reveal() -> Response {
+    super::notify::asset(
+        include_str!("../assets/reveal.js").to_string(),
         "text/javascript; charset=utf-8",
         "no-cache",
     )

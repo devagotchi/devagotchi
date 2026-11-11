@@ -1471,9 +1471,9 @@ mod bound {
     use crate::{
         AppState,
         account::{self, Account, Stored},
+        agenthub::cli::{self, EXIT_OK, EXIT_REFUSED, EXIT_UNAVAILABLE, Invocation},
         audit::Audit,
         auth::Verifier,
-        agenthub::cli::{self, EXIT_OK, EXIT_REFUSED, EXIT_UNAVAILABLE, Invocation},
         config::HubConfig,
         devices::Devices,
         hub::Hub,
@@ -1523,7 +1523,9 @@ mod bound {
                 audit,
                 links,
             },
-            issue_store: Arc::new(crate::agenthub::issue_lifecycle::IssueLifecycleStore::disabled()),
+            issue_store: Arc::new(
+                crate::agenthub::issue_lifecycle::IssueLifecycleStore::disabled(),
+            ),
             web: None,
             passkeys: None,
         };

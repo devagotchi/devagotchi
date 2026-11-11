@@ -8,6 +8,7 @@
 mod access_tests;
 pub mod account;
 mod accounts;
+pub mod agenthub;
 #[cfg(test)]
 mod ahead_tests;
 pub mod ai;
@@ -16,7 +17,6 @@ mod analytics;
 mod analytics_tests;
 mod audit;
 mod auth;
-pub mod agenthub;
 mod config;
 mod connect;
 mod devices;
@@ -1022,8 +1022,9 @@ async fn run(state_dir: PathBuf, config_path: PathBuf) -> BridgeResult<()> {
         .map_err(|_| BridgeError::new("invalid_config", "listen"))?;
     let warehouse_store = board_store.clone();
     let signals_store = board_store.clone();
-    let boards =
-        Arc::new(agenthub::mcp::Boards::from_config(&config, &state_dir).using_postgres(board_store)?);
+    let boards = Arc::new(
+        agenthub::mcp::Boards::from_config(&config, &state_dir).using_postgres(board_store)?,
+    );
     if let Some(preferences) = boards.preferences() {
         links.set_preferences(preferences.clone());
     }
@@ -2318,7 +2319,9 @@ mod tests {
                 offers: None,
                 routed: Default::default(),
             },
-            issue_store: Arc::new(crate::agenthub::issue_lifecycle::IssueLifecycleStore::disabled()),
+            issue_store: Arc::new(
+                crate::agenthub::issue_lifecycle::IssueLifecycleStore::disabled(),
+            ),
             web: None,
             passkeys: None,
         };
@@ -2545,7 +2548,9 @@ mod tests {
                 offers: None,
                 routed: Default::default(),
             },
-            issue_store: Arc::new(crate::agenthub::issue_lifecycle::IssueLifecycleStore::disabled()),
+            issue_store: Arc::new(
+                crate::agenthub::issue_lifecycle::IssueLifecycleStore::disabled(),
+            ),
             web: None,
             passkeys,
         }

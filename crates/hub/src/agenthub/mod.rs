@@ -12,11 +12,11 @@
 //! (`mcp.rs`) for agents anywhere, through the hub.
 
 pub mod approval;
-pub(crate) mod issue_lifecycle;
 pub mod cli;
 pub mod face;
 pub(crate) mod hosted;
 pub mod inbox;
+pub(crate) mod issue_lifecycle;
 mod lease;
 pub mod mcp;
 pub(crate) mod migration;

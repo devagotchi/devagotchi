@@ -138,7 +138,29 @@ async fn the_app_shows_only_the_accounts_own_machines_and_boards_in_one_frame() 
     );
     assert!(home.contains("<body class=\"app\">"), "the app's frame");
     assert!(home.contains("<nav class=\"tabs\"><a href=\"/app\" aria-current=\"page\">"));
-    assert!(home.contains("<span class=\"tab-label\">Home</span>"));
+    assert!(home.contains("<span class=\"tab-label\">Overview</span>"));
+    // The tabs in the order a swipe moves through them, AgentHub second.
+    let order: Vec<usize> = [
+        "/app\"",
+        "/app/boards\"",
+        "/approvals\"",
+        "/app/machines\"",
+        "/app/me\"",
+    ]
+    .iter()
+    .map(|href| home.find(&format!("<a href=\"{href}")).expect(href))
+    .collect();
+    assert!(order.windows(2).all(|pair| pair[0] < pair[1]), "{order:?}");
+    // The Go to button and its sheet, a section per place.
+    assert!(home.contains("id=\"focus-open\"") && home.contains("aria-controls=\"focus\""));
+    for section in [
+        "focus-agenthub",
+        "focus-overview",
+        "focus-machines",
+        "focus-you",
+    ] {
+        assert!(home.contains(&format!("id=\"{section}\"")), "{section}");
+    }
     for tab in ["/app/machines", "/app/boards", "/approvals"] {
         assert!(
             home.contains(&format!("<a href=\"{tab}\">")),
@@ -147,16 +169,17 @@ async fn the_app_shows_only_the_accounts_own_machines_and_boards_in_one_frame() 
     }
     assert_eq!(
         home.matches("<script").count(),
-        1,
-        "one script: the app's own file"
+        2,
+        "two scripts, both the app's own files"
     );
+    assert!(home.contains("<script src=\"/assets/reveal.js\"></script>"));
     assert!(home.contains("<script src=\"/assets/app.js\" defer></script>"));
     assert!(
         home.contains("id=\"install\" hidden"),
         "the install banner waits for app.js"
     );
 
-    for (path, tab) in [("/app/machines", "Machines"), ("/app/boards", "Boards")] {
+    for (path, tab) in [("/app/machines", "Machines"), ("/app/boards", "AgentHub")] {
         let (status, html) = page(&hub, path, &alice).await;
         assert_eq!(status, 200, "{path}: {html}");
         assert!(
@@ -178,6 +201,27 @@ async fn the_app_shows_only_the_accounts_own_machines_and_boards_in_one_frame() 
             assert!(!html.contains(theirs), "B's {path} shows A's {theirs}");
         }
     }
+    // What the Go to sheet lists: each person's own boards and machines, and nobody else's.
+    let focus = |person: &Person| {
+        hub.http
+            .get(format!("{}/app/focus", hub.url))
+            .header(axum::http::header::COOKIE, person.cookie.clone())
+            .send()
+    };
+    let mine: serde_json::Value = focus(&alice).await.unwrap().json().await.unwrap();
+    assert_eq!(mine["boards"], serde_json::json!(["alpha"]), "{mine}");
+    assert_eq!(mine["machines"][0]["name"], "desk", "{mine}");
+    assert_eq!(mine["owner"], false, "{mine}");
+    let theirs: serde_json::Value = focus(&bob).await.unwrap().json().await.unwrap();
+    assert!(!theirs.to_string().contains("alpha") && !theirs.to_string().contains("desk"));
+    let anonymous = hub
+        .http
+        .get(format!("{}/app/focus", hub.url))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(anonymous.status(), 401);
+
     let (_, home) = page(&hub, "/app", &bob).await;
     assert!(home.contains("No machines yet.") && home.contains("No boards yet."));
     assert!(home.contains("Nothing needs you."));

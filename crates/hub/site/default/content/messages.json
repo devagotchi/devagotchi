@@ -263,14 +263,14 @@
     "link_password": "Enter this account's password to link Google to it."
   },
   "app": {
-    "tab_home": "Home",
+    "tab_home": "Overview",
     "tab_machines": "Machines",
-    "tab_boards": "Boards",
+    "tab_boards": "AgentHub",
     "tab_approvals": "Approvals",
     "install_iphone": "Add to your home screen: tap Share, then Add to Home Screen.",
     "install_android": "Add to your home screen:",
     "install_button": "Install",
-    "home_title": "Home",
+    "home_title": "Overview",
     "needs_you": "Needs you",
     "needs_you_empty": "Nothing needs you.",
     "approval_waiting": "Approval waiting",

@@ -19,9 +19,9 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    agenthub::mcp::Boards,
     audit::{Audit, AuditEntry},
     auth::Subject,
-    agenthub::mcp::Boards,
     config::HubConfig,
     link::Links,
 };
