@@ -2,7 +2,7 @@
 # deploy/compose/install.sh, update.sh and backup.sh for real, as root on a Linux host with
 # Docker (CI: `hub (deploy scripts)`): the stack up behind an "external" edge on a loopback
 # port, the image pinned by digest, an update that is not healthy rolled back and never
-# retried, and a backup of the database and the state volume. Then the same stack re-run
+# retried, a backup of the database and the state volume, and restoring it. Then the same stack re-run
 # as a hosted hub (tenancy, an operator, Google from a secrets file), and the deploy files
 # coming with each new image from the commit it names (a local registry and file server
 # stand in for GHCR and GitHub): swapped in with a healthy image, rolled back with an
@@ -73,6 +73,23 @@ ls "$work"/backups/db-*.dump "$work"/backups/state-*.tgz >/dev/null || fail "bac
 listed=$(tar -tzf "$work"/backups/state-*.tgz) || fail "the state archive reads back"
 [[ -n "$listed" ]] || fail "the state archive has the hub's files"
 echo "PASS backup.sh: database dump and state archive"
+
+# Restoring it: what happened after the backup is gone, and the hub is healthy on what it held.
+psql_hub() { (cd "$dir" && docker compose exec -T postgres psql -h /var/run/postgresql -U devagotchi -d devagotchi -Atc "$1"); }
+pg_image=$(cd "$dir" && docker inspect --format '{{.Image}}' "$(docker compose ps -q postgres)")
+state_volume=$(docker volume ls -q --filter "label=com.docker.compose.volume=hub-state")
+tenants=$(psql_hub "SELECT count(*) FROM devagotchi.tenancy_tenants")
+psql_hub "CREATE TABLE devagotchi.after_the_backup (x int)" >/dev/null
+docker run --rm --network none -v "$state_volume:/state" "$pg_image" touch /state/after-the-backup
+"$dir/backup.sh" --restore "$work"/backups/db-*.dump "$work"/backups/state-*.tgz >/dev/null || fail "backup.sh --restore runs"
+[[ -z "$(psql_hub "SELECT to_regclass('devagotchi.after_the_backup')")" ]] || fail "a table made after the backup is gone"
+docker run --rm --network none -v "$state_volume:/state" "$pg_image" sh -c 'test ! -e /state/after-the-backup' \
+  || fail "a file made after the backup is gone"
+[[ "$(psql_hub "SELECT count(*) FROM devagotchi.tenancy_tenants")" == "$tenants" ]] || fail "the backup's rows are back"
+health=$(curl -fsS "http://127.0.0.1:$port/healthz") || fail "the hub answers after a restore"
+grep -q '"ok":true' <<<"$health" || fail "the hub is healthy after a restore: $health"
+grep -q '"audit":{[^}]*"ok":true' <<<"$health" || fail "the audit chain verifies after a restore: $health"
+echo "PASS backup.sh --restore: the database and state are the backup's, the hub healthy on them"
 
 # The hub's site (tests/fixtures/neutral-site): checked with the hub image, put in place,
 # served; nothing of the built-in site shows. This runs the published image, built from

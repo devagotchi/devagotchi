@@ -26,7 +26,8 @@ install.sh --domain NAME [options]
                        external: a proxy elsewhere terminates TLS and reaches the hub's port
   --hub-bind ADDR      where the hub's HTTP port is published (default 127.0.0.1)
   --hub-port PORT      that port (default 8787)
-  --track IMAGE        the image tag to follow (default ghcr.io/devagotchi/devagotchi:main)
+  --track IMAGE        the image tag to follow (default ghcr.io/devagotchi/devagotchi:latest,
+                       the newest tagged release; :main follows every merge)
   --dir DIR            where the stack lives (default /opt/devagotchi-hub)
   --source DIR|URL     where compose.yaml and update.sh come from (default: beside this
                        script, else https://raw.githubusercontent.com/<repo>/<ref>/deploy/compose)
@@ -64,7 +65,7 @@ EOF
 }
 
 domain="" public_url="" rp_id="" edge=caddy hub_bind=127.0.0.1 hub_port=8787
-track=ghcr.io/devagotchi/devagotchi:main dir=/opt/devagotchi-hub source=""
+track=ghcr.io/devagotchi/devagotchi:latest dir=/opt/devagotchi-hub source=""
 repo=devagotchi/devagotchi ref=main timer=true site="" site_only=false no_site=false
 tenancy="" operators="" proxies="" google=false github=false nomen="" email_from="" env_file=""
 analytics="" analytics_days=""
@@ -305,10 +306,13 @@ umask 022
 
 # First start (or a re-run): the stack up, then update.sh pins the track's digest and
 # deploys it, health-checked, exactly as the timer will every few minutes.
-services=(postgres clickhouse hub); [[ "$edge" == caddy ]] && services+=(caddy)
+services=(postgres hub); [[ "$edge" == caddy ]] && services+=(caddy)
 # Behind an external edge, a Caddy an earlier run started here would only hold ports 80/443.
 [[ "$edge" == external ]] && (cd "$dir" && docker compose rm -sf caddy >/dev/null 2>&1 || true)
 say "starting ${services[*]} in $dir"
+# ClickHouse is the statistics: started, never waited for. The boards work without it.
+(cd "$dir" && docker compose up -d --pull missing clickhouse) \
+  || say "ClickHouse did not start; the hub's events wait in Postgres: cd $dir && docker compose logs clickhouse"
 (cd "$dir" && docker compose up -d --pull missing --wait --wait-timeout 180 "${services[@]}")
 DEVAGOTCHI_DIR="$dir" "$dir/update.sh" --now || die "the hub did not come up healthy; see: cd $dir && docker compose logs hub"
 

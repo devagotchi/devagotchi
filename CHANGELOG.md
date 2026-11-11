@@ -7,6 +7,16 @@ heading. Agents draft the fragments below; they never tag.
 
 ## Unreleased
 
+### The release lane (increment 121)
+- `install.sh`, `hub-up.sh` and `compose.yaml` now follow `:latest`, which moves only when a
+  release is tagged. `--track ...:main` follows every merge, for a hub you test on.
+- Fixed: the deploy waited for ClickHouse, so one that never turned healthy rolled back a
+  healthy hub and refused that image from then on. ClickHouse is now started and never waited
+  for, and the hub no longer depends on it in compose.
+- `backup.sh --restore DB.dump STATE.tgz` puts back the database and the state volume, with
+  the update timer stopped while it runs. `tests/deploy_scripts.sh` runs it for real, and
+  runs a deploy against a ClickHouse that never turns healthy.
+
 ### Approving ahead of time covers one exact step (increment 120)
 - Fixed: a standing approval covered a kind and target, which are the AI's own words, so any
   command under an allowed label was approved with nobody told. It now covers its kind, its

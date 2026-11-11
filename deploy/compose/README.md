@@ -101,7 +101,7 @@ Docker's repository if it is missing, `.env` from its flags (Postgres sized for 
 image pinned by digest, and two systemd timers:
 
 - `devagotchi-hub-update.timer`, every 5 minutes, runs `update.sh`. When the track
-  (`DEVAGOTCHI_TRACK`, `:main` by default) points at a new digest, it backs the database up,
+  (`DEVAGOTCHI_TRACK`, `:latest` by default) points at a new digest, it backs the database up,
   deploys that digest and keeps it only if `/healthz` answers healthy. Otherwise it goes back
   to the digest that ran before, which migrations allow (they add; an older hub opens a
   newer store), and never tries that digest again. What it did is in
@@ -118,6 +118,26 @@ image pinned by digest, and two systemd timers:
 - `devagotchi-hub-backup.timer`, nightly, runs `backup.sh`: a `pg_dump` of the database and
   an archive of the state volume in `/var/backups/devagotchi-hub`, 14 days kept. Copy them
   off the host too.
+
+Two lanes to follow, set with `--track`:
+
+- `ghcr.io/devagotchi/devagotchi:latest`, the default, moves only when a release is tagged.
+- `ghcr.io/devagotchi/devagotchi:main` moves on every merge. Use it for a hub you are testing
+  on, since every merge reaches it within minutes. A `:latest` install has nothing to pull
+  until the first release is tagged.
+
+ClickHouse is started with the stack and never waited for, so a sick ClickHouse cannot undo a
+healthy deploy. The boards work without it and `/healthz` reports `analytics` as degraded.
+
+To restore a backup, on a stack `install.sh` made (on a new server, run `install.sh` first):
+
+```bash
+sudo ./backup.sh --restore /var/backups/devagotchi-hub/db-TIME.dump /var/backups/devagotchi-hub/state-TIME.tgz
+docker compose exec hub devagotchi hub analytics-resend --config /etc/devagotchi/hub.json
+```
+
+The first line replaces the database and the state volume with the backup's, and anything
+since is lost. The second refills ClickHouse.
 
 ```bash
 sudo ./install.sh --domain hub.example.com                   # with this stack's Caddy
@@ -309,7 +329,7 @@ Everything is in `.env`; each has a default (`.env.example` lists them).
 |---|---|---|
 | `DEVAGOTCHI_DOMAIN` | (required) | The name the hub is reached at; Caddy gets its certificate for it. `localhost` works for a try-out, with Caddy's own certificate. |
 | `DEVAGOTCHI_PUBLIC_URL` | `https://<DEVAGOTCHI_DOMAIN>` | The URL clients use, when it differs (another port, another proxy in front). Passkeys and AI clients are bound to it. |
-| `DEVAGOTCHI_IMAGE` | `ghcr.io/devagotchi/devagotchi:main` | The hub image. `docker compose up --build` builds it from this checkout instead. |
+| `DEVAGOTCHI_IMAGE` | `ghcr.io/devagotchi/devagotchi:latest` | The hub image. `docker compose up --build` builds it from this checkout instead. |
 | `DEVAGOTCHI_HTTP_PORT`, `DEVAGOTCHI_HTTPS_PORT` | `80`, `443` | Where Caddy listens on the host. |
 | `DEVAGOTCHI_PG_SHARED_BUFFERS` | `256MB` | About a quarter of the box's RAM. |
 | `DEVAGOTCHI_PG_EFFECTIVE_CACHE_SIZE` | `768MB` | About three quarters of the box's RAM. |

@@ -39,16 +39,22 @@ healthy() {
   done
   return 1
 }
-# The services this stack runs: Postgres and the hub, and Caddy unless an edge elsewhere
-# terminates TLS. All of them, so a compose.yaml that changed reaches each.
+# The services a deploy waits for: Postgres and the hub, and Caddy unless an edge elsewhere
+# terminates TLS, so a compose.yaml that changed reaches each.
 services() {
-  # ClickHouse is the hub's statistics (warehouse.rs): brought up with it, and the deploy
-  # waits for it, though the hub serves the boards without it.
-  printf '%s\n' postgres clickhouse hub
+  printf '%s\n' postgres hub
   [[ "$(env_get DEVAGOTCHI_EDGE)" == external ]] || printf '%s\n' caddy
+}
+# ClickHouse is the hub's statistics (warehouse.rs): started with the rest and never waited
+# for. The hub serves the boards without it and its events wait in Postgres, so a ClickHouse
+# that is sick must not undo a healthy deploy.
+start_statistics() {
+  docker compose up -d clickhouse >/dev/null 2>&1 \
+    || log "ClickHouse did not start; the hub's events wait in Postgres: cd $dir && docker compose logs clickhouse"
 }
 up() {
   local out
+  start_statistics
   # shellcheck disable=SC2046
   out=$(docker compose up -d --wait --wait-timeout 120 $(services) 2>&1) || { printf '%s\n' "$out" >&2; return 1; }
   healthy
