@@ -534,8 +534,10 @@ EOF
         step "Caddy at $public"
         if ! command -v caddy >/dev/null; then
             command -v apt-get >/dev/null || die "caddy is not installed; install it (https://caddyserver.com/docs/install), then re-run with --caddy"
-            DEBIAN_FRONTEND=noninteractive apt-get update -q >/dev/null
-            DEBIAN_FRONTEND=noninteractive apt-get install -y -q caddy >/dev/null
+            # apt's own output stays visible: when a mirror fails, it says which.
+            DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::Retries=3 update -q >/dev/null || true
+            DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::Retries=3 install -y -q caddy >/dev/null \
+                || die "could not install caddy with apt (its error is above); install it (https://caddyserver.com/docs/install), then re-run with --caddy"
             echo "    installed caddy from the distribution"
         fi
         case $public in
