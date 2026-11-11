@@ -13,10 +13,10 @@ use axum::{
 };
 use serde::Deserialize;
 
-use super::{open_board, person, words};
+use super::super::{open_board, person, words};
 use crate::{
     AppState,
-    board::{Anchors, Filter, Ticket, approval},
+    agenthub::{Anchors, Filter, Ticket, approval},
     web::{
         encode,
         pages::{self, Tab, escape},

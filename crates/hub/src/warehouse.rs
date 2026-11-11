@@ -1,7 +1,7 @@
 //! The hub's board events in ClickHouse, for statistics (ADR 0001, increment 115).
 //!
 //! Postgres stays the board of record. Every board mutation commits a row to its
-//! `board_outbox` in the same transaction (`board::hosted`); this exporter sends the rows
+//! `board_outbox` in the same transaction (`agenthub::hosted`); this exporter sends the rows
 //! that wait to ClickHouse over its HTTP interface and marks them delivered once
 //! ClickHouse has taken them. Delivery is at least once: a send whose answer is lost is sent
 //! again, and the table (`ReplacingMergeTree` ordered by tenant, board and event id) keeps
@@ -66,7 +66,7 @@ pub struct Warehouse {
 }
 
 fn now_secs() -> i64 {
-    crate::board::system_clock()() / 1000
+    crate::agenthub::system_clock()() / 1000
 }
 
 fn unavailable(message: impl Into<String>) -> BridgeError {
@@ -241,7 +241,7 @@ impl Warehouse {
         self.execute(&insert, Some(body), &[]).await?;
         // Taken by ClickHouse: marked delivered. A crash before this line sends them again,
         // and the table keeps one row per event id.
-        let delivered_at = crate::board::system_clock()();
+        let delivered_at = crate::agenthub::system_clock()();
         transaction!(&self.store, |connection| {
             self.store.scope(connection, tenant).await?;
             for chunk in rows.chunks(100) {
@@ -368,7 +368,7 @@ impl Warehouse {
         let (pending, oldest_secs, backlog_error) = match backlog {
             Ok((pending, oldest)) => (
                 Some(pending),
-                oldest.map(|ms| (crate::board::system_clock()() - ms).max(0) / 1000),
+                oldest.map(|ms| (crate::agenthub::system_clock()() - ms).max(0) / 1000),
                 None,
             ),
             Err(error) => (None, None, Some(error.message)),
@@ -493,7 +493,7 @@ pub async fn resend(store: &Store) -> BridgeResult<i64> {
 }
 
 /// One outbox row as a JSONEachRow line. A board event's payload is the event itself
-/// (`board::Event`); anything else (an import's receipt) keeps its kind as the action.
+/// (`agenthub::Event`); anything else (an import's receipt) keeps its kind as the action.
 #[allow(clippy::too_many_arguments)]
 fn row(
     tenant_id: &str,

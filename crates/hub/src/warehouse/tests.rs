@@ -17,7 +17,7 @@ use serde_json::Value;
 
 use super::*;
 use crate::{
-    board::{Actor, NewTicket, hosted::HostedBoard},
+    agenthub::{Actor, NewTicket, hosted::HostedBoard},
     orgs::Orgs,
     store::testing,
 };

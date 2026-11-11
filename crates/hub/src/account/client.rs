@@ -1,6 +1,6 @@
 //! One MCP session with a hub, as the account on file: the client side of Streamable
 //! HTTP. `devagotchi mcp --hub` relays an agent's stdio through it (`front`); the board's
-//! remote face (`board::remote`) calls tools through it. The token comes from
+//! remote face (`agenthub::remote`) calls tools through it. The token comes from
 //! `account.json` at each request — refreshed when due, so a long session rides over a
 //! rotation — and the seat (`X-Devagotchi-Seat`) names the account's agent on this machine.
 //!
@@ -18,7 +18,7 @@ use devagotchi_contracts::{BridgeError, BridgeResult};
 use serde_json::Value;
 
 use super::{Standing, Stored, current, unix_now};
-use crate::board::mcp::SEAT_HEADER;
+use crate::agenthub::mcp::SEAT_HEADER;
 
 /// The hosted hub (D22): the built-in site's `links.hosted_hub`, the app and its /mcp, not
 /// the marketing site, which redirects there; the relay never follows redirects.

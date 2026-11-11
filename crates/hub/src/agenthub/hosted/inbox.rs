@@ -1,11 +1,11 @@
-//! A recipient's position on a hosted board (`board::inbox`): one row of `board_settings`,
+//! A recipient's position on a hosted board (`agenthub::inbox`): one row of `board_settings`,
 //! read with the addressed notes and written in the same transaction.
 
 use devagotchi_contracts::BridgeResult;
 use sqlx::AnyConnection;
 
 use super::{DbResult, HostedBoard, decode};
-use crate::board::{
+use crate::agenthub::{
     Note,
     inbox::{self, Cursors, Delivery, InboxNote, KEY, SCAN},
 };
@@ -113,7 +113,7 @@ impl HostedBoard {
         })
     }
 
-    pub(crate) async fn wakes(&self) -> BridgeResult<crate::board::wake::Wakes> {
+    pub(crate) async fn wakes(&self) -> BridgeResult<crate::agenthub::wake::Wakes> {
         transaction!(&self.store, |connection| {
             self.scope(connection).await?;
             let raw: Option<String> = sqlx::query_scalar(
@@ -121,7 +121,7 @@ impl HostedBoard {
             )
             .bind(&self.tenant)
             .bind(&self.project)
-            .bind(crate::board::wake::KEY)
+            .bind(crate::agenthub::wake::KEY)
             .fetch_optional(&mut *connection)
             .await?;
             Ok(raw
@@ -132,8 +132,8 @@ impl HostedBoard {
 
     pub(crate) async fn save_wakes(
         &self,
-        actor: &crate::board::Actor<'_>,
-        wakes: &crate::board::wake::Wakes,
+        actor: &crate::agenthub::Actor<'_>,
+        wakes: &crate::agenthub::wake::Wakes,
         detail: serde_json::Value,
     ) -> BridgeResult<()> {
         transaction!(&self.store, |connection| {
@@ -144,7 +144,7 @@ impl HostedBoard {
             )
             .bind(&self.tenant)
             .bind(&self.project)
-            .bind(crate::board::wake::KEY)
+            .bind(crate::agenthub::wake::KEY)
             .bind(serde_json::to_string(wakes).expect("wakes json"))
             .execute(&mut *connection)
             .await?;

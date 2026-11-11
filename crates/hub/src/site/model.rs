@@ -1221,7 +1221,7 @@ pub struct AppCopy {
     pub machine_unknown_text: String,
     /// A form posted from another site.
     pub not_from_here: String,
-    /// The board and ticket pages (`web/app/board.rs`, `web/app/ticket.rs`). `not_changed`:
+    /// The board and ticket pages (`web/app/agenthub/board.rs`, `web/app/agenthub/ticket.rs`). `not_changed`:
     /// `{why}`, the board's answer.
     pub filter_state: String,
     pub filter_assignee: String,

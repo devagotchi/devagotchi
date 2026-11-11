@@ -16,7 +16,7 @@ use std::sync::Arc;
 use crate::{
     AppState,
     auth::Subject,
-    board::{Board, Note, Ticket},
+    agenthub::{Board, Note, Ticket},
 };
 
 pub const MAX_BODY: usize = 256 * 1024;
@@ -436,7 +436,7 @@ async fn authorized_board(
     }
     let mapped = state.hub.config.github.mapping(repository)?;
     let seat = headers
-        .get(crate::board::mcp::SEAT_HEADER)
+        .get(crate::agenthub::mcp::SEAT_HEADER)
         .map(|value| value.to_str().map_err(|_| invalid("invalid seat header")))
         .transpose()?;
     if seat.is_some_and(|seat| !crate::config::valid_name(seat)) {
@@ -444,7 +444,7 @@ async fn authorized_board(
     }
     let (board, kind, role) = state.hub.board_access(subject, &mapped.project)?;
     // A personal board with the same project name is not the configured source target.
-    if kind != crate::board::mcp::Kind::Shared {
+    if kind != crate::agenthub::mcp::Kind::Shared {
         return Err(BridgeError::new(
             "not_granted",
             "issue repository belongs to the configured shared board",

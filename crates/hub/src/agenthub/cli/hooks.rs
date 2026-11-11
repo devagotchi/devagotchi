@@ -37,7 +37,7 @@ pub(super) fn read_input(reader: impl Read) -> BridgeResult<Input> {
     if input
         .session_id
         .as_ref()
-        .is_some_and(|id| !crate::issue_lifecycle::request_key(id))
+        .is_some_and(|id| !crate::agenthub::issue_lifecycle::request_key(id))
     {
         return Err(BridgeError::new("usage", "invalid hook session_id"));
     }
@@ -180,7 +180,7 @@ fn apply(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::board::{Board, NewTicket};
+    use crate::agenthub::{Board, NewTicket};
     use std::sync::{
         Arc,
         atomic::{AtomicI64, Ordering},

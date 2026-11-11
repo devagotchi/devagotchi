@@ -21,7 +21,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     audit::{Audit, AuditEntry},
     auth::Subject,
-    board::mcp::Boards,
+    agenthub::mcp::Boards,
     config::HubConfig,
     link::Links,
 };
@@ -31,7 +31,7 @@ pub struct Hub {
     pub config: Arc<HubConfig>,
     pub audit: Arc<Audit>,
     pub links: Arc<Links>,
-    /// The project boards this hub serves (`board_*` tools, `crate::board::mcp`).
+    /// The project boards this hub serves (`board_*` tools, `crate::agenthub::mcp`).
     pub boards: Arc<Boards>,
     /// Web Push to people's phones when an approval waits; present with browser sign-in.
     pub push: Option<Arc<crate::push::Push>>,

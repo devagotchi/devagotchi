@@ -617,7 +617,7 @@ impl Boards {
             let next = tokio::task::spawn_blocking(move || boards.next_lease_expiry())
                 .await
                 .unwrap_or(None);
-            let now = crate::board::system_clock()();
+            let now = crate::agenthub::system_clock()();
             match next {
                 Some(at) if at <= now => {
                     let boards = self.clone();
@@ -1993,9 +1993,9 @@ impl Hub {
     )]
     async fn board_issue_context(
         &self,
-        Parameters(input): Parameters<crate::issue_lifecycle::IssueLookup>,
+        Parameters(input): Parameters<crate::agenthub::issue_lifecycle::IssueLookup>,
         context: RequestContext<RoleServer>,
-    ) -> BoardOut<crate::issue_lifecycle::IssueContext> {
+    ) -> BoardOut<crate::agenthub::issue_lifecycle::IssueContext> {
         let mapped = self
             .config
             .github
@@ -2034,9 +2034,9 @@ impl Hub {
     )]
     async fn board_issue_checkpoint(
         &self,
-        Parameters(input): Parameters<crate::issue_lifecycle::ContextWrite>,
+        Parameters(input): Parameters<crate::agenthub::issue_lifecycle::ContextWrite>,
         context: RequestContext<RoleServer>,
-    ) -> BoardOut<crate::issue_lifecycle::ContextReceipt> {
+    ) -> BoardOut<crate::agenthub::issue_lifecycle::ContextReceipt> {
         let mapped = self
             .config
             .github
@@ -3107,7 +3107,7 @@ impl Hub {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::board::{BOARD_DIR, BOARD_FILE, ProjectConfig};
+    use crate::agenthub::{BOARD_DIR, BOARD_FILE, ProjectConfig};
 
     fn hub_config(project: &str, dir: &std::path::Path) -> HubConfig {
         HubConfig::parse(
@@ -3159,7 +3159,7 @@ mod tests {
         let id = board
             .create(
                 &operator,
-                crate::board::NewTicket {
+                crate::agenthub::NewTicket {
                     title: "lapses".into(),
                     ..Default::default()
                 },

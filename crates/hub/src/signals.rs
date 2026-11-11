@@ -305,7 +305,7 @@ impl Sink {
                 status.waiting = 0;
                 status.oldest_waiting_ms = None;
                 if sent > 0 {
-                    status.last_sent_at = Some(crate::board::system_clock()() / 1000);
+                    status.last_sent_at = Some(crate::agenthub::system_clock()() / 1000);
                 }
                 status.sent += sent as u64;
             }
@@ -350,7 +350,7 @@ impl Sink {
             return Ok(());
         }
         self.push(&batch.signals).await?;
-        let now = crate::board::system_clock()();
+        let now = crate::agenthub::system_clock()();
         let moves = std::mem::take(&mut batch.moves);
         transaction!(&self.store, |connection| {
             for (source, scope, position) in &moves {
@@ -577,7 +577,7 @@ impl Sink {
     /// What `/healthz` reports for this sink. Never the token, the secret or a signal.
     pub fn health(&self) -> Value {
         let status = self.status.lock().expect("sink status");
-        let now = crate::board::system_clock()();
+        let now = crate::agenthub::system_clock()();
         let oldest = status.oldest_waiting_ms.map(|ms| (now - ms).max(0) / 1000);
         json!({
             "name": self.name,

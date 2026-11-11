@@ -1048,7 +1048,7 @@ Not every step needs a buzz. An AI names the kind of step it asks about (`approv
 such as a machine's name); the ticket carries them as labels and `/approvals` shows them. Under
 the usual Approve, a second button reads **Approve, and allow this exact restart on dabo for 30
 days**: it approves this one and records a standing approval on the board's settings
-(`board/approval.rs`). From then on a request with the same kind, the same target and the same
+(`agenthub/approval.rs`). From then on a request with the same kind, the same target and the same
 command, character for character, is approved the moment it is asked, decided by
 `standing:<id>` with a note naming the person who allowed it, and no phone is notified (`phones`
 is 0 and the answer carries the `standing` that covered it). The kind and target are the AI's own

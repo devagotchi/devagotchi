@@ -812,7 +812,7 @@ fn discovered_work_links_back_to_where_it_was_found() {
 mod cli {
     use std::{ffi::OsString, path::Path};
 
-    use crate::board::cli::{
+    use crate::agenthub::cli::{
         self, EXIT_CONFLICT, EXIT_NOT_FOUND, EXIT_OK, EXIT_UNAVAILABLE, EXIT_USAGE, Invocation,
     };
 
@@ -1473,7 +1473,7 @@ mod bound {
         account::{self, Account, Stored},
         audit::Audit,
         auth::Verifier,
-        board::cli::{self, EXIT_OK, EXIT_REFUSED, EXIT_UNAVAILABLE, Invocation},
+        agenthub::cli::{self, EXIT_OK, EXIT_REFUSED, EXIT_UNAVAILABLE, Invocation},
         config::HubConfig,
         devices::Devices,
         hub::Hub,
@@ -1518,12 +1518,12 @@ mod bound {
                 offers: None,
                 routed: Default::default(),
                 push: None,
-                boards: Arc::new(crate::board::mcp::Boards::from_config(&config, dir)),
+                boards: Arc::new(crate::agenthub::mcp::Boards::from_config(&config, dir)),
                 config,
                 audit,
                 links,
             },
-            issue_store: Arc::new(crate::issue_lifecycle::IssueLifecycleStore::disabled()),
+            issue_store: Arc::new(crate::agenthub::issue_lifecycle::IssueLifecycleStore::disabled()),
             web: None,
             passkeys: None,
         };
@@ -1952,7 +1952,7 @@ mod bound {
         .await;
         assert_eq!(refused["isError"], true, "{refused}");
         assert!(refused.to_string().contains("not_owner"), "{refused}");
-        let (_, board) = crate::board::open_project(&shared).unwrap();
+        let (_, board) = crate::agenthub::open_project(&shared).unwrap();
         assert_eq!(board.settings().unwrap().repo, None);
         // And the member's own board is not the agent's to reach at all.
         let refused = tool(

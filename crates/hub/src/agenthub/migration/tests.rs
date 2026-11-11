@@ -1,6 +1,6 @@
 use super::*;
 use crate::{
-    board::{Actor, Anchors, Board, DepKind, NewTicket},
+    agenthub::{Actor, Anchors, Board, DepKind, NewTicket},
     store::{testing, transaction},
 };
 use sqlx::Row;

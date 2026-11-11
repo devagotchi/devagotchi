@@ -5,13 +5,11 @@
 //! banner, refreshes on a pull and registers the service worker, which keeps the frame and
 //! the stylesheet so the app opens offline on `/app/offline`.
 
-mod board;
+mod agenthub;
 mod home;
 mod keys;
 mod machine;
 pub(super) mod me;
-mod ticket;
-mod ticket_actions;
 
 use std::sync::Arc;
 
@@ -26,7 +24,7 @@ use super::{
     pages::{self, escape},
     routes::{Who, not_set_up, see_other, unavailable, who},
 };
-use crate::{AppState, auth::Subject, board::Board, site::Site};
+use crate::{AppState, agenthub::Board, auth::Subject, site::Site};
 
 pub fn routes() -> Router<AppState> {
     Router::new()
@@ -38,11 +36,11 @@ pub fn routes() -> Router<AppState> {
             axum::routing::post(machine::update),
         )
         .route("/app/boards", get(home::boards))
-        .route("/app/boards/{project}", get(board::page))
-        .route("/app/tickets/{project}/{id}", get(ticket::page))
+        .route("/app/boards/{project}", get(agenthub::board::page))
+        .route("/app/tickets/{project}/{id}", get(agenthub::ticket::page))
         .route(
             "/app/tickets/{project}/{id}/{action}",
-            axum::routing::post(ticket_actions::act),
+            axum::routing::post(agenthub::ticket_actions::act),
         )
         .route("/app/me", get(me::page).post(me::save))
         .route("/app/keys", get(keys::page).post(keys::create))
@@ -171,5 +169,3 @@ async fn script() -> Response {
 mod approval_tests;
 #[cfg(test)]
 mod tests;
-#[cfg(test)]
-mod ticket_tests;

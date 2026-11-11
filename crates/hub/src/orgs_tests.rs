@@ -1,5 +1,5 @@
 //! Organisations end to end over HTTP, the whole router as it serves (`orgs`, `orgs::api`,
-//! `board::mcp::Hub::board_access`): a person makes an organisation and invites another,
+//! `agenthub::mcp::Hub::board_access`): a person makes an organisation and invites another,
 //! a project is made, the invited person's AI works it, and a change of role holds from that
 //! AI's next call: demoted to viewer it reads and changes nothing, removed it reaches
 //! nothing. Only people change who works what; another site's form changes nothing. On

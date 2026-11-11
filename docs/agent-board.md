@@ -1,7 +1,7 @@
 # Devagotchi agent board: tickets any subscription can claim, work, annotate and hand off
 
 Revision: **2026-11-09 UTC**. Status: **hosted CLI/MCP/web use native Postgres; standalone SQLite retained; offline queue pending**.
-Owner: `crates/hub/src/board/`. This document owns the board contract; the
+Owner: `crates/hub/src/agenthub/`. This document owns the board contract; the
 [architecture master](product-and-platform-plan.md) owns product decisions and sequencing; the
 [task-graph contract](task-graph-and-mesh-contract.md) owns execution graphs, which are a different thing.
 
@@ -42,7 +42,7 @@ protocol adds comes from what works elsewhere (§7).
 | What it replaces | The Go hub's tasks/notes/deps/leases/events, ported not run beside; the Go hub freezes behind a superseded banner once parity tests pass (increment 11). |
 | Authoritative state | Hosted boards: tenant/project-scoped Postgres tables in the existing hub `Store` (ADR 0001). Standalone boards: `<project>/.devagotchi/board.sqlite3`. Bound client SQLite is cache/pending operations only (ADR 0002). `board.jsonl` is an export, never authority. Live hosted routing remains SQLite until verified cutover. |
 | Dependencies and failure | Existing SQLx Postgres storage for hosted transactions; rusqlite for standalone/cache. No silent local fallback when the hub/database is down. Durable outbox to required ClickHouse exposes export lag/backpressure. Broken chains are reported, never silently repaired. |
-| Acceptance | `crates/hub/src/board/tests.rs`: lanes, fencing after expiry, reaper → attention, readiness through `blocks`, assignee priority, WIP, handoff, force-release, version conflicts, transitions, filters, append-only triggers, chain tampering, workflow replacement, discovered work. |
+| Acceptance | `crates/hub/src/agenthub/tests.rs`: lanes, fencing after expiry, reaper → attention, readiness through `blocks`, assignee priority, WIP, handoff, force-release, version conflicts, transitions, filters, append-only triggers, chain tampering, workflow replacement, discovered work. |
 
 Rejected: a board per machine (tickets outlive machines), Dolt or another versioned database.
 The original rejection of centralized hosted board storage is superseded by ADR 0001;
@@ -257,7 +257,7 @@ assignee: the caller as the board names it, since a seat's spelling is the hub's
 here runs on the hub as the account on file (`devagotchi login`), through one MCP session
 (`account::client`). The agent's name (`--as`, `DEVAGOTCHI_ACTOR`) travels as its seat; a bare OS
 user is the account itself. The command line renders the hub's records exactly as the local
-store's — one `Face` trait (`board/face.rs`), two implementations (`Board`, `remote::Remote`) —
+store's — one `Face` trait (`agenthub/face.rs`), two implementations (`Board`, `remote::Remote`) —
 and the hub's refusals keep their codes and the CLI's `next` hints; `not_signed_in`,
 `signed_out` and `hub_unreachable` say what to run. No local store is written for a bound
 project; `board unbind` makes the local store the board again (the hub keeps its board). A
@@ -346,11 +346,11 @@ user-authorized direct-recording exception, limited to hosted storage and offlin
 
 | Increment | Scope | Exit |
 |---|---|---|
-| 7 (this one) | `crates/hub/src/board/`: schema, ids, workflow, store, leases, reaper, chain; this document | `cargo nextest run -p devagotchi-hub` green; §2 acceptance list |
+| 7 (this one) | `crates/hub/src/agenthub/`: schema, ids, workflow, store, leases, reaper, chain; this document | `cargo nextest run -p devagotchi-hub` green; §2 acceptance list |
 | 8a (built) | `devagotchi board` CLI (`devagotchi-hub board` until 13b): `init` (+ AGENTS.md block), `prime`, `onboard`, `agent`, `ready`, `ls`, `show`, `new`, `claim`, `beat`, `note`, `done`, `handoff`, `release`, `force`, `set`, `dep`, `reap`, `verify`, `export`; JSON off a pipe, `--quiet`, exit codes by class, `next` on every error, claim cache | five CLI tests: init idempotence, the loop from a subdirectory with a cached fence, exit codes and hints, `prime` ≤ 50 lines, export + verify |
 | 8b (in) | MCP tools on `/mcp` (one board per `project`; **built**, §6: `boards` config, grants with `boards`/`human`, 17 tools, fence memory, audit, reaper, `tests/board_probe.py`); the hook pack (`board hooks`, **built**); the skill with the MCP snippet per CLI (**built**, agent-skills); still open: project registration with the hub, `request_id` | `tests/e2e.py` works a board over MCP as a person and two agents (**green**); the hook scripts exercised against the CLI (stop refused once while holding, beat throttled) in the CLI tests and by hand; on Claude Code and Codex themselves: open |
 | 9 | Broker liveness (B05), attempts link, message tickets, path reservations, per-state WIP, budgets | A lease survives an agent that never heartbeats while its operation runs; two agents cannot edit one reserved path |
-| 10 | Web: `/board`, `/board/<id>`, Approve; approval events; phone push (installable web app, iPhone and Android) and email (B10). **10a built:** approvals as board tickets (`board/approval.rs`), `approval_request` / `approval_wait` on `/mcp`, `/approvals` with one-tap Approve / Deny. **10b built:** Web Push (RFC 8291 / 8292 on aws-lc-rs), "Notify this phone" on `/approvals`, service worker and installable manifest. **10d built:** a phone stays reachable: every visit to `/approvals` re-saves (renews) its subscription, the service worker re-subscribes on `pushsubscriptionchange`, a busy or unreachable push service is tried again (2 s, 10 s), each push outcome is logged by host, and `approval_request` returns `phones` so an agent that reached nobody hands the user the link. Next: 10c passkey and email | Phone-width pages served by the existing axum app; a request an agent raises reaches a phone and an inbox, one tap approves, and the agent continues on the event |
+| 10 | Web: `/board`, `/board/<id>`, Approve; approval events; phone push (installable web app, iPhone and Android) and email (B10). **10a built:** approvals as board tickets (`agenthub/approval.rs`), `approval_request` / `approval_wait` on `/mcp`, `/approvals` with one-tap Approve / Deny. **10b built:** Web Push (RFC 8291 / 8292 on aws-lc-rs), "Notify this phone" on `/approvals`, service worker and installable manifest. **10d built:** a phone stays reachable: every visit to `/approvals` re-saves (renews) its subscription, the service worker re-subscribes on `pushsubscriptionchange`, a busy or unreachable push service is tried again (2 s, 10 s), each push outcome is logged by host, and `approval_request` returns `phones` so an agent that reached nobody hands the user the link. Next: 10c passkey and email | Phone-width pages served by the existing axum app; a request an agent raises reaches a phone and an inbox, one tap approves, and the agent continues on the event |
 | 15a/15b (native Postgres runtime built) | Account/org/shared boards, seats and atomic project limits; bound CLI uses the same authority | Real-Postgres HTTP MCP/web isolation, lease/fence, rollback, peer notifications and restart reaping verified; legacy staging imports are not automatically owner-bound |
 | 15c (amended; pending) | ADR 0002: authorized cached reads, durable pending discovery/new tickets/notes/drafts and client push/ack/cursor pull; no offline claim/completion | Disconnect/restart/lost-ack, request dedupe, conflicts, revocation and cursor-resnapshot tests; explicit offline/pending UI |
 | 21a (built) | Org boards (B13): the identity carries the org (`urn:nomen:iam:user:resourceowner:id`; web and CLI sign-in and the RFC 9728 metadata ask for it); `board_bind` makes the org's board, which every member finds; seats are `<account>/<seat>` on it; the free limit counts the org's projects; `whoami.org` | `board::mcp::tests::org_boards_belong_to_the_org_and_every_member_works_them`; `tests/board_probe.py` org section (two members share, another org never sees it) |

@@ -19,7 +19,7 @@ use sqlx::Row;
 
 use crate::{
     accounts::tenants::record_in,
-    board::approval::MAX_STANDING_DAYS,
+    agenthub::approval::MAX_STANDING_DAYS,
     config::valid_name,
     store::{Backend, Store, store_error, transaction},
 };
@@ -215,7 +215,7 @@ impl PreferenceStore {
     pub fn new(store: Store) -> Self {
         Self {
             store,
-            clock: Arc::new(|| crate::board::system_clock()() / 1000),
+            clock: Arc::new(|| crate::agenthub::system_clock()() / 1000),
         }
     }
 
