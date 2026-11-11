@@ -29,6 +29,12 @@ pub struct Act {
     version: i64,
     #[serde(default)]
     body: String,
+    /// A comment's kind (`note`, `question`, `handoff`, `decision`, `review`).
+    #[serde(default)]
+    kind: String,
+    /// Who a comment is for: a seat, or an AI by name.
+    #[serde(default)]
+    to: String,
     /// Undo: the state the ticket was closed from.
     #[serde(default)]
     from: String,
@@ -90,6 +96,10 @@ pub async fn act(
     };
     let me = subject.id.clone();
     let ticket = id.clone();
+    let addressed = (action == "comment")
+        .then(|| act.to.trim().to_string())
+        .filter(|to| !to.is_empty());
+    let wakes = board.clone();
     let done = tokio::task::spawn_blocking(move || {
         apply(&board, &Actor::human(&me), &ticket, &action, act)
     })
@@ -100,6 +110,9 @@ pub async fn act(
             "the board did not answer",
         ))
     });
+    if let (Ok(_), Some(to)) = (&done, &addressed) {
+        state.hub.wake_recipient(&project, wakes, to);
+    }
     let outcome = match &done {
         Ok(_) => "ok".to_string(),
         Err(error) => error.code.clone(),
@@ -138,7 +151,14 @@ fn apply(
     let update = |patch: Patch| board.update(actor, id, act.version, patch);
     match action {
         "comment" => board
-            .add_note(actor, id, "", &act.body, None, None)
+            .add_note(
+                actor,
+                id,
+                &act.kind,
+                &act.body,
+                Some(act.to.trim()).filter(|to| !to.is_empty()),
+                None,
+            )
             .map(|_| "done=comment".into()),
         "assign" => update(Patch {
             assignee: Some(Some(actor.id.to_string())),

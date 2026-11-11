@@ -294,6 +294,11 @@ body.app > .bar { height: calc(var(--bar-h) + env(safe-area-inset-top)); padding
 .ask form.allow .actions { margin-top: 0; }
 button.approve.allow { background: none; color: var(--online); }
 .note.always { margin: 12px 0 0; }
+.note-section h3 { margin: 16px 0 4px; }
+.note-for { color: var(--accent); font-weight: 600; }
+.note-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.note-fields select, .note-fields input { display: block; width: 100%; margin-top: 4px; padding: 10px; }
+@media (max-width: 360px) { .note-fields { grid-template-columns: 1fr; } }
 #notify-status { display: block; margin-top: 8px; }
 .prefs { margin-top: 16px; }
 .prefs h2 { margin-bottom: 8px; }

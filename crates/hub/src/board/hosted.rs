@@ -12,6 +12,7 @@ use super::{
 use crate::store::{Backend, Failed, Store, transaction};
 
 mod approvals;
+mod inbox;
 mod issues;
 mod operations;
 pub(crate) mod registry;

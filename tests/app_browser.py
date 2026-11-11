@@ -215,6 +215,27 @@ def main() -> int:
             assert [n["body"] for n in content["notes"]] == ["Looked at it from the phone"], content
             print("PASS a ticket from the board: commented, closed, undone; the AI sees it")
 
+            # A question left for the AI from the phone: its section, and it reaches the AI.
+            page.locator("#comment").fill("Which region did you pick?")
+            page.locator("#note-kind").select_option("question")
+            page.locator("#note-to").fill("claude")
+            page.locator("button", has_text="Comment").click()
+            page.wait_for_url(re.compile(r".*\?done=comment$"))
+            section = page.locator("#notes-question").inner_text()
+            assert "Which region did you pick?" in section and "for claude" in section, section
+            no_sideways_scroll(page, 390)
+            # (Inboxes are looked at no more than every 10 seconds per caller.)
+            for _ in range(15):
+                heard = ai.tool("board_list", {"project": "alpha"})
+                texts = " ".join(block.get("text", "") for block in heard["content"])
+                if "Which region did you pick?" in texts:
+                    break
+                time.sleep(1)
+            else:
+                raise AssertionError(f"the note never reached the AI: {texts[-400:]}")
+            assert "LEFT FOR YOU" in texts, texts[-400:]
+            print("PASS a note left from the phone, in its section, reached the AI on its next call")
+
             # The phone as one person's: greeted by name, their mark, what waits on the tab.
             restart = {"project": "alpha", "title": "Restart the api", "what": "systemctl restart api",
                        "why": "a new build", "undo": "start the old build", "kind": "restart",

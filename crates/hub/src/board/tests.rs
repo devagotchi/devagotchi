@@ -11,13 +11,13 @@ use super::{
     StateKind, Workflow,
 };
 
-struct Fixture {
-    board: Board,
+pub(super) struct Fixture {
+    pub(super) board: Board,
     now: Arc<AtomicI64>,
     _dir: tempfile::TempDir,
 }
 
-fn fixture() -> Fixture {
+pub(super) fn fixture() -> Fixture {
     let dir = tempfile::tempdir().expect("tempdir");
     let now = Arc::new(AtomicI64::new(1_700_000_000_000));
     let clock = now.clone();

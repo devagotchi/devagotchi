@@ -926,6 +926,15 @@ pub struct Messages {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields, default)]
 pub struct MeCopy {
+    pub notes_questions: String,
+    pub notes_handoffs: String,
+    pub notes_decisions: String,
+    pub notes_reviews: String,
+    pub notes_general: String,
+    pub note_to: String,
+    pub note_to_hint: String,
+    pub note_kind: String,
+    pub note_for: String,
     pub tab: String,
     pub title: String,
     pub hello: String,
@@ -965,6 +974,15 @@ impl Default for MeCopy {
     fn default() -> Self {
         let s = |text: &str| text.to_string();
         Self {
+            notes_questions: s("Questions"),
+            notes_handoffs: s("Handoffs"),
+            notes_decisions: s("Decisions"),
+            notes_reviews: s("Reviews"),
+            notes_general: s("Notes"),
+            note_to: s("For"),
+            note_to_hint: s("Anyone, or a name: claude, codex, grok, hermes"),
+            note_kind: s("Section"),
+            note_for: s("for {name}"),
             tab: s("You"),
             title: s("You"),
             hello: s("Hi {name}"),

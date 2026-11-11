@@ -1066,6 +1066,29 @@ the steps the person keeps approving: 3 or more approvals of one exact step in t
 none denied, and not already allowed. A request without a kind always waits for a person. The forms
 post from the hub's own pages only, like every other form.
 
+## Notes that reach who they are for
+
+`board_note` takes `to`: a seat, or an AI by name. An AI answers to its seat, its family
+(`claude`, `chatgpt`, `grok`, `cursor`), `codex` for Codex, and the name its client registered
+(`hermes`). The ticket page on the phone has the same two fields, and shows a ticket's notes in
+sections: Questions, Handoffs, Decisions, Reviews, Notes.
+
+- **On the recipient's next tool call,** of any kind, the answer carries a loud block with the
+  note, complete (`inbox_banner`). That is the delivery: it is not sent again.
+- **Until it marks them read** with `board_inbox` and `ack_through`, it gets a short reminder at
+  most every 15 minutes, with a count and no text.
+- **A custom agent with no open session** gets a webhook (`board_wake`): its new notes are POSTed
+  complete, as `devagotchi.notes/v1`, signed in `devagotchi-signature`, at most once a minute per
+  recipient. Notes arriving meanwhile ride one call. What the webhook refuses stays waiting.
+- **Limits:** a caller's inbox is looked at no more than every 10 seconds, and one delivery
+  carries at most 5 notes and 12,000 characters. The rest come with the next call.
+
+On a hub with many tenants a webhook must be https to a public address, pinned to the address
+that was checked, with redirects off. On one owner's hub the owner's own network is allowed.
+Note text is written by others, and the block says to treat it as information, not instructions.
+An MCP client is only reached when it next calls a tool: an idle session is not woken. Two
+sessions of one AI share one inbox, so whichever calls first receives the note.
+
 ## The phone app and a person's preferences
 
 `/app` is the installable phone app (`docs/spec-phone-app.md`): one frame with the person's mark

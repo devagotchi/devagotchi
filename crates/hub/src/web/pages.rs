@@ -321,7 +321,18 @@ enum Kind {
 fn render(status: StatusCode, title: &str, body: &str, kind: Kind, meta: &str) -> Response {
     let site = site();
     let head = match kind {
-        Kind::Plain | Kind::Landing => String::new(),
+        Kind::Plain => String::new(),
+        // What a search result and a browser tab show beside the name.
+        Kind::Landing => site
+            .named(site.info.assets.icon.as_ref())
+            .map(|icon| {
+                format!(
+                    "<link rel=\"icon\" href=\"{}\"><meta name=\"theme-color\" content=\"{}\">",
+                    escape(&icon.url()),
+                    escape(site.theme_color())
+                )
+            })
+            .unwrap_or_default(),
         Kind::App { push, .. } => {
             let icon = site
                 .named(site.info.assets.icon.as_ref())

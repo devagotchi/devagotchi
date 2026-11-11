@@ -7,6 +7,19 @@ heading. Agents draft the fragments below; they never tag.
 
 ## Unreleased
 
+### Notes that reach who they are for, and the landing page's search basics (increment 123)
+- A note with a `to` reaches that seat or AI by name (`claude`, `chatgpt`, `codex`, `grok`,
+  `hermes` …) complete on its next tool call, once. `board_inbox` reads them again and marks them
+  read; until then a short reminder comes at most every 15 minutes, with no text.
+- `board_wake` gives a custom agent a webhook: complete, signed, at most one POST a minute per
+  recipient. A hub with many tenants allows only https to public addresses.
+- The phone's ticket page shows notes in sections and can address a new one. Delivery state is one
+  document in each board's settings store, so there is no new table.
+- Landing: an icon of its own, a page title and description that say what it does, three more
+  questions (which also reach the page's FAQ data), and the board's notes.
+- Tests: `board/inbox_tests.rs` on file and Postgres boards, a real webhook receiver, `notes_tests.rs`
+  over HTTP on both backends, and `tests/app_browser.py` from the phone to the AI.
+
 ### The release lane (increment 121)
 - `install.sh`, `hub-up.sh` and `compose.yaml` now follow `:latest`, which moves only when a
   release is tagged. `--track ...:main` follows every merge, for a hub you test on.

@@ -921,6 +921,8 @@ impl ServerHandler for Hub {
             return Err(rmcp::ErrorData::invalid_params("tool not found", None));
         }
         let subject = self.subject(&context).ok();
+        let seat = self.request_seat(&context);
+        let delivers = request.name != "board_inbox";
         if request.name != "whoami"
             && let Some(subject) = &subject
             && let Some(answer) = self.waiting_result(subject)
@@ -938,6 +940,15 @@ impl ServerHandler for Hub {
             + Self::offers_router())
         .call(call)
         .await;
+        // Notes left for this caller ride the answer to whatever it just called.
+        let mut answer = answer;
+        if delivers
+            && let Ok(rmcp::model::CallToolResponse::Complete(result)) = &mut answer
+            && let Some(subject) = &subject
+            && let Some(text) = self.inbox_banner(subject, seat.as_deref()).await
+        {
+            result.content.push(rmcp::model::ContentBlock::text(text));
+        }
         // A successful call from an AI client of a known family: what a workflow's
         // `ai_client` step waits on (`workflows.rs`).
         if let Ok(rmcp::model::CallToolResponse::Complete(result)) = &answer
