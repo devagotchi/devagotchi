@@ -22,6 +22,6 @@ These tools read public product reference only. They do not execute commands, ac
 
 An installed local MCP host launches `devagotchi mcp` (with --socket ABS_PATH when the broker was started by hand). The independently launched broker owns execution. Four tools: operation_start, operation_get, operation_read, operation_cancel. See the quickstart topic for exact arguments and limits.
 
-The source archive is a Linux developer preview, not an installer. No project license has been selected. No named-host or cross-platform release certification, comparative performance win, or distributed exactly-once guarantee is claimed.
+The source archive is a Linux developer preview, not an installer. Devagotchi is source-available under the Business Source License 1.1 (AngryVibes LLC): free to self-host in production, not to offer as a hosted service, and each version becomes AGPL-3.0 four years after it is published. No named-host or cross-platform release certification, comparative performance win, or distributed exactly-once guarantee is claimed.
 
 Domain target: devagotchi.net. Use the verified hosted origin above until custom-domain activation is confirmed.

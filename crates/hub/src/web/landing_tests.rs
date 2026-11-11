@@ -49,10 +49,11 @@ fn a_claimed_hub_shows_the_whole_product_page() {
     ] {
         assert!(html.contains(needle), "{what}: {needle} missing");
     }
-    // Three steps, a sequence; eleven questions that open without script.
+    // Three steps, a sequence; twelve questions that open without script.
     let how = section(&html, "id=\"how\"");
     assert_eq!(how.matches("<li>").count(), 3, "{how}");
-    assert_eq!(html.matches("<details>").count(), 11);
+    assert_eq!(html.matches("<details>").count(), 12);
+    assert!(html.contains("Is Devagotchi open source?"));
     assert!(html.contains("What is a remote MCP server?"));
     // The order the page reads in.
     let order: Vec<usize> = [

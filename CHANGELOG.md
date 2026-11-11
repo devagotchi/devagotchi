@@ -7,6 +7,13 @@ heading. Agents draft the fragments below; they never tag.
 
 ## Unreleased
 
+### License, and an image anyone can pull (increment 127)
+- Devagotchi is source-available under the Business Source License 1.1, held by AngryVibes LLC:
+  production self-hosting is free, offering it to others as a hosted service is not, and each
+  version becomes AGPL-3.0 four years after it is published. The crates say `BUSL-1.1`.
+- The hub image on GHCR is public. Each publish now pulls it back with no login and runs it, so
+  a private package fails the release instead of a self-hoster's update.
+
 ### Hub settings, with sign-in set from the browser (increment 126)
 - `/admin`, for the hub's owner: settings grouped as Sign-in, AI access, People, and Data and signals.
 - Google and GitHub sign-in are set up there with step-by-step guidance and this hub's own callback

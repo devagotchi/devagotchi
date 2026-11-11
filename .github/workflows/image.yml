@@ -226,3 +226,11 @@ jobs:
           subject-name: ${{ env.IMAGE }}
           subject-digest: ${{ steps.digest.outputs.digest }}
           push-to-registry: true
+      # The way every self-hoster gets it: no login. A private package fails here, not on
+      # someone's server.
+      - name: Anyone can pull it
+        run: |
+          docker logout ghcr.io
+          tag="$(jq -r '.tags[0]' <<< "$DOCKER_METADATA_OUTPUT_JSON")"
+          docker pull --platform linux/amd64 "$tag"
+          docker run --rm --platform linux/amd64 "$tag" --version

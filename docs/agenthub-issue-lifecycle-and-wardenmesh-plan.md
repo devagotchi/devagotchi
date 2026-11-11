@@ -18,7 +18,7 @@ The minimum viable version is not a special-case "AI for GitHub issues" feature.
 - persists advice, ownership, decisions, and artifacts in a shared graph,
 - closes the issue with a consistent summary, evidence ledger, and handoff state,
 - works across frontier and subscription AI clients through a provider-neutral hub contract,
-- and can be hosted in a self-hosted open-source Docker image while the commercial product uses the same core with SaaS auth and cloud hosting.
+- and can be hosted in a self-hosted source-available Docker image while the commercial product uses the same core with SaaS auth and cloud hosting.
 
 This design matches the real-world GitHub webhook model and the repo's own graph-first direction.
 
@@ -197,9 +197,9 @@ This is consistent with the repo's explicit goal of becoming a trusted mesh and 
 
 The right strategy is not an unrelated commercial product. It is a clean fork and productization plan with shared core.
 
-### Open-source path
+### Source-available path
 
-- `devagotchi` remains the open-source self-hosted core.
+- `devagotchi` remains the source-available self-hosted core.
 - It provides the docker image, local broker, MCP adapters, issue webhook connector, and self-hosted deployment.
 - It is the equivalent of a local or private desktop + docker installation that can compete with Desktop Commander, but with better state sharing and issue lifecycle workflows.
 
@@ -234,7 +234,7 @@ The repo should be organized so that the OSS core is the foundation and the comm
 - enterprise policy and audit trail
 - SaaS UI
 
-This is a healthy product split: open-source trust + commercial platform value.
+This is a healthy product split: source-available trust + commercial platform value.
 
 ## Benchmark design: the benchmark that actually matters
 
@@ -328,7 +328,7 @@ The product is good to move forward when all of the following are true:
 - Every supported provider can read/write the same state object.
 - At least one real multi-provider schedule works without state loss.
 - A self-hosted Docker install can run without cloud hosting.
-- The hosted commercial fork adds value without altering the open-source contract.
+- The hosted commercial fork adds value without altering the source-available contract.
 - A benchmark exists that compares start, issue flow, state sharing, and handoff against Desktop Commander under realistic loads.
 
 ## Immediate next move
@@ -347,7 +347,7 @@ That sequence keeps the product honest and moves toward a real competitor to Des
 
 The core product should be framed as:
 
-- Devagotchi = open-source self-hosted workspace bridge + AgentHub + issue lifecycle + local desktop experience
+- Devagotchi = source-available self-hosted workspace bridge + AgentHub + issue lifecycle + local desktop experience
 - WardenMesh = commercial cloud-hosted fork for enterprise SaaS and managed deployment
 
 The crucial architectural rule is: the AI must not rely on vendor-specific chat memory. It must rely on a durable shared task graph and shared state service that survives issue opening, issue closure, and provider switching.
