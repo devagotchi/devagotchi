@@ -216,6 +216,11 @@ impl Boards {
         self.warehouse.get()
     }
 
+    /// How many signal sinks this hub sends to.
+    pub(crate) fn signal_sink_count(&self) -> usize {
+        self.sinks.get().map_or(0, Vec::len)
+    }
+
     /// The signal sinks (set once, at start).
     pub(crate) fn set_sinks(&self, sinks: Vec<Arc<crate::signals::Sink>>) {
         let _ = self.sinks.set(sinks);

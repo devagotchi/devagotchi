@@ -7,6 +7,13 @@ heading. Agents draft the fragments below; they never tag.
 
 ## Unreleased
 
+### Hub settings, with sign-in set from the browser (increment 126)
+- `/admin`, for the hub's owner: settings grouped as Sign-in, AI access, People, and Data and signals.
+- Google and GitHub sign-in are set up there with step-by-step guidance and this hub's own callback
+  address. Stored in Postgres with the secret sealed under a key in the state directory, applied
+  without a restart, and written on the chain without the secret. The config file still works; a
+  provider saved on the page replaces the file's of that name.
+
 ### API keys with scopes, limits and durations (increment 125)
 - `/app/keys`: make a key for what it may do, which projects and machines, and how long (1 hour to
   1 year). Shown once, stored as a hash, with last use, Revoke and Replace.

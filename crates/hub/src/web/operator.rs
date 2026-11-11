@@ -55,7 +55,7 @@ pub(super) async fn operator(state: &AppState, headers: &HeaderMap) -> Option<Su
 }
 
 /// What anyone but the operator gets: an unknown path's answer.
-pub(super) fn hidden() -> Response {
+pub(crate) fn hidden() -> Response {
     StatusCode::NOT_FOUND.into_response()
 }
 

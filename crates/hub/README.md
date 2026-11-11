@@ -1089,6 +1089,14 @@ Note text is written by others, and the block says to treat it as information, n
 An MCP client is only reached when it next calls a tool: an idle session is not woken. Two
 sessions of one AI share one inbox, so whichever calls first receives the note.
 
+## Hub settings
+
+`/admin` is the hub's owner's own page; anyone else gets a 404. Google and GitHub sign-in are set
+there, in Postgres (`sign_in_settings`), with the client secret sealed by `sealed.rs` under
+`settings.key` in the state directory. Back up the state volume with the database, or those secrets
+must be entered again. ClickHouse holds statistics only, never settings. Email, ClickHouse and
+signal sinks are still set at install and are shown there read-only.
+
 ## API keys
 
 OAuth is the handshake a person does once. An API key is what they hand an agent or script that
