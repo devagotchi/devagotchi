@@ -8,6 +8,7 @@
 mod board;
 mod home;
 mod machine;
+pub(super) mod me;
 mod ticket;
 mod ticket_actions;
 
@@ -42,6 +43,8 @@ pub fn routes() -> Router<AppState> {
             "/app/tickets/{project}/{id}/{action}",
             axum::routing::post(ticket_actions::act),
         )
+        .route("/app/me", get(me::page).post(me::save))
+        .route("/app/attention", get(attention))
         .route("/app/offline", get(offline))
         .route("/assets/app.js", get(script))
 }
@@ -104,6 +107,35 @@ pub(super) fn card(id: &str, title: &str, rows: &[String], empty: &str) -> Strin
         "<section class=\"card\" id=\"{id}\"><h2>{}</h2>{inner}</section>",
         escape(title)
     )
+}
+
+/// `/app/attention`: how many approvals wait for this person, for the count on the Approvals
+/// tab and on the installed app's icon (`app.js`).
+async fn attention(
+    axum::extract::State(state): axum::extract::State<AppState>,
+    headers: HeaderMap,
+) -> Response {
+    use axum::response::IntoResponse;
+    let subject = match who(&state, &headers).await {
+        Who::Person(subject) => subject,
+        _ => return StatusCode::UNAUTHORIZED.into_response(),
+    };
+    let approvals = if state.hub.may_approve(&subject) {
+        match super::approvals::pending(&state, &subject).await {
+            Ok(waiting) => waiting.len(),
+            Err(error) => {
+                eprintln!("devagotchi hub: attention: {error}");
+                return unavailable();
+            }
+        }
+    } else {
+        0
+    };
+    (
+        [(axum::http::header::CACHE_CONTROL, "no-store")],
+        axum::Json(serde_json::json!({ "approvals": approvals })),
+    )
+        .into_response()
 }
 
 /// `/app/offline`: what the service worker shows when the hub cannot be reached.

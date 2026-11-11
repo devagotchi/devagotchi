@@ -103,9 +103,17 @@ pub async fn home(State(state): State<AppState>, headers: HeaderMap) -> Response
     }
     needs.sort_by(|a, b| b.0.cmp(&a.0));
     let needs: Vec<String> = needs.into_iter().map(|(_, row)| row).collect();
+    let trouble = machines.iter().any(|machine| {
+        machine
+            .update
+            .as_deref()
+            .is_some_and(|u| u.starts_with("failed"))
+    });
+    let me = super::me::identity(&state, &subject).await;
     let body = format!(
-        "<h1>{}</h1>{}{}{}",
-        escape(&copy.home_title),
+        "{}{}{}{}{}",
+        hello(&me, needs.len(), trouble),
+        review(approvals.len()),
         card("needs-you", &copy.needs_you, &needs, &copy.needs_you_empty),
         machines_card(&machines),
         boards_card(&boards),
@@ -158,6 +166,54 @@ pub async fn boards(State(state): State<AppState>, headers: HeaderMap) -> Respon
         &format!("{}{orgs}", boards_card(&boards)),
         Tab::Boards,
     )
+}
+
+/// The top of Home: the mascot in the mood of what waits, and who it is talking to.
+fn hello(me: &pages::Me, needs: usize, trouble: bool) -> String {
+    let site = words();
+    let copy = &site.messages.me;
+    let first = me.name.split_whitespace().next().unwrap_or_default();
+    let greeting = if me.name == copy.tab {
+        escape(&copy.hello_nameless)
+    } else {
+        crate::site::Ctx::new(&site)
+            .with("name", first.to_string())
+            .inline(&copy.hello)
+    };
+    let line = match needs {
+        0 => escape(&copy.clear),
+        1 => escape(&copy.waiting_one),
+        n => crate::site::Ctx::new(&site)
+            .with("n", n.to_string())
+            .inline(&copy.waiting_many),
+    };
+    let mood = match (needs, trouble) {
+        (_, true) => "trouble",
+        (0, false) => "clear",
+        _ => "waiting",
+    };
+    let pet = site
+        .named(site.info.assets.mascot.as_ref())
+        .map(|pet| format!("<span class=\"pet-wrap\">{}</span>", pet.text()))
+        .unwrap_or_default();
+    format!(
+        "<section class=\"hello\" id=\"hello\" data-mood=\"{mood}\">{pet}\
+<div><h1>{greeting}</h1><p class=\"meta\">{line}</p></div></section>"
+    )
+}
+
+/// The one button that matters when approvals wait.
+fn review(approvals: usize) -> String {
+    let site = words();
+    let copy = &site.messages.me;
+    let label = match approvals {
+        0 => return String::new(),
+        1 => escape(&copy.review_one),
+        n => crate::site::Ctx::new(&site)
+            .with("n", n.to_string())
+            .inline(&copy.review_many),
+    };
+    format!("<a class=\"button primary review\" id=\"review\" href=\"/approvals\">{label}</a>")
 }
 
 /// Each of the person's boards: its open tickets and those assigned to the person.

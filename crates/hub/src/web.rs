@@ -144,10 +144,23 @@ pub async fn bar(
     };
     // A workflow's page (`/go/<token>`) is the link alone: no Sign in, no nudge to.
     let workflow = request.uri().path().starts_with("/go/");
+    // The app's own pages say who is signed in. The offline page is kept on the phone, so it
+    // names nobody.
+    let path = request.uri().path();
+    let framed = path == "/approvals" || path == "/app" || path.starts_with("/app/");
+    let named = path != "/app/offline" && path != "/app/attention";
+    let me = if framed && named && signed_in.is_some() {
+        match routes::who(&state, request.headers()).await {
+            routes::Who::Person(subject) => Some(app::me::identity(&state, &subject).await),
+            _ => None,
+        }
+    } else {
+        None
+    };
     let bar = if (state.web.is_none() && state.passkeys.is_none()) || unclaimed || workflow {
         pages::Bar::Plain
     } else if let Some(unsecured) = signed_in {
-        pages::Bar::SignedIn { unsecured }
+        pages::Bar::SignedIn { unsecured, me }
     } else {
         pages::Bar::SignedOut {
             return_to: safe_return_to(

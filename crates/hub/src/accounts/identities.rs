@@ -33,6 +33,9 @@ pub struct Proven {
     pub name: Option<String>,
 }
 
+/// What an account is called until someone gives it a name: a label, not a name.
+pub(crate) const UNNAMED: &str = "Your account";
+
 impl Proven {
     fn email(&self) -> Option<String> {
         self.verified_email
@@ -59,14 +62,14 @@ impl Proven {
             .name
             .as_deref()
             .or(self.verified_email.as_deref())
-            .unwrap_or("Your account")
+            .unwrap_or(UNNAMED)
             .trim()
             .chars()
             .filter(|c| !c.is_control())
             .take(64)
             .collect();
         if name.is_empty() {
-            "Your account".into()
+            UNNAMED.into()
         } else {
             name
         }
@@ -374,6 +377,30 @@ impl Accounts {
             Ok(Account {
                 provisional: false,
                 ..holder
+            })
+        })
+    }
+
+    /// An address `account` signs in with: its password's, or a linked sign-in's.
+    pub async fn address_of(&self, account: &str) -> BridgeResult<Option<String>> {
+        transaction!(&self.store, |connection| {
+            self.enter(connection, Lookup::Account(account)).await?;
+            let password: Option<String> =
+                sqlx::query_scalar("SELECT email FROM passwords WHERE account_id = $1")
+                    .bind(account)
+                    .fetch_optional(&mut *connection)
+                    .await?;
+            Ok(match password {
+                Some(address) => Some(address),
+                None => {
+                    sqlx::query_scalar(
+                        "SELECT email FROM auth_identities
+                         WHERE account = $1 AND email IS NOT NULL ORDER BY created_at LIMIT 1",
+                    )
+                    .bind(account)
+                    .fetch_optional(&mut *connection)
+                    .await?
+                }
             })
         })
     }

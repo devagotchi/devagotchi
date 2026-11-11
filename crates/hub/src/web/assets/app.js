@@ -1,8 +1,9 @@
 // The phone app's one script (`web/app/`): registers the service worker (which keeps the
 // frame for offline), shows the install banner for iPhone (Share, then Add to Home Screen)
 // or Android (the browser's install prompt) while the app is not installed, takes a closed
-// ticket's Undo away when its 10 seconds run out, and reloads the page when it is pulled
-// down from the top. Everything it shows is already on the page.
+// ticket's Undo away when its 10 seconds run out, reloads the page when it is pulled down
+// from the top, and keeps the count of waiting approvals on the Approvals tab and on the
+// installed app's icon. Everything else it shows is already on the page.
 (function () {
   "use strict";
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(function () {});
@@ -39,6 +40,27 @@
     var left = Number(undo.dataset.until) - Date.now();
     window.setTimeout(function () { undo.hidden = true; }, Math.max(0, left));
   }
+
+  // How many approvals wait: on the tab, and on the icon where the phone allows it.
+  var badge = document.getElementById("approvals-badge");
+  function count() {
+    if (!badge) return;
+    fetch("/app/attention", { credentials: "same-origin" }).then(function (answer) {
+      return answer.ok ? answer.json() : null;
+    }).then(function (attention) {
+      if (!attention) return;
+      var waiting = attention.approvals;
+      badge.textContent = waiting > 99 ? "99+" : String(waiting);
+      badge.hidden = waiting === 0;
+      if (navigator.setAppBadge) {
+        (waiting ? navigator.setAppBadge(waiting) : navigator.clearAppBadge()).catch(function () {});
+      }
+    }).catch(function () {});
+  }
+  count();
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "visible") count();
+  });
 
   // Pull to refresh: the page scrolls inside the frame, so the browser's own pull does not
   // reach it (and an installed app has none).

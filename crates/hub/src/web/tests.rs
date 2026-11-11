@@ -798,8 +798,8 @@ async fn a_person_approves_on_the_phone_page_and_the_agent_sees_it() {
     assert!(body.contains(&format!("value=\"{}\"", asked.id)));
     assert_eq!(
         body.matches("<script").count(),
-        1,
-        "one script, the hub's own file; nothing inline"
+        2,
+        "the app's two scripts, the hub's own files; nothing inline"
     );
     assert!(body.contains("<script src=\"/assets/push.js\" defer></script>"));
 
@@ -1243,7 +1243,18 @@ async fn every_page_says_whether_you_are_signed_in_with_one_tap_in_or_out() {
     let home = w.get("/", Some(&session)).await;
     assert_eq!(home.status(), StatusCode::SEE_OTHER);
     assert_eq!(location(&home), "/account");
-    for path in ["/docs", "/approvals", "/account"] {
+    let framed = w
+        .get("/approvals", Some(&session))
+        .await
+        .text()
+        .await
+        .unwrap();
+    assert!(
+        framed.contains("id=\"me-link\""),
+        "the app's bar goes to the person's page: {framed}"
+    );
+    assert!(!framed.contains(">Sign in</a>"), "{framed}");
+    for path in ["/docs", "/account"] {
         let html = w.get(path, Some(&session)).await.text().await.unwrap();
         assert!(
             html.contains("<form method=\"post\" action=\"/auth/logout\"><button type=\"submit\">Sign out</button></form>")

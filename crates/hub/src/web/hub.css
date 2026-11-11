@@ -244,3 +244,65 @@ form textarea { display: block; width: 100%; font: inherit; padding: 10px; margi
   border: 1px solid var(--line); border-radius: var(--radius-s); background: var(--bg); color: var(--text); }
 .rows .body { margin: 4px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 .what:empty { display: none; }
+
+/* The phone made for one person (`web/app/me.rs`, `home.rs`, `approvals.rs`): the frame keeps
+   clear of the phone's edges, the tabs carry icons and a count, Home greets, an approval
+   reads in one glance, and everything to tap is big enough for a thumb. */
+body.app > .bar { height: calc(var(--bar-h) + env(safe-area-inset-top)); padding-top: env(safe-area-inset-top); }
+.me { display: grid; place-items: center; min-width: 44px; min-height: 44px; text-decoration: none; }
+.avatar { display: inline-grid; place-items: center; width: 34px; height: 34px; border-radius: 50%;
+  background: var(--accent); color: var(--bg); font-weight: 700; font-size: .85rem; letter-spacing: .02em; }
+.avatar.large { flex: none; width: 64px; height: 64px; font-size: 1.5rem; }
+.tabs a { display: flex; flex-direction: column; align-items: center; gap: 2px; position: relative;
+  padding: 8px 2px 6px; font-size: .72rem; }
+.tab-icon { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.8;
+  stroke-linecap: round; stroke-linejoin: round; }
+.badge { position: absolute; top: 3px; left: calc(50% + 5px); min-width: 18px; height: 18px; padding: 0 5px;
+  border-radius: 9px; background: var(--revoked); color: #fff; font-size: .7rem; line-height: 18px;
+  font-weight: 700; text-align: center; font-variant-numeric: tabular-nums; }
+.badge[hidden] { display: none; }
+.hello, .who { display: flex; align-items: center; gap: 14px; margin: 4px 0 16px; }
+.hello h1, .who h1, .hello p, .who p { margin: 0; }
+.pet-wrap { flex: none; width: 60px; height: 66px; }
+.pet-wrap svg { display: block; width: 100%; height: 100%; }
+.pet-wrap .pet-egg { fill: var(--accent); }
+.hello[data-mood="waiting"] .pet-egg { fill: var(--wait); }
+.hello[data-mood="trouble"] .pet-egg { fill: var(--revoked); }
+.pet-wrap .pet-face { fill: var(--bg); }
+.pet-wrap .pet-smile { fill: none; stroke: var(--bg); stroke-width: 7; stroke-linecap: round; }
+.pet-wrap .pet-screen { fill: none; stroke: var(--bg); stroke-width: 3; stroke-dasharray: 2 8;
+  stroke-linecap: round; opacity: .35; }
+@media (prefers-reduced-motion: no-preference) {
+  .hello[data-mood="waiting"] .pet-wrap { animation: pet-bob 1.6s ease-in-out infinite; }
+}
+@keyframes pet-bob { 50% { transform: translateY(-4px); } }
+.button.review { display: block; padding: 14px; text-align: center; border-radius: var(--radius-m); }
+.ask-tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 8px; }
+.tag { padding: 2px 10px; border-radius: 999px; background: var(--sunk); color: var(--muted);
+  font-size: .8rem; overflow-wrap: anywhere; }
+.tag.kind { background: var(--accent); color: var(--bg); font-weight: 600; }
+.ask-facts { margin: 12px 0 0; }
+.ask-facts dt { margin-top: 10px; color: var(--muted); font-size: .75rem; font-weight: 600;
+  text-transform: uppercase; letter-spacing: .04em; }
+.ask-facts dd { margin: 2px 0 0; overflow-wrap: anywhere; }
+.ask-facts .cmd { padding: 10px; font: .92em var(--font-mono); white-space: pre-wrap; background: var(--bg);
+  border-radius: var(--radius-s); }
+.note-box { margin: 12px 0 0; }
+.note-box label { margin-top: 6px; }
+.ask .actions button { min-height: 52px; }
+.ask form.allow { margin-top: 8px; }
+.ask form.allow .actions { margin-top: 0; }
+button.approve.allow { background: none; color: var(--online); }
+.note.always { margin: 12px 0 0; }
+#notify-status { display: block; margin-top: 8px; }
+.prefs { margin-top: 16px; }
+.prefs h2 { margin-bottom: 8px; }
+.prefs h3 { margin: 20px 0 0; }
+.prefs select { display: block; width: 100%; margin-top: 4px; padding: 10px; }
+form label.check { display: flex; align-items: flex-start; gap: 10px; padding: 8px 0; margin-top: 8px;
+  color: var(--text); font-size: 1rem; }
+label.check input { flex: none; margin: 2px 0 0; }
+.help { margin: 4px 0 0; font-size: .85rem; }
+.leave form { margin-top: 12px; }
+.leave p { margin: 0; }
+.leave button { width: 100%; padding: 14px; color: var(--revoked); border-color: var(--revoked); font-weight: 600; }

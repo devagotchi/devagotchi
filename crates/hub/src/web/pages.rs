@@ -27,10 +27,21 @@ pub enum Bar {
     /// No web sign-in on this hub: the brand only.
     Plain,
     /// A live session: Approvals, Machines and a one-tap Sign out; on an account nobody
-    /// secured yet, a line under it that says so and leads to securing it.
-    SignedIn { unsecured: bool },
+    /// secured yet, a line under it that says so and leads to securing it. On the app's own
+    /// pages, who it is.
+    SignedIn { unsecured: bool, me: Option<Me> },
     /// No session: one Sign in that comes back to this page.
     SignedOut { return_to: String },
+}
+
+/// Who the app's frame says is signed in, and how they like it to look.
+#[derive(Clone)]
+pub struct Me {
+    /// What to call them.
+    pub name: String,
+    /// One or two letters for the round mark that stands for them.
+    pub initials: String,
+    pub theme: crate::preferences::Theme,
 }
 
 tokio::task_local! {
@@ -45,7 +56,42 @@ pub fn site() -> Arc<Site> {
         .unwrap_or_else(|_| crate::site::builtin())
 }
 
-fn bar_html(bar: &Bar, site: &Site) -> String {
+/// The app's bar: the brand, which goes home, and the person, who go to their own page. The
+/// tabs are the navigation, so it repeats none of them.
+fn app_bar_html(bar: &Bar, site: &Site, mark: &str) -> String {
+    let me = match bar {
+        Bar::SignedIn { me: Some(me), .. } => format!(
+            "<a class=\"me\" id=\"me-link\" href=\"/app/me\" aria-label=\"{}\">\
+<span class=\"avatar\">{}</span></a>",
+            escape(&format!("{}: {}", site.messages.me.tab, me.name)),
+            escape(&me.initials)
+        ),
+        _ => String::new(),
+    };
+    let nudge = match bar {
+        Bar::SignedIn {
+            unsecured: true, ..
+        } => UNSECURED,
+        _ => "",
+    };
+    format!(
+        "<header class=\"bar\"><a class=\"brand\" href=\"/app\">{mark}<span class=\"brand-name\">{}</span></a>{me}</header>{nudge}",
+        escape(site.name())
+    )
+}
+
+const UNSECURED: &str = "<p class=\"nudge\" role=\"status\">Your account is not \
+secured yet: nothing can recover it if you lose this browser. <a href=\"/account#secure\">Secure it</a></p>";
+
+fn bar_html(bar: &Bar, site: &Site, app: bool) -> String {
+    // The site's mark, inline: the pages' CSP loads no images, and CSS colours it per theme.
+    let mark = site
+        .named(site.info.assets.logo.as_ref())
+        .map(|logo| logo.text())
+        .unwrap_or_default();
+    if app && matches!(bar, Bar::SignedIn { .. }) {
+        return app_bar_html(bar, site, &mark);
+    }
     let links = match bar {
         Bar::Plain => String::new(),
         Bar::SignedIn { .. } => "<nav><a href=\"/approvals\">Approvals</a><a href=\"/account\">Machines</a>\
@@ -57,17 +103,11 @@ fn bar_html(bar: &Bar, site: &Site) -> String {
         ),
     };
     let nudge = match bar {
-        Bar::SignedIn { unsecured: true } => {
-            "<p class=\"nudge\" role=\"status\">Your account is not \
-secured yet: nothing can recover it if you lose this browser. <a href=\"/account#secure\">Secure it</a></p>"
-        }
+        Bar::SignedIn {
+            unsecured: true, ..
+        } => UNSECURED,
         _ => "",
     };
-    // The site's mark, inline: the pages' CSP loads no images, and CSS colours it per theme.
-    let mark = site
-        .named(site.info.assets.logo.as_ref())
-        .map(|logo| logo.text())
-        .unwrap_or_default();
     format!(
         "<header class=\"bar\"><a class=\"brand\" href=\"/\">{mark}<span class=\"brand-name\">{}</span></a>{links}</header>{nudge}",
         escape(site.name())
@@ -133,20 +173,11 @@ pub fn public(status: StatusCode, title: &str, body: &str, head: &str) -> Respon
     render(status, title, body, Kind::Plain, head)
 }
 
-/// A page that is also the installable app: the manifest, the icon and the hub's one
-/// script (`/assets/push.js`) may load, from this origin only. It is drawn in the app's
-/// frame (`app_page`) on its Approvals tab.
-pub fn app(status: StatusCode, title: &str, body: &str) -> Response {
-    render(
-        status,
-        title,
-        body,
-        Kind::App {
-            tab: Tab::Approvals,
-            script: "/assets/push.js",
-        },
-        "",
-    )
+/// A page that is also the installable app and can turn on this phone's notifications: the
+/// manifest, the icon and the hub's scripts may load, from this origin only. It is drawn in
+/// the app's frame (`app_page`) on `tab`.
+pub fn app(status: StatusCode, title: &str, body: &str, tab: Tab) -> Response {
+    render(status, title, body, Kind::App { tab, push: true }, "")
 }
 
 /// The phone app's tabs (`web/app/`), along the bottom of its frame.
@@ -156,32 +187,57 @@ pub enum Tab {
     Machines,
     Boards,
     Approvals,
+    Me,
 }
 
 /// A page of the phone app (`web/app/`): one fixed frame, the bar on top and the tabs at the
-/// bottom, with the page scrolling inside it. Its one script is `/assets/app.js`.
+/// bottom, with the page scrolling inside it. Its script is `/assets/app.js`.
 pub fn app_page(status: StatusCode, title: &str, body: &str, tab: Tab) -> Response {
-    render(
-        status,
-        title,
-        body,
-        Kind::App {
-            tab,
-            script: "/assets/app.js",
-        },
-        "",
+    render(status, title, body, Kind::App { tab, push: false }, "")
+}
+
+/// The icons of the tabs, drawn inline (the app's CSP loads none) in the text's colour.
+fn tab_icon(tab: Tab) -> String {
+    let path = match tab {
+        Tab::Home => "M4 11l8-7 8 7v8a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1z",
+        Tab::Approvals => {
+            "M12 3l7 3v5c0 4.5-2.900 8.300-7 10-4.100-1.700-7-5.500-7-10V6zM9 12l2.200 2.200L15.200 10"
+        }
+        Tab::Boards => "M4 4h4.500v16H4zM10.500 4H15v10h-4.500zM17 4h3.500v7H17z",
+        Tab::Machines => "M4 5h16v11H4zM9 20h6M12 16v4",
+        Tab::Me => {
+            "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4.500 20.500c.8-3.800 3.900-6 7.500-6s6.700 2.200 7.500 6"
+        }
+    };
+    format!(
+        "<svg class=\"tab-icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><path d=\"{path}\"/></svg>"
     )
 }
 
+/// How long ago, as a person says it; the exact time is its title.
+pub fn ago(at_secs: u64) -> String {
+    let now = (crate::board::system_clock()() / 1000).max(0) as u64;
+    let gone = now.saturating_sub(at_secs);
+    let words = match gone {
+        0..=59 => "just now".to_string(),
+        60..=3_599 => format!("{} min ago", gone / 60),
+        3_600..=86_399 => format!("{} h ago", gone / 3_600),
+        86_400..=172_799 => "yesterday".to_string(),
+        _ => format!("{} days ago", gone / 86_400),
+    };
+    format!("<time title=\"{}\">{words}</time>", utc(at_secs))
+}
+
 /// The frame's tab bar, the current tab marked; and, for `app.js` to show, the install
-/// banner for iPhone or Android.
-fn tabs(tab: Tab, script: &str, site: &Site) -> (String, String) {
+/// banner for iPhone or Android. `app.js` fills in the Approvals tab's count.
+fn tabs(tab: Tab, push: bool, site: &Site) -> (String, String) {
     let words = &site.messages.app;
     let links: String = [
         (Tab::Home, "/app", &words.tab_home),
-        (Tab::Machines, "/app/machines", &words.tab_machines),
-        (Tab::Boards, "/app/boards", &words.tab_boards),
         (Tab::Approvals, "/approvals", &words.tab_approvals),
+        (Tab::Boards, "/app/boards", &words.tab_boards),
+        (Tab::Machines, "/app/machines", &words.tab_machines),
+        (Tab::Me, "/app/me", &site.messages.me.tab),
     ]
     .iter()
     .map(|(this, href, label)| {
@@ -190,10 +246,19 @@ fn tabs(tab: Tab, script: &str, site: &Site) -> (String, String) {
         } else {
             ""
         };
-        format!("<a href=\"{href}\"{current}>{}</a>", escape(label))
+        let badge = if *this == Tab::Approvals {
+            "<span class=\"badge\" id=\"approvals-badge\" hidden></span>"
+        } else {
+            ""
+        };
+        format!(
+            "<a href=\"{href}\"{current}>{}<span class=\"tab-label\">{}</span>{badge}</a>",
+            tab_icon(*this),
+            escape(label)
+        )
     })
     .collect();
-    let banner = if script == "/assets/app.js" {
+    let banner = if !push {
         format!(
             "<p class=\"install\" id=\"install\" hidden><span data-os=\"iphone\" hidden>{}</span>\
 <span data-os=\"android\" hidden>{} <button id=\"install-go\" type=\"button\">{}</button></span></p>",
@@ -238,10 +303,11 @@ enum Kind {
     /// The landing page: a plain page (no script) laid out wide as full-viewport pages
     /// under the fixed bar (`body.landing`, `landing.css`), with the hub's own setup video.
     Landing,
-    /// A page in the phone app's frame (`app_page`), on `tab`, with its one script.
+    /// A page in the phone app's frame (`app_page`), on `tab`; `push` when it can turn on
+    /// this phone's notifications.
     App {
         tab: Tab,
-        script: &'static str,
+        push: bool,
     },
     Script(&'static str),
     Workflow {
@@ -256,15 +322,20 @@ fn render(status: StatusCode, title: &str, body: &str, kind: Kind, meta: &str) -
     let site = site();
     let head = match kind {
         Kind::Plain | Kind::Landing => String::new(),
-        Kind::App { script, .. } => {
+        Kind::App { push, .. } => {
             let icon = site
                 .named(site.info.assets.icon.as_ref())
                 .map(|icon| format!("<link rel=\"icon\" href=\"{}\">", escape(&icon.url())))
                 .unwrap_or_default();
             format!(
                 "<link rel=\"manifest\" href=\"/manifest.webmanifest\">{icon}\
-<meta name=\"theme-color\" content=\"{}\"><script src=\"{script}\" defer></script>",
-                escape(site.theme_color())
+<meta name=\"theme-color\" content=\"{}\"><script src=\"/assets/app.js\" defer></script>{}",
+                escape(site.theme_color()),
+                if push {
+                    "<script src=\"/assets/push.js\" defer></script>"
+                } else {
+                    ""
+                }
             )
         }
         Kind::Script(script) => format!("<script src=\"{script}\" defer></script>"),
@@ -284,24 +355,38 @@ fn render(status: StatusCode, title: &str, body: &str, kind: Kind, meta: &str) -
         }
     };
     let (tabs, banner) = match kind {
-        Kind::App { tab, script } => tabs(tab, script, &site),
+        Kind::App { tab, push } => tabs(tab, push, &site),
         _ => (String::new(), String::new()),
     };
+    let framed = matches!(kind, Kind::App { .. });
+    // How the person likes the app to look, when they said.
+    let theme = BAR
+        .try_with(|bar| match bar {
+            Bar::SignedIn { me: Some(me), .. }
+                if framed && me.theme != crate::preferences::Theme::System =>
+            {
+                format!(" data-theme=\"{}\"", me.theme.as_str())
+            }
+            _ => String::new(),
+        })
+        .unwrap_or_default();
     let page = format!(
-        "<!doctype html>\n<html lang=\"en\"><head><meta charset=\"utf-8\">\
-<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\
+        "<!doctype html>\n<html lang=\"en\"{theme}><head><meta charset=\"utf-8\">\
+<meta name=\"viewport\" content=\"width=device-width, initial-scale=1{cover}\">\
 <title>{} · {}</title>{meta}<link rel=\"stylesheet\" href=\"/assets/hub.css\">{head}</head>\
 <body{class}>{bar}<main>{banner}{body}</main>{tabs}</body></html>\n",
         escape(title),
         escape(site.name()),
+        // The frame reaches the phone's edges and keeps clear of them itself (`hub.css`).
+        cover = if framed { ", viewport-fit=cover" } else { "" },
         class = match kind {
             Kind::Landing => " class=\"landing\"",
             Kind::App { .. } => " class=\"app\"",
             _ => "",
         },
         bar = BAR
-            .try_with(|bar| bar_html(bar, &site))
-            .unwrap_or_else(|_| bar_html(&Bar::Plain, &site)),
+            .try_with(|bar| bar_html(bar, &site, framed))
+            .unwrap_or_else(|_| bar_html(&Bar::Plain, &site, framed)),
     );
     let mut response = (status, page).into_response();
     let headers = response.headers_mut();

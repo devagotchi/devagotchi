@@ -11,7 +11,7 @@ use std::{
     collections::{HashMap, VecDeque},
     net::SocketAddr,
     sync::{
-        Arc, Mutex,
+        Arc, Mutex, OnceLock,
         atomic::{AtomicU64, Ordering},
     },
     time::Duration,
@@ -112,6 +112,8 @@ pub struct Links {
     seen: Mutex<HashMap<String, (u64, u64)>>,
     /// How long a machine stays offline before its account's phones hear it (P1d).
     offline_after: Duration,
+    /// Who turned pushes about their machines off (set once, at start).
+    preferences: OnceLock<crate::preferences::PreferenceStore>,
     /// The pushes about machines this hub made, for the tests to read.
     #[cfg(test)]
     pushed: Mutex<Vec<(Vec<String>, serde_json::Value)>>,
@@ -230,9 +232,15 @@ impl Links {
             jobs: Mutex::new(HashMap::new()),
             seen: Mutex::new(HashMap::new()),
             offline_after: OFFLINE_PUSH_AFTER,
+            preferences: OnceLock::new(),
             #[cfg(test)]
             pushed: Mutex::new(Vec::new()),
         }
+    }
+
+    /// Ask `preferences` before a machine pushes to a person.
+    pub fn set_preferences(&self, preferences: crate::preferences::PreferenceStore) {
+        let _ = self.preferences.set(preferences);
     }
 
     /// `device`'s recent routed operations, newest first.
@@ -312,7 +320,14 @@ impl Links {
             .expect("pushed")
             .push((people.clone(), payload.clone()));
         if let (Some(push), false) = (self.push.clone(), people.is_empty()) {
-            tokio::spawn(async move { push.notify(&people, &payload).await });
+            let preferences = self.preferences.get().cloned();
+            tokio::spawn(async move {
+                let people =
+                    crate::preferences::wanting_machine_pushes(preferences.as_ref(), people).await;
+                if !people.is_empty() {
+                    push.notify(&people, &payload).await;
+                }
+            });
         }
     }
 

@@ -182,6 +182,23 @@ impl Style {
                 tokens.dark.iter().map(|(k, v)| (k.clone(), v)).collect(),
             );
             css.push_str("  }\n}\n");
+            // A person's own choice (`Preferences::theme`), over the phone's setting.
+            css.push_str(":root[data-theme=\"dark\"] {\n");
+            line(
+                &mut css,
+                tokens.dark.iter().map(|(k, v)| (k.clone(), v)).collect(),
+            );
+            css.push_str("  color-scheme: dark;\n}\n:root[data-theme=\"light\"] {\n");
+            line(
+                &mut css,
+                tokens
+                    .colors
+                    .iter()
+                    .filter(|(k, _)| tokens.dark.contains_key(*k))
+                    .map(|(k, v)| (k.clone(), v))
+                    .collect(),
+            );
+            css.push_str("  color-scheme: light;\n}\n");
         }
         for font in &tokens.font_files {
             let asset = assets.get(&font.file).ok_or_else(|| {

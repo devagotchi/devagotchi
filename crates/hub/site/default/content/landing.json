@@ -107,7 +107,11 @@
         "items": [
           {
             "term": "Approvals on your phone",
-            "text": "Before a step that needs your say, your AI asks: what will change, why, and how to undo it. It reaches your phone as a push, and the AI waits for your answer. Approve a kind of step ahead of time, say restarts on one machine for 30 days, and those go through without a buzz until you stop them with one tap."
+            "text": "Before a step that needs your say, your AI asks: what will change, why, and how to undo it. It reaches your phone as a push, and the AI waits for your answer. Approve a kind of step ahead of time, say restarts on one machine for 30 days, and those go through without a buzz until you stop them with one tap. Name the kinds that must always wait for you, and those never go through on their own."
+          },
+          {
+            "term": "An app made for your phone",
+            "text": "Add it to your home screen and it opens like any app. It greets you by name and says what needs you, the icon counts what waits, and a request reads at a glance with one big Approve. Your own page holds your organisations and what you want: how it looks, which kinds of step always wait for you, and which machines may buzz you."
           },
           {
             "term": "Setup links",
