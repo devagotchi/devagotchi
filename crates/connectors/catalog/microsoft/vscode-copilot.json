@@ -1,0 +1,47 @@
+{
+  "schema": "devagotchi.connector/v1",
+  "id": "vscode-copilot",
+  "name": "VS Code (GitHub Copilot)",
+  "vendor": "microsoft",
+  "surface": "ide",
+  "remote_mcp": true,
+  "transports": [
+    "streamable-http",
+    "sse",
+    "stdio"
+  ],
+  "auth": {
+    "oauth": true,
+    "dynamic_client_registration": null,
+    "bearer_header": true
+  },
+  "install": {
+    "kind": "config-file",
+    "command": null,
+    "config_path": null,
+    "project_config_path": ".vscode/mcp.json",
+    "format": "json",
+    "snippet": "{\n  \"servers\": {\n    \"{name}\": {\n      \"type\": \"http\",\n      \"url\": \"{url}\"\n    }\n  }\n}",
+    "ui_steps": [
+      "Command Palette: MCP: Open User Configuration (user profile mcp.json)",
+      "Portable alternative: workspace-root .mcp.json with top-level mcpServers (needs experimental setting chat.mcp.workspaceRootConfig.enabled)"
+    ]
+  },
+  "instructions_file": null,
+  "hooks": true,
+  "plan_limits": null,
+  "aliases": [
+    "copilot",
+    "vscode"
+  ],
+  "verification": {
+    "level": "docs",
+    "on": "2026-11-10",
+    "docs": [
+      "https://code.visualstudio.com/docs/copilot/customization/mcp-servers",
+      "https://code.visualstudio.com/docs/agents/reference/mcp-configuration"
+    ],
+    "test": null,
+    "gaps": "Per-OS user profile path not stated (use MCP: Open User Configuration). code --add-mcp documented only with a stdio JSON example; HTTP form not confirmed so command=null. DCR not mentioned (oauth.clientId pre-registered is shown). Instruction files not on fetched pages. Hooks=true only because a hooks reference is linked; not read. Plan requirements not stated. Tries HTTP stream first then falls back to SSE. Shown without a token so the client signs in with OAuth, as this hub expects."
+  }
+}

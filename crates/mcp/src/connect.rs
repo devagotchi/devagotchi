@@ -27,7 +27,11 @@ Clients (default: every one found here):
   claude-desktop  mcpServers.devagotchi in claude_desktop_config.json
 Each file is backed up beside itself (.bak-<time>) and written whole. Then the server is
 started once and asked for its tools (--no-check skips that). Restart a client that is
-open to pick the server up.";
+open to pick the server up.
+
+Every other client:
+  devagotchi connect --list                 the clients Devagotchi knows how to connect
+  devagotchi connect ID --hub URL --print   the exact steps for that client and hub";
 
 pub const SETUP_USAGE: &str = "Usage: devagotchi setup [claude-code|codex|claude-desktop|all] [--hub [URL] | --local] [--no-check]
 
@@ -94,6 +98,10 @@ struct Options {
     clients: Option<Vec<Client>>,
     target: Option<Target>,
     check: bool,
+    list: bool,
+    /// The catalog connector to print the steps for (`devagotchi_connectors`).
+    show: Option<String>,
+    print: bool,
 }
 
 fn parse(args: &[OsString]) -> Result<Option<Options>, String> {
@@ -101,6 +109,9 @@ fn parse(args: &[OsString]) -> Result<Option<Options>, String> {
         clients: None,
         target: None,
         check: true,
+        list: false,
+        show: None,
+        print: false,
     };
     let mut args = args
         .iter()
@@ -127,11 +138,83 @@ fn parse(args: &[OsString]) -> Result<Option<Options>, String> {
                 options.target = Some(Target::Hub(url));
             }
             "--no-check" => options.check = false,
+            "--list" => options.list = true,
+            "--print" => options.print = true,
             "--local" | "--hub" => return Err("give either --hub or --local, once".into()),
-            other => return Err(format!("unknown argument {other:?}")),
+            other if devagotchi_connectors::find(other).is_some() => {
+                options.show = Some(other.to_string());
+            }
+            other => {
+                return Err(format!(
+                    "unknown argument {other:?}; `devagotchi connect --list` names the clients"
+                ));
+            }
         }
     }
     Ok(Some(options))
+}
+
+/// The steps for `id`, as text.
+fn steps(connector: &devagotchi_connectors::Connector, url: &str) -> String {
+    let rendered = connector.render(url);
+    let mut out = format!("{} ({})\n", rendered.name, rendered.id);
+    if let Some(limits) = &rendered.plan_limits {
+        out.push_str(&format!("{limits}\n"));
+    }
+    if let Some(command) = &rendered.command {
+        out.push_str(&format!("\n  {command}\n"));
+    }
+    if let Some(paths) = &rendered.config_path {
+        for (os, path) in [
+            ("macOS", &paths.macos),
+            ("Linux", &paths.linux),
+            ("Windows", &paths.windows),
+        ] {
+            if let Some(path) = path {
+                out.push_str(&format!("\n{os}: {path}"));
+            }
+        }
+        out.push('\n');
+    }
+    if let Some(snippet) = &rendered.snippet {
+        out.push_str(&format!("\n{snippet}\n"));
+    }
+    for (number, step) in rendered.steps.iter().enumerate() {
+        out.push_str(&format!("\n{}. {step}", number + 1));
+    }
+    if !rendered.steps.is_empty() {
+        out.push('\n');
+    }
+    let source = rendered.docs.first().map(String::as_str).unwrap_or("");
+    out.push_str(&format!("\nChecked {}: {source}\n", rendered.checked_on));
+    if let Some(gaps) = &rendered.gaps {
+        out.push_str(&format!("Not confirmed: {gaps}\n"));
+    }
+    out
+}
+
+/// `--list` and `ID --print`: what needs no file written. None when neither was asked for.
+fn from_catalog(options: &Options) -> Option<ExitCode> {
+    if options.list {
+        for connector in devagotchi_connectors::all() {
+            println!("{:<16} {}", connector.id, connector.name);
+        }
+        return Some(ExitCode::SUCCESS);
+    }
+    let writes = matches!(
+        options.show.as_deref(),
+        None | Some("claude-code" | "codex" | "claude-desktop")
+    );
+    if !options.print && writes {
+        return None;
+    }
+    let connector = devagotchi_connectors::find(options.show.as_deref()?)?;
+    let url = match &options.target {
+        Some(Target::Hub(Some(url))) => format!("{}/mcp", url.trim_end_matches('/')),
+        _ => "https://YOUR-HUB/mcp".to_string(),
+    };
+    print!("{}", steps(connector, &url));
+    Some(ExitCode::SUCCESS)
 }
 
 /// `devagotchi connect …`
@@ -162,6 +245,9 @@ fn run(args: Vec<OsString>, machine: Machine, setup: bool) -> ExitCode {
             return ExitCode::from(64);
         }
     };
+    if let Some(done) = from_catalog(&options) {
+        return done;
+    }
     let target = match options.target {
         Some(target) => target,
         None if machine.signed_in => Target::Hub(None),
@@ -572,6 +658,21 @@ fn answer(rx: &mpsc::Receiver<String>, id: i64) -> Result<serde_json::Value, Str
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn a_catalog_client_prints_its_steps_for_the_hub_it_was_given() {
+        let args: Vec<OsString> = ["cursor", "--hub", "https://hub.test", "--print"]
+            .iter()
+            .map(OsString::from)
+            .collect();
+        let options = parse(&args).unwrap().unwrap();
+        assert_eq!(options.show.as_deref(), Some("cursor"));
+        let connector = devagotchi_connectors::find("cursor").unwrap();
+        let text = steps(connector, "https://hub.test/mcp");
+        assert!(text.contains("https://hub.test/mcp"), "{text}");
+        assert!(text.contains("Checked"), "{text}");
+        assert!(parse(&[OsString::from("not-a-client")]).is_err());
+    }
+
     use super::*;
 
     fn hub() -> Vec<String> {
@@ -588,7 +689,10 @@ mod tests {
             Options {
                 clients: Some(vec![Client::Codex]),
                 target: Some(Target::Hub(Some("https://hub.example".into()))),
-                check: true
+                check: true,
+                list: false,
+                show: None,
+                print: false,
             }
         );
         let local = parse(&["--local", "--no-check"]).unwrap().unwrap();
@@ -598,7 +702,7 @@ mod tests {
         );
         assert!(parse(&["--hub", "--local"]).is_err());
         assert!(parse(&["--hub", "http://plain.example"]).is_err());
-        assert!(parse(&["cursor"]).is_err());
+        assert!(parse(&["no-such-client"]).is_err());
         assert_eq!(parse(&["--help"]).unwrap(), None);
     }
 

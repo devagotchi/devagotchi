@@ -1,0 +1,49 @@
+{
+  "schema": "devagotchi.connector/v1",
+  "id": "codex-cli",
+  "name": "Codex CLI",
+  "vendor": "openai",
+  "surface": "cli",
+  "remote_mcp": true,
+  "transports": [
+    "streamable-http",
+    "stdio"
+  ],
+  "auth": {
+    "oauth": true,
+    "dynamic_client_registration": null,
+    "bearer_header": true
+  },
+  "install": {
+    "kind": "cli-command",
+    "command": "codex mcp add {name} --url {url}",
+    "config_path": {
+      "macos": "~/.codex/config.toml",
+      "linux": "~/.codex/config.toml",
+      "windows": "~/.codex/config.toml"
+    },
+    "project_config_path": ".codex/config.toml (trusted projects only)",
+    "format": "toml",
+    "snippet": "[mcp_servers.{name}]\nurl = \"{url}\"",
+    "ui_steps": [
+      "OAuth: codex mcp login {name} (add --no-browser for headless)",
+      "codex mcp list shows servers"
+    ]
+  },
+  "instructions_file": null,
+  "hooks": true,
+  "plan_limits": null,
+  "aliases": [
+    "codex",
+    "codex-cli"
+  ],
+  "verification": {
+    "level": "ci",
+    "on": "2026-11-10",
+    "docs": [
+      "https://learn.chatgpt.com/docs/extend/mcp?surface=cli"
+    ],
+    "test": "tests/clients_oauth.py",
+    "gaps": "Page redirected from developers.openai.com/codex/mcp. Command form taken from the page's OAuth example (codex mcp add example --url ...). AGENTS.md not tied to MCP on fetched page -> null. Hooks=true is weak: page only says see Hooks page. DCR not stated. Windows path not stated separately. stdio support assumed, not verified on this page. Shown without a token so the client signs in with OAuth, as this hub expects."
+  }
+}

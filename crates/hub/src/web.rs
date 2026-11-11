@@ -32,6 +32,7 @@ mod approvals;
 mod claim;
 #[cfg(test)]
 mod claim_tests;
+mod connectors;
 pub(crate) mod counted;
 mod device;
 mod discovery;

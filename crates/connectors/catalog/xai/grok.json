@@ -1,0 +1,44 @@
+{
+  "schema": "devagotchi.connector/v1",
+  "id": "grok",
+  "name": "Grok (xAI API remote MCP)",
+  "vendor": "xai",
+  "surface": "api",
+  "remote_mcp": true,
+  "transports": [
+    "streamable-http",
+    "sse"
+  ],
+  "auth": {
+    "oauth": null,
+    "dynamic_client_registration": null,
+    "bearer_header": true
+  },
+  "install": {
+    "kind": "api-parameter",
+    "command": null,
+    "config_path": null,
+    "project_config_path": null,
+    "format": "json",
+    "snippet": "{\"type\":\"mcp\",\"server_url\":\"{url}\",\"server_label\":\"{name}\",\"authorization\":\"TOKEN\"}",
+    "ui_steps": [
+      "Add as an entry in the tools array of a Responses API / xAI SDK request",
+      "Optional: server_description, allowed_tools (SDK: allowed_tool_names), headers (SDK: extra_headers)"
+    ]
+  },
+  "instructions_file": null,
+  "hooks": null,
+  "plan_limits": null,
+  "aliases": [
+    "grok"
+  ],
+  "verification": {
+    "level": "docs",
+    "on": "2026-11-10",
+    "docs": [
+      "https://docs.x.ai/developers/tools/remote-mcp"
+    ],
+    "test": null,
+    "gaps": "Docs cover only the API tool parameter; OAuth not mentioned; DCR unknown. Whether the consumer Grok app supports custom connectors was NOT confirmed from official docs. Snippet is a JSON rendering of the doc's Python dict. Public reachability requirement came from search snippets only."
+  }
+}

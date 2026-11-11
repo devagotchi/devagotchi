@@ -1,0 +1,51 @@
+{
+  "schema": "devagotchi.connector/v1",
+  "id": "windsurf",
+  "name": "Windsurf",
+  "vendor": "cognition",
+  "surface": "ide",
+  "remote_mcp": true,
+  "transports": [
+    "streamable-http",
+    "sse",
+    "stdio"
+  ],
+  "auth": {
+    "oauth": true,
+    "dynamic_client_registration": null,
+    "bearer_header": true
+  },
+  "install": {
+    "kind": "config-file",
+    "command": null,
+    "config_path": {
+      "macos": "~/.config/devin/mcp_config.json (or $XDG_CONFIG_HOME/devin/mcp_config.json)",
+      "linux": "~/.config/devin/mcp_config.json (or $XDG_CONFIG_HOME/devin/mcp_config.json)",
+      "windows": "%AppData%/devin/mcp_config.json"
+    },
+    "project_config_path": null,
+    "format": "json",
+    "snippet": "{\n  \"mcpServers\": {\n    \"{name}\": {\n      \"serverUrl\": \"{url}\"\n    }\n  }\n}",
+    "ui_steps": [
+      "Settings > Tools > Windsurf Settings > Add Server, or Cascade MCP menu",
+      "Select server, click + Add Server",
+      "Press refresh"
+    ]
+  },
+  "instructions_file": null,
+  "hooks": null,
+  "plan_limits": "Teams: admins toggle MCP and may allowlist servers (one allowlisted server blocks all others). Enterprise: users must turn MCP on manually.",
+  "aliases": [
+    "windsurf"
+  ],
+  "verification": {
+    "level": "docs",
+    "on": "2026-11-10",
+    "docs": [
+      "https://docs.devin.ai/windsurf/plugins/cascade/mcp",
+      "https://docs.devin.ai/desktop/cascade/mcp"
+    ],
+    "test": null,
+    "gaps": "Windsurf docs now redirect to docs.devin.ai. Same page also names editor discovery file ~/.codeium/windsurf/mcp_config.json (stable); search snippets disagree on path, so confirm via Open MCP config file action. DCR not stated. AGENTS.md and hooks (.devin/hooks.v1.json) are documented only on the Devin Local page, not confirmed for the Windsurf editor, so instructions_file and hooks are null. Doc header example is API_KEY: value; Authorization Bearer is a generalization. Shown without a token so the client signs in with OAuth, as this hub expects."
+  }
+}

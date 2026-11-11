@@ -7,6 +7,16 @@ heading. Agents draft the fragments below; they never tag.
 
 ## Unreleased
 
+### Connectors for 17 AI clients, from one catalog (increment 124)
+- `crates/connectors`: one JSON file per client under `catalog/<vendor>/<id>.json`, one schema generated
+  from its types (`schemas/connector.v1.schema.json`), one renderer. Claude Code, Claude Desktop, Claude on
+  the web, ChatGPT, Codex, Cursor, VS Code, Windsurf, Gemini CLI, Grok, OpenRouter, Zed, Cline, Continue,
+  Goose, Junie and Hermes Agent.
+- `/connect` gives each client's exact steps with this hub's address; `GET /api/v1/connectors` is the same
+  for an agent; `devagotchi connect --list` and `devagotchi connect ID --hub URL --print` on the command line.
+- Every entry records its source, the date it was read and what the documentation did not confirm. Only
+  Codex is proven by a real client in this project's tests so far.
+
 ### Notes that reach who they are for, and the landing page's search basics (increment 123)
 - A note with a `to` reaches that seat or AI by name (`claude`, `chatgpt`, `codex`, `grok`,
   `hermes` …) complete on its next tool call, once. `board_inbox` reads them again and marks them

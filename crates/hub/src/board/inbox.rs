@@ -113,6 +113,11 @@ pub fn client_aliases(name: &str) -> Vec<String> {
     if !own.is_empty() && !aliases.contains(&own) {
         aliases.push(own);
     }
+    for alias in devagotchi_connectors::aliases_for_client(name) {
+        if !aliases.contains(&alias) {
+            aliases.push(alias);
+        }
+    }
     aliases
 }
 

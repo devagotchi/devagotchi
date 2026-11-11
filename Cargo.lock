@@ -872,6 +872,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "devagotchi-connectors"
+version = "0.1.0"
+dependencies = [
+ "schemars 1.2.3",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "devagotchi-contracts"
 version = "0.1.0"
 dependencies = [
@@ -922,6 +931,7 @@ dependencies = [
  "aws-lc-rs",
  "axum",
  "base64 0.23.1",
+ "devagotchi-connectors",
  "devagotchi-contracts",
  "devagotchi-ipc",
  "devagotchi-mcp",
@@ -993,6 +1003,7 @@ name = "devagotchi-mcp"
 version = "0.1.0"
 dependencies = [
  "base64 0.23.1",
+ "devagotchi-connectors",
  "devagotchi-contracts",
  "devagotchi-ipc",
  "rmcp",
