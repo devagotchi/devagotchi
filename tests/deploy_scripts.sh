@@ -2,7 +2,7 @@
 # deploy/compose/install.sh, update.sh and backup.sh for real, as root on a Linux host with
 # Docker (CI: `hub (deploy scripts)`): the stack up behind an "external" edge on a loopback
 # port, the image pinned by digest, an update that is not healthy rolled back and never
-# retried, and a backup of the database and the state volume. Then the same stack re-run
+# retried, a backup of the database and the state volume, and restoring it. Then the same stack re-run
 # as a hosted hub (tenancy, an operator, Google from a secrets file), and the deploy files
 # coming with each new image from the commit it names (a local registry and file server
 # stand in for GHCR and GitHub): swapped in with a healthy image, rolled back with an
@@ -73,6 +73,23 @@ ls "$work"/backups/db-*.dump "$work"/backups/state-*.tgz >/dev/null || fail "bac
 listed=$(tar -tzf "$work"/backups/state-*.tgz) || fail "the state archive reads back"
 [[ -n "$listed" ]] || fail "the state archive has the hub's files"
 echo "PASS backup.sh: database dump and state archive"
+
+# Restoring it: what happened after the backup is gone, and the hub is healthy on what it held.
+psql_hub() { (cd "$dir" && docker compose exec -T postgres psql -h /var/run/postgresql -U devagotchi -d devagotchi -Atc "$1"); }
+pg_image=$(cd "$dir" && docker inspect --format '{{.Image}}' "$(docker compose ps -q postgres)")
+state_volume=$(docker volume ls -q --filter "label=com.docker.compose.volume=hub-state")
+tenants=$(psql_hub "SELECT count(*) FROM devagotchi.tenancy_tenants")
+psql_hub "CREATE TABLE devagotchi.after_the_backup (x int)" >/dev/null
+docker run --rm --network none -v "$state_volume:/state" "$pg_image" touch /state/after-the-backup
+"$dir/backup.sh" --restore "$work"/backups/db-*.dump "$work"/backups/state-*.tgz >/dev/null || fail "backup.sh --restore runs"
+[[ -z "$(psql_hub "SELECT to_regclass('devagotchi.after_the_backup')")" ]] || fail "a table made after the backup is gone"
+docker run --rm --network none -v "$state_volume:/state" "$pg_image" sh -c 'test ! -e /state/after-the-backup' \
+  || fail "a file made after the backup is gone"
+[[ "$(psql_hub "SELECT count(*) FROM devagotchi.tenancy_tenants")" == "$tenants" ]] || fail "the backup's rows are back"
+health=$(curl -fsS "http://127.0.0.1:$port/healthz") || fail "the hub answers after a restore"
+grep -q '"ok":true' <<<"$health" || fail "the hub is healthy after a restore: $health"
+grep -q '"audit":{[^}]*"ok":true' <<<"$health" || fail "the audit chain verifies after a restore: $health"
+echo "PASS backup.sh --restore: the database and state are the backup's, the hub healthy on them"
 
 # The hub's site (tests/fixtures/neutral-site): checked with the hub image, put in place,
 # served; nothing of the built-in site shows. This runs the published image, built from
@@ -211,4 +228,19 @@ if "$dir/update.sh"; then fail "an image whose commit's files cannot be had is n
 [[ "$(env_get DEVAGOTCHI_IMAGE)" == "$next" ]] || fail "nothing changed for files that could not be fetched"
 grep -q "deploy files of $next_rev" "$dir/compose.yaml" || fail "compose.yaml unchanged"
 echo "PASS update.sh: no files from the image's commit, no deploy"
+# ClickHouse is the statistics, not the hub: with one that never turns healthy, a healthy hub
+# image still deploys and stays, instead of being rolled back and refused from then on. A
+# Caddy stands in for it: it runs, and it never answers ClickHouse's health check.
+sick_rev=4444444444444444444444444444444444444444
+printf 'FROM %s\nLABEL org.opencontainers.image.revision=%s\n' "$next" "$sick_rev" \
+  | docker build -q -t "localhost:5055/devagotchi:${sick_rev:0:4}" - >/dev/null
+docker push -q "localhost:5055/devagotchi:${sick_rev:0:4}" >/dev/null
+mkdir -p "$work/files/$sick_rev/deploy/compose"
+cp "$root"/deploy/compose/{compose.yaml,update.sh,backup.sh} "$work/files/$sick_rev/deploy/compose/"
+printf 'DEVAGOTCHI_CLICKHOUSE_IMAGE=%s\n' "$bad" >> "$dir/.env"
+track_to "$sick_rev"
+"$dir/update.sh" || fail "a sick ClickHouse does not fail a healthy hub's deploy"
+[[ "$(env_get DEVAGOTCHI_REVISION)" == "$sick_rev" ]] || fail "the new image is kept with a sick ClickHouse"
+curl -fsS "http://127.0.0.1:$port/healthz" | grep -q '"ok":true' || fail "the hub is healthy with a sick ClickHouse"
+echo "PASS update.sh: a ClickHouse that never turns healthy does not cost a healthy hub its deploy"
 echo "DEPLOY SCRIPTS PASSED"

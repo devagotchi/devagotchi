@@ -75,16 +75,15 @@ services:
 
   hub:
     container_name: ${COMPOSE_PROJECT_NAME}-hub
-    image: ${DEVAGOTCHI_IMAGE:-ghcr.io/devagotchi/devagotchi:main}
+    image: ${DEVAGOTCHI_IMAGE:-ghcr.io/devagotchi/devagotchi:latest}
     build:
       context: ../..
       dockerfile: deploy/compose/Dockerfile
+    # Not on ClickHouse: the hub serves the boards whether it answers or not, and its events
+    # wait in Postgres. A dependency would make every deploy wait for it.
     depends_on:
       postgres:
         condition: service_healthy
-      # Started, not healthy: the hub serves the boards whether ClickHouse answers or not.
-      clickhouse:
-        condition: service_started
     configs:
       - source: hub
         target: /etc/devagotchi/hub.json
