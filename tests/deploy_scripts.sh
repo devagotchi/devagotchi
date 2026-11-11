@@ -211,4 +211,19 @@ if "$dir/update.sh"; then fail "an image whose commit's files cannot be had is n
 [[ "$(env_get DEVAGOTCHI_IMAGE)" == "$next" ]] || fail "nothing changed for files that could not be fetched"
 grep -q "deploy files of $next_rev" "$dir/compose.yaml" || fail "compose.yaml unchanged"
 echo "PASS update.sh: no files from the image's commit, no deploy"
+# ClickHouse is the statistics, not the hub: with one that never turns healthy, a healthy hub
+# image still deploys and stays, instead of being rolled back and refused from then on. A
+# Caddy stands in for it: it runs, and it never answers ClickHouse's health check.
+sick_rev=4444444444444444444444444444444444444444
+printf 'FROM %s\nLABEL org.opencontainers.image.revision=%s\n' "$next" "$sick_rev" \
+  | docker build -q -t "localhost:5055/devagotchi:${sick_rev:0:4}" - >/dev/null
+docker push -q "localhost:5055/devagotchi:${sick_rev:0:4}" >/dev/null
+mkdir -p "$work/files/$sick_rev/deploy/compose"
+cp "$root"/deploy/compose/{compose.yaml,update.sh,backup.sh} "$work/files/$sick_rev/deploy/compose/"
+printf 'DEVAGOTCHI_CLICKHOUSE_IMAGE=%s\n' "$bad" >> "$dir/.env"
+track_to "$sick_rev"
+"$dir/update.sh" || fail "a sick ClickHouse does not fail a healthy hub's deploy"
+[[ "$(env_get DEVAGOTCHI_REVISION)" == "$sick_rev" ]] || fail "the new image is kept with a sick ClickHouse"
+curl -fsS "http://127.0.0.1:$port/healthz" | grep -q '"ok":true' || fail "the hub is healthy with a sick ClickHouse"
+echo "PASS update.sh: a ClickHouse that never turns healthy does not cost a healthy hub its deploy"
 echo "DEPLOY SCRIPTS PASSED"
