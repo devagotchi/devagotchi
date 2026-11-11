@@ -31,6 +31,9 @@ const TERM_GRACE: Duration = Duration::from_millis(200);
 const MAX_WATCHED: usize = 64;
 /// The look interval when this kernel offers no pidfd.
 const NO_PIDFD_INTERVAL: Duration = Duration::from_millis(20);
+/// A pidfd says only when its process exits. A member can leave the group without exiting
+/// (`setsid`, as a daemon does), so the group is read again at least this often.
+const MEMBERSHIP_RECHECK: Duration = Duration::from_millis(100);
 
 pub(crate) const SCOPE: &str = "Linux root process and inherited process group; excludes processes that leave the group. This is not OS containment.";
 pub(crate) const RUNNING_DETAIL: &str = "Root spawned with exact argv, cleared environment, null stdin, and a new Linux process group. Executable behavior is not sandboxed.";
@@ -151,8 +154,14 @@ impl OwnedTree {
                     watched.push(fd);
                 }
             }
-            for fd in &watched {
-                fd.readable().await.map_err(observation)?.retain_ready();
+            let all_ended = async {
+                for fd in &watched {
+                    fd.readable().await.map_err(observation)?.retain_ready();
+                }
+                Ok::<_, BridgeError>(())
+            };
+            if let Ok(ended) = timeout(MEMBERSHIP_RECHECK, all_ended).await {
+                ended?;
             }
         }
     }
@@ -407,6 +416,27 @@ mod tests {
         let mut child = spawn("setsid sleep 3 & sleep 0.2; exit 0");
         let tree = owned(&mut child).await;
         tree.root_exit(&mut child).await.unwrap();
+        let began = Instant::now();
+        tree.members_settled().await.unwrap();
+        assert!(
+            began.elapsed() < Duration::from_secs(2),
+            "{:?}",
+            began.elapsed()
+        );
+        child.wait().await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn a_member_that_leaves_after_it_is_watched_does_not_hold_settlement() {
+        // In the group when settlement starts watching it, then out of it by setsid without
+        // exiting: settlement ends when it leaves, not when it exits three seconds later.
+        let mut child = spawn("(sleep 0.3; exec setsid sleep 3) & exit 0");
+        let tree = owned(&mut child).await;
+        tree.root_exit(&mut child).await.unwrap();
+        assert!(
+            !group_members(tree.pid).unwrap().is_empty(),
+            "still a member"
+        );
         let began = Instant::now();
         tree.members_settled().await.unwrap();
         assert!(
