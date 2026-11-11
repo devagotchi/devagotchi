@@ -8,8 +8,7 @@ heading. Agents draft the fragments below; they never tag.
 ## Unreleased
 
 ### The release lane (increment 121)
-- `install.sh`, `hub-up.sh` and `compose.yaml` now follow `:latest`, which moves only when a
-  release is tagged. `--track ...:main` follows every merge, for a hub you test on.
+- Installs keep following `:main` while the project is alpha (`.ai/project.json`).
 - Fixed: the deploy waited for ClickHouse, so one that never turned healthy rolled back a
   healthy hub and refused that image from then on. ClickHouse is now started and never waited
   for, and the hub no longer depends on it in compose.

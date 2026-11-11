@@ -1,3 +1,23 @@
+# ALPHA = PRE-RELEASE. NOTHING IS IN PRODUCTION.
+
+**The toggle is `"stage"` in [project.json](project.json). `alpha` means pre-release.** Read it
+before anything else. It stays `alpha` until the operator promotes it ([how](docs/lifecycle.md)).
+
+While it says `alpha`, every agent on every task works like this:
+
+- **Nothing is live.** There are no production users, deployments or data to protect.
+- **When something fails, leave it failed and work it all the way through.** No rollback, no
+  retreat, no stopping to report it. Find the cause and fix forward until it works.
+- **No production thinking.** No rollback plans, staged rollouts, release gates, compatibility
+  layers, migration paths or "not safe to deploy" verdicts. They arrive with promotion.
+- **Do not stop to ask whether to continue.** Keep going until the work is done.
+- **Do not burn CI** on work you know is incomplete. Test the smallest relevant slice.
+
+Alpha never excuses: broken authorization, tenant boundaries or secret handling, lost user data,
+hidden failures, or claiming something works when it was not run.
+
+---
+
 # AI development contracts
 
 Root [AGENTS.md](../AGENTS.md) is the instruction entry point; this directory supplies
