@@ -77,10 +77,20 @@ pub fn page(
     };
     let tabs = if allow_signup {
         format!(
-            "<p class=\"tabs\"><a href=\"/auth/login?tab=in&amp;return_to={back}\">{}</a> \
-<a href=\"/auth/login?tab=up&amp;return_to={back}\">{}</a></p>",
+            "<p class=\"tabs\"><a href=\"/auth/login?tab=in&amp;return_to={back}\"{in_now}>{}</a> \
+<a href=\"/auth/login?tab=up&amp;return_to={back}\"{up_now}>{}</a></p>",
             e(&words.tab_in),
-            e(&words.tab_up)
+            e(&words.tab_up),
+            in_now = if matches!(tab, Tab::In) {
+                " aria-current=\"page\""
+            } else {
+                ""
+            },
+            up_now = if matches!(tab, Tab::Up) {
+                " aria-current=\"page\""
+            } else {
+                ""
+            },
         )
     } else {
         String::new()
@@ -93,7 +103,10 @@ pub fn page(
 <label>{password} <input type=\"password\" name=\"password\" required autocomplete=\"{complete}\"></label>\
 <p class=\"actions\"><button class=\"button primary\" type=\"submit\">{submit}</button></p></form>\
 {forgot}",
-        title = e(&words.title),
+        title = e(match tab {
+            Tab::In => &words.title,
+            Tab::Up => &words.tab_up,
+        }),
         tabs = tabs,
         notice = notice.unwrap_or_default(),
         to = e(return_to),
