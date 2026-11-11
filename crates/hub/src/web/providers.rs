@@ -66,9 +66,13 @@ struct Endpoints {
 
 /// Every sign-in provider the config names, and the email link if it has a mail server.
 pub struct Providers {
-    pub list: Vec<Provider>,
+    /// What is offered now: the config file's, with the settings page's over them.
+    list: std::sync::RwLock<Vec<Arc<Provider>>>,
+    /// What the config file names.
+    from_config: Vec<Arc<Provider>>,
     pub email: Option<super::email::Mailer>,
     http: reqwest::Client,
+    sealer: crate::sealed::Sealer,
 }
 
 impl std::fmt::Debug for Provider {
@@ -82,9 +86,14 @@ impl Providers {
     /// No providers and no email link: passkeys only.
     pub fn none() -> Self {
         Self {
-            list: Vec::new(),
+            list: std::sync::RwLock::new(Vec::new()),
+            from_config: Vec::new(),
             email: None,
-            http: reqwest::Client::new(),
+            http: reqwest::Client::builder()
+                .redirect(reqwest::redirect::Policy::none())
+                .build()
+                .unwrap_or_default(),
+            sealer: crate::sealed::Sealer::ephemeral(),
         }
     }
 
@@ -115,12 +124,12 @@ impl Providers {
                 ),
                 (None, None) => None,
             };
-            list.push(Provider {
+            list.push(Arc::new(Provider {
                 config: provider.clone(),
                 client_id: client_id.trim().to_string(),
                 secret,
                 endpoints: tokio::sync::OnceCell::new(),
-            });
+            }));
         }
         let email = email.map(super::email::Mailer::from_config).transpose()?;
         let http = reqwest::Client::builder()
@@ -130,17 +139,78 @@ impl Providers {
             .user_agent("devagotchi-hub")
             .build()
             .map_err(|error| error.to_string())?;
-        Ok(Self { list, email, http })
+        Ok(Self {
+            list: std::sync::RwLock::new(list.clone()),
+            from_config: list,
+            email,
+            http,
+            sealer: crate::sealed::Sealer::ephemeral(),
+        })
     }
 
-    pub fn get(&self, name: &str) -> Option<&Provider> {
-        self.list.iter().find(|p| p.config.name() == name)
+    /// Keep sealed settings under the key in `state_dir`.
+    pub fn sealing_in(mut self, state_dir: &std::path::Path) -> Result<Self, String> {
+        self.sealer = crate::sealed::Sealer::open(state_dir)?;
+        Ok(self)
+    }
+
+    pub fn sealer(&self) -> &crate::sealed::Sealer {
+        &self.sealer
+    }
+
+    /// What is offered now.
+    pub fn current(&self) -> Vec<Arc<Provider>> {
+        self.list.read().expect("providers").clone()
+    }
+
+    pub fn get(&self, name: &str) -> Option<Arc<Provider>> {
+        self.current().into_iter().find(|p| p.config.name() == name)
+    }
+
+    /// Offer the config file's providers with `stored` over them: one saved on the settings
+    /// page replaces the file's of that name, and one turned off there takes it away.
+    pub fn apply(&self, stored: &[crate::accounts::sign_in_settings::StoredSignIn]) {
+        let mut list: Vec<Arc<Provider>> = self
+            .from_config
+            .iter()
+            .filter(|p| !stored.iter().any(|s| s.name == p.config.name()))
+            .cloned()
+            .collect();
+        for setting in stored.iter().filter(|s| s.enabled) {
+            let Some(secret) = self
+                .sealer
+                .open_value(&setting.name, &setting.sealed_secret)
+            else {
+                eprintln!(
+                    "devagotchi-hub: sign-in {}: its secret does not open with this hub's key; save it again",
+                    setting.name
+                );
+                continue;
+            };
+            let config = match serde_json::from_value::<ProviderConfig>(serde_json::json!({
+                "kind": setting.name,
+            })) {
+                Ok(config) => config,
+                Err(error) => {
+                    eprintln!("devagotchi-hub: sign-in {}: {error}", setting.name);
+                    continue;
+                }
+            };
+            list.push(Arc::new(Provider {
+                config,
+                client_id: setting.client_id.clone(),
+                secret: Some(secret),
+                endpoints: tokio::sync::OnceCell::new(),
+            }));
+        }
+        *self.list.write().expect("providers") = list;
     }
 
     /// The buttons a sign-in page offers: each provider's path and label, in the site's
     /// order (`sign_in.order`) and with its label (`sign_in.labels`) over the config's.
     pub fn buttons(&self, site: &crate::site::Site, return_to: &str, link: bool) -> String {
-        let mut ordered: Vec<&Provider> = self.list.iter().collect();
+        let current = self.current();
+        let mut ordered: Vec<&Arc<Provider>> = current.iter().collect();
         ordered.sort_by_key(|provider| site.sign_in_rank(provider.config.name()));
         ordered
             .into_iter()
@@ -321,7 +391,7 @@ pub async fn start(
             "This hub does not sign in with that.",
         );
     };
-    let endpoints = match hub.providers.endpoints(provider).await {
+    let endpoints = match hub.providers.endpoints(&provider).await {
         Ok(endpoints) => endpoints,
         Err(why) => {
             eprintln!("devagotchi-hub: sign-in provider {name}: {why}");
@@ -424,7 +494,7 @@ pub async fn callback(
     if started.p != name || started.s != returned {
         return stale();
     }
-    let proven = match prove(&hub, provider, &code, &started).await {
+    let proven = match prove(&hub, &provider, &code, &started).await {
         Ok(proven) => proven,
         Err(why) => {
             eprintln!("devagotchi-hub: sign-in with {name} refused: {why}");

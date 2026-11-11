@@ -55,7 +55,7 @@ fn early_access_with_plans(value: &mut Value) {
     ]);
 }
 
-pub(super) async fn hub_on(store: Option<&str>, base: Option<&'static Path>) -> Hosted {
+pub(crate) async fn hub_on(store: Option<&str>, base: Option<&'static Path>) -> Hosted {
     hosted_with(store, move |dir, _| {
         let site = site_dir(dir, base, early_access_with_plans);
         json!({
@@ -67,7 +67,7 @@ pub(super) async fn hub_on(store: Option<&str>, base: Option<&'static Path>) -> 
 }
 
 /// The operator signed in, as their browser's cookie.
-pub(super) async fn operator_cookie(hub: &Hosted) -> String {
+pub(crate) async fn operator_cookie(hub: &Hosted) -> String {
     let operator = hub
         .accounts
         .sign_in_identity(&Proven {

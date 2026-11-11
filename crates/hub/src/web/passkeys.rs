@@ -95,6 +95,13 @@ impl HubSignIn {
         })
     }
 
+    /// Apply what the owner saved on the settings page.
+    pub async fn reload_providers(&self) -> devagotchi_contracts::BridgeResult<()> {
+        let stored = self.accounts.sign_in_settings().await?;
+        self.providers.apply(&stored);
+        Ok(())
+    }
+
     /// This sign-in with the config's providers and email link (`Providers::from_config`).
     pub fn with_providers(mut self, providers: super::providers::Providers) -> Self {
         self.providers = providers;
@@ -122,7 +129,8 @@ impl HubSignIn {
     /// offers to keep an account with (`workflow.rs`).
     pub(super) fn provider_names(&self) -> Vec<(String, String)> {
         let site = self.site();
-        let mut ordered: Vec<&super::providers::Provider> = self.providers.list.iter().collect();
+        let current = self.providers.current();
+        let mut ordered: Vec<&Arc<super::providers::Provider>> = current.iter().collect();
         ordered.sort_by_key(|provider| site.sign_in_rank(provider.config.name()));
         ordered
             .into_iter()

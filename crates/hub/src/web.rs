@@ -40,6 +40,7 @@ mod discovery;
 mod discovery_tests;
 mod email;
 mod hosted;
+mod hub_settings;
 mod landing;
 #[cfg(test)]
 mod landing_tests;
@@ -52,7 +53,9 @@ pub mod oauth;
 mod offers;
 mod operator;
 #[cfg(test)]
-mod operator_tests;
+pub(crate) mod operator_tests;
+#[cfg(test)]
+pub(crate) use operator_tests as operator_tests_support;
 mod orgs;
 mod pages;
 #[cfg(test)]

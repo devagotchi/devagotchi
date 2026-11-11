@@ -23,6 +23,8 @@ mod devices;
 mod downloads;
 mod files;
 mod hub;
+#[cfg(test)]
+mod hub_settings_tests;
 mod identity;
 mod issue_lifecycle;
 mod join;
@@ -50,6 +52,7 @@ mod preferences;
 mod provider_tests;
 mod push;
 mod run;
+mod sealed;
 mod signals;
 mod site;
 mod store;
@@ -897,6 +900,8 @@ async fn run(state_dir: PathBuf, config_path: PathBuf) -> BridgeResult<()> {
     let providers = if config.has_accounts() {
         Some(
             web::Providers::from_config(&config)
+                .map_err(|why| BridgeError::new("invalid_config", why))?
+                .sealing_in(&state_dir)
                 .map_err(|why| BridgeError::new("invalid_config", why))?,
         )
     } else {
@@ -919,6 +924,10 @@ async fn run(state_dir: PathBuf, config_path: PathBuf) -> BridgeResult<()> {
             })
             .map(Arc::new)
     });
+    // What the owner set on the settings page, over what the config file says.
+    if let Some(hub) = &passkeys {
+        hub.reload_providers().await?;
+    }
     // A one-owner hub whose config names neither its owner nor its operators may be claimed
     // from the browser (`accounts/claim.rs`); its code is issued once the hub listens, below.
     // A hosted hub (`tenancy.mode multi`) is never claimed.
