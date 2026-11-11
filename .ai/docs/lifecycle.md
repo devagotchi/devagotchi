@@ -25,6 +25,10 @@ tested; never invent a production migration burden for nonexistent production us
 Keep existing supported behavior unless the task deliberately changes it. Verify the
 smallest relevant slice while iterating; do not burn CI on known-incomplete work.
 
+When something fails in alpha, it stays failed and gets worked all the way through: no
+rollback, no retreat, and no stopping to report it instead of fixing it. Do not add rollout
+gates, release lanes or recovery machinery for deployments that do not exist.
+
 ## Explicit production promotion
 
 Only a reviewed PR may change `stage` to `production`. Its `production_promotion` object

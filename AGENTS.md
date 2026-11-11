@@ -1,5 +1,8 @@
 # Devagotchi: canonical agent instructions
 
+> **ALPHA = PRE-RELEASE. NOTHING IS IN PRODUCTION.** Read [.ai/README.md](.ai/README.md) first.
+> When something fails, leave it failed and work it all the way through. No production thinking.
+
 This is the provider-neutral entry point. Provider files are discovery adapters, not
 alternative policies. Read [the AI contract index](.ai/README.md), especially
 [DG-LIFECYCLE-1](.ai/docs/lifecycle.md) and [DG-DELIVERY-1](.ai/dev/workflow.md).

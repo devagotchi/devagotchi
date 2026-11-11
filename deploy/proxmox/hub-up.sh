@@ -48,7 +48,7 @@ hub-up.sh --ct ID --domain NAME [options]
   --domain NAME      the name the hub answers at (required)
   --rp-id NAME       passkeys' relying party: NAME or a parent domain (default NAME)
   --port PORT        the hub's port on the container's loopback (default 8787)
-  --track IMAGE      the image tag the hub follows (default ghcr.io/devagotchi/devagotchi:latest)
+  --track IMAGE      the image tag the hub follows (default ghcr.io/devagotchi/devagotchi:main)
   --repo OWNER/NAME --ref REF
                      where the deploy files come from (default devagotchi/devagotchi at
                      main, resolved to one commit)
@@ -65,7 +65,7 @@ The hub's site (crates/hub/README.md, "The site"):
 EOF
 }
 
-ct="" domain="" rp_id="" port=8787 track=ghcr.io/devagotchi/devagotchi:latest
+ct="" domain="" rp_id="" port=8787 track=ghcr.io/devagotchi/devagotchi:main
 repo=devagotchi/devagotchi ref=main snapshot=true
 hosted=() env_file="" tenancy="" site="" site_only=false
 while [[ $# -gt 0 ]]; do

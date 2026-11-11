@@ -26,8 +26,7 @@ install.sh --domain NAME [options]
                        external: a proxy elsewhere terminates TLS and reaches the hub's port
   --hub-bind ADDR      where the hub's HTTP port is published (default 127.0.0.1)
   --hub-port PORT      that port (default 8787)
-  --track IMAGE        the image tag to follow (default ghcr.io/devagotchi/devagotchi:latest,
-                       the newest tagged release; :main follows every merge)
+  --track IMAGE        the image tag to follow (default ghcr.io/devagotchi/devagotchi:main)
   --dir DIR            where the stack lives (default /opt/devagotchi-hub)
   --source DIR|URL     where compose.yaml and update.sh come from (default: beside this
                        script, else https://raw.githubusercontent.com/<repo>/<ref>/deploy/compose)
@@ -65,7 +64,7 @@ EOF
 }
 
 domain="" public_url="" rp_id="" edge=caddy hub_bind=127.0.0.1 hub_port=8787
-track=ghcr.io/devagotchi/devagotchi:latest dir=/opt/devagotchi-hub source=""
+track=ghcr.io/devagotchi/devagotchi:main dir=/opt/devagotchi-hub source=""
 repo=devagotchi/devagotchi ref=main timer=true site="" site_only=false no_site=false
 tenancy="" operators="" proxies="" google=false github=false nomen="" email_from="" env_file=""
 analytics="" analytics_days=""

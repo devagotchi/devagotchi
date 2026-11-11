@@ -75,7 +75,7 @@ services:
 
   hub:
     container_name: ${COMPOSE_PROJECT_NAME}-hub
-    image: ${DEVAGOTCHI_IMAGE:-ghcr.io/devagotchi/devagotchi:latest}
+    image: ${DEVAGOTCHI_IMAGE:-ghcr.io/devagotchi/devagotchi:main}
     build:
       context: ../..
       dockerfile: deploy/compose/Dockerfile
