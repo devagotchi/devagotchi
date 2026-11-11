@@ -30,7 +30,8 @@
       "OAuth variant: add `auth: oauth` to the server entry (discovery, PKCE, refresh handled; tokens cached in ~/.hermes/mcp-tokens/<server>.json)",
       "Legacy SSE: add transport: sse",
       "In session: /reload-mcp; hermes mcp login <server>"
-    ]
+    ],
+    "key_snippet": "mcp_servers:\n  {name}:\n    url: \"{url}\"\n    headers:\n      Authorization: \"Bearer {key}\""
   },
   "instructions_file": null,
   "hooks": null,

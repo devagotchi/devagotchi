@@ -1089,6 +1089,20 @@ Note text is written by others, and the block says to treat it as information, n
 An MCP client is only reached when it next calls a tool: an idle session is not woken. Two
 sessions of one AI share one inbox, so whichever calls first receives the note.
 
+## API keys
+
+OAuth is the handshake a person does once. An API key is what they hand an agent or script that
+cannot do it. `/app/keys` makes one, limited to what it may do (`Scope`), which projects and
+machines, and how long: 1 hour to 1 year. The key starts `dgk_`, is shown once, and only its
+SHA-256 is stored. The page lists when each was last used, and ends or replaces any at once.
+
+A key reaches `/mcp` only, is refused on the REST API and every page, and acts as the account's
+AI: it cannot approve anything or make keys. `KeyLimits::check` runs in `Hub::call_tool`, and a tool
+with no scope is refused, so a new tool stays closed until someone assigns it one. A key stops when
+it ends, is revoked, or its account is disabled or lapses. Each key made and ended is on the
+tenant's chain, each refused call is in the audit log. A key limited to some machines can still
+see the names of the others through `machines`.
+
 ## The phone app and a person's preferences
 
 `/app` is the installable phone app (`docs/spec-phone-app.md`): one frame with the person's mark

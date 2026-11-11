@@ -62,6 +62,13 @@ reaches a hub through what you build around it.</p>",
             escape(snippet)
         ));
     }
+    if let Some(with_key) = &connector.key_snippet {
+        body.push_str(&format!(
+            "<details class=\"gaps\"><summary>With an API key</summary>\
+<div class=\"command\"><pre><code>{}</code></pre></div></details>",
+            escape(with_key)
+        ));
+    }
     if !connector.steps.is_empty() {
         let steps: String = connector
             .steps
@@ -134,7 +141,9 @@ pub async fn page(State(state): State<AppState>) -> Response {
     let title = "Connect your AI to your own servers";
     let body = format!(
         "<h1>{title}</h1><p>Every client below connects to this hub's one address. Pick yours for \
-the exact steps.</p><div class=\"command\"><pre><code>{}</code></pre></div>{groups}",
+the exact steps. Most sign in with OAuth. For an agent that cannot, make an \
+<a href=\"/app/keys\">API key</a> limited to what it needs, for as long as it needs it.</p>\
+<div class=\"command\"><pre><code>{}</code></pre></div>{groups}",
         escape(&url)
     );
     let site = state.hub.config.site();

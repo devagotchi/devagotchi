@@ -294,6 +294,8 @@ body.app > .bar { height: calc(var(--bar-h) + env(safe-area-inset-top)); padding
 .ask form.allow .actions { margin-top: 0; }
 button.approve.allow { background: none; color: var(--online); }
 .note.always { margin: 12px 0 0; }
+.key-once { border-color: var(--accent); }
+.key-once code { user-select: all; overflow-wrap: anywhere; }
 .connector { margin: 8px 0; padding: 12px 16px; background: var(--surface); border: 1px solid var(--line);
   border-radius: var(--radius-m); }
 .connector summary { color: var(--text); font-weight: 600; min-height: 28px; }

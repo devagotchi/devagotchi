@@ -22,6 +22,8 @@ mod tests;
 pub const SCHEMA: &str = "devagotchi.connector/v1";
 /// What the catalog's text stands in for a server's name.
 pub const SERVER_NAME: &str = "devagotchi";
+/// What a rendered configuration shows where the person's own key goes.
+pub const KEY_PLACEHOLDER: &str = "dgk_YOUR_KEY";
 
 /// Where a client runs, which is how a person looks for it.
 #[derive(
@@ -119,6 +121,9 @@ pub struct Install {
     /// The exact configuration for a remote server, with `{name}` and `{url}`.
     #[serde(default)]
     pub snippet: Option<String>,
+    /// The configuration with an API key instead of OAuth, with `{name}`, `{url}` and `{key}`.
+    #[serde(default)]
+    pub key_snippet: Option<String>,
     /// Steps in the client's own interface, with `{name}` and `{url}`.
     #[serde(default)]
     pub ui_steps: Vec<String>,
@@ -190,6 +195,7 @@ pub struct Rendered {
     pub kind: InstallKind,
     pub command: Option<String>,
     pub snippet: Option<String>,
+    pub key_snippet: Option<String>,
     pub config_path: Option<ConfigPaths>,
     pub project_config_path: Option<String>,
     pub format: Option<ConfigFormat>,
@@ -208,6 +214,7 @@ impl Connector {
         let fill = |text: &String| {
             text.replace("{name}", SERVER_NAME)
                 .replace("{url}", mcp_url)
+                .replace("{key}", KEY_PLACEHOLDER)
         };
         Rendered {
             id: self.id.clone(),
@@ -218,6 +225,7 @@ impl Connector {
             kind: self.install.kind,
             command: self.install.command.as_ref().map(fill),
             snippet: self.install.snippet.as_ref().map(fill),
+            key_snippet: self.install.key_snippet.as_ref().map(fill),
             config_path: self.install.config_path.clone(),
             project_config_path: self.install.project_config_path.clone(),
             format: self.install.format,

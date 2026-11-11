@@ -30,7 +30,8 @@
       "Auth: /mcp auth (needs local browser and localhost callback)",
       "gemini mcp add defaults to project scope; -s selects scope",
       "Bearer: add --header \"Authorization: Bearer TOKEN\""
-    ]
+    ],
+    "key_snippet": "{\n  \"mcpServers\": {\n    \"{name}\": {\n      \"httpUrl\": \"{url}\",\n      \"headers\": {\n        \"Authorization\": \"Bearer {key}\"\n      }\n    }\n  }\n}"
   },
   "instructions_file": "GEMINI.md (configurable via context.fileName, e.g. AGENTS.md)",
   "hooks": true,

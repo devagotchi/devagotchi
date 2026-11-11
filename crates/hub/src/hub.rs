@@ -921,6 +921,26 @@ impl ServerHandler for Hub {
             return Err(rmcp::ErrorData::invalid_params("tool not found", None));
         }
         let subject = self.subject(&context).ok();
+        // An API key may do only what it was made to do.
+        let limits = context
+            .extensions
+            .get::<http::request::Parts>()
+            .and_then(|parts| {
+                parts
+                    .extensions
+                    .get::<crate::accounts::api_keys::KeyLimits>()
+            })
+            .cloned();
+        if let (Some(limits), Some(subject)) = (&limits, &subject)
+            && let Some(why) = limits.check(&request.name, request.arguments.as_ref())
+        {
+            self.record(subject, &request.name, "", "", "key_denied")
+                .map_err(|Json(error)| rmcp::ErrorData::internal_error(error.message, None))?;
+            return Ok(
+                rmcp::model::CallToolResult::error(vec![rmcp::model::ContentBlock::text(why)])
+                    .into(),
+            );
+        }
         let seat = self.request_seat(&context);
         let delivers = request.name != "board_inbox";
         if request.name != "whoami"

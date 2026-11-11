@@ -7,6 +7,13 @@ heading. Agents draft the fragments below; they never tag.
 
 ## Unreleased
 
+### API keys with scopes, limits and durations (increment 125)
+- `/app/keys`: make a key for what it may do, which projects and machines, and how long (1 hour to
+  1 year). Shown once, stored as a hash, with last use, Revoke and Replace.
+- Enforced at the one place every tool passes through; a tool without a scope is closed to keys.
+  A key reaches `/mcp` only and acts as the account's AI, never the person.
+- Every client on `/connect` that takes a bearer header has its configuration with a key.
+
 ### Connectors for 17 AI clients, from one catalog (increment 124)
 - `crates/connectors`: one JSON file per client under `catalog/<vendor>/<id>.json`, one schema generated
   from its types (`schemas/connector.v1.schema.json`), one renderer. Claude Code, Claude Desktop, Claude on

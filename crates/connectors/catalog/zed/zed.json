@@ -21,7 +21,8 @@
     "ui_steps": [
       "Command Palette: zed: open settings file",
       "Or Settings > AI > MCP Servers"
-    ]
+    ],
+    "key_snippet": "{\n  \"context_servers\": {\n    \"{name}\": {\n      \"url\": \"{url}\",\n      \"headers\": {\n        \"Authorization\": \"Bearer {key}\"\n      }\n    }\n  }\n}"
   },
   "instructions_file": null,
   "hooks": null,

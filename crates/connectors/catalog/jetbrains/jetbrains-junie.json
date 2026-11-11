@@ -27,7 +27,8 @@
     "ui_steps": [
       "IDE: Tools | Junie | MCP Settings, click Add (opens mcp.json)",
       "Junie CLI: /mcp, Ctrl+A for Installation Assistant; OAuth servers show Authorization required, choose Authorize"
-    ]
+    ],
+    "key_snippet": "{\n  \"mcpServers\": {\n    \"{name}\": {\n      \"url\": \"{url}\",\n      \"headers\": {\n        \"Authorization\": \"Bearer {key}\"\n      },\n      \"timeout\": 120000\n    }\n  }\n}"
   },
   "instructions_file": null,
   "hooks": null,

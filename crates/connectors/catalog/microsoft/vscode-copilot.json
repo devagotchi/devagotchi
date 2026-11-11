@@ -25,7 +25,8 @@
     "ui_steps": [
       "Command Palette: MCP: Open User Configuration (user profile mcp.json)",
       "Portable alternative: workspace-root .mcp.json with top-level mcpServers (needs experimental setting chat.mcp.workspaceRootConfig.enabled)"
-    ]
+    ],
+    "key_snippet": "{\n  \"servers\": {\n    \"{name}\": {\n      \"type\": \"http\",\n      \"url\": \"{url}\",\n      \"headers\": {\n        \"Authorization\": \"Bearer {key}\"\n      }\n    }\n  }\n}"
   },
   "instructions_file": null,
   "hooks": true,

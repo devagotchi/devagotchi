@@ -131,6 +131,10 @@ fn snippets_are_valid_in_the_format_they_claim() {
         if c.install.format == Some(ConfigFormat::Json) {
             serde_json::from_str::<serde_json::Value>(&snippet)
                 .unwrap_or_else(|error| panic!("{}: {error}\n{snippet}", c.id));
+            if let Some(with_key) = c.render("https://hub.test/mcp").key_snippet {
+                serde_json::from_str::<serde_json::Value>(&with_key)
+                    .unwrap_or_else(|error| panic!("{}: {error}\n{with_key}", c.id));
+            }
         }
     }
 }

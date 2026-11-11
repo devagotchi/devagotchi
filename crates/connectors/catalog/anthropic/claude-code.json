@@ -29,7 +29,8 @@
     "ui_steps": [
       "Bearer: claude mcp add --transport http {name} {url} --header \"Authorization: Bearer TOKEN\"",
       "OAuth: run /mcp in a session or `claude mcp login {name}`"
-    ]
+    ],
+    "key_snippet": "{\n  \"mcpServers\": {\n    \"{name}\": {\n      \"type\": \"http\",\n      \"url\": \"{url}\",\n      \"headers\": {\n        \"Authorization\": \"Bearer {key}\"\n      }\n    }\n  }\n}"
   },
   "instructions_file": "CLAUDE.md (AGENTS.md also readable in place of CLAUDE.md)",
   "hooks": true,
