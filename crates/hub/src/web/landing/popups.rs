@@ -177,6 +177,8 @@ pub const TOOLS: [(&str, &[(&[&str], &str)]); 5] = [
                 "board_issue_context",
                 "board_issue_checkpoint",
                 "board_settings",
+                "board_inbox",
+                "board_wake",
             ],
             "A project's ticket board: attach shared work, read issue context, claim and keep the claim alive, checkpoint advice and evidence, hand off, finish.",
         )],

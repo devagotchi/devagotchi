@@ -1,0 +1,49 @@
+{
+  "schema": "devagotchi.connector/v1",
+  "id": "chatgpt",
+  "name": "ChatGPT",
+  "vendor": "openai",
+  "surface": "web",
+  "remote_mcp": true,
+  "transports": [
+    "streamable-http"
+  ],
+  "auth": {
+    "oauth": null,
+    "dynamic_client_registration": null,
+    "bearer_header": null
+  },
+  "install": {
+    "kind": "ui-steps",
+    "command": null,
+    "config_path": null,
+    "project_config_path": null,
+    "format": null,
+    "snippet": null,
+    "ui_steps": [
+      "Go to ChatGPT Plugins (chatgpt.com/plugins)",
+      "Click plus, choose Add custom MCP server",
+      "Enter name and description",
+      "Under Connection choose Public endpoint and enter {url} or Secure MCP Tunnel",
+      "Configure authentication, review risk warning, confirm",
+      "Select Create as a plugin",
+      "Review discovered tools"
+    ]
+  },
+  "instructions_file": null,
+  "hooks": null,
+  "plan_limits": null,
+  "aliases": [
+    "chatgpt",
+    "openai"
+  ],
+  "verification": {
+    "level": "docs",
+    "on": "2026-11-10",
+    "docs": [
+      "https://developers.openai.com/apps-sdk/deploy/connect-chatgpt"
+    ],
+    "test": null,
+    "gaps": "Official help article help.openai.com/en/articles/12584461 returned 403 and developer-mode guide URL 404. Plan requirements and OAuth/DCR/no-auth/bearer details NOT confirmed by the fetched official page. Search snippets (non-authoritative, recorded here only) conflict on plans: Business/Enterprise/Edu vs Plus/Pro. UI naming (Plugins vs Settings>Connectors>Developer mode) differs between sources; the fetched page says Plugins."
+  }
+}

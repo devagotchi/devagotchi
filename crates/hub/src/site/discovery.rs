@@ -165,6 +165,7 @@ pub fn sitemap_xml(site: &Site, public_url: &str, landing: bool) -> String {
             xml(hub)
         ));
     }
+    out.push_str(&format!("  <url><loc>{}/connect</loc></url>\n", xml(hub)));
     out.push_str("</urlset>\n");
     out
 }

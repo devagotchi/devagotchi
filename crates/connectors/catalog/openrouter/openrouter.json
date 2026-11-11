@@ -1,0 +1,45 @@
+{
+  "schema": "devagotchi.connector/v1",
+  "id": "openrouter",
+  "name": "OpenRouter (client-side MCP via Agent SDK)",
+  "vendor": "openrouter",
+  "surface": "agent-framework",
+  "remote_mcp": false,
+  "transports": [
+    "streamable-http",
+    "sse"
+  ],
+  "auth": {
+    "oauth": true,
+    "dynamic_client_registration": null,
+    "bearer_header": true
+  },
+  "install": {
+    "kind": "api-parameter",
+    "command": null,
+    "config_path": null,
+    "project_config_path": null,
+    "format": null,
+    "snippet": "const mcp = await createMCPTools({ url: '{url}', auth: { kind: 'bearer', token: process.env.MCP_TOKEN } }); // then tools: mcp.tools in callModel",
+    "ui_steps": [
+      "OpenRouter has no server-side remote MCP; client code connects to the MCP server and passes tools to the model",
+      "TS: @openrouter/mcp createMCPTools; transport 'streamableHttp' default (falls back to SSE) or 'sse'; auth kinds bearer, headers, oauth (OAuthClientProvider you supply)"
+    ]
+  },
+  "instructions_file": null,
+  "hooks": null,
+  "plan_limits": null,
+  "aliases": [
+    "openrouter"
+  ],
+  "verification": {
+    "level": "docs",
+    "on": "2026-11-10",
+    "docs": [
+      "https://openrouter.ai/docs/agent-sdk/call-model/mcp-tools.md",
+      "https://openrouter.ai/docs/guides/coding-agents/mcp-servers"
+    ],
+    "test": null,
+    "gaps": "remote_mcp=false: the OpenRouter API itself does not host/connect to MCP; client-side only (guide confirms). Snippet is code, so format null. DCR depends on the OAuthClientProvider you write. OpenRouter also hosts its own MCP server (search result only; irrelevant to connecting Devagotchi)."
+  }
+}

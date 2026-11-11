@@ -11,13 +11,17 @@ pub mod approval;
 pub mod cli;
 pub mod face;
 pub(crate) mod hosted;
+pub mod inbox;
 mod lease;
 pub mod mcp;
 pub(crate) mod migration;
 pub mod remote;
+pub mod wake;
 pub mod welcome;
 pub mod workflow;
 
+#[cfg(test)]
+pub(crate) mod inbox_tests;
 #[cfg(test)]
 mod settings_tests;
 #[cfg(test)]

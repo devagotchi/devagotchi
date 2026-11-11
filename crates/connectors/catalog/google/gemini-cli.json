@@ -1,0 +1,53 @@
+{
+  "schema": "devagotchi.connector/v1",
+  "id": "gemini-cli",
+  "name": "Gemini CLI",
+  "vendor": "google",
+  "surface": "cli",
+  "remote_mcp": true,
+  "transports": [
+    "streamable-http",
+    "sse",
+    "stdio"
+  ],
+  "auth": {
+    "oauth": true,
+    "dynamic_client_registration": true,
+    "bearer_header": true
+  },
+  "install": {
+    "kind": "cli-command",
+    "command": "gemini mcp add --transport http {name} {url}",
+    "config_path": {
+      "macos": "~/.gemini/settings.json",
+      "linux": "~/.gemini/settings.json",
+      "windows": "~/.gemini/settings.json"
+    },
+    "project_config_path": ".gemini/settings.json",
+    "format": "json",
+    "snippet": "{\n  \"mcpServers\": {\n    \"{name}\": {\n      \"httpUrl\": \"{url}\"\n    }\n  }\n}",
+    "ui_steps": [
+      "Auth: /mcp auth (needs local browser and localhost callback)",
+      "gemini mcp add defaults to project scope; -s selects scope",
+      "Bearer: add --header \"Authorization: Bearer TOKEN\""
+    ],
+    "key_snippet": "{\n  \"mcpServers\": {\n    \"{name}\": {\n      \"httpUrl\": \"{url}\",\n      \"headers\": {\n        \"Authorization\": \"Bearer {key}\"\n      }\n    }\n  }\n}"
+  },
+  "instructions_file": "GEMINI.md (configurable via context.fileName, e.g. AGENTS.md)",
+  "hooks": true,
+  "plan_limits": null,
+  "aliases": [
+    "gemini",
+    "gemini-cli"
+  ],
+  "verification": {
+    "level": "docs",
+    "on": "2026-11-10",
+    "docs": [
+      "https://geminicli.com/docs/tools/mcp-server/",
+      "https://geminicli.com/docs/cli/gemini-md/"
+    ],
+    "test": null,
+    "gaps": "Page says Gemini CLI was replaced by Antigravity CLI on June 18, 2026 for unpaid tier and Google One users: applicability to those users uncertain. Hooks docs linked but contents not read. Windows path not stated separately. Shown without a token so the client signs in with OAuth, as this hub expects."
+  }
+}

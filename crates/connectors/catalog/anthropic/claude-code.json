@@ -1,0 +1,52 @@
+{
+  "schema": "devagotchi.connector/v1",
+  "id": "claude-code",
+  "name": "Claude Code",
+  "vendor": "anthropic",
+  "surface": "cli",
+  "remote_mcp": true,
+  "transports": [
+    "streamable-http",
+    "sse",
+    "stdio"
+  ],
+  "auth": {
+    "oauth": true,
+    "dynamic_client_registration": true,
+    "bearer_header": true
+  },
+  "install": {
+    "kind": "cli-command",
+    "command": "claude mcp add --transport http {name} {url}",
+    "config_path": {
+      "macos": "~/.claude.json",
+      "linux": "~/.claude.json",
+      "windows": "~/.claude.json"
+    },
+    "project_config_path": ".mcp.json",
+    "format": "json",
+    "snippet": "{\n  \"mcpServers\": {\n    \"{name}\": {\n      \"type\": \"http\",\n      \"url\": \"{url}\"\n    }\n  }\n}",
+    "ui_steps": [
+      "Bearer: claude mcp add --transport http {name} {url} --header \"Authorization: Bearer TOKEN\"",
+      "OAuth: run /mcp in a session or `claude mcp login {name}`"
+    ],
+    "key_snippet": "{\n  \"mcpServers\": {\n    \"{name}\": {\n      \"type\": \"http\",\n      \"url\": \"{url}\",\n      \"headers\": {\n        \"Authorization\": \"Bearer {key}\"\n      }\n    }\n  }\n}"
+  },
+  "instructions_file": "CLAUDE.md (AGENTS.md also readable in place of CLAUDE.md)",
+  "hooks": true,
+  "plan_limits": null,
+  "aliases": [
+    "claude",
+    "claude-code"
+  ],
+  "verification": {
+    "level": "docs",
+    "on": "2026-11-10",
+    "docs": [
+      "https://code.claude.com/docs/en/mcp",
+      "https://code.claude.com/docs/en/memory"
+    ],
+    "test": null,
+    "gaps": "Only first 100000 of 157062 chars of MCP page read. Hooks=true inferred from references to hooks guide (PreToolUse); hooks page not fetched. No plan requirement stated. Scope file paths use ~ on all OSes; Windows expansion not stated. SSE deprecated; 'streamable-http' accepted as alias of type http. Shown without a token so the client signs in with OAuth, as this hub expects."
+  }
+}

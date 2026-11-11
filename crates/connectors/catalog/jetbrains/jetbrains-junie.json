@@ -1,0 +1,49 @@
+{
+  "schema": "devagotchi.connector/v1",
+  "id": "jetbrains-junie",
+  "name": "Junie (JetBrains)",
+  "vendor": "jetbrains",
+  "surface": "ide",
+  "remote_mcp": true,
+  "transports": [
+    "streamable-http"
+  ],
+  "auth": {
+    "oauth": true,
+    "dynamic_client_registration": null,
+    "bearer_header": true
+  },
+  "install": {
+    "kind": "config-file",
+    "command": null,
+    "config_path": {
+      "macos": "~/.junie/mcp/mcp.json",
+      "linux": "~/.junie/mcp/mcp.json",
+      "windows": "~/.junie/mcp/mcp.json"
+    },
+    "project_config_path": ".junie/mcp/mcp.json",
+    "format": "json",
+    "snippet": "{\n  \"mcpServers\": {\n    \"{name}\": {\n      \"url\": \"{url}\",\n      \"timeout\": 120000\n    }\n  }\n}",
+    "ui_steps": [
+      "IDE: Tools | Junie | MCP Settings, click Add (opens mcp.json)",
+      "Junie CLI: /mcp, Ctrl+A for Installation Assistant; OAuth servers show Authorization required, choose Authorize"
+    ],
+    "key_snippet": "{\n  \"mcpServers\": {\n    \"{name}\": {\n      \"url\": \"{url}\",\n      \"headers\": {\n        \"Authorization\": \"Bearer {key}\"\n      },\n      \"timeout\": 120000\n    }\n  }\n}"
+  },
+  "instructions_file": null,
+  "hooks": null,
+  "plan_limits": null,
+  "aliases": [
+    "junie"
+  ],
+  "verification": {
+    "level": "docs",
+    "on": "2026-11-10",
+    "docs": [
+      "https://junie.jetbrains.com/docs/junie-cli-mcp-configuration.html",
+      "https://junie.jetbrains.com/docs/junie-plugin-mcp-settings.html"
+    ],
+    "test": null,
+    "gaps": "Transport 'streamable-http' is inferred from 'HTTP/HTTPS' remote servers; page names no transport. DCR not stated. Instruction file (AGENTS.md / .junie/guidelines.md) and hooks not on fetched pages. The ~ path is given for all OSes; Windows expansion not stated. Shown without a token so the client signs in with OAuth, as this hub expects."
+  }
+}

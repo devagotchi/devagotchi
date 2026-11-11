@@ -2,6 +2,7 @@
 resolver = "3"
 members = [
     "crates/contracts",
+    "crates/connectors",
     "crates/ipc",
     "crates/core",
     "crates/broker",
@@ -16,6 +17,7 @@ members = [
 # member (one lockfile, one toolchain) but built explicitly with `-p`.
 default-members = [
     "crates/contracts",
+    "crates/connectors",
     "crates/ipc",
     "crates/core",
     "crates/broker",
@@ -36,6 +38,7 @@ repository = "https://github.com/devagotchi/devagotchi"
 
 [workspace.dependencies]
 devagotchi-contracts = { path = "crates/contracts" }
+devagotchi-connectors = { path = "crates/connectors" }
 devagotchi-ipc = { path = "crates/ipc" }
 devagotchi-core = { path = "crates/core" }
 

@@ -1,0 +1,48 @@
+{
+  "schema": "devagotchi.connector/v1",
+  "id": "claude-desktop",
+  "name": "Claude Desktop",
+  "vendor": "anthropic",
+  "surface": "desktop",
+  "remote_mcp": true,
+  "transports": [],
+  "auth": {
+    "oauth": true,
+    "dynamic_client_registration": true,
+    "bearer_header": true
+  },
+  "install": {
+    "kind": "ui-steps",
+    "command": null,
+    "config_path": null,
+    "project_config_path": null,
+    "format": null,
+    "snippet": null,
+    "ui_steps": [
+      "Customize > Connectors",
+      "Click + Add > Add custom connector",
+      "Enter the name {name} and the URL {url}, then continue",
+      "Review detected authentication settings; choose sign-in mode (Sign in now / Sign in when needed / No sign in)",
+      "Under OAuth client choose Register automatically, Claude's published identity, or your own client",
+      "Optionally add fixed credentials under Request headers",
+      "Click Add",
+      "Remote connectors are configured via the Claude account; claude_desktop_config.json is for local servers (separate mechanism)"
+    ]
+  },
+  "instructions_file": null,
+  "hooks": null,
+  "plan_limits": "Custom connectors on Free (limit 1), Pro, Max, Ultra, Team, Enterprise. Team: Owner/Primary Owner adds under Organization settings > Connectors, then members click Connect. Enterprise: Owners, Primary Owners, custom role with Manage access to Libraries.",
+  "aliases": [
+    "claude",
+    "claude-desktop"
+  ],
+  "verification": {
+    "level": "docs",
+    "on": "2026-11-10",
+    "docs": [
+      "https://support.claude.com/en/articles/11175166-get-started-with-custom-connectors-using-remote-mcp"
+    ],
+    "test": null,
+    "gaps": "Article does not name transports; connection originates from Anthropic cloud so server must be publicly reachable. 'Register automatically' presumed = DCR but article does not use that term. claude_desktop_config.json path, instruction file, hooks not fetched. Team/Enterprise members share one header credential."
+  }
+}

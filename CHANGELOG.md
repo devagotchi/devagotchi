@@ -7,6 +7,36 @@ heading. Agents draft the fragments below; they never tag.
 
 ## Unreleased
 
+### API keys with scopes, limits and durations (increment 125)
+- `/app/keys`: make a key for what it may do, which projects and machines, and how long (1 hour to
+  1 year). Shown once, stored as a hash, with last use, Revoke and Replace.
+- Enforced at the one place every tool passes through; a tool without a scope is closed to keys.
+  A key reaches `/mcp` only and acts as the account's AI, never the person.
+- Every client on `/connect` that takes a bearer header has its configuration with a key.
+
+### Connectors for 17 AI clients, from one catalog (increment 124)
+- `crates/connectors`: one JSON file per client under `catalog/<vendor>/<id>.json`, one schema generated
+  from its types (`schemas/connector.v1.schema.json`), one renderer. Claude Code, Claude Desktop, Claude on
+  the web, ChatGPT, Codex, Cursor, VS Code, Windsurf, Gemini CLI, Grok, OpenRouter, Zed, Cline, Continue,
+  Goose, Junie and Hermes Agent.
+- `/connect` gives each client's exact steps with this hub's address; `GET /api/v1/connectors` is the same
+  for an agent; `devagotchi connect --list` and `devagotchi connect ID --hub URL --print` on the command line.
+- Every entry records its source, the date it was read and what the documentation did not confirm. Only
+  Codex is proven by a real client in this project's tests so far.
+
+### Notes that reach who they are for, and the landing page's search basics (increment 123)
+- A note with a `to` reaches that seat or AI by name (`claude`, `chatgpt`, `codex`, `grok`,
+  `hermes` …) complete on its next tool call, once. `board_inbox` reads them again and marks them
+  read; until then a short reminder comes at most every 15 minutes, with no text.
+- `board_wake` gives a custom agent a webhook: complete, signed, at most one POST a minute per
+  recipient. A hub with many tenants allows only https to public addresses.
+- The phone's ticket page shows notes in sections and can address a new one. Delivery state is one
+  document in each board's settings store, so there is no new table.
+- Landing: an icon of its own, a page title and description that say what it does, three more
+  questions (which also reach the page's FAQ data), and the board's notes.
+- Tests: `board/inbox_tests.rs` on file and Postgres boards, a real webhook receiver, `notes_tests.rs`
+  over HTTP on both backends, and `tests/app_browser.py` from the phone to the AI.
+
 ### The release lane (increment 121)
 - Installs keep following `:main` while the project is alpha (`.ai/project.json`).
 - Fixed: the deploy waited for ClickHouse, so one that never turned healthy rolled back a

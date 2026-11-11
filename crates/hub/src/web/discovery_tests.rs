@@ -101,7 +101,7 @@ fn meta<'a>(html: &'a str, kind: &str, key: &str) -> Option<&'a str> {
 }
 
 /// The public pages, by path.
-const PUBLIC: [&str; 5] = ["/", "/docs", "/privacy", "/terms", "/support"];
+const PUBLIC: [&str; 6] = ["/", "/docs", "/privacy", "/terms", "/support", "/connect"];
 
 #[tokio::test]
 async fn every_route_answers_with_its_type_and_no_sign_in() {

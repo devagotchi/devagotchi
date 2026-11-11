@@ -84,6 +84,8 @@ pub fn router(hub_authorization: bool) -> Router<AppState> {
         .route("/manifest.webmanifest", get(notify::manifest))
         .route("/assets/push.js", get(notify::script))
         .route("/docs", get(public::docs))
+        .route("/connect", get(super::connectors::page))
+        .route("/api/v1/connectors", get(super::connectors::api))
         .route("/privacy", get(public::privacy))
         .route("/terms", get(public::terms))
         .route("/support", get(public::support))

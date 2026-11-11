@@ -1,0 +1,66 @@
+//! The catalog's files, compiled in. A test holds this list equal to the `catalog` folder.
+
+pub(super) const FILES: &[(&str, &str)] = &[
+    (
+        "anthropic/claude-code.json",
+        include_str!("../catalog/anthropic/claude-code.json"),
+    ),
+    (
+        "anthropic/claude-desktop.json",
+        include_str!("../catalog/anthropic/claude-desktop.json"),
+    ),
+    (
+        "anthropic/claude-web.json",
+        include_str!("../catalog/anthropic/claude-web.json"),
+    ),
+    (
+        "anysphere/cursor.json",
+        include_str!("../catalog/anysphere/cursor.json"),
+    ),
+    (
+        "block/goose.json",
+        include_str!("../catalog/block/goose.json"),
+    ),
+    (
+        "cline/cline.json",
+        include_str!("../catalog/cline/cline.json"),
+    ),
+    (
+        "cognition/windsurf.json",
+        include_str!("../catalog/cognition/windsurf.json"),
+    ),
+    (
+        "continue/continue.json",
+        include_str!("../catalog/continue/continue.json"),
+    ),
+    (
+        "google/gemini-cli.json",
+        include_str!("../catalog/google/gemini-cli.json"),
+    ),
+    (
+        "jetbrains/jetbrains-junie.json",
+        include_str!("../catalog/jetbrains/jetbrains-junie.json"),
+    ),
+    (
+        "microsoft/vscode-copilot.json",
+        include_str!("../catalog/microsoft/vscode-copilot.json"),
+    ),
+    (
+        "nous-research/hermes-agent.json",
+        include_str!("../catalog/nous-research/hermes-agent.json"),
+    ),
+    (
+        "openai/chatgpt.json",
+        include_str!("../catalog/openai/chatgpt.json"),
+    ),
+    (
+        "openai/codex-cli.json",
+        include_str!("../catalog/openai/codex-cli.json"),
+    ),
+    (
+        "openrouter/openrouter.json",
+        include_str!("../catalog/openrouter/openrouter.json"),
+    ),
+    ("xai/grok.json", include_str!("../catalog/xai/grok.json")),
+    ("zed/zed.json", include_str!("../catalog/zed/zed.json")),
+];

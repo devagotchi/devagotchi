@@ -3,7 +3,7 @@
     "name": "Devagotchi",
     "short_name": "Devagotchi",
     "tagline": "Your AI gets your server",
-    "description": "Give Claude, ChatGPT, Codex, Cursor and Grok your own servers and PCs through one HTTPS address, with no sign-up and one line per machine.",
+    "description": "Connect Claude, ChatGPT, Codex, Cursor and Grok to your own servers through one MCP address, with a shared ticket board and approvals on your phone.",
     "domain": "devagotchi.com"
   },
   "operator": {

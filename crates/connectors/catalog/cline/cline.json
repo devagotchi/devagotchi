@@ -1,0 +1,46 @@
+{
+  "schema": "devagotchi.connector/v1",
+  "id": "cline",
+  "name": "Cline",
+  "vendor": "cline",
+  "surface": "ide",
+  "remote_mcp": true,
+  "transports": [
+    "streamable-http",
+    "sse",
+    "stdio"
+  ],
+  "auth": {
+    "oauth": true,
+    "dynamic_client_registration": null,
+    "bearer_header": true
+  },
+  "install": {
+    "kind": "config-file",
+    "command": null,
+    "config_path": null,
+    "project_config_path": null,
+    "format": "json",
+    "snippet": "{\n  \"mcpServers\": {\n    \"{name}\": {\n      \"type\": \"streamableHttp\",\n      \"url\": \"{url}\",\n      \"disabled\": false,\n      \"autoApprove\": []\n    }\n  }\n}",
+    "ui_steps": [
+      "IDE: Cline panel > MCP Servers icon > Configure tab > Configure MCP Servers",
+      "CLI file: ~/.cline/data/settings/cline_mcp_settings.json (override CLINE_MCP_SETTINGS_PATH); wizard has Authorize OAuth action"
+    ],
+    "key_snippet": "{\n  \"mcpServers\": {\n    \"{name}\": {\n      \"type\": \"streamableHttp\",\n      \"url\": \"{url}\",\n      \"headers\": {\n        \"Authorization\": \"Bearer {key}\"\n      },\n      \"disabled\": false,\n      \"autoApprove\": []\n    }\n  }\n}"
+  },
+  "instructions_file": null,
+  "hooks": null,
+  "plan_limits": null,
+  "aliases": [
+    "cline"
+  ],
+  "verification": {
+    "level": "docs",
+    "on": "2026-11-10",
+    "docs": [
+      "https://docs.cline.bot/mcp/adding-and-configuring-servers"
+    ],
+    "test": null,
+    "gaps": "IDE extension per-OS settings path not stated (only the CLI path), so config_path is null. If type is omitted Cline uses SSE, so set streamableHttp. DCR not stated. .clinerules and hooks not mentioned on page. Shown without a token so the client signs in with OAuth, as this hub expects."
+  }
+}

@@ -26,12 +26,16 @@ mod hub;
 mod identity;
 mod issue_lifecycle;
 mod join;
+#[cfg(test)]
+mod keys_tests;
 mod link;
 mod machine_update;
 mod mail;
 #[cfg(test)]
 mod me_tests;
 mod nomen;
+#[cfg(test)]
+mod notes_tests;
 mod oauth;
 mod offers;
 #[cfg(test)]
@@ -1448,6 +1452,33 @@ async fn require_bearer(
     let Some(token) = token else {
         return challenge(StatusCode::UNAUTHORIZED, &metadata, None);
     };
+    // An API key reaches this endpoint only, and only with the limits it was made with.
+    if token.starts_with("dgk_") {
+        let found = match &state.passkeys {
+            Some(hub) => hub.accounts().verify_key(&token).await,
+            None => Ok(None),
+        };
+        return match found {
+            Ok(Some((subject, limits))) => {
+                request.extensions_mut().insert(subject);
+                request.extensions_mut().insert(limits);
+                next.run(request).await
+            }
+            Ok(None) => {
+                log_refusal("unknown, revoked or expired API key");
+                challenge(StatusCode::UNAUTHORIZED, &metadata, Some("invalid_token"))
+            }
+            Err(error) => {
+                log_unavailable(&error.message);
+                (
+                    StatusCode::SERVICE_UNAVAILABLE,
+                    [(header::RETRY_AFTER, "5")],
+                    "the hub's store did not answer",
+                )
+                    .into_response()
+            }
+        };
+    }
     match state.verifier.verify(&token).await {
         Ok(subject) => {
             request.extensions_mut().insert(subject);

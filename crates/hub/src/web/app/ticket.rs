@@ -152,22 +152,61 @@ value=\"{}\">{inner}</form>",
     } else {
         format!("<p class=\"note\" id=\"flash\" role=\"status\">{flash}</p>")
     };
-    let notes: String = view
-        .notes
+    let me_copy = &site.messages.me;
+    let sections = [
+        ("question", &me_copy.notes_questions),
+        ("handoff", &me_copy.notes_handoffs),
+        ("decision", &me_copy.notes_decisions),
+        ("review", &me_copy.notes_reviews),
+        ("note", &me_copy.notes_general),
+    ];
+    let known = |kind: &str| sections.iter().any(|(k, _)| *k == kind && *k != "note");
+    let notes: String = sections
         .iter()
-        .map(|note| {
-            format!(
-                "<li><span class=\"meta\">{} · {}</span><p class=\"body\">{}</p></li>",
-                who(Some(&note.author)),
-                pages::utc((note.created_at / 1000).max(0) as u64),
-                escape(&note.body)
-            )
+        .filter_map(|(kind, title)| {
+            let rows: String = view
+                .notes
+                .iter()
+                .filter(|note| {
+                    if *kind == "note" {
+                        !known(&note.kind)
+                    } else {
+                        note.kind == *kind
+                    }
+                })
+                .map(|note| {
+                    let addressed = note
+                        .to_principal
+                        .as_deref()
+                        .map(|to| {
+                            format!(
+                                " · <span class=\"note-for\">{}</span>",
+                                crate::site::Ctx::new(&site)
+                                    .with("name", to.to_string())
+                                    .inline(&me_copy.note_for)
+                            )
+                        })
+                        .unwrap_or_default();
+                    format!(
+                        "<li><span class=\"meta\">{} · {}{addressed}</span><p class=\"body\">{}</p></li>",
+                        who(Some(&note.author)),
+                        pages::ago((note.created_at / 1000).max(0) as u64),
+                        escape(&note.body)
+                    )
+                })
+                .collect();
+            (!rows.is_empty()).then(|| {
+                format!(
+                    "<section class=\"note-section\" id=\"notes-{kind}\"><h3>{}</h3><ul class=\"rows\">{rows}</ul></section>",
+                    escape(title)
+                )
+            })
         })
         .collect();
     let notes = if notes.is_empty() {
         format!("<p class=\"empty\">{}</p>", escape(&copy.notes_empty))
     } else {
-        format!("<ul class=\"rows\" id=\"notes\">{notes}</ul>")
+        format!("<div id=\"notes\">{notes}</div>")
     };
     let history: String = events
         .iter()
@@ -210,8 +249,24 @@ value=\"{}\">{inner}</form>",
         "comment",
         &format!(
             "<label>{}<textarea name=\"body\" id=\"comment\" required maxlength=\"20000\" rows=\"3\"></textarea>\
-</label><p class=\"actions\"><button class=\"approve\" type=\"submit\">{}</button></p>",
+</label><div class=\"note-fields\"><label>{}<select name=\"kind\" id=\"note-kind\">{}</select></label>\
+<label>{}<input type=\"text\" name=\"to\" id=\"note-to\" maxlength=\"200\" autocapitalize=\"none\" autocorrect=\"off\" \
+spellcheck=\"false\" placeholder=\"{}\"></label></div>\
+<p class=\"actions\"><button class=\"approve\" type=\"submit\">{}</button></p>",
             escape(&copy.comment_label),
+            escape(&site.messages.me.note_kind),
+            [
+                ("note", &site.messages.me.notes_general),
+                ("question", &site.messages.me.notes_questions),
+                ("handoff", &site.messages.me.notes_handoffs),
+                ("decision", &site.messages.me.notes_decisions),
+                ("review", &site.messages.me.notes_reviews),
+            ]
+            .iter()
+            .map(|(value, label)| format!("<option value=\"{value}\">{}</option>", escape(label)))
+            .collect::<String>(),
+            escape(&site.messages.me.note_to),
+            escape(&site.messages.me.note_to_hint),
             escape(&copy.comment_button)
         ),
     );

@@ -921,6 +921,28 @@ impl ServerHandler for Hub {
             return Err(rmcp::ErrorData::invalid_params("tool not found", None));
         }
         let subject = self.subject(&context).ok();
+        // An API key may do only what it was made to do.
+        let limits = context
+            .extensions
+            .get::<http::request::Parts>()
+            .and_then(|parts| {
+                parts
+                    .extensions
+                    .get::<crate::accounts::api_keys::KeyLimits>()
+            })
+            .cloned();
+        if let (Some(limits), Some(subject)) = (&limits, &subject)
+            && let Some(why) = limits.check(&request.name, request.arguments.as_ref())
+        {
+            self.record(subject, &request.name, "", "", "key_denied")
+                .map_err(|Json(error)| rmcp::ErrorData::internal_error(error.message, None))?;
+            return Ok(
+                rmcp::model::CallToolResult::error(vec![rmcp::model::ContentBlock::text(why)])
+                    .into(),
+            );
+        }
+        let seat = self.request_seat(&context);
+        let delivers = request.name != "board_inbox";
         if request.name != "whoami"
             && let Some(subject) = &subject
             && let Some(answer) = self.waiting_result(subject)
@@ -938,6 +960,15 @@ impl ServerHandler for Hub {
             + Self::offers_router())
         .call(call)
         .await;
+        // Notes left for this caller ride the answer to whatever it just called.
+        let mut answer = answer;
+        if delivers
+            && let Ok(rmcp::model::CallToolResponse::Complete(result)) = &mut answer
+            && let Some(subject) = &subject
+            && let Some(text) = self.inbox_banner(subject, seat.as_deref()).await
+        {
+            result.content.push(rmcp::model::ContentBlock::text(text));
+        }
         // A successful call from an AI client of a known family: what a workflow's
         // `ai_client` step waits on (`workflows.rs`).
         if let Ok(rmcp::model::CallToolResponse::Complete(result)) = &answer

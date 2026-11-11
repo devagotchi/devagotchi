@@ -156,7 +156,7 @@ it is a person only when its grant says `human` or it is the owner (`whoami` rep
 `boards`). Agents never are, whatever they claim. No grant, no board: `not_granted`; a project the
 hub does not serve: `unknown_board`.
 
-Seventeen tools, each taking `project`: `board_prime` (start here), `board_ready`, `board_list`,
+Nineteen tools (with `board_inbox` and `board_wake`), each taking `project`: `board_prime` (start here), `board_ready`, `board_list`,
 `board_get`, `board_create`, `board_claim` (by id, or the best ready ticket when `id` is omitted;
 `claimed: false` when nothing is ready), `board_heartbeat`, `board_update`, `board_note`,
 `board_handoff`, `board_release`, `board_complete`, `board_dep`, `board_force_release` (people

@@ -1,0 +1,307 @@
+{
+  "$defs": {
+    "Auth": {
+      "additionalProperties": false,
+      "description": "`null` everywhere means the vendor's documentation did not say.",
+      "properties": {
+        "bearer_header": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "dynamic_client_registration": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "oauth": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "ConfigFormat": {
+      "enum": [
+        "json",
+        "toml",
+        "yaml"
+      ],
+      "type": "string"
+    },
+    "ConfigPaths": {
+      "additionalProperties": false,
+      "properties": {
+        "linux": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "macos": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "windows": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "Install": {
+      "additionalProperties": false,
+      "properties": {
+        "command": {
+          "default": null,
+          "description": "The exact command, with `{name}` and `{url}`.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "config_path": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ConfigPaths"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "format": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ConfigFormat"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "key_snippet": {
+          "default": null,
+          "description": "The configuration with an API key instead of OAuth, with `{name}`, `{url}` and `{key}`.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "kind": {
+          "$ref": "#/$defs/InstallKind"
+        },
+        "project_config_path": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "snippet": {
+          "default": null,
+          "description": "The exact configuration for a remote server, with `{name}` and `{url}`.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "ui_steps": {
+          "default": [],
+          "description": "Steps in the client's own interface, with `{name}` and `{url}`.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "type": "object"
+    },
+    "InstallKind": {
+      "description": "How a person or an agent sets it up.",
+      "enum": [
+        "cli-command",
+        "config-file",
+        "ui-steps",
+        "api-parameter"
+      ],
+      "type": "string"
+    },
+    "Proof": {
+      "description": "How far an entry has been proven.",
+      "oneOf": [
+        {
+          "const": "docs",
+          "description": "Read from the vendor's documentation.",
+          "type": "string"
+        },
+        {
+          "const": "ci",
+          "description": "A real client connected in this repository's tests.",
+          "type": "string"
+        }
+      ]
+    },
+    "Surface": {
+      "description": "Where a client runs, which is how a person looks for it.",
+      "enum": [
+        "cli",
+        "ide",
+        "desktop",
+        "web",
+        "api",
+        "agent-framework"
+      ],
+      "type": "string"
+    },
+    "Transport": {
+      "enum": [
+        "streamable-http",
+        "sse",
+        "stdio"
+      ],
+      "type": "string"
+    },
+    "Verification": {
+      "additionalProperties": false,
+      "properties": {
+        "docs": {
+          "description": "The vendor's pages this was read from.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "gaps": {
+          "default": null,
+          "description": "What the documentation did not confirm.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "level": {
+          "$ref": "#/$defs/Proof"
+        },
+        "on": {
+          "description": "`YYYY-MM-DD`.",
+          "type": "string"
+        },
+        "test": {
+          "default": null,
+          "description": "The test that proves it, when `level` is `ci`.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "level",
+        "on",
+        "docs"
+      ],
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "One AI client.",
+  "properties": {
+    "aliases": {
+      "description": "The lowercase names a note can be addressed to, and that its OAuth client name is\nmatched against.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "auth": {
+      "$ref": "#/$defs/Auth"
+    },
+    "hooks": {
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "id": {
+      "description": "`[a-z0-9-]`, the file's name and what `devagotchi connect` takes.",
+      "type": "string"
+    },
+    "install": {
+      "$ref": "#/$defs/Install"
+    },
+    "instructions_file": {
+      "default": null,
+      "description": "The project instruction file it reads.",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "name": {
+      "type": "string"
+    },
+    "plan_limits": {
+      "default": null,
+      "description": "A plan it needs for custom connectors.",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "remote_mcp": {
+      "description": "Whether it can reach a hub over the network by itself. `null`: not documented.",
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "schema": {
+      "type": "string"
+    },
+    "surface": {
+      "$ref": "#/$defs/Surface"
+    },
+    "transports": {
+      "items": {
+        "$ref": "#/$defs/Transport"
+      },
+      "type": "array"
+    },
+    "vendor": {
+      "description": "`[a-z0-9-]`, the folder it lives in.",
+      "type": "string"
+    },
+    "verification": {
+      "$ref": "#/$defs/Verification"
+    }
+  },
+  "required": [
+    "schema",
+    "id",
+    "name",
+    "vendor",
+    "surface",
+    "transports",
+    "auth",
+    "install",
+    "aliases",
+    "verification"
+  ],
+  "title": "Connector",
+  "type": "object"
+}
