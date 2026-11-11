@@ -1352,11 +1352,13 @@ impl Authority {
     }
 
     #[cfg(test)]
-    pub fn testing_limits(&self, cap: usize, per_hour: usize) {
+    /// Limits for a test; `ttl_secs` as short as a test of expiry needs, and no shorter for
+    /// any other, since a loaded runner can take seconds between two calls.
+    pub fn testing_limits(&self, cap: usize, per_hour: usize, ttl_secs: u64) {
         let mut limits = self.limits.lock().expect("limits");
         limits.unclaimed_cap = cap;
         limits.starts_per_hour = per_hour;
-        limits.ttl_secs = 2;
+        limits.ttl_secs = ttl_secs;
     }
 
     pub fn drain_merges(&self) -> Vec<(String, String)> {
@@ -3083,7 +3085,7 @@ mod tests {
     fn a_provisional_account_expires() {
         let dir = tempfile::tempdir().unwrap();
         let auth = Authority::open(dir.path(), "http://127.0.0.1:9").unwrap();
-        auth.testing_limits(10, 8);
+        auth.testing_limits(10, 8, 2);
         let session = auth
             .agent_start("devagotchi-cli", "claude", "203.0.113.8")
             .unwrap();
@@ -3157,7 +3159,7 @@ mod tests {
     fn an_agent_opens_an_account_and_a_claim_keeps_or_merges_it() {
         let dir = tempfile::tempdir().unwrap();
         let auth = Authority::open(dir.path(), "http://127.0.0.1:9").unwrap();
-        auth.testing_limits(10, 2);
+        auth.testing_limits(10, 2, 600);
         let session = auth
             .agent_start("devagotchi-cli", "claude", "203.0.113.5")
             .unwrap();
