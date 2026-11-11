@@ -920,6 +920,50 @@ pub struct Messages {
     /// The person's own page and the app's greeting (`web/app/me.rs`, `web/app/home.rs`).
     #[serde(default)]
     pub me: MeCopy,
+    /// The app's Go to sheet (`web/pages.rs`, `assets/app.js`).
+    #[serde(default)]
+    pub focus: FocusCopy,
+}
+
+/// The words of the app's Go to sheet: its button, title and the places it lists. Its sections
+/// are named after the tabs.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields, default)]
+pub struct FocusCopy {
+    pub open: String,
+    pub title: String,
+    pub close: String,
+    pub all_boards: String,
+    pub all_machines: String,
+    pub needs_you: String,
+    pub settings: String,
+    pub keys: String,
+    pub connect: String,
+    pub admin: String,
+    pub loading: String,
+    pub no_boards: String,
+    pub no_machines: String,
+}
+
+impl Default for FocusCopy {
+    fn default() -> Self {
+        let s = |text: &str| text.to_string();
+        Self {
+            open: s("Go to"),
+            title: s("Go to"),
+            close: s("Close"),
+            all_boards: s("All boards"),
+            all_machines: s("All machines"),
+            needs_you: s("Needs you"),
+            settings: s("Your settings"),
+            keys: s("API keys"),
+            connect: s("Connect an AI"),
+            admin: s("Hub settings"),
+            loading: s("Loading…"),
+            no_boards: s("No boards yet."),
+            no_machines: s("No machines yet."),
+        }
+    }
 }
 
 /// The words of the person's own page and of the greeting on the app's home.

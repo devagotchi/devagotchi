@@ -15,8 +15,8 @@ use super::super::{person, words};
 use super::ticket::{UNDO_MS, now_ms, unknown};
 use crate::{
     AppState,
-    audit::AuditEntry,
     agenthub::{Actor, Board, Patch, workflow::StateKind},
+    audit::AuditEntry,
     web::{approvals::same_origin, encode, pages, routes::see_other},
 };
 

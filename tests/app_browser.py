@@ -78,6 +78,17 @@ def link_machine(binary: str, url: str, line: str, work: Path, processes: list) 
     processes.append(linked)
 
 
+def swipe(page, x0: float, x1: float, y: float) -> None:
+    """A finger across the screen from x0 to x1 at height y, as the phone sends it."""
+    cdp = page.context.new_cdp_session(page)
+    point = lambda x: [{"x": x, "y": y}]
+    cdp.send("Input.dispatchTouchEvent", {"type": "touchStart", "touchPoints": point(x0)})
+    for step in range(1, 9):
+        cdp.send("Input.dispatchTouchEvent", {"type": "touchMove", "touchPoints": point(x0 + (x1 - x0) * step / 8)})
+    cdp.send("Input.dispatchTouchEvent", {"type": "touchEnd", "touchPoints": []})
+    cdp.detach()
+
+
 def no_sideways_scroll(page, width: int) -> None:
     for what in ("document.documentElement.scrollWidth", "document.querySelector('body.app > main').scrollWidth"):
         seen = page.evaluate(what)
@@ -176,12 +187,42 @@ def main() -> int:
             machine = page.locator("#machines #machine-desk")
             assert "Online" in machine.inner_text(), machine.inner_text()
             assert "alpha" in page.locator("#boards").inner_text()
-            assert page.locator("nav.tabs a[aria-current=page]").inner_text() == "Home"
+            assert page.locator("nav.tabs a[aria-current=page]").inner_text() == "Overview"
             no_sideways_scroll(page, 390)
             banner = page.locator("#install [data-os=iphone]")
             banner.wait_for(state="visible", timeout=5_000)
             assert "Add to Home Screen" in banner.inner_text()
             print("PASS /app on an iPhone 13 shows desk online and alpha; no sideways scroll at 390 px")
+
+            # Swipe left from Overview: AgentHub. Swipe right: back to Overview.
+            swipe(page, 300, 60, 430)
+            page.wait_for_url(re.compile(r".*/app/boards$"), timeout=10_000)
+            assert page.locator("nav.tabs a[aria-current=page]").inner_text() == "AgentHub"
+            swipe(page, 60, 300, 430)
+            page.wait_for_url(re.compile(r".*/app$"), timeout=10_000)
+            # A swipe from the screen's edge is the phone's (Back), not the app's.
+            swipe(page, 4, 250, 430)
+            page.wait_for_timeout(600)
+            assert urllib.parse.urlsplit(page.url).path == "/app", page.url
+            print("PASS a swipe moves between Overview and AgentHub; one from the edge does not")
+
+            # The Go to sheet: the board and the machine, sections that swipe, Escape closes it.
+            page.locator("#focus-open").click()
+            sheet = page.locator("#focus")
+            sheet.wait_for(state="visible")
+            page.locator("#focus [data-fill=boards] a", has_text="alpha").wait_for(timeout=5_000)
+            page.locator("#focus [data-fill=machines] a", has_text="desk").wait_for(timeout=5_000)
+            page.locator("#focus .sheet-chips a[href='#focus-machines']").click()
+            page.locator("#focus .sheet-chips a[href='#focus-machines'][aria-current=true]").wait_for(timeout=5_000)
+            no_sideways_scroll(page, 390)
+            page.keyboard.press("Escape")
+            sheet.wait_for(state="hidden")
+            page.locator("#focus-open").click()
+            sheet.wait_for(state="visible")
+            page.locator("#focus [data-fill=boards] a", has_text="alpha").click()
+            page.wait_for_url(re.compile(r".*/app/boards/alpha$"), timeout=10_000)
+            print("PASS the Go to sheet lists alpha and desk, its chips move between sections, Escape closes it, a board opens from it")
+            page.goto(f"{url}/app")
 
             # Its machine page: status, build, last seen, recent jobs, Update now.
             page.locator("#machine-desk a").click()

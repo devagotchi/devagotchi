@@ -100,7 +100,10 @@ async fn world_configured(owner: Option<&str>, site: Option<&std::path::Path>) -
             offers: None,
             routed: Default::default(),
             push: Some(push),
-            boards: Arc::new(crate::agenthub::mcp::Boards::from_config(&config, dir.path())),
+            boards: Arc::new(crate::agenthub::mcp::Boards::from_config(
+                &config,
+                dir.path(),
+            )),
             config: config.clone(),
             audit: audit.clone(),
             links,

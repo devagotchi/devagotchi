@@ -193,6 +193,62 @@ form.inline { margin-top: 8px; }
 @keyframes page-leave { to { opacity: 0; transform: translateX(-28px); } }
 @keyframes page-arrive { from { opacity: 0; transform: translateX(36px); } }
 
+/* Swiping between the app's tabs (`app.js`): the page follows the finger, and the next page
+   slides in from the side it was pulled towards; a tap on a tab slides the same way. */
+@media (prefers-reduced-motion: no-preference) and (scripting: enabled) {
+  html[data-nav="next"]::view-transition-old(root) { animation: 180ms cubic-bezier(.4, 0, 1, 1) both slide-to-left; }
+  html[data-nav="next"]::view-transition-new(root) { animation: 260ms cubic-bezier(0, 0, .2, 1) both slide-from-right; }
+  html[data-nav="prev"]::view-transition-old(root) { animation: 180ms cubic-bezier(.4, 0, 1, 1) both slide-to-right; }
+  html[data-nav="prev"]::view-transition-new(root) { animation: 260ms cubic-bezier(0, 0, .2, 1) both slide-from-left; }
+  body.app > main { transition: transform .2s ease; }
+  dialog.sheet[open] { animation: sheet-up .24s cubic-bezier(0, 0, .2, 1); }
+  dialog.sheet { transition: transform .2s ease; }
+}
+@keyframes slide-to-left { to { opacity: .3; transform: translateX(-35%); } }
+@keyframes slide-from-right { from { opacity: .3; transform: translateX(35%); } }
+@keyframes slide-to-right { to { opacity: .3; transform: translateX(35%); } }
+@keyframes slide-from-left { from { opacity: .3; transform: translateX(-35%); } }
+@keyframes sheet-up { from { transform: translateY(100%); } }
+body.app > main { touch-action: pan-y pinch-zoom; }
+body.app > main.swiping, dialog.sheet.dragging { transition: none; }
+
+/* The bar's Go to button, beside the person. */
+.bar-end { display: flex; align-items: center; gap: 4px; }
+.focus-open { display: grid; place-items: center; min-width: 44px; min-height: 44px; padding: 0;
+  border: 0; border-radius: var(--radius-s); background: none; color: var(--text); }
+.focus-open svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2;
+  stroke-linejoin: round; }
+
+/* The Go to sheet: from the bottom, a section per place side by side, swiped or chosen by chip. */
+dialog.sheet { position: fixed; inset: auto 0 0; width: 100%; max-width: 640px; max-height: 85vh;
+  max-height: 85dvh; margin: 0 auto; padding: 0 0 env(safe-area-inset-bottom); border: 0;
+  border-radius: 16px 16px 0 0; background: var(--surface); color: var(--text);
+  box-shadow: 0 -8px 32px rgb(0 0 0 / .25); overflow: hidden; }
+dialog.sheet[open] { display: flex; flex-direction: column; }
+dialog.sheet::backdrop { background: rgb(0 0 0 / .4); }
+.sheet-grip { flex: none; width: 40px; height: 5px; margin: 8px auto 0; border-radius: 3px;
+  background: var(--line); }
+/* The sheet's top is its handle: the browser leaves a drag there to `app.js`, which closes the
+   sheet when it is pulled far enough down; the chips still scroll sideways. */
+.sheet-grip, .sheet-head { touch-action: none; }
+.sheet-chips { touch-action: pan-x; }
+.sheet-head { flex: none; display: flex; align-items: center; justify-content: space-between;
+  padding: 4px 8px 0 16px; }
+.sheet-head h2 { margin: 0; }
+.sheet-head form { margin: 0; }
+.sheet-close { min-width: 44px; min-height: 44px; padding: 0; border: 0; background: none;
+  color: var(--muted); font-size: 1.6rem; line-height: 1; }
+.sheet-chips { flex: none; display: flex; gap: 8px; padding: 8px 16px 12px; overflow-x: auto;
+  scrollbar-width: none; }
+.sheet-chips .chip { flex: none; min-height: 32px; text-decoration: none; }
+.sheet-panels { flex: 1; min-height: 0; display: flex; overflow-x: auto; overflow-y: hidden;
+  scroll-snap-type: x mandatory; overscroll-behavior-x: contain; scrollbar-width: none; }
+.sheet-panels::-webkit-scrollbar, .sheet-chips::-webkit-scrollbar { display: none; }
+.sheet-panel { flex: 0 0 100%; box-sizing: border-box; max-height: 60vh; max-height: 60dvh;
+  padding: 0 16px 16px; overflow-y: auto; scroll-snap-align: start; scroll-snap-stop: always; }
+.sheet-panel .rows a { display: block; min-height: 24px; text-decoration: none; }
+.sheet-panel .rows + .rows { margin-top: 8px; border-top: 1px solid var(--line); }
+
 /* The phone app (`web/app/`): one fixed frame, the bar on top and the tabs at the bottom,
    the page scrolling in between, so nothing but the page moves. */
 body.app { height: 100vh; height: 100dvh; min-height: 0; display: flex; flex-direction: column;

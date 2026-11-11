@@ -15,8 +15,8 @@ use std::sync::Arc;
 
 use crate::{
     AppState,
-    auth::Subject,
     agenthub::{Board, Note, Ticket},
+    auth::Subject,
 };
 
 pub const MAX_BODY: usize = 256 * 1024;

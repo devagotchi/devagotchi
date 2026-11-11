@@ -12,8 +12,8 @@ use axum::{
 use super::{board_names, card, open_board, person, words};
 use crate::{
     AppState,
-    auth::Subject,
     agenthub::{Filter, approval},
+    auth::Subject,
     hub::Machine,
     web::pages::{self, Tab, escape},
 };

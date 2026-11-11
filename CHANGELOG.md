@@ -7,6 +7,14 @@ heading. Agents draft the fragments below; they never tag.
 
 ## Unreleased
 
+### The phone app moves with a swipe (increments 131 and 132)
+- AgentHub lives in one place: `crates/hub/src/agenthub/` (the board, its tools, inbox,
+  approvals, GitHub issues) and `web/app/agenthub/` (its screens).
+- Tabs: Overview, AgentHub, Approvals, Machines, You. Swipe left or right on a tab's page to
+  move to the next or previous one; the page slides that way. Tapping a tab still works.
+- A Go to sheet (the button beside you, or a swipe up on the tabs): your boards, machines and
+  settings in sections that swipe sideways; drag it down, tap outside or press Escape to close.
+
 ### License, and an image anyone can pull (increment 127)
 - Devagotchi is source-available under the Business Source License 1.1, held by AngryVibes LLC:
   production self-hosting is free, offering it to others as a hosted service is not, and each

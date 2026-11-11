@@ -19,8 +19,8 @@ use super::{person, words};
 use crate::{
     AppState,
     accounts::identities::UNNAMED,
-    auth::Subject,
     agenthub::Actor,
+    auth::Subject,
     preferences::{ALLOW_CHOICES, Preferences, Theme, parse_kinds},
     web::{
         approvals,
