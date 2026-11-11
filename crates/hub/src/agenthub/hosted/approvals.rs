@@ -1,5 +1,5 @@
 use super::*;
-use crate::board::approval::{ApprovalStatus, KIND, Verdict, landing, text};
+use crate::agenthub::approval::{ApprovalStatus, KIND, Verdict, landing, text};
 
 impl HostedBoard {
     pub(crate) async fn request_approval(
@@ -87,8 +87,8 @@ impl HostedBoard {
             decided_by,
             decided_at,
             note,
-            kind: crate::board::approval::label_value(&ticket.labels, "kind:"),
-            target: crate::board::approval::label_value(&ticket.labels, "target:"),
+            kind: crate::agenthub::approval::label_value(&ticket.labels, "kind:"),
+            target: crate::agenthub::approval::label_value(&ticket.labels, "target:"),
         })
     }
 

@@ -20,7 +20,7 @@ use crate::{
     AppState,
     accounts::identities::UNNAMED,
     auth::Subject,
-    board::Actor,
+    agenthub::Actor,
     preferences::{ALLOW_CHOICES, Preferences, Theme, parse_kinds},
     web::{
         approvals,

@@ -13,7 +13,7 @@ const BRANDS: [&str; 3] = ["Devagotchi", "devagotchi.com", "AngryVibes"];
 
 /// Wire names that carry the product's name and stay as they are, and why.
 const WIRE: [(&str, &str); 2] = [
-    // The seat header machines and AI clients already send (`board/mcp.rs`).
+    // The seat header machines and AI clients already send (`agenthub/mcp.rs`).
     ("X-Devagotchi-Seat", "an HTTP header on the wire"),
     // Where Windows machines that already joined keep the install.
     (

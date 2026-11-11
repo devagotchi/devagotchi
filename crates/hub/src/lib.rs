@@ -16,7 +16,7 @@ mod analytics;
 mod analytics_tests;
 mod audit;
 mod auth;
-pub mod board;
+pub mod agenthub;
 mod config;
 mod connect;
 mod devices;
@@ -26,7 +26,6 @@ mod hub;
 #[cfg(test)]
 mod hub_settings_tests;
 mod identity;
-mod issue_lifecycle;
 mod join;
 #[cfg(test)]
 mod keys_tests;
@@ -158,7 +157,7 @@ enum Command {
 struct AppState {
     verifier: Arc<Verifier>,
     hub: Hub,
-    issue_store: Arc<issue_lifecycle::IssueLifecycleStore>,
+    issue_store: Arc<agenthub::issue_lifecycle::IssueLifecycleStore>,
     /// Browser sign-in through Nomen, when the config has a `web` section.
     web: Option<Arc<web::WebLogin>>,
     /// Browser sign-in with the hub's own accounts and passkeys (`auth.mode hub`).
@@ -550,7 +549,7 @@ fn manage(command: Command) -> BridgeResult<()> {
             apply,
         } => {
             let config = read_config(&config)?;
-            let snapshot = board::migration::Snapshot::read(&source)?;
+            let snapshot = agenthub::migration::Snapshot::read(&source)?;
             let receipt = if apply {
                 let runtime = tokio::runtime::Builder::new_current_thread()
                     .enable_all()
@@ -786,7 +785,7 @@ pub fn cli(args: Vec<OsString>) -> ExitCode {
     let (state_dir, config_path) = match parse_args(args) {
         Ok(Command::Serve { state, config }) => (state, config),
         Ok(Command::Help) => {
-            println!("{USAGE}\n\n{}", board::migration::USAGE);
+            println!("{USAGE}\n\n{}", agenthub::migration::USAGE);
             return ExitCode::SUCCESS;
         }
         Ok(command) => {
@@ -826,7 +825,7 @@ pub fn cli(args: Vec<OsString>) -> ExitCode {
 /// directory: what `devagotchi board …` runs.
 pub fn board_cli(args: Vec<OsString>, account_file: Option<PathBuf>) -> ExitCode {
     use std::io::IsTerminal;
-    let invocation = board::cli::Invocation {
+    let invocation = agenthub::cli::Invocation {
         args,
         cwd: env::current_dir().unwrap_or_else(|_| PathBuf::from(".")),
         actor_env: env::var("DEVAGOTCHI_ACTOR")
@@ -840,7 +839,7 @@ pub fn board_cli(args: Vec<OsString>, account_file: Option<PathBuf>) -> ExitCode
         account_file,
     };
     let (mut out, mut err) = (std::io::stdout(), std::io::stderr());
-    ExitCode::from(board::cli::run(invocation, &mut out, &mut err))
+    ExitCode::from(agenthub::cli::run(invocation, &mut out, &mut err))
 }
 
 async fn run(state_dir: PathBuf, config_path: PathBuf) -> BridgeResult<()> {
@@ -1024,7 +1023,7 @@ async fn run(state_dir: PathBuf, config_path: PathBuf) -> BridgeResult<()> {
     let warehouse_store = board_store.clone();
     let signals_store = board_store.clone();
     let boards =
-        Arc::new(board::mcp::Boards::from_config(&config, &state_dir).using_postgres(board_store)?);
+        Arc::new(agenthub::mcp::Boards::from_config(&config, &state_dir).using_postgres(board_store)?);
     if let Some(preferences) = boards.preferences() {
         links.set_preferences(preferences.clone());
     }
@@ -1064,14 +1063,14 @@ async fn run(state_dir: PathBuf, config_path: PathBuf) -> BridgeResult<()> {
         sinks.push(sink);
     }
     boards.set_sinks(sinks);
-    let listener = board::mcp::Boards::postgres_listener(&url).await?;
+    let listener = agenthub::mcp::Boards::postgres_listener(&url).await?;
     tokio::spawn(boards.clone().listen_postgres(listener));
     if !boards.is_empty() {
         // Lapsed leases go back to their queue when they lapse: the reaper sleeps until
         // the next lease ends or a board changes. Claims also expire them lazily.
         tokio::spawn(boards.clone().reap_on_time());
     }
-    let issue_store = Arc::new(issue_lifecycle::IssueLifecycleStore::from_config(
+    let issue_store = Arc::new(agenthub::issue_lifecycle::IssueLifecycleStore::from_config(
         &config.github,
     )?);
     let state = AppState {
@@ -1216,23 +1215,23 @@ fn app(state: AppState) -> Router {
         .route("/link", get(link_upgrade))
         .route(
             "/webhooks/github/issues",
-            axum::routing::post(issue_lifecycle::webhooks_routes).layer(
-                axum::extract::DefaultBodyLimit::max(issue_lifecycle::MAX_BODY),
+            axum::routing::post(agenthub::issue_lifecycle::webhooks_routes).layer(
+                axum::extract::DefaultBodyLimit::max(agenthub::issue_lifecycle::MAX_BODY),
             ),
         )
         .merge(
             Router::new()
                 .route(
                     "/api/v1/agenthub/issue",
-                    get(issue_lifecycle::issue_state_route),
+                    get(agenthub::issue_lifecycle::issue_state_route),
                 )
                 .route(
                     "/api/v1/agenthub/state",
-                    get(issue_lifecycle::shared_state_read_route)
-                        .post(issue_lifecycle::shared_state_write_route),
+                    get(agenthub::issue_lifecycle::shared_state_read_route)
+                        .post(agenthub::issue_lifecycle::shared_state_write_route),
                 )
                 .layer(axum::extract::DefaultBodyLimit::max(
-                    issue_lifecycle::MAX_BODY,
+                    agenthub::issue_lifecycle::MAX_BODY,
                 ))
                 .layer(middleware::from_fn_with_state(
                     state.clone(),
@@ -2308,7 +2307,7 @@ mod tests {
         let state = AppState {
             verifier: Arc::new(auth::Verifier::Devagotchi(authority.clone())),
             hub: hub::Hub {
-                boards: Arc::new(board::mcp::Boards::from_config(&config, dir.path())),
+                boards: Arc::new(agenthub::mcp::Boards::from_config(&config, dir.path())),
                 config,
                 audit: audit.clone(),
                 links,
@@ -2319,7 +2318,7 @@ mod tests {
                 offers: None,
                 routed: Default::default(),
             },
-            issue_store: Arc::new(crate::issue_lifecycle::IssueLifecycleStore::disabled()),
+            issue_store: Arc::new(crate::agenthub::issue_lifecycle::IssueLifecycleStore::disabled()),
             web: None,
             passkeys: None,
         };
@@ -2535,7 +2534,7 @@ mod tests {
                     .unwrap(),
             ),
             hub: Hub {
-                boards: Arc::new(board::mcp::Boards::from_config(&config, dir)),
+                boards: Arc::new(agenthub::mcp::Boards::from_config(&config, dir)),
                 config,
                 audit,
                 links,
@@ -2546,7 +2545,7 @@ mod tests {
                 offers: None,
                 routed: Default::default(),
             },
-            issue_store: Arc::new(crate::issue_lifecycle::IssueLifecycleStore::disabled()),
+            issue_store: Arc::new(crate::agenthub::issue_lifecycle::IssueLifecycleStore::disabled()),
             web: None,
             passkeys,
         }

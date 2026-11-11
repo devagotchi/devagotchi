@@ -16,7 +16,7 @@ use axum::{
 use super::*;
 use crate::{
     audit::AuditEntry,
-    board::{Actor, NewTicket, hosted::HostedBoard},
+    agenthub::{Actor, NewTicket, hosted::HostedBoard},
     config::SinkConfig,
     orgs::{Orgs, Role},
     store::testing,

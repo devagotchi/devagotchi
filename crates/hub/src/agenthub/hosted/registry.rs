@@ -1,5 +1,5 @@
 use super::*;
-use crate::{board::Board, store::Lookup};
+use crate::{agenthub::Board, store::Lookup};
 use std::sync::Arc;
 
 pub(crate) struct Registry {
@@ -52,7 +52,7 @@ impl Registry {
         }
         drop(connection);
         let home = crate::accounts::tenants::new_tenant_id(crate::link::random::<16>());
-        let now = (crate::board::system_clock()() / 1000) as u64;
+        let now = (crate::agenthub::system_clock()() / 1000) as u64;
         transaction!(&self.store, |connection| {
             crate::accounts::tenants::settle_in(&self.store, connection, &home, now).await?;
             Ok(

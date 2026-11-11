@@ -14,7 +14,7 @@ use axum::{
 use devagotchi_contracts::BridgeResult;
 use serde::Deserialize;
 
-use super::{open_board, person, words};
+use super::super::{open_board, person, words};
 use crate::{
     AppState,
     site::Ctx,
@@ -51,7 +51,7 @@ pub(super) fn unknown() -> Response {
 }
 
 pub(super) fn now_ms() -> i64 {
-    (crate::board::system_clock())()
+    (crate::agenthub::system_clock())()
 }
 
 pub async fn page(
@@ -103,7 +103,7 @@ pub async fn page(
     let site = words();
     let copy = &site.messages.app;
     let ticket = &view.ticket;
-    if ticket.kind == crate::board::approval::KIND {
+    if ticket.kind == crate::agenthub::approval::KIND {
         return unknown();
     }
     let me = subject.id.as_str();

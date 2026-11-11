@@ -21,7 +21,7 @@ use serde::Deserialize;
 use serde_json::json;
 
 use super::{Org, Principal, ProjectRef, Role, Visibility, owner_of};
-use crate::{AppState, audit::AuditEntry, auth::Subject, board::mcp::SEAT_HEADER};
+use crate::{AppState, audit::AuditEntry, auth::Subject, agenthub::mcp::SEAT_HEADER};
 
 pub(crate) fn routes() -> Router<AppState> {
     Router::new()

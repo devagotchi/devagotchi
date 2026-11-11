@@ -7,7 +7,7 @@
 //! puts a harmless approval on the person's first board and pushes it to their phones
 //! only, so the whole loop is checked with one tap and no AI.
 //!
-//! Approving ahead of time (`board::approval`, standing authorizations): a request that
+//! Approving ahead of time (`agenthub::approval`, standing authorizations): a request that
 //! names its kind gets a third button, approve it and allow this exact step (kind, target and
 //! command) for as long as the person set (`crate::preferences`, 30 days until they say). Each
 //! board's live ones are listed with their command and a button to end each at once, and a
@@ -29,7 +29,7 @@ use super::{
 };
 use crate::{
     AppState,
-    board::{
+    agenthub::{
         Actor,
         approval::{self, ApprovalStatus, MAX_STANDING_DAYS, Standing, Suggestion, Verdict},
     },
@@ -200,7 +200,7 @@ async fn decider(
     state: &AppState,
     headers: &HeaderMap,
     project: &str,
-) -> Result<(crate::auth::Subject, std::sync::Arc<crate::board::Board>), Response> {
+) -> Result<(crate::auth::Subject, std::sync::Arc<crate::agenthub::Board>), Response> {
     if !same_origin(headers, &state.hub.config.public_url) {
         return Err(pages::message(
             StatusCode::FORBIDDEN,

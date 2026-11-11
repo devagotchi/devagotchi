@@ -4,7 +4,7 @@
 
 use serde_json::{Value, json};
 
-use super::tests::{hosted, page, things_of};
+use super::super::tests::{hosted, page, things_of};
 use crate::tenant_tests::{Hosted, Person, refused};
 
 async fn ticket(hub: &Hosted, alice: &mut Person, id: &str) -> Value {
@@ -368,7 +368,7 @@ async fn the_board_filters_by_anchor_chips_and_the_ticket_shows_its_anchors() {
 
 /// A's board `alpha` as an earlier build left it, before this hub opens it: its workflow is
 /// `workflow`, stored without an event.
-async fn earlier_board(hub: &Hosted, alice: &mut Person, workflow: &crate::board::Workflow) {
+async fn earlier_board(hub: &Hosted, alice: &mut Person, workflow: &crate::agenthub::Workflow) {
     let me = hub.call(alice, "whoami", json!({})).await["structuredContent"]["subject"]
         .as_str()
         .unwrap()
@@ -376,7 +376,7 @@ async fn earlier_board(hub: &Hosted, alice: &mut Person, workflow: &crate::board
     let dir = hub.dir.path().join("account-boards").join(&me);
     std::fs::create_dir_all(&dir).unwrap();
     let path = dir.join("alpha.sqlite3");
-    drop(crate::board::Board::open(&path, "alpha").unwrap());
+    drop(crate::agenthub::Board::open(&path, "alpha").unwrap());
     rusqlite::Connection::open(&path)
         .unwrap()
         .execute(
@@ -423,7 +423,7 @@ async fn undo_works_on_a_board_made_before_closed_tickets_reopened() {
     earlier_board(
         &hub,
         &mut alice,
-        &crate::board::Workflow::previous_default(),
+        &crate::agenthub::Workflow::previous_default(),
     )
     .await;
     let (id, to) = close_and_undo(&hub, &mut alice).await;
@@ -454,7 +454,7 @@ async fn undo_works_on_a_board_made_before_closed_tickets_reopened() {
 async fn undo_on_a_customised_workflow_says_which_transition_to_add() {
     let hub = hosted().await;
     let mut alice = hub.first_connect("Claude").await;
-    let mut ours = crate::board::Workflow::previous_default();
+    let mut ours = crate::agenthub::Workflow::previous_default();
     ours.id = "ours".into();
     earlier_board(&hub, &mut alice, &ours).await;
     let (id, to) = close_and_undo(&hub, &mut alice).await;

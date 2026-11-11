@@ -1,5 +1,5 @@
 use super::*;
-use crate::issue_lifecycle::{
+use crate::agenthub::issue_lifecycle::{
     ContextReceipt, ContextWrite, DeliveryReceipt, IssueContext, IssueWebhookEvent, SourceIssue,
     hash,
 };
@@ -334,7 +334,7 @@ impl HostedBoard {
                 .into());
             }
             if ticket.holder.is_some() {
-                crate::board::lease::check_held(&ticket, actor, payload.fence)?;
+                crate::agenthub::lease::check_held(&ticket, actor, payload.fence)?;
             }
             let note = self
                 .insert_note(

@@ -1,7 +1,7 @@
 use super::*;
 use crate::store::testing;
 
-use crate::board::{
+use crate::agenthub::{
     AnchorPatch, Anchors, DepKind, Filter, NextFilter, Patch, ProjectSettings, approval::Verdict,
 };
 
@@ -379,12 +379,12 @@ async fn shared_runtime_resolver_uses_postgres_without_board_files_and_observes_
         )
         .unwrap();
         let boards = std::sync::Arc::new(
-            crate::board::mcp::Boards::from_config(&config, dir.path())
+            crate::agenthub::mcp::Boards::from_config(&config, dir.path())
                 .using_postgres(test.store.clone())
                 .unwrap(),
         );
         let peer = std::sync::Arc::new(
-            crate::board::mcp::Boards::from_config(&config, dir.path())
+            crate::agenthub::mcp::Boards::from_config(&config, dir.path())
                 .using_postgres(test.store.clone())
                 .unwrap(),
         );
@@ -416,7 +416,7 @@ async fn shared_runtime_resolver_uses_postgres_without_board_files_and_observes_
         let same = peer.open_account("alice", "demo").unwrap().unwrap();
         let other = peer.open_account("bob", "demo").unwrap().unwrap();
         let mut unrelated = other.changes();
-        let listener = crate::board::mcp::Boards::postgres_listener(&test.url)
+        let listener = crate::agenthub::mcp::Boards::postgres_listener(&test.url)
             .await
             .unwrap();
         let listener_task = tokio::spawn(peer.clone().listen_postgres(listener));
@@ -492,13 +492,13 @@ async fn listener_reconnect_invalidates_waiters_even_without_a_new_event() {
     )
     .unwrap();
     let boards = std::sync::Arc::new(
-        crate::board::mcp::Boards::from_config(&config, dir.path())
+        crate::agenthub::mcp::Boards::from_config(&config, dir.path())
             .using_postgres(test.store.clone())
             .unwrap(),
     );
     let board = boards.open("shared").unwrap();
     let mut changes = board.changes();
-    let mut listener = crate::board::mcp::Boards::postgres_listener(&test.url)
+    let mut listener = crate::agenthub::mcp::Boards::postgres_listener(&test.url)
         .await
         .unwrap();
     let pid: i32 = sqlx::query_scalar("SELECT pg_backend_pid()")
@@ -553,7 +553,7 @@ async fn outbox_failure_rolls_back_ticket_lease_event_and_fence() {
         .await
         .unwrap();
     let events = board.events().await.unwrap();
-    let listener = crate::board::mcp::Boards::postgres_listener(&test.url)
+    let listener = crate::agenthub::mcp::Boards::postgres_listener(&test.url)
         .await
         .unwrap();
     sqlx::query("ALTER TABLE devagotchi.board_outbox ADD CONSTRAINT refuse_claim CHECK(kind <> 'ticket.claimed')")
@@ -862,15 +862,15 @@ async fn a_hosted_board_approves_a_kind_ahead_of_time() {
     seed(&test.store).await;
     let hosted = HostedBoard::new(test.store.clone(), TENANT, "ahead").unwrap();
     hosted.initialize().await.unwrap();
-    let board = crate::board::Board::from_hosted(hosted).await.unwrap();
+    let board = crate::agenthub::Board::from_hosted(hosted).await.unwrap();
     tokio::task::spawn_blocking(move || {
-        crate::board::standing_tests::standing_approvals_hold(&board, None)
+        crate::agenthub::standing_tests::standing_approvals_hold(&board, None)
     })
     .await
     .unwrap();
 }
 
-/// A note reaching who it is for on a hosted board (`board::inbox`).
+/// A note reaching who it is for on a hosted board (`agenthub::inbox`).
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_hosted_board_delivers_a_note_once() {
     let Some(test) = testing::postgres().await else {
@@ -879,8 +879,8 @@ async fn a_hosted_board_delivers_a_note_once() {
     seed(&test.store).await;
     let hosted = HostedBoard::new(test.store.clone(), TENANT, "inbox").unwrap();
     hosted.initialize().await.unwrap();
-    let board = crate::board::Board::from_hosted(hosted).await.unwrap();
-    tokio::task::spawn_blocking(move || crate::board::inbox_tests::inbox_holds(&board))
+    let board = crate::agenthub::Board::from_hosted(hosted).await.unwrap();
+    tokio::task::spawn_blocking(move || crate::agenthub::inbox_tests::inbox_holds(&board))
         .await
         .unwrap();
 }

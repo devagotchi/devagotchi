@@ -216,7 +216,7 @@ fn tab_icon(tab: Tab) -> String {
 
 /// How long ago, as a person says it; the exact time is its title.
 pub fn ago(at_secs: u64) -> String {
-    let now = (crate::board::system_clock()() / 1000).max(0) as u64;
+    let now = (crate::agenthub::system_clock()() / 1000).max(0) as u64;
     let gone = now.saturating_sub(at_secs);
     let words = match gone {
         0..=59 => "just now".to_string(),

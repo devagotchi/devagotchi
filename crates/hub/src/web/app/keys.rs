@@ -114,7 +114,7 @@ async fn draw(state: &AppState, subject: &Subject, once: Option<(ApiKey, String)
             return unavailable();
         }
     };
-    let now = (crate::board::system_clock()() / 1000).max(0) as u64;
+    let now = (crate::agenthub::system_clock()() / 1000).max(0) as u64;
     let rows: String = keys.iter().map(|key| row(key, now)).collect();
     let list = if rows.is_empty() {
         "<p class=\"empty\">No keys yet.</p>".to_string()

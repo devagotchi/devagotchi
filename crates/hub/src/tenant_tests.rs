@@ -47,7 +47,7 @@ pub(crate) async fn hosted_with(
     hosted_with_ingress(
         store,
         extra,
-        crate::issue_lifecycle::IssueLifecycleStore::disabled(),
+        crate::agenthub::issue_lifecycle::IssueLifecycleStore::disabled(),
     )
     .await
 }
@@ -55,7 +55,7 @@ pub(crate) async fn hosted_with(
 pub(crate) async fn hosted_with_ingress(
     store: Option<&str>,
     extra: impl FnOnce(&std::path::Path, &str) -> Value,
-    ingress: crate::issue_lifecycle::IssueLifecycleStore,
+    ingress: crate::agenthub::issue_lifecycle::IssueLifecycleStore,
 ) -> Hosted {
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let url = format!("http://{}", listener.local_addr().unwrap());
@@ -115,7 +115,7 @@ pub(crate) async fn hosted_with_ingress(
         .downloads
         .as_ref()
         .map(|dir| Arc::new(crate::downloads::Downloads::open(std::path::Path::new(dir)).unwrap()));
-    let mut boards = board::mcp::Boards::from_config(&config, dir.path());
+    let mut boards = agenthub::mcp::Boards::from_config(&config, dir.path());
     if accounts.store().backend() == store::Backend::Postgres {
         boards = boards.using_postgres(accounts.store().clone()).unwrap();
     } else if tokio::runtime::Handle::current().runtime_flavor()
@@ -127,7 +127,7 @@ pub(crate) async fn hosted_with_ingress(
     }
     let boards = Arc::new(boards);
     if accounts.store().backend() == store::Backend::Postgres {
-        let listener = board::mcp::Boards::postgres_listener(&store_url)
+        let listener = agenthub::mcp::Boards::postgres_listener(&store_url)
             .await
             .unwrap();
         tokio::spawn(boards.clone().listen_postgres(listener));

@@ -166,9 +166,9 @@ async fn world_with(downloads: Option<Arc<crate::downloads::Downloads>>) -> Worl
     *fake.redirect_uri.lock().unwrap() = format!("{url}/auth/callback");
     let dir = tempfile::tempdir().unwrap();
     let board_dir = dir.path().join("estate");
-    let store = board_dir.join(crate::board::BOARD_DIR);
+    let store = board_dir.join(crate::agenthub::BOARD_DIR);
     std::fs::create_dir_all(&store).unwrap();
-    crate::board::Board::open(&store.join(crate::board::BOARD_FILE), "estate").unwrap();
+    crate::agenthub::Board::open(&store.join(crate::agenthub::BOARD_FILE), "estate").unwrap();
     std::fs::write(
         store.join("config.json"),
         json!({"project": "estate", "prefix": "esta", "created_at": 0}).to_string(),
@@ -226,12 +226,12 @@ async fn world_with(downloads: Option<Arc<crate::downloads::Downloads>>) -> Worl
             offers: None,
             routed: Default::default(),
             push: Some(push),
-            boards: Arc::new(crate::board::mcp::Boards::from_config(&config, dir.path())),
+            boards: Arc::new(crate::agenthub::mcp::Boards::from_config(&config, dir.path())),
             config,
             audit,
             links,
         },
-        issue_store: Arc::new(crate::issue_lifecycle::IssueLifecycleStore::disabled()),
+        issue_store: Arc::new(crate::agenthub::issue_lifecycle::IssueLifecycleStore::disabled()),
         web: Some(Arc::new(web)),
         passkeys: None,
     };
@@ -777,7 +777,7 @@ async fn the_public_pages_need_no_sign_in_and_name_the_operator() {
 
 #[tokio::test]
 async fn a_person_approves_on_the_phone_page_and_the_agent_sees_it() {
-    use crate::board::{Actor, open_project};
+    use crate::agenthub::{Actor, open_project};
     let w = world().await;
     let (_, board) = open_project(&w.board_dir).unwrap();
     let asked = board
@@ -860,7 +860,7 @@ async fn a_person_approves_on_the_phone_page_and_the_agent_sees_it() {
 async fn configured_boards_decide_for_the_owner_and_human_grants_only() {
     use crate::{
         auth::Subject,
-        board::{Actor, open_project},
+        agenthub::{Actor, open_project},
     };
     let w = world().await;
     let (_, board) = open_project(&w.board_dir).unwrap();
@@ -907,7 +907,7 @@ async fn configured_boards_decide_for_the_owner_and_human_grants_only() {
         .unwrap(),
     );
     let hub = Hub {
-        boards: Arc::new(crate::board::mcp::Boards::from_config(
+        boards: Arc::new(crate::agenthub::mcp::Boards::from_config(
             &config,
             w.dir.path(),
         )),
@@ -964,7 +964,7 @@ async fn configured_boards_decide_for_the_owner_and_human_grants_only() {
 
 #[tokio::test]
 async fn notify_this_phone_then_an_approval_buzzes_it_encrypted() {
-    use crate::board::{Actor, open_project};
+    use crate::agenthub::{Actor, open_project};
     use aws_lc_rs::{
         agreement::{ECDH_P256, PrivateKey},
         rand::{SecureRandom, SystemRandom},
@@ -1282,7 +1282,7 @@ async fn every_page_says_whether_you_are_signed_in_with_one_tap_in_or_out() {
 
 #[tokio::test]
 async fn a_new_board_says_how_to_start_and_one_tap_tests_the_phone() {
-    use crate::board::{Actor, Filter, open_project};
+    use crate::agenthub::{Actor, Filter, open_project};
     use aws_lc_rs::{
         agreement::{ECDH_P256, PrivateKey},
         rand::{SecureRandom, SystemRandom},

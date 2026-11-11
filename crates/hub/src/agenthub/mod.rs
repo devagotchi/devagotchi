@@ -1,5 +1,9 @@
-//! The agents' board: tickets that any subscription claims under a lease, works,
-//! annotates and hands off, stored per project in `<project>/.devagotchi/board.sqlite3`.
+//! AgentHub: the agents' board. Tickets that any subscription claims under a lease, works,
+//! annotates and hands off, stored per project in `<project>/.devagotchi/board.sqlite3` (or the
+//! hub's Postgres, `hosted`). Everything AgentHub is in this folder: the board and its rules
+//! here, its MCP tools (`mcp`), its command line (`cli`), notes that reach agents (`inbox`,
+//! `wake`), approvals (`approval`), GitHub issues (`issue_lifecycle`). Its pages are in
+//! `web/agenthub/`; nothing here depends on the web.
 //! Contract: `docs/agent-board.md`. The hub never owns jobs; a ticket is a unit of
 //! coordination and memory, a broker operation is a unit of execution.
 //!
@@ -8,6 +12,7 @@
 //! (`mcp.rs`) for agents anywhere, through the hub.
 
 pub mod approval;
+pub(crate) mod issue_lifecycle;
 pub mod cli;
 pub mod face;
 pub(crate) mod hosted;
@@ -970,7 +975,7 @@ impl Board {
     pub(crate) fn issue_source(
         &self,
         id: &str,
-    ) -> BridgeResult<Option<crate::issue_lifecycle::SourceIssue>> {
+    ) -> BridgeResult<Option<crate::agenthub::issue_lifecycle::SourceIssue>> {
         match &self.hosted {
             Some(hosted) => self.hosted_call(hosted.issue_source(id), false),
             None => Ok(None),

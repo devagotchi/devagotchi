@@ -1,5 +1,5 @@
 //! Approving ahead of time end to end over HTTP, the whole router as it serves
-//! (`board::approval`, `web/approvals.rs`, `approval_request`): a person's AI asks to
+//! (`agenthub::approval`, `web/approvals.rs`, `approval_request`): a person's AI asks to
 //! restart a machine and the person taps "Approve, and allow"; the same command there is
 //! approved the moment it is asked and no phone is notified; another command under the same
 //! label waits for the person; the approvals page lists it with Stop, and once stopped the

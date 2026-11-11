@@ -294,7 +294,7 @@ impl Orgs {
     pub fn new(store: Store) -> Self {
         Self {
             store,
-            clock: Arc::new(|| crate::board::system_clock()() / 1000),
+            clock: Arc::new(|| crate::agenthub::system_clock()() / 1000),
         }
     }
 

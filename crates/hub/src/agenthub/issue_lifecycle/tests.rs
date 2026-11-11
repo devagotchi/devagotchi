@@ -1,6 +1,6 @@
 use super::*;
 use crate::{
-    board::{Actor, Filter},
+    agenthub::{Actor, Filter},
     store::testing,
     tenant_tests::{Hosted, hosted_with_ingress, refused},
 };
@@ -420,8 +420,8 @@ async fn mcp_issue_tools_share_rest_authority_receipts_and_refuse_shadow_boards(
         let invoke = |args: &[&str]| {
             let mut out = Vec::new();
             let mut err = Vec::new();
-            let code = crate::board::cli::run(
-                crate::board::cli::Invocation {
+            let code = crate::agenthub::cli::run(
+                crate::agenthub::cli::Invocation {
                     args: args.iter().map(std::ffi::OsString::from).collect(),
                     cwd: checkout.clone(),
                     actor_env: Some("claude".into()),

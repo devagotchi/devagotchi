@@ -53,7 +53,7 @@ person's mark in the bar, a count on the Approvals tab, and `/app/me` with their
   buffer beside the link sessions in `link.rs`); nothing new is stored.
 
 ### P1c — board and ticket pages
-- `web/app/board.rs`, `web/app/ticket.rs`: read with `Board::list`/`Board::get`; actions via
+- `web/app/agenthub/board.rs`, `web/app/agenthub/ticket.rs`: read with `Board::list`/`Board::get`; actions via
   `Board::add_note`, `Board::update` (assignee, state). Every action is the same audited board
   call the MCP tools make, with the person as actor (`Actor::human`).
 - Close + Undo: the close happens at once; Undo within 10 s reopens it (one `update`).

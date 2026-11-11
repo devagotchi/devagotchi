@@ -11,15 +11,12 @@ use axum::{
 use devagotchi_contracts::BridgeResult;
 use serde::Deserialize;
 
-use super::{
-    person,
-    ticket::{UNDO_MS, now_ms, unknown},
-    words,
-};
+use super::super::{person, words};
+use super::ticket::{UNDO_MS, now_ms, unknown};
 use crate::{
     AppState,
     audit::AuditEntry,
-    board::{Actor, Board, Patch, workflow::StateKind},
+    agenthub::{Actor, Board, Patch, workflow::StateKind},
     web::{approvals::same_origin, encode, pages, routes::see_other},
 };
 
@@ -105,7 +102,7 @@ pub async fn act(
     })
     .await
     .unwrap_or_else(|_| {
-        Err(crate::board::fail(
+        Err(crate::agenthub::fail(
             "board_store",
             "the board did not answer",
         ))
@@ -201,7 +198,7 @@ fn apply(
             };
             // A workflow someone changed keeps its own rules: say which one Undo needs.
             if !workflow.allows(&current.state, &to) {
-                return Err(crate::board::fail(
+                return Err(crate::agenthub::fail(
                     "transition_not_allowed",
                     format!(
                         "this board's workflow ({}) has no transition {} -> {}; add {{\"from\": \"{}\", \"to\": \"{}\"}} to its transitions to undo here",
