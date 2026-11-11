@@ -7,14 +7,19 @@
 //!
 //! Not every step needs a person in the moment. An agent names the kind of step it asks for
 //! (`kind`: `restart`, `deploy`, `edit-file` …) and, when it matters, what it is aimed at
-//! (`target`: a machine, a service). A person may approve a kind ahead of time on a board,
-//! for that target or any, for up to `MAX_STANDING_DAYS` (`grant_standing`): a standing
-//! authorization, kept in the board's settings and granted, used and revoked on its chain.
-//! An approval asked of a kind a live one covers is approved the moment it is asked, by
-//! `standing:<id>`, with a note naming who granted it and until when; nobody is notified.
+//! (`target`: a machine, a service). A person may approve one exact step ahead of time on a
+//! board for up to `MAX_STANDING_DAYS` (`grant_standing`): a standing authorization, kept in
+//! the board's settings and granted, used and revoked on its chain. It covers its kind, its
+//! target and its command, character for character. The kind and the target are the agent's
+//! own words, so they never approve anything alone: another command under the same label
+//! waits for the person. An approval a live one covers is approved the moment it is asked,
+//! by `standing:<id>`, with a note naming who granted it and until when; nobody is notified.
 //! Only a person grants or revokes one; an agent never can (`Actor::human`). What people
-//! decided is the record of what they want: after `SUGGEST_AFTER` approvals of one kind and
-//! target in 30 days with none denied, `suggestions` offers to approve it ahead of time.
+//! decided is the record of what they want: after `SUGGEST_AFTER` approvals of one exact
+//! step in 30 days with none denied, `suggestions` offers to approve it ahead of time.
+//!
+//! This binds what the agent says it will run to what the person approved. It cannot make
+//! the agent run that: the hub does not check commands against approvals.
 
 use devagotchi_contracts::BridgeResult;
 use rusqlite::{OptionalExtension, params};
@@ -29,24 +34,27 @@ use crate::config::valid_name;
 
 pub const KIND: &str = "approval";
 
-/// The longest a person may approve a kind of step ahead of time.
+/// The longest a person may approve a step ahead of time.
 pub const MAX_STANDING_DAYS: u32 = 90;
 /// Live standing authorizations a board holds at most.
 const MAX_LIVE: usize = 50;
-/// Approvals of one kind and target, none denied, in 30 days before it is suggested.
+/// Approvals of one exact step, none denied, in 30 days before it is suggested.
 pub const SUGGEST_AFTER: usize = 3;
 const DAY_MS: i64 = 86_400_000;
 
-/// A kind of step a person approved ahead of time on one board.
+/// One exact step a person approved ahead of time on one board.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct Standing {
     /// `st-` and 8 hex digits: what revoking names it by.
     pub id: String,
     /// The kind of step it covers, as agents name it.
     pub kind: String,
-    /// The one target it covers; absent, any.
+    /// The one target it covers; absent, only a request that names no target.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub target: Option<String>,
+    /// The exact command the person approved. Empty covers nothing.
+    #[serde(default)]
+    pub what: String,
     pub granted_by: String,
     /// Milliseconds since the epoch.
     pub granted_at: i64,
@@ -62,8 +70,12 @@ impl Standing {
         self.revoked_at.is_none() && now < self.expires_at
     }
 
-    pub fn covers(&self, kind: &str, target: Option<&str>) -> bool {
-        self.kind == kind && (self.target.is_none() || self.target.as_deref() == target)
+    /// Whether this is the step it was granted for: kind, target and command, all exact.
+    pub fn covers(&self, kind: &str, target: Option<&str>, what: &str) -> bool {
+        !self.what.is_empty()
+            && self.what == what
+            && self.kind == kind
+            && self.target.as_deref() == target
     }
 }
 
@@ -78,14 +90,30 @@ pub struct Ask<'a> {
     pub target: Option<&'a str>,
 }
 
-/// A kind of step people keep approving and never deny: worth approving ahead of time.
+/// One exact step people keep approving and never deny: worth approving ahead of time.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct Suggestion {
     pub kind: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub target: Option<String>,
+    /// The exact command.
+    pub what: String,
     /// How many were approved in the last 30 days.
     pub approved: usize,
+}
+
+/// What, why and how to undo it, from an approval's description, when it reads only one way.
+/// An agent writes those fields, so one that imitates the separators could pass part of its
+/// command off as its reason: that reads as nothing, is shown whole, and can never be approved
+/// ahead of time.
+pub fn parts(description: &str) -> Option<(&str, &str, &str)> {
+    let rest = description.strip_prefix("What: ")?;
+    if rest.matches("\n\nWhy: ").count() != 1 || rest.matches("\n\nUndo: ").count() != 1 {
+        return None;
+    }
+    let (what, rest) = rest.split_once("\n\nWhy: ")?;
+    let (why, undo) = rest.split_once("\n\nUndo: ")?;
+    Some((what, why, undo))
 }
 
 /// The value after `key` (`kind:`, `target:`) among an approval's labels.
@@ -112,6 +140,13 @@ fn checked(field: &str, value: &str) -> BridgeResult<String> {
 pub enum Verdict {
     Approved,
     Denied,
+}
+
+impl ApprovalStatus {
+    /// The command it asks to run, when its description reads only one way.
+    pub fn what(&self) -> Option<&str> {
+        parts(&self.description).map(|(what, _, _)| what)
+    }
 }
 
 /// Where an approval stands. `status` is `pending`, `approved` or `denied`.
@@ -217,12 +252,15 @@ impl Board {
         let Some(kind) = kind else {
             return Ok((status, None));
         };
+        let Some(what) = status.what().map(str::to_string) else {
+            return Ok((status, None));
+        };
         let now = self.now();
         let standing = self
             .settings()?
             .standing
             .into_iter()
-            .find(|s| s.live(now) && s.covers(&kind, target.as_deref()));
+            .find(|s| s.live(now) && s.covers(&kind, target.as_deref(), &what));
         let Some(standing) = standing else {
             return Ok((status, None));
         };
@@ -367,23 +405,25 @@ impl Board {
         Ok(status_of(ticket, decision))
     }
 
-    /// A person approves `kind` (on `target`, or any) ahead of time on this board for
-    /// `days` (1 to `MAX_STANDING_DAYS`).
+    /// A person approves the exact command `what` of `kind` (on `target`) ahead of time on
+    /// this board for `days` (1 to `MAX_STANDING_DAYS`).
     pub fn grant_standing(
         &self,
         actor: &Actor<'_>,
         kind: &str,
         target: Option<&str>,
+        what: &str,
         days: u32,
     ) -> BridgeResult<Standing> {
         if !actor.human {
             return Err(fail(
                 "humans_only",
-                "only a person approves a kind of step ahead of time",
+                "only a person approves a step ahead of time",
             ));
         }
         let kind = checked("kind", kind)?;
         let target = target.map(|t| checked("target", t)).transpose()?;
+        let what = text("what", what, 4000, true)?;
         if !(1..=MAX_STANDING_DAYS).contains(&days) {
             return Err(invalid(format!(
                 "approve ahead of time for 1 to {MAX_STANDING_DAYS} days"
@@ -394,6 +434,7 @@ impl Board {
             id: format!("st-{}", hex::encode(crate::link::random::<4>())),
             kind,
             target,
+            what,
             granted_by: actor.id.to_string(),
             granted_at: now,
             expires_at: now + i64::from(days) * DAY_MS,
@@ -409,12 +450,12 @@ impl Board {
             if settings.standing.iter().filter(|s| s.live(now)).count() >= MAX_LIVE {
                 return Err(fail(
                     "too_many",
-                    format!("this board already approves {MAX_LIVE} kinds ahead of time; revoke one first"),
+                    format!("this board already approves {MAX_LIVE} steps ahead of time; revoke one first"),
                 ));
             }
             settings.standing.push(made.clone());
             Ok(serde_json::json!({
-                "id": made.id, "kind": made.kind, "target": made.target,
+                "id": made.id, "kind": made.kind, "target": made.target, "what": made.what,
                 "expires_at": made.expires_at,
             }))
         })?;
@@ -461,7 +502,7 @@ impl Board {
         Ok(all)
     }
 
-    /// Kinds of step people approved at least `SUGGEST_AFTER` times in the last 30 days and
+    /// Exact steps people approved at least `SUGGEST_AFTER` times in the last 30 days and
     /// never denied, that nothing approves ahead of time yet.
     pub fn suggestions(&self) -> BridgeResult<Vec<Suggestion>> {
         let now = self.now();
@@ -479,14 +520,19 @@ impl Board {
             kind: Some(KIND.into()),
             ..Filter::default()
         })?;
-        let mut tally: std::collections::BTreeMap<(String, Option<String>), (usize, usize)> =
-            Default::default();
+        let mut tally: std::collections::BTreeMap<
+            (String, Option<String>, String),
+            (usize, usize),
+        > = Default::default();
         for ticket in asked.iter().filter(|t| t.created_at >= since) {
             let Some(kind) = label_value(&ticket.labels, "kind:") else {
                 continue;
             };
             let target = label_value(&ticket.labels, "target:");
-            let entry = tally.entry((kind, target)).or_default();
+            let Some((what, _, _)) = parts(&ticket.description) else {
+                continue;
+            };
+            let entry = tally.entry((kind, target, what.to_string())).or_default();
             if ticket.state == approved {
                 entry.0 += 1;
             } else if ticket.state == denied {
@@ -495,14 +541,15 @@ impl Board {
         }
         Ok(tally
             .into_iter()
-            .filter(|((kind, target), (yes, no))| {
+            .filter(|((kind, target, what), (yes, no))| {
                 *no == 0
                     && *yes >= SUGGEST_AFTER
-                    && !live.iter().any(|s| s.covers(kind, target.as_deref()))
+                    && !live.iter().any(|s| s.covers(kind, target.as_deref(), what))
             })
-            .map(|((kind, target), (yes, _))| Suggestion {
+            .map(|((kind, target, what), (yes, _))| Suggestion {
                 kind,
                 target,
+                what,
                 approved: yes,
             })
             .collect())

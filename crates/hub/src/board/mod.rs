@@ -397,8 +397,8 @@ pub struct Settings {
     /// The environments a ticket's `environment` may name.
     #[serde(default = "default_environments")]
     pub environments: Vec<String>,
-    /// Kinds of step a person approved ahead of time on this board (`approval.rs`): an
-    /// approval of a kind one of these covers is approved the moment it is asked.
+    /// Exact steps a person approved ahead of time on this board (`approval.rs`): an
+    /// approval one of these covers is approved the moment it is asked.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub standing: Vec<approval::Standing>,
 }

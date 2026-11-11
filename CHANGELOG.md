@@ -7,6 +7,20 @@ heading. Agents draft the fragments below; they never tag.
 
 ## Unreleased
 
+### Approving ahead of time covers one exact step (increment 120)
+- Fixed: a standing approval covered a kind and target, which are the AI's own words, so any
+  command under an allowed label was approved with nobody told. It now covers its kind, its
+  target and its command, character for character, and another command waits for the person.
+  No target means only a request that names none, no longer every target. A standing
+  approval with no command covers nothing.
+- Fixed: a command or reason that imitated the description's `Why:` and `Undo:` separators
+  could show part of the command as its reason on `/approvals`. Such a request is now shown
+  whole and cannot be allowed ahead of time.
+- Offers count one exact step; `/approvals` lists the command beside each one allowed.
+- `preferences/tests.rs` now tests Postgres row-level security itself. The landing page says
+  what these do: one exact command, no shortcut offered for a kind you always decide, and one
+  switch for machine notifications.
+
 ### The phone, made for one person (increment 119)
 - The app's frame says who is signed in: the person's mark in the bar goes to their page, and
   the bar no longer repeats the tabs. Five tabs with icons (Home, Approvals, Boards, Machines,

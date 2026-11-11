@@ -94,6 +94,35 @@ async fn holds(store: Store) {
         Preferences::default()
     );
 
+    // Row-level security itself, on Postgres: scoped to tenant b, a query that asks for tenant
+    // a's row by name finds nothing and a row written in tenant a's name is refused.
+    if store.backend() == Backend::Postgres {
+        let seen: i64 = transaction!(&store, |connection| {
+            store.scope(connection, &b).await?;
+            Ok(
+                sqlx::query_scalar("SELECT COUNT(*) FROM person_preferences WHERE tenant_id = $1")
+                    .bind(&a)
+                    .fetch_one(&mut *connection)
+                    .await?,
+            )
+        })
+        .unwrap();
+        assert_eq!(seen, 0, "another tenant's row is invisible");
+        let forged: BridgeResult<()> = transaction!(&store, |connection| {
+            store.scope(connection, &b).await?;
+            sqlx::query(
+                "INSERT INTO person_preferences
+                   (tenant_id, subject, schema_version, body, updated_at)
+                 VALUES ($1, 'mallory', 1, '{}', 1)",
+            )
+            .bind(&a)
+            .execute(&mut *connection)
+            .await?;
+            Ok(())
+        });
+        assert!(forged.is_err(), "a row in another tenant's name is refused");
+    }
+
     // A machine asks without knowing the tenant.
     assert!(!preferences.machine_pushes("alice").await.unwrap());
     assert!(preferences.machine_pushes("bob").await.unwrap());
