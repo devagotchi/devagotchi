@@ -10,8 +10,8 @@ This is the boundary. Check it before adding anything that only a hosted service
 Rules:
 
 1. A self-hoster gets every feature that works on one hub. Cloud adds running it for many.
-2. Cloud reuses this core unchanged: its private repository depends on a pinned release of
-   this one (an image digest or a tag) and moves by bumping that pin. It is never a fork, since a
+2. Cloud reuses this core unchanged: its private repository holds this one as a git submodule
+   pinned to a release tag, and moves by bumping that pin ([cloud edition plan](../dev/plans/cloud-edition.md)). It is never a fork, since a
    GitHub fork of a public repository stays public and drifts from upstream.
 3. Enterprise code, secrets and hosted-service deployment configuration never go in this repository.
 4. The license allows production self-hosting and forbids offering the core to others as a
@@ -21,4 +21,4 @@ Rules:
    exists as a file or an environment variable is unfinished.
 
 Already in this repository and marked for review against rule 2 and 3: `tenancy.mode multi`,
-`/operator` (waiting list and plans) and plan limits. The private cloud repository does not exist yet.
+`/operator` (waiting list and plans) and plan limits. The private cloud repository does not exist yet; the [cloud edition plan](../dev/plans/cloud-edition.md) says what comes first.

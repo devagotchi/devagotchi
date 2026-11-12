@@ -1,6 +1,7 @@
 # Plan: AgentHub as an AI factory board — boundary, hooks, importers, UI
 
-Status: PLAN for Jesse's review (2026-11-09). Built on the research brief
+Status: PLAN for Jesse's review (2026-11-09). Progress and the research of 2026-11-11 are tracked in
+[.ai/dev/plans/agenthub-factory.md](../.ai/dev/plans/agenthub-factory.md). Built on the research brief
 `agenthub-research.md` (not yet in this repo; every claim there has a source) and on `main`
 at 660efb6. Each phase gets a code-anchored spec for approval before any agent builds it.
 Storage and offline rules come from [ADR 0001](adr/0001-hosted-board-postgres-and-clickhouse.md)
