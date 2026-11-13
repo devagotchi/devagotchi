@@ -1091,8 +1091,9 @@ sessions of one AI share one inbox, so whichever calls first receives the note.
 
 ## Hub settings
 
-`/admin` is the hub's owner's own page; anyone else gets a 404. Google and GitHub sign-in are set
-there, in Postgres (`sign_in_settings`), with the client secret sealed by `sealed.rs` under
+`/admin` is the hub's owner's own page; anyone else gets a 404. Google, GitHub, Sign in with
+Shippin (Nomen, its issuer filled in) and any other OpenID Connect provider (Okta, Entra ID,
+Auth0, Keycloak, Authentik) are set there, each with its redirect address shown, in Postgres (`sign_in_settings`), with the client secret sealed by `sealed.rs` under
 `settings.key` in the state directory. Back up the state volume with the database, or those secrets
 must be entered again. ClickHouse holds statistics only, never settings. Email, ClickHouse and
 signal sinks are still set at install and are shown there read-only.

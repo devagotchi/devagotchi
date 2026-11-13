@@ -7,6 +7,12 @@ heading. Agents draft the fragments below; they never tag.
 
 ## Unreleased
 
+### Sign in with Shippin, and any OpenID Connect provider, from Hub settings (increment 134)
+- `/admin` has a Shippin (Nomen) card with its issuer filled in, a card for each provider added
+  by name, and a form to add another OpenID Connect provider (issuer, button label, client ID,
+  secret or none for a public client). Each is held to the config file's own rules (an https
+  issuer), sealed, and offered at once without a restart.
+
 ### The phone app moves with a swipe (increments 131 and 132)
 - AgentHub lives in one place: `crates/hub/src/agenthub/` (the board, its tools, inbox,
   approvals, GitHub issues) and `web/app/agenthub/` (its screens).

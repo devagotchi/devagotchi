@@ -18,7 +18,7 @@
 | M3 | Email (SMTP) from the page, sealed | M2 | to write | pending |
 | M4 | ClickHouse connection from the page, sealed | M2 | to write | pending |
 | M5 | Signal sinks from the page, sealed | M2 | to write | pending |
-| M6 | OpenID Connect providers from the page | M2 | to write | pending |
+| M6 | OpenID Connect providers from the page: Sign in with Shippin (Nomen) prefilled, any other by name, public clients | M2 | `hub_settings_tests.rs` | done (increment 134) |
 | M7 | Network providers | operator's decision | to write | pending |
 | M8 | Review and merge to main | operator approval | merged PR | pending |
 

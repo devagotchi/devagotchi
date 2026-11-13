@@ -177,19 +177,29 @@ impl Providers {
             .cloned()
             .collect();
         for setting in stored.iter().filter(|s| s.enabled) {
-            let Some(secret) = self
+            // An OpenID Connect provider's public client has no secret (PKCE only).
+            let secret = if setting.sealed_secret.is_empty() {
+                None
+            } else if let Some(secret) = self
                 .sealer
                 .open_value(&setting.name, &setting.sealed_secret)
-            else {
+            {
+                Some(secret)
+            } else {
                 eprintln!(
                     "devagotchi-hub: sign-in {}: its secret does not open with this hub's key; save it again",
                     setting.name
                 );
                 continue;
             };
-            let config = match serde_json::from_value::<ProviderConfig>(serde_json::json!({
-                "kind": setting.name,
-            })) {
+            let mut described = serde_json::json!({ "kind": setting.kind, "name": setting.name });
+            if !setting.label.is_empty() {
+                described["label"] = setting.label.clone().into();
+            }
+            if !setting.issuer.is_empty() {
+                described["issuer"] = setting.issuer.clone().into();
+            }
+            let config = match serde_json::from_value::<ProviderConfig>(described) {
                 Ok(config) => config,
                 Err(error) => {
                     eprintln!("devagotchi-hub: sign-in {}: {error}", setting.name);
@@ -199,7 +209,7 @@ impl Providers {
             list.push(Arc::new(Provider {
                 config,
                 client_id: setting.client_id.clone(),
-                secret: Some(secret),
+                secret,
                 endpoints: tokio::sync::OnceCell::new(),
             }));
         }
