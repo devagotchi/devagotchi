@@ -147,4 +147,3 @@ impl Registry {
         Ok(Some((Arc::new(Board::from_hosted(board).await?), created)))
     }
 }
-

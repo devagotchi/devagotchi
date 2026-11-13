@@ -31,9 +31,11 @@ schemars = { workspace = true }
 sha2 = { workspace = true }
 hex = { workspace = true }
 getrandom = "0.4"
-# Wake: notes POSTed to an agent's webhook, signed (`wake.rs`).
+# Wake: notes POSTed to an agent's webhook, signed (`wake.rs`); the ClickHouse export.
 hmac = "0.13"
 reqwest = { version = "0.13", default-features = false, features = ["rustls", "json", "form"] }
+# ClickHouse export: queries go over its HTTP interface (`clickhouse.rs`).
+percent-encoding = "2"
 
 [dev-dependencies]
 devagotchi-store = { workspace = true, features = ["testing"] }

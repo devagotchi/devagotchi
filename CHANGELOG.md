@@ -7,6 +7,14 @@ heading. Agents draft the fragments below; they never tag.
 
 ## Unreleased
 
+### AgentHub is its own crate (increment 137)
+- `crates/agenthub` (`devagotchi-agenthub`) holds the board: tickets, leases, workflow,
+  approvals, notes that reach agents, the hosted Postgres board, GitHub issue records and the
+  ClickHouse export. `crates/store` (`devagotchi-store`) is the database it shares with the hub,
+  with the migrations. The hub serves AgentHub through the crate's public API; nothing changes
+  for anyone running it. Next: AgentHub's own migrations, then a Postgres and ClickHouse of
+  your own set from `/admin` (plan: `.ai/dev/plans/agenthub-crate.md`).
+
 ### Plugins for Claude Code, Codex and Grok (increment 136)
 - This repository is a plugin marketplace. `devagotchi` gives a client the connector (your hub,
   signed in with OAuth) and two skills, AgentHub and machines; Claude Code can point it at your

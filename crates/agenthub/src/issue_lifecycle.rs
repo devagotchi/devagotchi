@@ -145,7 +145,6 @@ pub struct ContextReceipt {
     pub revision: i64,
 }
 
-
 pub fn invalid(message: impl Into<String>) -> BridgeError {
     BridgeError::new("invalid", message)
 }
@@ -265,4 +264,3 @@ impl ContextWrite {
         Ok(())
     }
 }
-

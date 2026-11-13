@@ -11,11 +11,7 @@ use hmac::{Hmac, KeyInit, Mac};
 use sha2::Sha256;
 use std::sync::Arc;
 
-use crate::{
-    AppState,
-    agenthub::Board,
-    auth::Subject,
-};
+use crate::{AppState, agenthub::Board, auth::Subject};
 
 pub use devagotchi_agenthub::issue_lifecycle::*;
 

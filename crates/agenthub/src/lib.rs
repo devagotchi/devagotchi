@@ -10,6 +10,7 @@
 //! operation is a unit of execution, and this crate never runs one.
 
 pub mod approval;
+pub mod clickhouse;
 pub mod face;
 pub mod hosted;
 pub mod inbox;

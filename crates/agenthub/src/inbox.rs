@@ -146,13 +146,7 @@ pub fn floor(cursors: &Cursors, who: &[String]) -> i64 {
 }
 
 /// What to tell `who` now, moving their positions as if it was told.
-pub fn plan(
-    notes: &[Note],
-    who: &[String],
-    me: &str,
-    cursors: &mut Cursors,
-    now: i64,
-) -> Delivery {
+pub fn plan(notes: &[Note], who: &[String], me: &str, cursors: &mut Cursors, now: i64) -> Delivery {
     let mut delivery = Delivery::default();
     let mut chars = 0;
     let mut already = 0;
@@ -219,12 +213,7 @@ pub fn acknowledge(cursors: &mut Cursors, who: &[String], through: i64) {
 }
 
 /// Everything addressed to `who` that it has not marked read, whether handed yet or not.
-pub fn unread(
-    notes: &[Note],
-    who: &[String],
-    me: &str,
-    cursors: &Cursors,
-) -> Vec<InboxNote> {
+pub fn unread(notes: &[Note], who: &[String], me: &str, cursors: &Cursors) -> Vec<InboxNote> {
     wanted(notes, who, me)
         .filter(|note| note.seq > cursor_of(cursors, note.to_principal.as_ref()).acked)
         .map(InboxNote::from)

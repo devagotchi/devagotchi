@@ -61,8 +61,7 @@ impl HostedBoard {
                     .bytes()
                     .all(|c| c.is_ascii_digit() || (b'a'..=b'f').contains(&c))
         });
-        if !devagotchi_store::valid_tenant_id(tenant)
-            || (!internal && !crate::valid_name(project))
+        if !devagotchi_store::valid_tenant_id(tenant) || (!internal && !crate::valid_name(project))
         {
             return Err(invalid("hosted board requires a valid tenant and project"));
         }
@@ -77,12 +76,7 @@ impl HostedBoard {
         })
     }
 
-    pub fn for_owner(
-        store: Store,
-        tenant: &str,
-        owner: &str,
-        project: &str,
-    ) -> BridgeResult<Self> {
+    pub fn for_owner(store: Store, tenant: &str, owner: &str, project: &str) -> BridgeResult<Self> {
         let mut board = Self::new(store, tenant, project)?;
         if owner.is_empty() || owner.len() > 256 {
             return Err(invalid("invalid board owner"));

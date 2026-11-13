@@ -121,11 +121,7 @@ impl HostedBoard {
         })
     }
 
-    pub async fn put_settings(
-        &self,
-        actor: &Actor<'_>,
-        settings: &Settings,
-    ) -> BridgeResult<()> {
+    pub async fn put_settings(&self, actor: &Actor<'_>, settings: &Settings) -> BridgeResult<()> {
         if settings.lease_min_ttl_ms <= 0
             || settings.lease_max_ttl_ms < settings.lease_min_ttl_ms
             || settings.lease_ttl_ms < settings.lease_min_ttl_ms
@@ -177,11 +173,7 @@ impl HostedBoard {
         actor: &Actor<'_>,
         patch: &ProjectSettings,
     ) -> BridgeResult<Settings> {
-        let repo = patch
-            .repo
-            .as_deref()
-            .map(crate::check_repo)
-            .transpose()?;
+        let repo = patch.repo.as_deref().map(crate::check_repo).transpose()?;
         let environments = patch
             .environments
             .as_deref()
@@ -217,11 +209,7 @@ impl HostedBoard {
         })
     }
 
-    pub async fn put_workflow(
-        &self,
-        actor: &Actor<'_>,
-        workflow: &Workflow,
-    ) -> BridgeResult<()> {
+    pub async fn put_workflow(&self, actor: &Actor<'_>, workflow: &Workflow) -> BridgeResult<()> {
         workflow.validate().map_err(invalid)?;
         transaction!(&self.store, |connection| {
             let now = self.scope(connection).await?;
