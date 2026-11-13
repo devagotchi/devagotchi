@@ -62,6 +62,8 @@ pub const USAGE: &str = "Usage: devagotchi board <command> [options]
   export    [--out PATH]           board.jsonl (export, never the truth)
   hooks     [--for claude-code|codex|all]   write compatibility launchers and print native lifecycle config (review/trust in the client)
   hook      session-start|beat|stop|session-end   native client hook; bounded JSON on stdin, explicit failures
+            [--as auto] the agent is DEVAGOTCHI_ACTOR, else the plugin's client (claude, codex, grok)
+            [--if-board] outside a project with a board, answer {} and exit 0 (what the plugin runs)
 
 ANCHORS: --machine M --repo URL --env E --agent A --session S --fingerprint F   where a ticket belongs; on ls, filters
 Global: --dir PATH (project directory; default: walk up from here)  --as ID (act as this agent)
@@ -83,6 +85,26 @@ pub struct Invocation {
     pub stdout_is_terminal: bool,
     /// `account.json`, for a bound project; none when the environment has no home.
     pub account_file: Option<PathBuf>,
+    /// The AI client whose plugin runs this command ([`plugin_host`]): who `--as auto` is
+    /// when `DEVAGOTCHI_ACTOR` is not set.
+    pub plugin_host: Option<String>,
+}
+
+/// The AI client whose plugin started this process, from the variables each client's plugin
+/// loader documents for its hooks: Grok sets `GROK_PLUGIN_ROOT`; Codex sets `PLUGIN_ROOT`
+/// (and `CLAUDE_PLUGIN_ROOT` too, for compatibility); Claude Code sets only
+/// `CLAUDE_PLUGIN_ROOT`. Checked in that order; none set, none.
+pub fn plugin_host(var: impl Fn(&str) -> Option<OsString>) -> Option<String> {
+    let set = |name: &str| var(name).is_some_and(|value| !value.is_empty());
+    if set("GROK_PLUGIN_ROOT") {
+        Some("grok".into())
+    } else if set("PLUGIN_ROOT") {
+        Some("codex".into())
+    } else if set("CLAUDE_PLUGIN_ROOT") {
+        Some("claude".into())
+    } else {
+        None
+    }
 }
 
 /// What `.devagotchi/` keeps out of the repo: the store, the claim cache, the beat markers.
@@ -156,6 +178,7 @@ const SWITCHES: &[&str] = &[
     "--open",
     "--remove",
     "--shared",
+    "--if-board",
 ];
 
 fn parse(args: &[OsString]) -> Result<Parsed, String> {
@@ -418,11 +441,27 @@ pub fn run(mut invocation: Invocation, out: &mut dyn Write, err: &mut dyn Write)
         let _ = writeln!(output.out, "{USAGE}");
         return EXIT_OK;
     }
-    let (actor_id, human) = match parsed
-        .flag("--as")
-        .map(str::to_string)
-        .or(invocation.actor_env.clone())
-    {
+    let named = match parsed.flag("--as") {
+        Some("auto") => match invocation
+            .actor_env
+            .clone()
+            .or_else(|| invocation.plugin_host.clone())
+        {
+            Some(id) => Some(id),
+            None => {
+                return output.error(
+                    &BridgeError::new(
+                        "usage",
+                        "--as auto names the agent from DEVAGOTCHI_ACTOR or the plugin that runs this; neither is set",
+                    ),
+                    None,
+                );
+            }
+        },
+        Some(id) => Some(id.to_string()),
+        None => invocation.actor_env.clone(),
+    };
+    let (actor_id, human) = match named {
         Some(id) => (id, false),
         None => (
             invocation
@@ -482,6 +521,11 @@ pub fn run(mut invocation: Invocation, out: &mut dyn Write, err: &mut dyn Write)
         }
         None => match find_project_dir(&invocation.cwd) {
             Some(dir) => dir,
+            // A plugin's hooks run in every project; one without a board is not an error.
+            None if hook_input.is_some() && parsed.switch("--if-board") => {
+                let _ = writeln!(output.out, "{{}}");
+                return EXIT_OK;
+            }
             None => {
                 return output.error(
                     &BridgeError::new("no_board", "no .devagotchi/ here or above"),
@@ -1500,6 +1544,22 @@ pub fn codex_hooks() -> String {
             "PostToolUse": [{ "matcher": "", "hooks": [{ "type": "command", "command": hook_command("beat", "codex"), "timeout": 30 }] }],
             "Stop": [{ "hooks": [{ "type": "command", "command": hook_command("stop", "codex"), "timeout": 30 }] }],
             "SessionEnd": [{ "hooks": [{ "type": "command", "command": hook_command("session-end", "codex"), "timeout": 30 }] }]
+        }
+    }))
+    .expect("hooks json")
+}
+
+/// The hooks the `devagotchi-agenthub` plugin ships (`plugins/devagotchi-agenthub/hooks/hooks.json`,
+/// held to this by a test): the same four as [`claude_code_hooks`], for whichever client runs
+/// the plugin (`--as auto`), and silent in a project with no board (`--if-board`).
+pub fn plugin_hooks() -> String {
+    let command = |phase: &str| format!("devagotchi board hook {phase} --as auto --if-board");
+    serde_json::to_string_pretty(&serde_json::json!({
+        "hooks": {
+            "SessionStart": [{ "hooks": [{ "type": "command", "command": command("session-start"), "timeout": 30 }] }],
+            "PostToolUse": [{ "matcher": "", "hooks": [{ "type": "command", "command": command("beat"), "timeout": 30 }] }],
+            "Stop": [{ "hooks": [{ "type": "command", "command": command("stop"), "timeout": 30 }] }],
+            "SessionEnd": [{ "hooks": [{ "type": "command", "command": command("session-end"), "timeout": 30 }] }]
         }
     }))
     .expect("hooks json")

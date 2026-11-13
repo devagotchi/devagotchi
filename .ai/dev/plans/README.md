@@ -6,8 +6,8 @@ Plans are requested deliverables here, not a general permission to litter the re
 with scratch notes. Private logs/evidence stay outside Git.
 
 Start with the [roadmap](roadmap.md): AgentHub ([factory](agenthub-factory.md)), the
-[phone](mobile-experience.md), the [browser](browser-experience.md) and the
-[cloud edition](cloud-edition.md).
+[phone](mobile-experience.md), the [browser](browser-experience.md), the
+[plugins](plugins.md) and the [cloud edition](cloud-edition.md).
 
 Active: [AI development contracts and local capture](ai-development-capture.md);
 [Make alpha = pre-release obvious](alpha-stage-obvious.md).

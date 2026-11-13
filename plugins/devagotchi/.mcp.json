@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "devagotchi": {
+      "type": "http",
+      "url": "https://app.devagotchi.com/mcp"
+    }
+  }
+}

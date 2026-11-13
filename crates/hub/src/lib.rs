@@ -46,6 +46,8 @@ mod orgs;
 mod orgs_tests;
 #[cfg(test)]
 mod output_schema;
+#[cfg(test)]
+mod plugin_tests;
 mod preferences;
 #[cfg(test)]
 mod provider_tests;
@@ -837,6 +839,7 @@ pub fn board_cli(args: Vec<OsString>, account_file: Option<PathBuf>) -> ExitCode
         os_user: env::var("USER").or_else(|_| env::var("USERNAME")).ok(),
         stdout_is_terminal: std::io::stdout().is_terminal(),
         account_file,
+        plugin_host: agenthub::cli::plugin_host(|name| env::var_os(name)),
     };
     let (mut out, mut err) = (std::io::stdout(), std::io::stderr());
     ExitCode::from(agenthub::cli::run(invocation, &mut out, &mut err))

@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "SessionStart": [
+      { "hooks": [{ "type": "command", "command": "devagotchi board hook session-start --as auto --if-board", "timeout": 30 }] }
+    ],
+    "PostToolUse": [
+      { "matcher": "", "hooks": [{ "type": "command", "command": "devagotchi board hook beat --as auto --if-board", "timeout": 30 }] }
+    ],
+    "Stop": [
+      { "hooks": [{ "type": "command", "command": "devagotchi board hook stop --as auto --if-board", "timeout": 30 }] }
+    ],
+    "SessionEnd": [
+      { "hooks": [{ "type": "command", "command": "devagotchi board hook session-end --as auto --if-board", "timeout": 30 }] }
+    ]
+  }
+}

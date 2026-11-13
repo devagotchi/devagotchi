@@ -175,6 +175,15 @@ The ready line names the endpoint: a local named pipe, `\\.\pipe\devagotchi-brok
 
 Each root is created suspended, assigned to a new Job Object, and only then resumed, so neither it nor anything it starts runs outside that job. The job permits no breakaway and terminates its members when the broker's job handle closes, including when the broker exits. Cancellation and deadlines call `TerminateJobObject` and verify that no active process remains. Windows has no general graceful-stop request for arbitrary programs, so there is no grace period. Arguments are encoded with the Microsoft C runtime quoting rules most programs parse; a program with its own command-line parser may read them differently.
 
+## Claude Code, Codex and Grok plugins
+
+This repository is also a plugin marketplace. In Claude Code:
+`/plugin marketplace add devagotchi/devagotchi`, then `/plugin install devagotchi@devagotchi`
+(the connector and the AgentHub and machines skills) and, with `devagotchi` on PATH,
+`/plugin install devagotchi-agenthub@devagotchi` (board hooks). In Codex:
+`codex plugin marketplace add devagotchi/devagotchi`, `codex plugin add devagotchi@devagotchi`,
+`codex mcp login devagotchi`. Details, Grok and updates: [plugins/README.md](plugins/README.md).
+
 ## Connect a local MCP client
 
 One step, no account: `devagotchi setup` gives Claude Code, Codex and Claude Desktop (every one

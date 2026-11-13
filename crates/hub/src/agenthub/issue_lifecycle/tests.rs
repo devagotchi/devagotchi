@@ -429,6 +429,7 @@ async fn mcp_issue_tools_share_rest_authority_receipts_and_refuse_shadow_boards(
                     os_user: Some("owner".into()),
                     stdout_is_terminal: false,
                     account_file: Some(account_file.clone()),
+                    plugin_host: None,
                 },
                 &mut out,
                 &mut err,
