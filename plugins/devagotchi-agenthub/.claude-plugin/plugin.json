@@ -1,0 +1,25 @@
+{
+  "name": "devagotchi-agenthub",
+  "displayName": "Devagotchi AgentHub hooks",
+  "description": "Keeps the AgentHub tickets you hold alive while you work, gives each session the board's state when it starts, and stops a session from ending with work held. Silent in projects without a board. Needs the devagotchi command on this computer.",
+  "author": {
+    "name": "AngryVibes LLC",
+    "url": "https://devagotchi.com"
+  },
+  "homepage": "https://devagotchi.com",
+  "repository": "https://github.com/devagotchi/devagotchi",
+  "license": "BUSL-1.1",
+  "icon": "./.claude-plugin/icon.png",
+  "documentationUrl": "https://app.devagotchi.com/docs",
+  "supportUrl": "https://app.devagotchi.com/support",
+  "privacyPolicyUrl": "https://app.devagotchi.com/privacy",
+  "termsOfServiceUrl": "https://app.devagotchi.com/terms",
+  "keywords": [
+    "agenthub",
+    "board",
+    "hooks"
+  ],
+  "dependencies": [
+    "devagotchi"
+  ]
+}

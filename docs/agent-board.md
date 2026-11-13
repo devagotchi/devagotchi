@@ -200,7 +200,9 @@ for a configured hub.
   Explicit handoff/release or database-time expiry remains authoritative.
 
 Claude Code (`.claude/settings.json`) and Codex (`.codex/hooks.json`) get printed
-snippets. Keep unrelated entries when merging. Current Codex documentation requires
+snippets. The `devagotchi-agenthub` plugin (`plugins/`, [plan](../.ai/dev/plans/plugins.md))
+ships the same four hooks as `board hook PHASE --as auto --if-board`: the agent is the client
+whose plugin runs it, and a project without a board answers `{}`. Keep unrelated entries when merging. Current Codex documentation requires
 project trust and review of exact hook definitions using `/hooks`; changed definitions
 need review again. Never bypass that trust. The binary must be on the client's PATH.
 Subscription UIs without interception remain manual/workflow-enforced; MCP cannot force

@@ -1,0 +1,22 @@
+{
+  "name": "devagotchi",
+  "owner": {
+    "name": "AngryVibes LLC",
+    "url": "https://devagotchi.com"
+  },
+  "metadata": {
+    "description": "Devagotchi for AI coding clients: your machines and your AgentHub board, through one connector."
+  },
+  "plugins": [
+    {
+      "name": "devagotchi",
+      "source": "./plugins/devagotchi",
+      "description": "The Devagotchi connector and the skills that use it: run commands on your own machines, work your AgentHub board, ask for approval on your phone."
+    },
+    {
+      "name": "devagotchi-agenthub",
+      "source": "./plugins/devagotchi-agenthub",
+      "description": "Keeps the AgentHub tickets you hold alive while you work and stops a session from ending with work held. Needs the devagotchi command on this computer."
+    }
+  ]
+}

@@ -7,6 +7,14 @@ heading. Agents draft the fragments below; they never tag.
 
 ## Unreleased
 
+### Plugins for Claude Code, Codex and Grok (increment 136)
+- This repository is a plugin marketplace. `devagotchi` gives a client the connector (your hub,
+  signed in with OAuth) and two skills, AgentHub and machines; Claude Code can point it at your
+  own hub. `devagotchi-agenthub` adds the board hooks to Claude Code.
+- `devagotchi board hook --as auto` names the agent after the client whose plugin runs it
+  (`DEVAGOTCHI_ACTOR` still wins), and `--if-board` answers `{}` in a project with no board, so
+  the hooks can be installed once for every project.
+
 ### Sign in with Shippin, and any OpenID Connect provider, from Hub settings (increment 134)
 - `/admin` has a Shippin (Nomen) card with its issuer filled in, a card for each provider added
   by name, and a form to add another OpenID Connect provider (issuer, button label, client ID,

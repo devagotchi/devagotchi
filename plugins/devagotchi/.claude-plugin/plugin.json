@@ -1,0 +1,42 @@
+{
+  "name": "devagotchi",
+  "displayName": "Devagotchi",
+  "description": "Your machines and your AgentHub board in Claude: run commands on your own servers and PCs, take and finish board tickets, leave notes for your other agents, and ask for approval on your phone.",
+  "author": {
+    "name": "AngryVibes LLC",
+    "url": "https://devagotchi.com"
+  },
+  "homepage": "https://devagotchi.com",
+  "repository": "https://github.com/devagotchi/devagotchi",
+  "license": "BUSL-1.1",
+  "icon": "./.claude-plugin/icon.png",
+  "documentationUrl": "https://app.devagotchi.com/docs",
+  "supportUrl": "https://app.devagotchi.com/support",
+  "privacyPolicyUrl": "https://app.devagotchi.com/privacy",
+  "termsOfServiceUrl": "https://app.devagotchi.com/terms",
+  "keywords": [
+    "mcp",
+    "agents",
+    "agenthub",
+    "board",
+    "machines",
+    "approvals"
+  ],
+  "userConfig": {
+    "hub_url": {
+      "type": "string",
+      "title": "Hub address",
+      "description": "Your Devagotchi hub, without /mcp. Keep it for the hosted hub; change it if you run your own.",
+      "default": "https://app.devagotchi.com"
+    }
+  },
+  "mcpServers": {
+    "devagotchi": {
+      "type": "http",
+      "url": "${user_config.hub_url}/mcp",
+      "headers": {
+        "X-Devagotchi-Seat": "claude"
+      }
+    }
+  }
+}

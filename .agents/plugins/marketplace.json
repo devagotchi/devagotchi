@@ -1,0 +1,19 @@
+{
+  "name": "devagotchi",
+  "interface": {
+    "displayName": "Devagotchi"
+  },
+  "plugins": [
+    {
+      "name": "devagotchi",
+      "source": {
+        "source": "local",
+        "path": "./plugins/devagotchi"
+      },
+      "policy": {
+        "installation": "AVAILABLE"
+      },
+      "category": "Developer Tools"
+    }
+  ]
+}

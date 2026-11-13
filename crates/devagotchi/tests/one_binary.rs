@@ -130,6 +130,142 @@ fn native_board_hooks_run_without_a_shell_with_spaces_and_never_complete_on_stop
     assert!(bad.stdout.is_empty());
 }
 
+/// What the `devagotchi-agenthub` plugin runs: silent where there is no board, and the
+/// agent is whichever client's plugin started the hook.
+#[test]
+fn plugin_hooks_are_silent_without_a_board_and_name_the_client_that_runs_them() {
+    use serde_json::{Value, json};
+    use std::{io::Write, process::Stdio};
+    const HOSTS: [&str; 4] = [
+        "CLAUDE_PLUGIN_ROOT",
+        "PLUGIN_ROOT",
+        "GROK_PLUGIN_ROOT",
+        "DEVAGOTCHI_ACTOR",
+    ];
+    let hook = |dir: &std::path::Path, args: &[&str], env: &[(&str, &str)], body: Value| {
+        let mut command = devagotchi();
+        command
+            .args(["board", "hook"])
+            .args(args)
+            .current_dir(dir)
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped());
+        for name in HOSTS {
+            command.env_remove(name);
+        }
+        for (name, value) in env {
+            command.env(name, value);
+        }
+        let mut child = command.spawn().unwrap();
+        child
+            .stdin
+            .take()
+            .unwrap()
+            .write_all(&serde_json::to_vec(&body).unwrap())
+            .unwrap();
+        child.wait_with_output().unwrap()
+    };
+    let stop = json!({"hook_event_name":"Stop","stop_hook_active":false});
+
+    // No board here or above: the plugin's hooks answer {} and let the client go on.
+    let bare = tempfile::tempdir().unwrap();
+    let quiet = hook(
+        bare.path(),
+        &["stop", "--as", "auto", "--if-board"],
+        &[("CLAUDE_PLUGIN_ROOT", "/plugins/devagotchi-agenthub")],
+        stop.clone(),
+    );
+    assert!(
+        quiet.status.success(),
+        "{}",
+        String::from_utf8_lossy(&quiet.stderr)
+    );
+    assert_eq!(String::from_utf8_lossy(&quiet.stdout).trim(), "{}");
+    let start = hook(
+        bare.path(),
+        &["session-start", "--as", "auto", "--if-board"],
+        &[("CLAUDE_PLUGIN_ROOT", "/plugins/devagotchi-agenthub")],
+        json!({"hook_event_name":"SessionStart","session_id":"plugin-1","cwd":bare.path()}),
+    );
+    assert!(start.status.success());
+    assert_eq!(String::from_utf8_lossy(&start.stdout).trim(), "{}");
+    // Without --if-board, no board is still an error, as before.
+    let loud = hook(bare.path(), &["stop", "--as", "claude"], &[], stop.clone());
+    assert!(!loud.status.success());
+    assert!(String::from_utf8_lossy(&loud.stderr).contains("no_board"));
+    // --as auto with no plugin host and no DEVAGOTCHI_ACTOR says so instead of guessing.
+    let nobody = hook(
+        bare.path(),
+        &["stop", "--as", "auto", "--if-board"],
+        &[],
+        stop.clone(),
+    );
+    assert_eq!(nobody.status.code(), Some(64));
+    assert!(String::from_utf8_lossy(&nobody.stderr).contains("--as auto"));
+
+    // A board where Grok holds a ticket: Grok's Stop is held, Claude's is not.
+    let dir = tempfile::tempdir().unwrap();
+    let board = |args: &[&str]| {
+        let out = devagotchi()
+            .arg("board")
+            .args(args)
+            .current_dir(dir.path())
+            .output()
+            .unwrap();
+        assert!(
+            out.status.success(),
+            "{}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+        out
+    };
+    board(&["init", "--project", "plugin"]);
+    board(&["new", "Held by Grok", "--as", "grok"]);
+    let listed: Value = serde_json::from_slice(&board(&["ls", "--json"]).stdout).unwrap();
+    let id = listed
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|t| t["title"] == "Held by Grok")
+        .unwrap()["id"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    board(&["claim", &id, "--as", "grok"]);
+    let auto = ["stop", "--as", "auto", "--if-board"];
+    let grok = hook(
+        dir.path(),
+        &auto,
+        &[("GROK_PLUGIN_ROOT", "/plugins/devagotchi-agenthub")],
+        stop.clone(),
+    );
+    assert_eq!(grok.status.code(), Some(2));
+    assert!(String::from_utf8_lossy(&grok.stderr).contains(&id));
+    let claude = hook(
+        dir.path(),
+        &auto,
+        &[("CLAUDE_PLUGIN_ROOT", "/plugins/devagotchi-agenthub")],
+        stop.clone(),
+    );
+    assert!(
+        claude.status.success(),
+        "{}",
+        String::from_utf8_lossy(&claude.stderr)
+    );
+    // DEVAGOTCHI_ACTOR still wins over the plugin's client.
+    let named = hook(
+        dir.path(),
+        &auto,
+        &[
+            ("CLAUDE_PLUGIN_ROOT", "/plugins/devagotchi-agenthub"),
+            ("DEVAGOTCHI_ACTOR", "grok"),
+        ],
+        stop,
+    );
+    assert_eq!(named.status.code(), Some(2));
+}
+
 #[test]
 fn hub_serve_refuses_default_or_explicit_sqlite_without_creating_state() {
     let dir = tempfile::tempdir().unwrap();
