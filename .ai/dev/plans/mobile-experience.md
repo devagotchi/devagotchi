@@ -33,6 +33,7 @@
 | P2d | Search in the Go to sheet: boards, machines, tickets by title or id | N1 | app tests | not started |
 | P2e | Offline: decisions and notes made offline are queued and sent on reconnect (ADR 0002) | P2a | service worker test | not started |
 | P2f | Budgets in CI: page weight, script size (app.js under 20 KB), an accessibility scan (axe) on every app page | N1 | CI job | not started |
+| AI | Sessions on each machine, opened and resumed from the phone, with push and email: [ai-sessions.md](ai-sessions.md) | consent S1 | that plan | not started |
 | P2g | Real devices: iPhone Safari installed to the home screen and Android Chrome, by the operator, recorded in the PR | P2a | operator receipt | not started |
 
 ## Risks and approved decisions

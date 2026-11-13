@@ -16,6 +16,7 @@
 |---|---|---|---|
 | AgentHub, the software factory | [agenthub-factory.md](agenthub-factory.md) | Board, leases, handoffs, dependencies, ready queue, notes that reach agents, approvals and standing approvals, GitHub issues, 17 connectors, API keys; engine in `crates/hub/src/agenthub/`. F1 and F2 partly built; F3 to F8 not started | F1 finished, then F4: completion gated on checks |
 | Phone | [mobile-experience.md](mobile-experience.md) | P1a to P1d done; tabs Overview, AgentHub, Approvals, Machines, You; swipe between tabs; Go to sheet | P2a review queue, P2b live ticket activity |
+| AI sessions on your machines | [ai-sessions.md](ai-sessions.md) | Not started; machines, operations, push and email exist to build on | S0 name the clients, S1 consent, S2 list sessions |
 | Full browser | [browser-experience.md](browser-experience.md) | The desktop shows the phone's single column with the tab bar at the bottom | B1 wide layout with a side rail, B2 board as columns |
 | Cloud edition | [cloud-edition.md](cloud-edition.md) | Boundary written ([editions](../../docs/editions.md)); license BSL 1.1; public image; no tag, no extension points, no private repo | C1 first pre-release tag, C2 extension points in core, C3 private repo with core as a submodule |
 
