@@ -1,8 +1,8 @@
 use super::*;
-use crate::agenthub::approval::{ApprovalStatus, KIND, Verdict, landing, text};
+use crate::approval::{ApprovalStatus, KIND, Verdict, landing, text};
 
 impl HostedBoard {
-    pub(crate) async fn request_approval(
+    pub async fn request_approval(
         &self,
         actor: &Actor<'_>,
         title: &str,
@@ -87,12 +87,12 @@ impl HostedBoard {
             decided_by,
             decided_at,
             note,
-            kind: crate::agenthub::approval::label_value(&ticket.labels, "kind:"),
-            target: crate::agenthub::approval::label_value(&ticket.labels, "target:"),
+            kind: crate::approval::label_value(&ticket.labels, "kind:"),
+            target: crate::approval::label_value(&ticket.labels, "target:"),
         })
     }
 
-    pub(crate) async fn edit_settings<F>(
+    pub async fn edit_settings<F>(
         &self,
         actor: &Actor<'_>,
         action: &str,
@@ -113,7 +113,7 @@ impl HostedBoard {
         })
     }
 
-    pub(crate) async fn approval_status(&self, id: &str) -> BridgeResult<ApprovalStatus> {
+    pub async fn approval_status(&self, id: &str) -> BridgeResult<ApprovalStatus> {
         transaction!(&self.store, |connection| {
             let now = self.scope(connection).await?;
             let workflow = self.configuration(connection, "workflow").await?;
@@ -121,7 +121,7 @@ impl HostedBoard {
         })
     }
 
-    pub(crate) async fn pending_approvals(&self) -> BridgeResult<Vec<ApprovalStatus>> {
+    pub async fn pending_approvals(&self) -> BridgeResult<Vec<ApprovalStatus>> {
         transaction!(&self.store, |connection| {
             let now = self.scope(connection).await?;
             let workflow: Workflow = self.configuration(connection, "workflow").await?;
@@ -138,7 +138,7 @@ impl HostedBoard {
         })
     }
 
-    pub(crate) async fn decide_approval(
+    pub async fn decide_approval(
         &self,
         actor: &Actor<'_>,
         id: &str,

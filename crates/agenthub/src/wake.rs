@@ -23,7 +23,7 @@ use sha2::Sha256;
 use super::{Actor, Board, inbox::InboxNote, invalid, store_error};
 
 pub const SCHEMA: &str = "devagotchi.notes/v1";
-pub(super) const KEY: &str = "wakes";
+pub const KEY: &str = "wakes";
 /// A recipient is called at most once in this long.
 pub const WINDOW: Duration = Duration::from_secs(60);
 const MAX_WAKES: usize = 20;
@@ -80,7 +80,7 @@ impl Limiter {
 }
 
 /// Whether an address is one a tenant's webhook may reach.
-pub(crate) fn is_public(address: IpAddr) -> bool {
+pub fn is_public(address: IpAddr) -> bool {
     match address {
         IpAddr::V4(v4) => {
             let [a, b, ..] = v4.octets();
@@ -111,7 +111,7 @@ pub(crate) fn is_public(address: IpAddr) -> bool {
 }
 
 /// The address to call for `url`, or why not.
-pub(crate) async fn target(
+pub async fn target(
     url: &str,
     allow_private: bool,
 ) -> BridgeResult<(reqwest::Url, String, SocketAddr)> {
@@ -147,7 +147,7 @@ pub(crate) async fn target(
 }
 
 /// POST `notes` to `wake`, signed, pinned to the address that was checked.
-pub(crate) async fn send(
+pub async fn send(
     wake: &Wake,
     project: &str,
     recipient: &str,
@@ -189,7 +189,7 @@ pub(crate) async fn send(
 
 /// Everything waiting for `recipient` goes to its webhook. What is taken is never sent again;
 /// what is refused stays, for the next note or the recipient's next tool call.
-pub(crate) async fn flush(
+pub async fn flush(
     board: std::sync::Arc<Board>,
     project: String,
     recipient: String,
@@ -276,7 +276,7 @@ impl Board {
         url: Option<&str>,
     ) -> BridgeResult<Option<String>> {
         let mut wakes = self.wakes()?;
-        let secret = url.map(|_| hex::encode(crate::link::random::<32>()));
+        let secret = url.map(|_| hex::encode(devagotchi_store::random::<32>()));
         match (url, &secret) {
             (Some(url), Some(secret)) => {
                 if !wakes.contains_key(recipient) && wakes.len() >= MAX_WAKES {

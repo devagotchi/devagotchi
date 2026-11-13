@@ -1565,8 +1565,7 @@ pub fn plugin_hooks() -> String {
     .expect("hooks json")
 }
 
-pub const PROTOCOL_LINE: &str =
-    "claim → beat → note → done (or handoff with a note). Never stop holding a ticket.";
+pub use devagotchi_agenthub::PROTOCOL_LINE;
 
 pub const AGENTS_MD_START: &str = "<!-- devagotchi-board:start -->";
 pub const AGENTS_MD_END: &str = "<!-- devagotchi-board:end -->";

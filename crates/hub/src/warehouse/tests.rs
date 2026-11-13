@@ -19,7 +19,7 @@ use super::*;
 use crate::{
     agenthub::{Actor, NewTicket, hosted::HostedBoard},
     orgs::Orgs,
-    store::testing,
+    store::{Store, testing, transaction},
 };
 
 #[derive(Clone, Copy, PartialEq, Eq)]

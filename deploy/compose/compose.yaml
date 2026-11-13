@@ -53,7 +53,7 @@ services:
   clickhouse:
     container_name: ${COMPOSE_PROJECT_NAME}-clickhouse
     image: ${DEVAGOTCHI_CLICKHOUSE_IMAGE:-clickhouse/clickhouse-server:25.8@sha256:0152dd511befe6a2c2ef53e930726179669b08116da78500b37c51c96ff5ee77}
-    # The hub's board events, for statistics (ADR 0001, crates/hub/src/warehouse.rs). On
+    # The hub's board events, for statistics (ADR 0001, crates/agenthub/src/clickhouse.rs). On
     # the compose network only, no published port: the hub alone talks to it, as the
     # devagotchi user with the password install.sh keeps in .env (0600). The boards never
     # need it; while it is down the events wait in Postgres and /healthz says so.

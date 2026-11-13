@@ -1,0 +1,42 @@
+[package]
+name = "devagotchi-agenthub"
+description = "AgentHub: the agents' board - tickets claimed under a lease, worked, annotated and handed off - on a local SQLite file or a Postgres of record, with its events exported to ClickHouse when there is one"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[lib]
+name = "devagotchi_agenthub"
+path = "src/lib.rs"
+
+[dependencies]
+devagotchi-contracts = { workspace = true }
+# A note for "codex" also reaches the names a client is known by (`inbox.rs`).
+devagotchi-connectors = { workspace = true }
+# The database it shares with the hub: Postgres (its own schema, tenant RLS) or SQLite.
+devagotchi-store = { workspace = true }
+# A local board is a SQLite file in the project (`.devagotchi/board.sqlite3`).
+rusqlite = { workspace = true }
+sqlx = { workspace = true }
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+schemars = { workspace = true }
+sha2 = { workspace = true }
+hex = { workspace = true }
+getrandom = "0.4"
+# Wake: notes POSTed to an agent's webhook, signed (`wake.rs`); the ClickHouse export.
+hmac = "0.13"
+reqwest = { version = "0.13", default-features = false, features = ["rustls", "json", "form"] }
+# ClickHouse export: queries go over its HTTP interface (`clickhouse.rs`).
+percent-encoding = "2"
+
+[dev-dependencies]
+devagotchi-store = { workspace = true, features = ["testing"] }
+tempfile = { workspace = true }

@@ -56,7 +56,7 @@ pub(crate) const SHARED_OWNER: &str = "@shared";
 /// The boards a hub serves, opened on first use and kept open; plus the last fence
 /// handed to each subject per ticket, so a caller may omit it.
 pub struct Boards {
-    hosted: Option<super::hosted::registry::Registry>,
+    hosted: Option<super::registry::Registry>,
     /// Organisations, their members and who works which project (`crate::orgs`): in the
     /// hub's store, beside the hosted boards.
     orgs: Option<crate::orgs::Orgs>,
@@ -183,7 +183,7 @@ impl Boards {
     pub(crate) fn using_postgres(mut self, store: crate::store::Store) -> BridgeResult<Self> {
         self.orgs = Some(crate::orgs::Orgs::new(store.clone()));
         self.preferences = Some(crate::preferences::PreferenceStore::new(store.clone()));
-        self.hosted = Some(super::hosted::registry::Registry::new(store)?);
+        self.hosted = Some(super::registry::Registry::new(store)?);
         Ok(self)
     }
 
@@ -238,7 +238,7 @@ impl Boards {
     ) -> BridgeResult<T> {
         let handle = tokio::runtime::Handle::try_current()
             .map_err(|error| BridgeError::new("board_runtime", error.to_string()))?;
-        super::hosted::registry::blocking(&handle, future)
+        super::hosted::blocking(&handle, future)
     }
 
     pub(crate) async fn postgres_listener(url: &str) -> BridgeResult<sqlx::postgres::PgListener> {
@@ -284,12 +284,10 @@ impl Boards {
     fn wake_hosted(&self, notification: Option<&(String, String)>) {
         let open = self.open.lock().expect("boards lock");
         for board in open.values() {
-            if let Some(hosted) = &board.hosted
+            if let Some(hosted) = board.hosted()
                 && notification.is_none_or(|(tenant, id)| hosted.matches_notification(tenant, id))
             {
-                board
-                    .changes
-                    .send_modify(|revision| *revision = revision.wrapping_add(1));
+                board.mark_changed();
             }
         }
         self.activity.notify_one();

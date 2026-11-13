@@ -57,6 +57,8 @@ mod sealed;
 mod signals;
 mod site;
 mod store;
+#[cfg(test)]
+mod store_tests;
 mod tenant_access;
 mod tenant_machines;
 #[cfg(test)]

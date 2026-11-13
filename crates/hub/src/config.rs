@@ -180,23 +180,7 @@ pub struct AccountBoardsConfig {
     pub unlimited: Vec<String>,
 }
 
-/// Where the hub exports its board events for statistics (`warehouse.rs`).
-#[derive(Debug, Clone, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct ClickHouseConfig {
-    /// The HTTP interface, `http://host:8123` (https for a server elsewhere).
-    pub url: String,
-    /// The database the hub makes and keeps its tables in.
-    #[serde(default = "default_clickhouse_database")]
-    pub database: String,
-    /// The user it signs in as; the password comes from `DEVAGOTCHI_CLICKHOUSE_PASSWORD`.
-    #[serde(default)]
-    pub user: Option<String>,
-}
-
-fn default_clickhouse_database() -> String {
-    "devagotchi".into()
-}
+pub use devagotchi_agenthub::clickhouse::ClickHouseConfig;
 
 /// The hub's signal sinks (`signals.rs`).
 #[derive(Debug, Clone, Default, Deserialize)]
@@ -707,7 +691,7 @@ impl HubConfig {
                 None => {
                     config.clickhouse = Some(ClickHouseConfig {
                         url,
-                        database: default_clickhouse_database(),
+                        database: devagotchi_agenthub::clickhouse::default_database(),
                         user: None,
                     })
                 }
@@ -1450,15 +1434,7 @@ fn loopback_http(url: &str) -> bool {
         )
 }
 
-pub(crate) fn valid_name(name: &str) -> bool {
-    let bytes = name.as_bytes();
-    !bytes.is_empty()
-        && bytes.len() <= 63
-        && bytes[0].is_ascii_lowercase() | bytes[0].is_ascii_digit()
-        && bytes
-            .iter()
-            .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || *b == b'-')
-}
+pub(crate) use devagotchi_agenthub::valid_name;
 
 #[cfg(test)]
 mod hub_tests;

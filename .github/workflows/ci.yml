@@ -63,7 +63,7 @@ jobs:
       - run: cargo nextest run --locked --profile ci
 
   hub-postgres:
-    # The hub's store has two backends (crates/hub/src/store.rs): every hub test that takes
+    # The hub's store has two backends (crates/store/src/lib.rs): every hub test that takes
     # a store runs on SQLite in `core` and here on Postgres as well, against a throwaway
     # cluster of the runner image's PostgreSQL. A test that cannot reach it fails; none
     # skips Postgres silently while DEVAGOTCHI_TEST_POSTGRES_URL is set.
@@ -83,7 +83,7 @@ jobs:
       # The export's real-ClickHouse test (warehouse/tests.rs) runs against it.
       - name: Start a throwaway ClickHouse
         run: tests/throwaway_clickhouse.sh
-      - run: cargo nextest run --locked --profile ci -p devagotchi-hub
+      - run: cargo nextest run --locked --profile ci -p devagotchi-hub -p devagotchi-agenthub -p devagotchi-store
         env:
           DEVAGOTCHI_TEST_POSTGRES_URL: postgres://postgres@127.0.0.1:55432/postgres
           DEVAGOTCHI_TEST_CLICKHOUSE_URL: http://127.0.0.1:18123

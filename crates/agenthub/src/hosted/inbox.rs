@@ -5,11 +5,11 @@ use devagotchi_contracts::BridgeResult;
 use sqlx::AnyConnection;
 
 use super::{DbResult, HostedBoard, decode};
-use crate::agenthub::{
+use crate::{
     Note,
     inbox::{self, Cursors, Delivery, InboxNote, KEY, SCAN},
 };
-use crate::store::transaction;
+use devagotchi_store::transaction;
 
 impl HostedBoard {
     async fn cursors(&self, connection: &mut AnyConnection) -> DbResult<Cursors> {
@@ -62,7 +62,7 @@ impl HostedBoard {
             .collect::<BridgeResult<Vec<Note>>>()?)
     }
 
-    pub(crate) async fn inbox_deliver(
+    pub async fn inbox_deliver(
         &self,
         who: &[String],
         me: &str,
@@ -83,7 +83,7 @@ impl HostedBoard {
         })
     }
 
-    pub(crate) async fn inbox_mark_delivered(&self, notes: &[InboxNote]) -> BridgeResult<()> {
+    pub async fn inbox_mark_delivered(&self, notes: &[InboxNote]) -> BridgeResult<()> {
         transaction!(&self.store, |connection| {
             let now = self.scope(connection).await?;
             let mut cursors = self.cursors(connection).await?;
@@ -93,7 +93,7 @@ impl HostedBoard {
         })
     }
 
-    pub(crate) async fn inbox(
+    pub async fn inbox(
         &self,
         who: &[String],
         me: &str,
@@ -113,7 +113,7 @@ impl HostedBoard {
         })
     }
 
-    pub(crate) async fn wakes(&self) -> BridgeResult<crate::agenthub::wake::Wakes> {
+    pub async fn wakes(&self) -> BridgeResult<crate::wake::Wakes> {
         transaction!(&self.store, |connection| {
             self.scope(connection).await?;
             let raw: Option<String> = sqlx::query_scalar(
@@ -121,7 +121,7 @@ impl HostedBoard {
             )
             .bind(&self.tenant)
             .bind(&self.project)
-            .bind(crate::agenthub::wake::KEY)
+            .bind(crate::wake::KEY)
             .fetch_optional(&mut *connection)
             .await?;
             Ok(raw
@@ -130,10 +130,10 @@ impl HostedBoard {
         })
     }
 
-    pub(crate) async fn save_wakes(
+    pub async fn save_wakes(
         &self,
-        actor: &crate::agenthub::Actor<'_>,
-        wakes: &crate::agenthub::wake::Wakes,
+        actor: &crate::Actor<'_>,
+        wakes: &crate::wake::Wakes,
         detail: serde_json::Value,
     ) -> BridgeResult<()> {
         transaction!(&self.store, |connection| {
@@ -144,7 +144,7 @@ impl HostedBoard {
             )
             .bind(&self.tenant)
             .bind(&self.project)
-            .bind(crate::agenthub::wake::KEY)
+            .bind(crate::wake::KEY)
             .bind(serde_json::to_string(wakes).expect("wakes json"))
             .execute(&mut *connection)
             .await?;
