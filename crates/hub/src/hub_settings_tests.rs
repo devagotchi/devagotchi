@@ -142,6 +142,106 @@ async fn run(store: Option<&str>) {
     assert!(!after[0].enabled);
     let (status, _) = Hosted::text(hub.get("/auth/provider/github", None).await).await;
     assert_eq!(status, 404, "turned off applies at once");
+
+    // Sign in with Shippin: its card has Nomen's issuer filled in, and saving it offers it at once.
+    let (_, page) = Hosted::text(hub.get("/admin", Some(&owner)).await).await;
+    assert!(page.contains("Shippin (Nomen)"), "{page}");
+    assert!(
+        page.contains("value=\"https://id.shippin.cloud\""),
+        "{page}"
+    );
+    assert!(
+        page.contains("Add another OpenID Connect provider"),
+        "{page}"
+    );
+    let nomen = save(
+        &hub,
+        &owner,
+        "nomen",
+        &[
+            ("issuer", "https://id.shippin.cloud"),
+            ("label", "Shippin"),
+            ("client_id", "devagotchi-hub"),
+            ("client_secret", "nomen-secret-value"),
+            ("enabled", "on"),
+        ],
+    )
+    .send()
+    .await
+    .unwrap();
+    assert_eq!(nomen.status(), 303);
+    let (_, login) = Hosted::text(hub.get("/auth/login", None).await).await;
+    assert!(
+        login.contains("/auth/provider/nomen") && login.contains("Shippin"),
+        "{login}"
+    );
+    let stored = hub.accounts.sign_in_settings().await.unwrap();
+    let shippin = stored.iter().find(|s| s.name == "nomen").unwrap();
+    assert_eq!(
+        (shippin.kind.as_str(), shippin.issuer.as_str()),
+        ("oidc", "https://id.shippin.cloud")
+    );
+    assert!(!shippin.sealed_secret.contains("nomen-secret-value"));
+
+    // Another provider by name, with a public client; an issuer that is not https is refused,
+    // and so is a name already taken.
+    let plain = save(
+        &hub,
+        &owner,
+        "new",
+        &[
+            ("name", "okta"),
+            ("label", "Okta"),
+            ("issuer", "http://idp.example.com"),
+            ("client_id", "x"),
+            ("enabled", "on"),
+        ],
+    )
+    .send()
+    .await
+    .unwrap();
+    assert_eq!(plain.status(), 400);
+    let taken = save(
+        &hub,
+        &owner,
+        "new",
+        &[
+            ("name", "nomen"),
+            ("issuer", "https://idp.example.com"),
+            ("client_id", "x"),
+        ],
+    )
+    .send()
+    .await
+    .unwrap();
+    assert_eq!(taken.status(), 409);
+    let okta = save(
+        &hub,
+        &owner,
+        "new",
+        &[
+            ("name", "okta"),
+            ("label", "Okta"),
+            ("issuer", "https://example.okta.com"),
+            ("client_id", "public-client"),
+            ("enabled", "on"),
+        ],
+    )
+    .send()
+    .await
+    .unwrap();
+    assert_eq!(okta.status(), 303);
+    let (_, login) = Hosted::text(hub.get("/auth/login", None).await).await;
+    assert!(
+        login.contains("/auth/provider/okta") && login.contains("Okta"),
+        "a public client is offered too: {login}"
+    );
+    let (_, page) = Hosted::text(hub.get("/admin", Some(&owner)).await).await;
+    assert!(page.contains("id=\"sign-in-okta\""), "its own card: {page}");
+    assert!(
+        page.contains(&format!("{}/auth/provider/okta/callback", hub.url)),
+        "{page}"
+    );
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
