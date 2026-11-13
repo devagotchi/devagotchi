@@ -17,4 +17,24 @@ path = "src/lib.rs"
 
 [dependencies]
 devagotchi-contracts = { workspace = true }
+# A note for "codex" also reaches the names a client is known by (`inbox.rs`).
+devagotchi-connectors = { workspace = true }
+# The database it shares with the hub: Postgres (its own schema, tenant RLS) or SQLite.
 devagotchi-store = { workspace = true }
+# A local board is a SQLite file in the project (`.devagotchi/board.sqlite3`).
+rusqlite = { workspace = true }
+sqlx = { workspace = true }
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+schemars = { workspace = true }
+sha2 = { workspace = true }
+hex = { workspace = true }
+getrandom = "0.4"
+# Wake: notes POSTed to an agent's webhook, signed (`wake.rs`).
+hmac = "0.13"
+reqwest = { version = "0.13", default-features = false, features = ["rustls", "json", "form"] }
+
+[dev-dependencies]
+devagotchi-store = { workspace = true, features = ["testing"] }
+tempfile = { workspace = true }

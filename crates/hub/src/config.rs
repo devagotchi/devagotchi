@@ -1450,15 +1450,7 @@ fn loopback_http(url: &str) -> bool {
         )
 }
 
-pub(crate) fn valid_name(name: &str) -> bool {
-    let bytes = name.as_bytes();
-    !bytes.is_empty()
-        && bytes.len() <= 63
-        && bytes[0].is_ascii_lowercase() | bytes[0].is_ascii_digit()
-        && bytes
-            .iter()
-            .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || *b == b'-')
-}
+pub(crate) use devagotchi_agenthub::valid_name;
 
 #[cfg(test)]
 mod hub_tests;

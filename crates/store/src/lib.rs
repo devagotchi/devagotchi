@@ -820,3 +820,15 @@ pub fn random<const N: usize>() -> [u8; N] {
     getrandom::fill(&mut bytes).expect("operating system random source");
     bytes
 }
+
+/// A tenant id the hub made: `t-` and a lowercase UUID.
+pub fn valid_tenant_id(id: &str) -> bool {
+    let Some(uuid) = id.strip_prefix("t-") else {
+        return false;
+    };
+    uuid.len() == 36
+        && uuid.bytes().enumerate().all(|(i, b)| match i {
+            8 | 13 | 18 | 23 => b == b'-',
+            _ => b.is_ascii_digit() || (b'a'..=b'f').contains(&b),
+        })
+}

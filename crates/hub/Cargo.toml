@@ -19,8 +19,9 @@ path = "src/lib.rs"
 devagotchi-contracts = { workspace = true }
 devagotchi-connectors = { workspace = true }
 devagotchi-ipc = { workspace = true }
-# The shared database (`crates/store`).
+# The shared database (`crates/store`) and AgentHub, the board (`crates/agenthub`).
 devagotchi-store = { workspace = true }
+devagotchi-agenthub = { workspace = true }
 # The tool surface shared with the local adapter (`run`'s composition); no network in it.
 devagotchi-mcp = { path = "../mcp" }
 rmcp = { workspace = true, features = ["transport-streamable-http-server"] }

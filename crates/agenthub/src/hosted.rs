@@ -9,20 +9,19 @@ use super::{
     Actor, Event, GENESIS, NewTicket, Note, Settings, Ticket, Workflow, check_environment,
     clean_anchor, clean_labels, default_prefix, event_hash, fail, invalid, lease::Lease,
 };
-use crate::store::{Backend, Failed, Store, transaction};
+use devagotchi_store::{Backend, Failed, Store, transaction};
 
 mod approvals;
 mod inbox;
 mod issues;
 mod operations;
-pub(crate) mod registry;
 
 #[derive(Clone)]
-pub(crate) struct HostedBoard {
+pub struct HostedBoard {
     store: Store,
     tenant: String,
     project: String,
-    pub(super) name: String,
+    pub name: String,
     owner: Option<String>,
     runtime: tokio::runtime::Handle,
 }
@@ -31,12 +30,12 @@ type DbResult<T> = std::result::Result<T, Failed>;
 
 impl HostedBoard {
     /// The tenant whose rows this board's are.
-    pub(crate) fn tenant(&self) -> &str {
+    pub fn tenant(&self) -> &str {
         &self.tenant
     }
 
     /// The board's id in its tenant: what its events carry (`board_id`).
-    pub(crate) fn board_id(&self) -> &str {
+    pub fn board_id(&self) -> &str {
         &self.project
     }
 }
@@ -52,7 +51,7 @@ fn decode<T: DeserializeOwned>(text: &str) -> BridgeResult<T> {
 
 impl HostedBoard {
     /// Tenant/project must come from the authenticated resolver, never a tool payload.
-    pub(crate) fn new(store: Store, tenant: &str, project: &str) -> BridgeResult<Self> {
+    pub fn new(store: Store, tenant: &str, project: &str) -> BridgeResult<Self> {
         if store.backend() != Backend::Postgres {
             return Err(fail("invalid_config", "hosted boards require Postgres"));
         }
@@ -62,8 +61,8 @@ impl HostedBoard {
                     .bytes()
                     .all(|c| c.is_ascii_digit() || (b'a'..=b'f').contains(&c))
         });
-        if !crate::accounts::tenants::valid_tenant_id(tenant)
-            || (!internal && !crate::config::valid_name(project))
+        if !devagotchi_store::valid_tenant_id(tenant)
+            || (!internal && !crate::valid_name(project))
         {
             return Err(invalid("hosted board requires a valid tenant and project"));
         }
@@ -78,7 +77,7 @@ impl HostedBoard {
         })
     }
 
-    pub(crate) fn for_owner(
+    pub fn for_owner(
         store: Store,
         tenant: &str,
         owner: &str,
@@ -97,14 +96,14 @@ impl HostedBoard {
     }
 
     // MCP/reaper use blocking workers; Tokio compensates for synchronous web callers.
-    pub(crate) fn blocking<T>(
+    pub fn blocking<T>(
         &self,
         future: impl std::future::Future<Output = BridgeResult<T>>,
     ) -> BridgeResult<T> {
-        registry::blocking(&self.runtime, future)
+        blocking(&self.runtime, future)
     }
 
-    pub(crate) async fn prefix(&self) -> BridgeResult<String> {
+    pub async fn prefix(&self) -> BridgeResult<String> {
         transaction!(&self.store, |connection| {
             self.scope(connection).await?;
             Ok(sqlx::query_scalar(
@@ -113,19 +112,19 @@ impl HostedBoard {
         })
     }
 
-    pub(crate) async fn database_now(&self) -> BridgeResult<i64> {
+    pub async fn database_now(&self) -> BridgeResult<i64> {
         transaction!(&self.store, |connection| { self.scope(connection).await })
     }
 
-    pub(crate) fn matches_notification(&self, tenant: &str, board: &str) -> bool {
+    pub fn matches_notification(&self, tenant: &str, board: &str) -> bool {
         self.tenant == tenant && self.project == board
     }
 
-    pub(crate) async fn initialize(&self) -> BridgeResult<bool> {
+    pub async fn initialize(&self) -> BridgeResult<bool> {
         self.initialize_limited(None).await
     }
 
-    pub(crate) async fn initialize_limited(&self, limit: Option<usize>) -> BridgeResult<bool> {
+    pub async fn initialize_limited(&self, limit: Option<usize>) -> BridgeResult<bool> {
         transaction!(&self.store, |connection| {
             self.store.scope(connection, &self.tenant).await?;
             sqlx::query("SELECT id FROM tenancy_tenants WHERE id=$1 FOR UPDATE")
@@ -327,7 +326,7 @@ impl HostedBoard {
         Ok(ticket)
     }
 
-    pub(crate) async fn get(&self, id: &str) -> BridgeResult<Ticket> {
+    pub async fn get(&self, id: &str) -> BridgeResult<Ticket> {
         transaction!(&self.store, |connection| {
             let now = self.scope(connection).await?;
             let workflow = self.configuration(connection, "workflow").await?;
@@ -392,11 +391,11 @@ impl HostedBoard {
         Ok(())
     }
 
-    pub(crate) async fn events(&self) -> BridgeResult<Vec<Event>> {
+    pub async fn events(&self) -> BridgeResult<Vec<Event>> {
         self.events_page(0, usize::MAX).await
     }
 
-    pub(crate) async fn events_page(&self, after: i64, limit: usize) -> BridgeResult<Vec<Event>> {
+    pub async fn events_page(&self, after: i64, limit: usize) -> BridgeResult<Vec<Event>> {
         transaction!(&self.store, |connection| {
             self.scope(connection).await?;
             let rows: Vec<String> = sqlx::query_scalar(
@@ -425,7 +424,7 @@ impl HostedBoard {
         })
     }
 
-    pub(crate) async fn create(&self, actor: &Actor<'_>, new: &NewTicket) -> BridgeResult<Ticket> {
+    pub async fn create(&self, actor: &Actor<'_>, new: &NewTicket) -> BridgeResult<Ticket> {
         transaction!(&self.store, |connection| {
             let now = self.scope(connection).await?;
             self.create_in(connection, actor, new, now).await
@@ -579,7 +578,7 @@ impl HostedBoard {
         .await
     }
 
-    pub(crate) async fn claim(
+    pub async fn claim(
         &self,
         actor: &Actor<'_>,
         id: &str,
@@ -692,7 +691,7 @@ impl HostedBoard {
         )?)
     }
 
-    pub(crate) async fn heartbeat(
+    pub async fn heartbeat(
         &self,
         actor: &Actor<'_>,
         id: &str,
@@ -765,7 +764,7 @@ impl HostedBoard {
         })
     }
 
-    pub(crate) async fn add_note(
+    pub async fn add_note(
         &self,
         actor: &Actor<'_>,
         id: &str,
@@ -807,7 +806,7 @@ impl HostedBoard {
         })
     }
 
-    pub(crate) async fn complete(
+    pub async fn complete(
         &self,
         actor: &Actor<'_>,
         id: &str,
@@ -861,7 +860,7 @@ impl HostedBoard {
         })
     }
 
-    pub(crate) async fn release(
+    pub async fn release(
         &self,
         actor: &Actor<'_>,
         id: &str,
@@ -905,5 +904,18 @@ fn lease(ticket: Ticket, settings: &Settings, already_held: bool) -> BridgeResul
     })
 }
 
-#[cfg(test)]
-mod tests;
+pub fn blocking<T>(
+    runtime: &tokio::runtime::Handle,
+    future: impl std::future::Future<Output = BridgeResult<T>>,
+) -> BridgeResult<T> {
+    match tokio::runtime::Handle::try_current() {
+        Ok(handle) if handle.runtime_flavor() == tokio::runtime::RuntimeFlavor::MultiThread => {
+            tokio::task::block_in_place(|| runtime.block_on(future))
+        }
+        Ok(_) => Err(fail(
+            "board_runtime",
+            "synchronous hosted board calls require a blocking worker or multi-thread runtime",
+        )),
+        Err(_) => runtime.block_on(future),
+    }
+}

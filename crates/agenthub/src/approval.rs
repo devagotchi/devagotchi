@@ -30,7 +30,7 @@ use super::{
     Actor, Board, Filter, StateKind, Ticket, Workflow, fail, insert_note, invalid, load_workflow,
     read_ticket, store_error,
 };
-use crate::config::valid_name;
+use crate::valid_name;
 
 pub const KIND: &str = "approval";
 
@@ -117,7 +117,7 @@ pub fn parts(description: &str) -> Option<(&str, &str, &str)> {
 }
 
 /// The value after `key` (`kind:`, `target:`) among an approval's labels.
-pub(crate) fn label_value(labels: &[String], key: &str) -> Option<String> {
+pub fn label_value(labels: &[String], key: &str) -> Option<String> {
     labels
         .iter()
         .find_map(|label| label.strip_prefix(key))
@@ -175,7 +175,7 @@ pub struct ApprovalStatus {
     pub target: Option<String>,
 }
 
-pub(super) fn text(field: &str, value: &str, max: usize, required: bool) -> BridgeResult<String> {
+pub fn text(field: &str, value: &str, max: usize, required: bool) -> BridgeResult<String> {
     let value = value.trim();
     if (required && value.is_empty()) || value.chars().count() > max {
         let need = if required { "1" } else { "0" };
@@ -188,7 +188,7 @@ pub(super) fn text(field: &str, value: &str, max: usize, required: bool) -> Brid
 
 /// The done state a verdict lands in: `done` / `cancelled` when the workflow has them as
 /// done states, else its first done state.
-pub(super) fn landing(workflow: &Workflow, verdict: Verdict) -> BridgeResult<String> {
+pub fn landing(workflow: &Workflow, verdict: Verdict) -> BridgeResult<String> {
     let preferred = match verdict {
         Verdict::Approved => "done",
         Verdict::Denied => "cancelled",
@@ -272,7 +272,7 @@ impl Board {
                 Some(target) => format!("{} on {target}", standing.kind),
                 None => standing.kind.clone(),
             },
-            crate::web::utc((standing.expires_at / 1000).max(0) as u64)
+            crate::utc((standing.expires_at / 1000).max(0) as u64)
         );
         let decided = self.decide_approval(
             &Actor {
@@ -431,7 +431,7 @@ impl Board {
         }
         let now = self.now();
         let standing = Standing {
-            id: format!("st-{}", hex::encode(crate::link::random::<4>())),
+            id: format!("st-{}", hex::encode(devagotchi_store::random::<4>())),
             kind,
             target,
             what,

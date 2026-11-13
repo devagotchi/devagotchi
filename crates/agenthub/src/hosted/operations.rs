@@ -1,8 +1,8 @@
 use super::*;
-use crate::agenthub::{ChainStatus, Dep, DepKind, Filter, Patch, ProjectSettings};
+use crate::{ChainStatus, Dep, DepKind, Filter, Patch, ProjectSettings};
 
 impl HostedBoard {
-    pub(crate) async fn welcome_if_new(
+    pub async fn welcome_if_new(
         &self,
         actor: &Actor<'_>,
         title: &str,
@@ -41,10 +41,10 @@ impl HostedBoard {
         })
     }
 
-    pub(crate) async fn claim_next(
+    pub async fn claim_next(
         &self,
         actor: &Actor<'_>,
-        filter: &crate::agenthub::NextFilter,
+        filter: &crate::NextFilter,
     ) -> BridgeResult<Option<Lease>> {
         transaction!(&self.store, |connection| {
             let now = self.scope(connection).await?;
@@ -107,21 +107,21 @@ impl HostedBoard {
         })
     }
 
-    pub(crate) async fn settings(&self) -> BridgeResult<Settings> {
+    pub async fn settings(&self) -> BridgeResult<Settings> {
         transaction!(&self.store, |connection| {
             self.scope(connection).await?;
             self.configuration(connection, "settings").await
         })
     }
 
-    pub(crate) async fn workflow(&self) -> BridgeResult<Workflow> {
+    pub async fn workflow(&self) -> BridgeResult<Workflow> {
         transaction!(&self.store, |connection| {
             self.scope(connection).await?;
             self.configuration(connection, "workflow").await
         })
     }
 
-    pub(crate) async fn put_settings(
+    pub async fn put_settings(
         &self,
         actor: &Actor<'_>,
         settings: &Settings,
@@ -153,7 +153,7 @@ impl HostedBoard {
         })
     }
 
-    pub(super) async fn save_configuration<T: serde::Serialize>(
+    pub async fn save_configuration<T: serde::Serialize>(
         &self,
         connection: &mut AnyConnection,
         key: &str,
@@ -172,7 +172,7 @@ impl HostedBoard {
         Ok(())
     }
 
-    pub(crate) async fn set_project(
+    pub async fn set_project(
         &self,
         actor: &Actor<'_>,
         patch: &ProjectSettings,
@@ -180,12 +180,12 @@ impl HostedBoard {
         let repo = patch
             .repo
             .as_deref()
-            .map(crate::agenthub::check_repo)
+            .map(crate::check_repo)
             .transpose()?;
         let environments = patch
             .environments
             .as_deref()
-            .map(crate::agenthub::check_environments)
+            .map(crate::check_environments)
             .transpose()?;
         transaction!(&self.store, |connection| {
             let now = self.scope(connection).await?;
@@ -217,7 +217,7 @@ impl HostedBoard {
         })
     }
 
-    pub(crate) async fn put_workflow(
+    pub async fn put_workflow(
         &self,
         actor: &Actor<'_>,
         workflow: &Workflow,
@@ -336,7 +336,7 @@ impl HostedBoard {
         Ok(tickets)
     }
 
-    pub(crate) async fn list(&self, filter: &Filter) -> BridgeResult<Vec<Ticket>> {
+    pub async fn list(&self, filter: &Filter) -> BridgeResult<Vec<Ticket>> {
         transaction!(&self.store, |connection| {
             let now = self.scope(connection).await?;
             let workflow = self.configuration(connection, "workflow").await?;
@@ -344,7 +344,7 @@ impl HostedBoard {
         })
     }
 
-    pub(crate) async fn ready(&self, actor: &Actor<'_>, limit: usize) -> BridgeResult<Vec<Ticket>> {
+    pub async fn ready(&self, actor: &Actor<'_>, limit: usize) -> BridgeResult<Vec<Ticket>> {
         transaction!(&self.store, |connection| {
             let now = self.scope(connection).await?;
             let workflow = self.configuration(connection, "workflow").await?;
@@ -393,7 +393,7 @@ impl HostedBoard {
         Ok(deps)
     }
 
-    pub(crate) async fn view(&self, id: &str) -> BridgeResult<crate::agenthub::TicketView> {
+    pub async fn view(&self, id: &str) -> BridgeResult<crate::TicketView> {
         transaction!(&self.store, |connection| {
             let now = self.scope(connection).await?;
             let workflow = self.configuration(connection, "workflow").await?;
@@ -410,7 +410,7 @@ impl HostedBoard {
                 .iter()
                 .map(|text| decode(text))
                 .collect::<BridgeResult<Vec<Note>>>()?;
-            Ok(crate::agenthub::TicketView {
+            Ok(crate::TicketView {
                 ticket,
                 deps,
                 dependents,
@@ -420,7 +420,7 @@ impl HostedBoard {
         })
     }
 
-    pub(crate) async fn add_dep(
+    pub async fn add_dep(
         &self,
         actor: &Actor<'_>,
         id: &str,
@@ -470,7 +470,7 @@ impl HostedBoard {
         })
     }
 
-    pub(crate) async fn remove_dep(
+    pub async fn remove_dep(
         &self,
         actor: &Actor<'_>,
         id: &str,
@@ -500,7 +500,7 @@ impl HostedBoard {
         })
     }
 
-    pub(crate) async fn update(
+    pub async fn update(
         &self,
         actor: &Actor<'_>,
         id: &str,
@@ -511,7 +511,7 @@ impl HostedBoard {
             let now = self.scope(connection).await?;
             let workflow: Workflow = self.configuration(connection, "workflow").await?;
             let current = self.ticket(connection, id, &workflow, now).await?;
-            if current.kind == crate::agenthub::approval::KIND {
+            if current.kind == crate::approval::KIND {
                 return Err(fail(
                     "approval_decide_only",
                     "an approval changes only through a person's decision",
@@ -585,7 +585,7 @@ impl HostedBoard {
                 changed.insert("last_seen_at".into(), serde_json::json!(last_seen_at));
             }
             if let Some(to) = patch.state.as_ref().filter(|to| *to != &current.state) {
-                crate::agenthub::check_transition(&workflow, &current, to, actor.id)?;
+                crate::check_transition(&workflow, &current, to, actor.id)?;
                 ticket.state = to.clone();
                 ticket.closed_at = workflow.is_done(to).then_some(now);
                 changed.insert("from".into(), serde_json::json!(current.state));
@@ -619,7 +619,7 @@ impl HostedBoard {
         })
     }
 
-    pub(crate) async fn handoff(
+    pub async fn handoff(
         &self,
         actor: &Actor<'_>,
         id: &str,
@@ -638,7 +638,7 @@ impl HostedBoard {
             let now = self.scope(connection).await?;
             let workflow = self.configuration(connection, "workflow").await?;
             let ticket = self.ticket(connection, id, &workflow, now).await?;
-            crate::agenthub::lease::check_held(&ticket, actor.id, Some(fence))?;
+            crate::lease::check_held(&ticket, actor.id, Some(fence))?;
             self.insert_note(
                 connection,
                 actor.id,
@@ -664,7 +664,7 @@ impl HostedBoard {
                 actor.id,
                 now,
                 &ticket,
-                &crate::agenthub::lease::release_state(&workflow, &ticket),
+                &crate::lease::release_state(&workflow, &ticket),
                 "ticket.handoff",
                 serde_json::json!({"to":to}),
             )
@@ -673,7 +673,7 @@ impl HostedBoard {
         })
     }
 
-    pub(crate) async fn force_release(
+    pub async fn force_release(
         &self,
         actor: &Actor<'_>,
         id: &str,
@@ -692,13 +692,13 @@ impl HostedBoard {
             if ticket.holder.is_none() {
                 return Err(fail("not_held", format!("{id} is not held")).into());
             }
-            self.clear_lease(connection,actor.id,now,&ticket,&crate::agenthub::lease::release_state(&workflow,&ticket),
+            self.clear_lease(connection,actor.id,now,&ticket,&crate::lease::release_state(&workflow,&ticket),
                 "ticket.force_released",serde_json::json!({"previous_holder":ticket.holder,"previous_fence":ticket.fence,"reason":reason.trim()})).await?;
             self.ticket(connection, id, &workflow, now).await
         })
     }
 
-    pub(crate) async fn reap(&self) -> BridgeResult<usize> {
+    pub async fn reap(&self) -> BridgeResult<usize> {
         transaction!(&self.store, |connection| {
             let now = self.scope(connection).await?;
             let workflow = self.configuration(connection, "workflow").await?;
@@ -715,7 +715,7 @@ impl HostedBoard {
         })
     }
 
-    pub(crate) async fn next_lease_expiry(&self) -> BridgeResult<Option<i64>> {
+    pub async fn next_lease_expiry(&self) -> BridgeResult<Option<i64>> {
         transaction!(&self.store, |connection| {
             self.scope(connection).await?;
             Ok(sqlx::query_scalar(
@@ -724,7 +724,7 @@ impl HostedBoard {
         })
     }
 
-    pub(crate) async fn verify_chain(&self) -> BridgeResult<ChainStatus> {
+    pub async fn verify_chain(&self) -> BridgeResult<ChainStatus> {
         let events = self.events().await?;
         let mut previous = GENESIS.to_string();
         let mut broken = None;
