@@ -19,8 +19,11 @@ fn json(path: &str) -> Value {
     serde_json::from_str(&text).unwrap_or_else(|error| panic!("{path}: {error}"))
 }
 
+/// A file's text with Windows line endings made plain (a Windows checkout has CRLF).
 fn text(path: &str) -> String {
-    std::fs::read_to_string(root().join(path)).unwrap_or_else(|error| panic!("{path}: {error}"))
+    std::fs::read_to_string(root().join(path))
+        .unwrap_or_else(|error| panic!("{path}: {error}"))
+        .replace("\r\n", "\n")
 }
 
 #[test]
