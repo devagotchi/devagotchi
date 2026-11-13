@@ -860,6 +860,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "devagotchi-agenthub"
+version = "0.1.0"
+dependencies = [
+ "devagotchi-contracts",
+ "devagotchi-store",
+]
+
+[[package]]
 name = "devagotchi-broker"
 version = "0.1.0"
 dependencies = [
@@ -935,6 +943,7 @@ dependencies = [
  "devagotchi-contracts",
  "devagotchi-ipc",
  "devagotchi-mcp",
+ "devagotchi-store",
  "ed25519-dalek",
  "form_urlencoded",
  "futures-util",
@@ -1011,6 +1020,19 @@ dependencies = [
  "schemars 1.2.3",
  "serde",
  "serde_json",
+ "tempfile",
+ "tokio",
+]
+
+[[package]]
+name = "devagotchi-store"
+version = "0.1.0"
+dependencies = [
+ "devagotchi-contracts",
+ "getrandom 0.4.3",
+ "hex",
+ "percent-encoding",
+ "sqlx",
  "tempfile",
  "tokio",
 ]

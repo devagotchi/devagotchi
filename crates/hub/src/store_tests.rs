@@ -2,7 +2,11 @@ use std::collections::BTreeSet;
 
 use sqlx::Row;
 
-use super::{testing::*, *};
+use std::path::Path;
+
+use devagotchi_contracts::{BridgeError, BridgeResult};
+
+use crate::store::{testing::*, *};
 
 #[test]
 fn a_configured_url_is_postgres_or_an_absolute_sqlite_file_and_never_carries_a_password() {
@@ -80,7 +84,7 @@ async fn writers_racing_on_one_row_each_count_once() {
             "CREATE TABLE counter (id BIGINT PRIMARY KEY, n BIGINT NOT NULL);
              INSERT INTO counter (id, n) VALUES (1, 0);",
         )
-        .execute(&store.admin)
+        .execute(store.admin())
         .await
         .unwrap();
         let mut tasks = Vec::new();
@@ -104,7 +108,7 @@ async fn writers_racing_on_one_row_each_count_once() {
             task.await.unwrap().unwrap();
         }
         let n: i64 = sqlx::query_scalar("SELECT n FROM counter WHERE id = 1")
-            .fetch_one(&store.pool)
+            .fetch_one(store.pool())
             .await
             .unwrap();
         assert_eq!(n, 8, "{:?}", store.backend());
@@ -116,7 +120,7 @@ async fn a_refusal_rolls_back_what_the_transaction_did() {
     for test in stores().await {
         let store = test.store;
         sqlx::raw_sql("CREATE TABLE notes (body TEXT NOT NULL)")
-            .execute(&store.admin)
+            .execute(store.admin())
             .await
             .unwrap();
         let refused: BridgeResult<()> = transaction!(&store, |connection| {
@@ -127,7 +131,7 @@ async fn a_refusal_rolls_back_what_the_transaction_did() {
         });
         assert_eq!(refused.unwrap_err().code, "refused");
         let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM notes")
-            .fetch_one(&store.pool)
+            .fetch_one(store.pool())
             .await
             .unwrap();
         assert_eq!(count, 0);
@@ -146,13 +150,13 @@ async fn both_backends_have_the_same_tables_and_columns() {
     let tables: Vec<String> = sqlx::query_scalar(
         "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE '\\_%' ESCAPE '\\' AND name NOT LIKE 'sqlite%'",
     )
-    .fetch_all(&sqlite.store.pool)
+    .fetch_all(sqlite.store.pool())
     .await
     .unwrap();
     for table in tables {
         let rows = sqlx::query("SELECT name FROM pragma_table_info($1)")
             .bind(&table)
-            .fetch_all(&sqlite.store.pool)
+            .fetch_all(sqlite.store.pool())
             .await
             .unwrap();
         for row in rows {
@@ -163,7 +167,7 @@ async fn both_backends_have_the_same_tables_and_columns() {
         "SELECT table_name::text, column_name::text FROM information_schema.columns
          WHERE table_schema = 'devagotchi'",
     )
-    .fetch_all(&postgres.store.admin)
+    .fetch_all(postgres.store.admin())
     .await
     .unwrap();
     let pg: BTreeSet<(String, String)> = rows
@@ -220,7 +224,7 @@ async fn on_postgres_the_hubs_tables_live_in_their_own_schema() {
         "SELECT table_schema::text, table_name::text FROM information_schema.tables
          WHERE table_schema IN ('public', 'devagotchi_hub', 'devagotchi') ORDER BY 1, 2",
     )
-    .fetch_all(&store.admin)
+    .fetch_all(store.admin())
     .await
     .unwrap();
     for row in rows {

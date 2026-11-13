@@ -7,6 +7,8 @@ members = [
     "crates/core",
     "crates/broker",
     "crates/mcp",
+    "crates/store",
+    "crates/agenthub",
     "crates/hub",
     "crates/link",
     "crates/devagotchi",
@@ -22,6 +24,8 @@ default-members = [
     "crates/core",
     "crates/broker",
     "crates/mcp",
+    "crates/store",
+    "crates/agenthub",
     "crates/hub",
     "crates/link",
     "crates/devagotchi",
@@ -41,6 +45,8 @@ devagotchi-contracts = { path = "crates/contracts" }
 devagotchi-connectors = { path = "crates/connectors" }
 devagotchi-ipc = { path = "crates/ipc" }
 devagotchi-core = { path = "crates/core" }
+devagotchi-store = { path = "crates/store" }
+devagotchi-agenthub = { path = "crates/agenthub" }
 
 rmcp = { version = "=3.9.0", default-features = false, features = ["server", "macros", "transport-io"] }
 schemars = "1"
@@ -55,7 +61,7 @@ hex = "0.4.3"
 # up to i64::MAX and refuse larger ones, exactly as 0.37 did by default.
 rusqlite = { version = "0.39", features = ["bundled", "fallible_uint"] }
 # The hub's store: Postgres for a hosted hub, SQLite built in for a standalone one, one
-# code path over both (`crates/hub/src/store.rs`).
+# code path over both (`crates/store/src/lib.rs`).
 sqlx = { version = "0.9", default-features = false, features = ["runtime-tokio", "tls-rustls-aws-lc-rs", "postgres", "sqlite", "any", "migrate", "macros"] }
 sha2 = "0.11.1"
 uuid = { version = "1", features = ["v4"] }
