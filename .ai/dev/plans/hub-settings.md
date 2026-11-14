@@ -16,7 +16,7 @@
 | M1 | `/admin`, owner only, grouped sections | none | `hub_settings_tests.rs` | done |
 | M2 | Google and GitHub stored sealed in Postgres, live without restart | M1 | `hub_settings_tests.rs` | done |
 | M3 | Email (SMTP) from the page, sealed | M2 | to write | pending |
-| M4 | ClickHouse connection from the page, sealed | M2 | to write | pending |
+| M4 | ClickHouse connection from the page, sealed | M2 | `hub_settings_tests.rs` | done (increment 138, [AgentHub crate](agenthub-crate.md) A4) |
 | M5 | Signal sinks from the page, sealed | M2 | to write | pending |
 | M6 | OpenID Connect providers from the page: Sign in with Shippin (Nomen) prefilled, any other by name, public clients | M2 | `hub_settings_tests.rs` | done (increment 134) |
 | M7 | Network providers | operator's decision | to write | pending |

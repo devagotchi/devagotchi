@@ -1043,11 +1043,24 @@ async fn run(state_dir: PathBuf, config_path: PathBuf) -> BridgeResult<()> {
             password,
         )?);
         tokio::spawn(warehouse.clone().run());
-        boards.set_warehouse(warehouse);
+        boards.set_warehouse(Some(warehouse));
         eprintln!(
             "devagotchi hub: exporting board events to ClickHouse at {} (database {})",
             clickhouse.url, clickhouse.database
         );
+    } else if let Some(hub) = &passkeys
+        && warehouse_store.backend() == store::Backend::Postgres
+    {
+        // Else the ClickHouse the owner set on the settings page, if any. One it cannot
+        // start is said here and on the page; the boards work without it.
+        match warehouse::start_stored(&boards, hub.accounts(), hub.sealer(), warehouse_store).await
+        {
+            Ok(true) => eprintln!(
+                "devagotchi hub: exporting board events to the ClickHouse set on the settings page"
+            ),
+            Ok(false) => {}
+            Err(error) => eprintln!("devagotchi hub: ClickHouse from the settings page: {error}"),
+        }
     }
     // Signals to the operator's sinks (`signals.rs`, docs/signals.md): each on its own task,
     // reported in /healthz, never holding back the hub or another sink.

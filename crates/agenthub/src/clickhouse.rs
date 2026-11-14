@@ -76,6 +76,9 @@ pub struct Warehouse {
     user: Option<String>,
     password: Option<String>,
     status: Mutex<Status>,
+    /// Set by `stop`: `run` returns at its next turn, woken from any wait.
+    stopped: std::sync::atomic::AtomicBool,
+    wake: tokio::sync::Notify,
 }
 
 pub fn now_secs() -> i64 {
@@ -110,23 +113,78 @@ impl Warehouse {
             user: config.user.clone(),
             password: password.filter(|p| !p.is_empty()),
             status: Mutex::new(Status::default()),
+            stopped: std::sync::atomic::AtomicBool::new(false),
+            wake: tokio::sync::Notify::new(),
         })
     }
 
-    /// Send the rows that wait, forever, backing off while ClickHouse refuses.
+    /// The HTTP interface it sends to.
+    pub fn url(&self) -> &str {
+        &self.url
+    }
+
+    /// The database its table is in.
+    pub fn database(&self) -> &str {
+        &self.database
+    }
+
+    /// The user it signs in as, if any.
+    pub fn user(&self) -> Option<&str> {
+        self.user.as_deref()
+    }
+
+    /// Whether ClickHouse answers and lets this user make the database and the table: what
+    /// the first round does, done now so a person setting it up hears at once.
+    pub async fn check(&self) -> BridgeResult<()> {
+        let outcome = self.ensure_schema().await;
+        let mut status = self.status.lock().expect("warehouse status");
+        match &outcome {
+            Ok(()) => {
+                status.ready = true;
+                status.last_error = None;
+            }
+            Err(error) => {
+                status.ready = false;
+                status.last_error = Some(error.message.clone());
+            }
+        }
+        outcome
+    }
+
+    /// Stop `run`: when another export replaces this one, or the export is turned off. The
+    /// events not yet sent stay waiting in Postgres for whichever export comes next.
+    pub fn stop(&self) {
+        self.stopped
+            .store(true, std::sync::atomic::Ordering::SeqCst);
+        self.wake.notify_one();
+    }
+
+    fn stopping(&self) -> bool {
+        self.stopped.load(std::sync::atomic::Ordering::SeqCst)
+    }
+
+    /// Wait `time`, or less when `stop` is called.
+    async fn pause(&self, time: Duration) {
+        tokio::select! {
+            () = tokio::time::sleep(time) => {}
+            () = self.wake.notified() => {}
+        }
+    }
+
+    /// Send the rows that wait until `stop`, backing off while ClickHouse refuses.
     pub async fn run(self: std::sync::Arc<Self>) {
         let mut backoff = Duration::from_secs(1);
-        loop {
+        while !self.stopping() {
             match self.round().await {
                 Ok(sent) => {
                     backoff = Duration::from_secs(1);
                     if sent == 0 {
-                        tokio::time::sleep(IDLE).await;
+                        self.pause(IDLE).await;
                     }
                 }
                 Err(error) => {
                     eprintln!("devagotchi hub: analytics export: {}", error.message);
-                    tokio::time::sleep(backoff).await;
+                    self.pause(backoff).await;
                     backoff = (backoff * 2).min(MAX_BACKOFF);
                 }
             }

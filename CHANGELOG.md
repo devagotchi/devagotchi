@@ -7,6 +7,14 @@ heading. Agents draft the fragments below; they never tag.
 
 ## Unreleased
 
+### Your ClickHouse from the settings page, and where your boards are (increment 138)
+- `/admin`, Data and signals: connect the ClickHouse AgentHub sends its board events to
+  (address, database, user, password), checked when you save, the password sealed, and in use
+  at once with no restart. It shows how many events wait and when they were last sent. A
+  ClickHouse set in the config file or `DEVAGOTCHI_CLICKHOUSE_URL` is shown there, not changed.
+- The same section says where AgentHub keeps its boards (which Postgres, which schema, whether
+  the database keeps tenants apart) and the steps to move the hub to a Postgres you already run.
+
 ### AgentHub is its own crate (increment 137)
 - `crates/agenthub` (`devagotchi-agenthub`) holds the board: tickets, leases, workflow,
   approvals, notes that reach agents, the hosted Postgres board, GitHub issue records and the

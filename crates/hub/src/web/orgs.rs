@@ -312,7 +312,7 @@ async fn membership(orgs: &Orgs, slug: &str, subject: &Subject) -> Result<(Org, 
 /// Events on one of the organisation's boards in the last 7 days, when the hub exports to
 /// ClickHouse and it answers; nothing otherwise.
 async fn events_week(state: &AppState, subject: &Subject, name: &str) -> Option<i64> {
-    let warehouse = state.hub.boards.warehouse().cloned()?;
+    let warehouse = state.hub.boards.warehouse()?;
     let hub = state.hub.clone();
     let who = subject.clone();
     let name = name.to_string();

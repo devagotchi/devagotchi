@@ -5,6 +5,65 @@ pub use devagotchi_agenthub::clickhouse::*;
 
 use devagotchi_contracts::{BridgeError, BridgeResult};
 use serde_json::{Value, json};
+use std::sync::Arc;
+
+use crate::{
+    accounts::{Accounts, analytics_settings::StoredClickHouse},
+    agenthub::mcp::Boards,
+    sealed::Sealer,
+    store::Store,
+};
+
+/// The name a ClickHouse password is sealed under (`crate::sealed`).
+pub(crate) const SEALED_AS: &str = "clickhouse";
+
+impl StoredClickHouse {
+    /// As the export takes it.
+    pub(crate) fn config(&self) -> ClickHouseConfig {
+        ClickHouseConfig {
+            url: self.url.clone(),
+            database: self.database.clone(),
+            user: (!self.user.is_empty()).then(|| self.user.clone()),
+        }
+    }
+}
+
+/// Export the boards' events to `config` from now on: checked first (ClickHouse answers and
+/// lets this user make the database and table), then it replaces whatever export ran.
+pub(crate) async fn start_checked(
+    boards: &Boards,
+    store: Store,
+    config: &ClickHouseConfig,
+    password: Option<String>,
+) -> BridgeResult<()> {
+    let warehouse = Arc::new(Warehouse::new(config, store, password)?);
+    warehouse.check().await?;
+    tokio::spawn(warehouse.clone().run());
+    boards.set_warehouse(Some(warehouse));
+    Ok(())
+}
+
+/// At the hub's start: the ClickHouse its owner set on the settings page, when the config
+/// sets none. Not checked first: a ClickHouse that is down now is waited for, as the config's
+/// is, and `/healthz` and the settings page say so.
+pub(crate) async fn start_stored(
+    boards: &Boards,
+    accounts: &Accounts,
+    sealer: &Sealer,
+    store: Store,
+) -> BridgeResult<bool> {
+    let Some(stored) = accounts.clickhouse_setting().await? else {
+        return Ok(false);
+    };
+    if !stored.enabled {
+        return Ok(false);
+    }
+    let password = sealer.open_value(SEALED_AS, &stored.sealed_password);
+    let warehouse = Arc::new(Warehouse::new(&stored.config(), store, password)?);
+    tokio::spawn(warehouse.clone().run());
+    boards.set_warehouse(Some(warehouse));
+    Ok(true)
+}
 
 #[cfg(test)]
 mod tests;
@@ -58,7 +117,7 @@ async fn stats_for(
     use axum::{http::StatusCode, response::IntoResponse};
     let days = days.unwrap_or(30).clamp(1, 366);
     let result: BridgeResult<Value> = async {
-        let warehouse = state.hub.boards.warehouse().cloned().ok_or_else(|| {
+        let warehouse = state.hub.boards.warehouse().ok_or_else(|| {
             BridgeError::new(
                 "not_offered",
                 "this hub exports no statistics: it has no ClickHouse (clickhouse.url)",
