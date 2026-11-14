@@ -15,7 +15,7 @@ const ROOTS: [&str; 2] = ["crates", "apps"];
 /// Folder names never walked: build output and other people's code.
 const SKIPPED: [&str; 2] = ["target", "node_modules"];
 const HEADER: &str = "\
-# Rust files over the 500-line cap when the cap arrived (main d4166f8, 2026-11-13).
+# Rust files over the 500-line cap when the cap arrived (main 332bf25, 2026-11-13).
 # <lines><TAB><path>, sorted by path. A listed file may shrink, never grow; a file that is
 # not listed may not exceed the cap. Never add a line or raise a number to make the test
 # pass: see .ai/patterns/layout.md.

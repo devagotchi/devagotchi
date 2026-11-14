@@ -57,12 +57,14 @@
   never a top-level barrel.
 - No behavior, storage or privacy change in any increment; a PR that needs one stops and
   gets its own plan.
-- Open, for the operator (found 2026-11-13 by the open-PR check before S0): #184
-  (`increment-137/agenthub-crate`, plan [agenthub-crate](https://github.com/devagotchi/devagotchi/pull/184))
-  already moves the board to `crates/agenthub` and the store to `crates/store`. That is S3c
-  ahead of S3a and S3b, plus two of S1's thirteen test files. It moves 4 files on the ratchet
-  list and edits 10 more, so whichever of #184 and #185 merges second re-paths the list. S1
-  and S3 are not started until this is reconciled.
+- Open, for the operator: #184 (`increment-137/agenthub-crate`, plan
+  [agenthub-crate](agenthub-crate.md)) merged to `main` at 332bf25 on 2026-11-13, while
+  S0 was in review. It did S3c ahead of S3a and S3b: the board is in `crates/agenthub` and
+  the store in `crates/store`. It also went against S1's convention twice
+  (`agenthub/hosted/tests.rs` became `agenthub/hosted_tests.rs`, `store/tests.rs` became
+  `store_tests.rs`), so the hub's top level now has 50 `.rs` files, 14 of them `*_tests.rs`.
+  The baseline section above and the S1 and S3 rows describe d4166f8 and need reconciling
+  with that plan before S1 starts. S0 merged `main` and re-measured the ratchet list there.
 - S0 choices awaiting review: a listed file that is gone fails the ratchet (a move edits its
   line in the list, so later moves are renames plus the list); the cap covers every `.rs`
   file under `crates/` and `apps/`, tests included.
@@ -72,7 +74,9 @@
 Per increment: `cargo build --locked --bins`, `cargo nextest run --locked`,
 `python3 tests/e2e.py --bin-dir target/debug`, and the rename-only diff check. Record each.
 
-### S0 (#185, candidate 22999dd, Linux x86_64, rustc 1.99.1, 2026-11-13)
+### S0 (#185, Linux x86_64, rustc 1.99.1, 2026-11-13)
+
+Run on candidate 22999dd, on `main` d4166f8:
 
 | Gate | Result |
 |---|---|
@@ -89,8 +93,16 @@ Per increment: `cargo build --locked --bins`, `cargo nextest run --locked`,
 | Ratchet, both reverted | passes; `DEVAGOTCHI_WRITE_LAYOUT=1` changes nothing |
 | Diff | additions only: 4 new files and 2 index lines; no `.rs` file moved or edited |
 
-Not run: the real-ClickHouse export test, Windows, the browser suites (CI). The pattern doc
-review is the operator's and is pending.
+After #184 merged, CI's `core` job failed on the merge with `main`: the ratchet named 14
+files, the ones #184 moved, added or grew. The fix merged `main` 332bf25 into the branch
+and re-measured the list there: 72 files over the cap (23 over 1,000) of 250. Against the
+d4166f8 list: 9 entries left (moved, or now under the cap), 8 arrived (7 in
+`crates/agenthub` and `crates/store`, and `hosted_tests.rs`), 5 are lower, and
+`crates/hub/src/lib.rs` went from 2,714 to 2,716, which #184 added before the rule existed. On the merged tree the `layout`
+tests pass (7 of 7); the rest of the suite on the merge is CI's run.
+
+Not run locally: the real-ClickHouse export test, Windows, the browser suites (CI). The
+pattern doc review is the operator's and is pending.
 
 ## Delivery
 
