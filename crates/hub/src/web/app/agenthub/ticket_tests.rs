@@ -470,3 +470,77 @@ async fn undo_on_a_customised_workflow_says_which_transition_to_add() {
         "cancelled"
     );
 }
+
+#[tokio::test]
+async fn a_person_assigns_a_ticket_to_an_agent_and_the_agent_is_told() {
+    let hub = hosted().await;
+    let mut alice = hub.first_connect("Claude").await;
+    things_of(&hub, &mut alice).await;
+    let made = hub
+        .call(
+            &mut alice,
+            "board_create",
+            json!({ "project": "alpha", "title": "Rotate the keys" }),
+        )
+        .await;
+    let id = made["structuredContent"]["id"]
+        .as_str()
+        .unwrap()
+        .to_string();
+
+    // The page offers the board's roster: Claude, which this account connected, and the
+    // well-known clients; any other name can be typed.
+    let (status, html) = page(&hub, &format!("/app/tickets/alpha/{id}"), &alice).await;
+    assert_eq!(status, 200, "{html}");
+    assert!(html.contains(&format!("action=\"/app/tickets/alpha/{id}/delegate\"")));
+    assert!(html.contains("<datalist id=\"agents\">"), "{html}");
+    for agent in ["claude", "codex", "grok"] {
+        assert!(
+            html.contains(&format!("<option value=\"{agent}\">")),
+            "{agent}: {html}"
+        );
+    }
+    let claude = html.find("<option value=\"claude\">").unwrap();
+    let codex = html.find("<option value=\"codex\">").unwrap();
+    assert!(claude < codex, "a connected client comes first");
+
+    // A name that is not one changes nothing.
+    let view = ticket(&hub, &mut alice, &id).await;
+    let bad = press(
+        &hub,
+        &alice,
+        &id,
+        "delegate",
+        &[("version", &version(&view)), ("to", "Not A Name")],
+    )
+    .await;
+    assert!(bad.contains("done=no"), "{bad}");
+    assert!(ticket(&hub, &mut alice, &id).await["ticket"]["assignee"].is_null());
+
+    // Assigned to Codex: the ticket says so, and Codex has a note addressed to it.
+    let to = press(
+        &hub,
+        &alice,
+        &id,
+        "delegate",
+        &[("version", &version(&view)), ("to", "codex")],
+    )
+    .await;
+    assert!(to.ends_with("?done=delegate"), "{to}");
+    let view = ticket(&hub, &mut alice, &id).await;
+    assert_eq!(view["ticket"]["assignee"], "codex", "{view}");
+    let told = view["notes"].as_array().unwrap().iter().any(|note| {
+        note["to_principal"] == "codex" && note["body"].as_str().unwrap().contains("board_claim")
+    });
+    assert!(told, "{view}");
+    let (_, html) = page(
+        &hub,
+        &format!("/app/tickets/alpha/{id}?done=delegate"),
+        &alice,
+    )
+    .await;
+    assert!(
+        html.contains("The agent is told on its next call"),
+        "{html}"
+    );
+}

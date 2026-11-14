@@ -1,7 +1,8 @@
 //! `/app/tickets/<project>/<id>`: one ticket — title, state, priority, labels, who holds it
 //! and who it is assigned to, its description, notes and history — and what a person does
-//! with it from the phone: **Comment**, **Assign to me**, **Close** (at once, with Undo for
-//! 10 s) and **Hand to AI** (back to the board's ready queue, unassigned). Each action is
+//! with it from the phone or a browser: **Comment**, **Assign to me**, **Assign to an agent**
+//! (from the board's roster: [`roster`]), **Close** (at once, with Undo for 10 s) and **Hand
+//! to AI** (back to the board's ready queue, unassigned). Each action is
 //! the board call the MCP tools make (`Board::add_note`, `Board::update`), with the person
 //! as the actor, audited as they audit it (`ticket_actions.rs`); every form posts from this
 //! hub's pages only.
@@ -50,6 +51,41 @@ pub(super) fn unknown() -> Response {
     )
 }
 
+/// The names a ticket can be assigned to, best first: the AI clients this account has
+/// connected (each as the seat it works under), the agents with a webhook on this board, the
+/// agents already on this ticket, then the well-known clients. Any other name may be typed.
+pub(super) fn roster(
+    families: &[String],
+    wakes: impl IntoIterator<Item = String>,
+    seen: impl IntoIterator<Item = String>,
+    me: &str,
+) -> Vec<String> {
+    let seat = |family: &str| match family {
+        "claude" => Some("claude"),
+        "chatgpt" => Some("codex"),
+        "grok" => Some("grok"),
+        "cursor" => Some("cursor"),
+        _ => None,
+    };
+    let mut out: Vec<String> = Vec::new();
+    let names = families
+        .iter()
+        .filter_map(|f| seat(f).map(str::to_string))
+        .chain(wakes)
+        .chain(seen)
+        .chain(
+            ["claude", "codex", "grok", "cursor", "gemini"]
+                .into_iter()
+                .map(str::to_string),
+        );
+    for name in names {
+        if name != me && crate::agenthub::valid_name(&name) && !out.contains(&name) {
+            out.push(name);
+        }
+    }
+    out
+}
+
 pub(super) fn now_ms() -> i64 {
     (crate::agenthub::system_clock())()
 }
@@ -74,9 +110,18 @@ pub async fn page(
         }
     };
     let wanted = id.clone();
+    let families = match (&state.passkeys, &subject.tenant) {
+        (Some(hub), Some(tenant)) => hub
+            .accounts()
+            .client_families(tenant)
+            .await
+            .unwrap_or_default(),
+        _ => Vec::new(),
+    };
     let read = tokio::task::spawn_blocking(move || {
         let view = board.get(&wanted)?;
         let source = board.issue_source(&wanted)?;
+        let wakes: Vec<String> = board.wakes().unwrap_or_default().into_keys().collect();
         // The ticket's own history: the board's chain, read a page at a time.
         let mut events = Vec::new();
         let mut after = 0;
@@ -89,10 +134,10 @@ pub async fn page(
                     .filter(|e| e.ticket.as_deref() == Some(wanted.as_str())),
             );
         }
-        BridgeResult::Ok((view, events, source))
+        BridgeResult::Ok((view, events, source, wakes))
     })
     .await;
-    let (view, events, source) = match read {
+    let (view, events, source, wakes) = match read {
         Ok(Ok(value)) => value,
         Ok(Err(error)) if error.code == "not_found" => return unknown(),
         other => {
@@ -118,6 +163,7 @@ pub async fn page(
         Some("close") => escape(&copy.done_close),
         Some("undo") => escape(&copy.done_undo),
         Some("hand") => escape(&copy.done_hand),
+        Some("delegate") => escape(&copy.delegate.done),
         Some("late") => escape(&copy.undo_late),
         Some("no") => Ctx::new(&site)
             .with("why", shown.why.unwrap_or_default())
@@ -245,6 +291,33 @@ value=\"{}\">{inner}</form>",
             )
         ),
     );
+    let agents = roster(
+        &families,
+        wakes,
+        ticket
+            .assignee
+            .iter()
+            .chain(ticket.holder.iter())
+            .cloned()
+            .chain(events.iter().map(|e| e.actor.clone())),
+        me,
+    );
+    let delegate = form(
+        "delegate",
+        &format!(
+            "<label>{}<input type=\"text\" name=\"to\" id=\"delegate-to\" list=\"agents\" required \
+pattern=\"[a-z0-9][a-z0-9-]{{0,62}}\" maxlength=\"63\" autocapitalize=\"none\" autocorrect=\"off\" \
+spellcheck=\"false\" placeholder=\"{}\"></label><datalist id=\"agents\">{}</datalist>\
+<p class=\"actions\"><button type=\"submit\" id=\"delegate\">{}</button></p>",
+            escape(&copy.delegate.label),
+            escape(&copy.delegate.hint),
+            agents
+                .iter()
+                .map(|name| format!("<option value=\"{}\">", escape(name)))
+                .collect::<String>(),
+            escape(&copy.delegate.button),
+        ),
+    );
     let comment = form(
         "comment",
         &format!(
@@ -311,7 +384,7 @@ spellcheck=\"false\" placeholder=\"{}\"></label></div>\
         "<p class=\"meta\"><a href=\"/app/boards/{}\">{}</a> · {}</p><h1>{}</h1>{flash}{undo}\
 <section class=\"card\" id=\"ticket\"><dl class=\"facts\"><dt>{}</dt><dd id=\"state\">{}</dd>\
 <dt>{}</dt><dd>P{}</dd><dt>{}</dt><dd>{}</dd><dt>{}</dt><dd id=\"assignee\">{}</dd><dt>{}</dt><dd>{}</dd>{anchors}</dl>\
-<pre class=\"what\">{}</pre>{actions}</section>{source}<h2>{}</h2>{notes}{comment}<h2>{}</h2>\
+<pre class=\"what\">{}</pre>{actions}<div class=\"delegate\">{delegate}</div></section>{source}<h2>{}</h2>{notes}{comment}<h2>{}</h2>\
 <ul class=\"rows\" id=\"history\">{history}</ul>",
         encode(&project),
         escape(&project),
