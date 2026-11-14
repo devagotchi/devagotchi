@@ -120,7 +120,7 @@ unannotated = [t["name"] for t in listed if not t.get("title") or not (
     "readOnlyHint" in t.get("annotations", {}) and "openWorldHint" in t.get("annotations", {})
     and (t["annotations"]["readOnlyHint"] or "destructiveHint" in t["annotations"]))]
 check("every tool has a title and annotations", not unannotated, ", ".join(unannotated))
-broker_tools = ["approval_request", "approval_wait", "create_directory", "edit_file", "get_file_info",
+broker_tools = ["approval_request", "approval_wait", "connection_call", "connections", "create_directory", "edit_file", "get_file_info",
                 "list_directory", "machine_add", "machine_update", "machines", "move_file", "operation_cancel", "operation_get", "operation_read",
                 "operation_start", "operation_wait", "read_file", "read_image", "read_multiple_files", "run", "whoami",
                 "workflow_cancel", "workflow_list", "workflow_start", "workflow_status", "workflow_wait",

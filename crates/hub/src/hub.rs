@@ -45,6 +45,9 @@ pub struct Hub {
     /// The site's offers and how an account is linked (`crate::offers`), on a hub with its
     /// own accounts.
     pub offers: Option<Arc<crate::offers::Offers>>,
+    /// The account's outside services, called through the hub (`crate::connections`), on a
+    /// hub with its own accounts.
+    pub connections: Option<Arc<crate::connections::Connections>>,
     /// The machines this MCP session's calls were routed to (the service makes one `Hub`
     /// per session, `for_session`): what fills a new ticket's `machine` (P2c).
     pub routed: Arc<Mutex<Routed>>,
@@ -905,7 +908,7 @@ pub(crate) fn unexpected_response(expected: &str, actual: &ResponseBody) -> Json
 }
 
 #[tool_handler(
-    router = (Self::tool_router() + Self::run_router() + Self::files_router() + Self::board_router() + Self::workflow_router() + Self::offers_router())
+    router = (Self::tool_router() + Self::run_router() + Self::files_router() + Self::board_router() + Self::workflow_router() + Self::offers_router() + Self::connections_router())
 )]
 impl ServerHandler for Hub {
     /// Every tool call, unless the caller's tenant waits to be let in (early access): then
@@ -957,7 +960,8 @@ impl ServerHandler for Hub {
             + Self::files_router()
             + Self::board_router()
             + Self::workflow_router()
-            + Self::offers_router())
+            + Self::offers_router()
+            + Self::connections_router())
         .call(call)
         .await;
         // Notes left for this caller ride the answer to whatever it just called.
@@ -998,7 +1002,8 @@ impl ServerHandler for Hub {
                 + Self::files_router()
                 + Self::board_router()
                 + Self::workflow_router()
-                + Self::offers_router())
+                + Self::offers_router()
+                + Self::connections_router())
             .list_all()
             .into_iter()
             .filter(|tool| offered || !crate::offers::TOOLS.contains(&tool.name.as_ref()))
@@ -1018,7 +1023,8 @@ impl ServerHandler for Hub {
             + Self::files_router()
             + Self::board_router()
             + Self::workflow_router()
-            + Self::offers_router())
+            + Self::offers_router()
+            + Self::connections_router())
         .get(name)
         .cloned()
     }
@@ -1053,7 +1059,8 @@ pub(crate) fn tools() -> Vec<rmcp::model::Tool> {
         + Hub::files_router()
         + Hub::board_router()
         + Hub::workflow_router()
-        + Hub::offers_router())
+        + Hub::offers_router()
+        + Hub::connections_router())
     .list_all()
 }
 
@@ -1080,7 +1087,8 @@ mod schema_tests {
             + Hub::files_router()
             + Hub::board_router()
             + Hub::workflow_router()
-            + Hub::offers_router())
+            + Hub::offers_router()
+            + Hub::connections_router())
         .list_all()
         .into_iter()
         .find(|tool| tool.name == "whoami")

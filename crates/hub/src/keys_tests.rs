@@ -204,7 +204,9 @@ async fn every_tool_is_either_scoped_or_deliberately_closed_to_keys() {
     let listed = hub.mcp(&mut person, "tools/list", json!({})).await;
     let tools = listed["tools"].as_array().expect("tools");
     assert!(tools.len() > 30, "{listed}");
-    const CLOSED: [&str; 2] = ["offers", "offers_accept"];
+    // Connections are closed to keys until a key can be limited to named connections
+    // (connections-gateway.md, X3).
+    const CLOSED: [&str; 4] = ["offers", "offers_accept", "connections", "connection_call"];
     for tool in tools {
         let name = tool["name"].as_str().unwrap();
         assert!(

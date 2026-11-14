@@ -98,6 +98,7 @@ async fn world_configured(owner: Option<&str>, site: Option<&std::path::Path>) -
             analytics: None,
             workflows: None,
             offers: None,
+            connections: None,
             routed: Default::default(),
             push: Some(push),
             boards: Arc::new(crate::agenthub::mcp::Boards::from_config(

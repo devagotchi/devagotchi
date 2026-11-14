@@ -67,7 +67,7 @@ fn claim(ctx: &Ctx) -> String {
 
 /// The hub's MCP tools, grouped by what they are for. They are the hub's own, so they stay
 /// with its code: a test holds this to the tools the hub serves (`hub::tool_names`).
-pub const TOOLS: [(&str, &[(&[&str], &str)]); 5] = [
+pub const TOOLS: [(&str, &[(&[&str], &str)]); 6] = [
     (
         "Find your machines",
         &[
@@ -181,6 +181,13 @@ pub const TOOLS: [(&str, &[(&[&str], &str)]); 5] = [
                 "board_wake",
             ],
             "A project's ticket board: attach shared work, read issue context, claim and keep the claim alive, checkpoint advice and evidence, hand off, finish.",
+        )],
+    ),
+    (
+        "Call your services",
+        &[(
+            &["connections", "connection_call"],
+            "Calls the services you connected (Resend, Stripe, GitHub, Slack and more) through the hub: your agent never sees their keys.",
         )],
     ),
 ];

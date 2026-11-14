@@ -23,7 +23,7 @@ place and `/app/focus` already answers what it needs.
 
 | Milestone | Task | Dependencies | Acceptance evidence | State |
 |---|---|---|---|---|
-| B1 | Wide layout from 1000 px: a left rail with the five destinations and their counts, the page beside it at a readable width, the tab bar hidden; the Go to sheet becomes a centred dialog | mobile N1 | browser test at 1440 px: rail present, no sideways scroll; the phone layout unchanged at 390 px | not started |
+| B1 | Wide layout from 1000 px: a left rail with the five destinations and their counts, the page beside it at a readable width, the tab bar hidden; the Go to sheet becomes a centred dialog | mobile N1 | browser test at 1440 px: rail present, no sideways scroll; the phone layout unchanged at 390 px | partial (increment 140): from 1024 px the tabs are a left rail and the page is up to 1280 px wide; the connections page sits in two columns. Counts on the rail and a centred Go to sheet still to come |
 | B2 | AgentHub board as columns by lane; a ticket opens in a panel beside the board (list and detail), and its URL still opens the page alone | B1 | browser test: open, close, back button | not started |
 | B3 | Command palette (Ctrl+K or Cmd+K): the Go to sheet's places plus actions (new ticket, next approval, a machine) and search | B1, mobile P2d | browser test | not started |
 | B4 | Keyboard: `g o`, `g a`, `g p`, `g m`, `g y` to go; `j` and `k` through lists; `a` accept and `r` send back in the review queue; `?` lists them | B2 | browser test | not started |

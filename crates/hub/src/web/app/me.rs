@@ -227,7 +227,7 @@ pub async fn page(
         ""
     };
     let leave = format!(
-        "<section class=\"card leave\" id=\"leave\"><p><a href=\"/app/keys\" id=\"keys-link\">API keys</a></p>{admin}<p><a href=\"/account\">{}</a></p>\
+        "<section class=\"card leave\" id=\"leave\"><p><a href=\"/app/keys\" id=\"keys-link\">API keys</a></p><p><a href=\"/app/connections\" id=\"connections-link\">Connections</a></p>{admin}<p><a href=\"/account\">{}</a></p>\
 <form method=\"post\" action=\"/auth/logout\"><button type=\"submit\">{}</button></form></section>",
         escape(&copy.account_link),
         escape(&copy.sign_out),
