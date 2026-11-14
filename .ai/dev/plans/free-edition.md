@@ -72,6 +72,47 @@ modules/<name>/
 | `hub-server` | starts the hub: config, HTTP, wiring the modules; nothing else | none | `lib.rs`, `config*`, `web/routes.rs` |
 | `agenthub` (git submodule `devagotchi/agenthub`) | boards, tickets, notes, approvals, workflows, wake; usable alone on any Postgres (and ClickHouse) | `board_` | `crates/agenthub`, `crates/hub/src/agenthub/`, migrations 0014/0016 |
 
+## The UI: every module is run from its own pages
+
+Operator, 2026-11-14: "IT NEEDS TO HAVE UI TO SUPPORT IT". Standing rule: every setting is set
+in the UI, guided, grouped and next to what it affects. So each module's README names its
+pages, and its `ui/` holds them:
+
+| Module | What the person does there |
+|---|---|
+| `identity` | `/admin` → Sign-in: Sign in with Shippin (on by default, one switch to turn off), Google with your own client, GitHub, any OpenID Connect, email + password; `/account` → Sign-in and security: change password, linked sign-ins, passkey (offered after the first machine) |
+| `machines` | Machines: add (the one line per OS), approve a machine's code, rename, revoke, update, where it runs |
+| `mail` | `/admin` → Mail: SMTP or a Resend connection, send a test |
+| `push` | You → Notifications: this phone on or off, send a test, the phones that get them |
+| `connections` | You → Connections (exists) |
+| `analytics` | `/admin` → Statistics: ClickHouse (exists) |
+| `audit` | `/admin` → Activity: the record, filter by machine, agent, person |
+| `agenthub` | Boards and tickets (exist), board settings |
+| `tenancy` | `/operator`, only in a build with it |
+| `hub-server` | `/admin` → Hub: address, updates (track, version running), backups |
+
+Deploy-time values that cannot be set from a page because the hub needs them to start (its
+address, its Postgres URL) are listed as such in `hub-server`'s README and nowhere else. A CI
+check compares every config key with the module pages and that list.
+
+## Sign in with Shippin, on from the first start
+
+Operator, 2026-11-14: "shippin.ai available from deployment that can be toggled off so Google
+auth is always available". A self-hosted hub shows **Continue with Shippin** (Google and email
+through Shippin) with nothing set up, and the owner can turn it off on `/admin` → Sign-in.
+
+Checked 2026-11-14: Sign in with Shippin exists as an OpenID Connect provider
+(`config/providers.rs`, `accounts/identities.rs`), but a hub must be registered with Nomen by
+hand (`devagotchi hub connect-nomen`); `https://id.shippin.cloud/.well-known/openid-configuration`
+has no `registration_endpoint`; it accepts public clients (`none`) and the device grant.
+
+What makes it work with no registration: Nomen accepts **Client ID Metadata Documents** (the
+direction MCP takes in its 2026-07-28 revision). A hub's client id is a URL on the hub,
+`https://<hub>/oauth/client.json`, naming its redirect address; Nomen fetches it, checks the
+redirect matches, and treats it as a public client with PKCE. Nothing is registered and no
+secret exists. This is a change in Nomen (`D:\localdev\nomen-react-go`), made and tested there
+first (S0).
+
 Each module runs its own migrations against the hub's one Postgres; how sqlx 0.9 keeps their
 version histories apart (a migration table per module, or a schema per module) is settled in
 R0 with a test, not assumed.
@@ -85,7 +126,9 @@ R0 with a test, not assumed.
 | R2 | Split `crates/hub` into the modules above, moving files with no behaviour change; `crates/core` becomes `machine-engine` | full CI green; no file in `hub-server` beyond wiring | not started |
 | R3 | Postgres only: machines, push, audit, browser sessions, Nomen sign-ins move into their modules' tables; `auth.mode devagotchi`, the store's SQLite backend and twin migrations, and the hub's SQLite board fallback are deleted | a hub test runs `hub serve` with every feature exercised and finds no `*.sqlite3` in the state directory; `grep -rln rusqlite modules/{identity,machines,audit,push,hub-server}` empty | not started |
 | R4 | `tenancy` as its own module, out of the default build; a one-owner hub has no tenant code in its binary | the default binary's symbols carry no `tenancy`; a hub built with it passes the tenant tests | not started |
-| D1 | Sign-in as Desktop Commander's: Continue with Google, email + password (Sign in / Sign up), Forgot password by email; nothing else before the AI app gets its connection | `tests/first_connect_browser.py`; live check on app.devagotchi.com once Google and mail are set (below) | not started |
+| U0 | The UI contract: each module's pages listed in its README; `/admin` grouped by module; the CI check that every config key has a page or is a listed deploy-time value | the check fails on a config key with neither | not started |
+| S0 | Nomen accepts Client ID Metadata Documents (public client, PKCE, redirect checked against the hub's document); in `nomen-react-go`, with its tests | Nomen's tests; a hub on a fresh domain signs in through id.shippin.cloud with nothing registered | not started |
+| D1 | Sign-in as Desktop Commander's: **Continue with Shippin** on by default (Google and email through Shippin; off with one switch on `/admin` → Sign-in), Continue with Google when the owner adds their own client, email + password (Sign in / Sign up), Forgot password by email; nothing else before the AI app gets its connection | `tests/first_connect_browser.py` on a fresh hub with no settings: the Shippin button is there, turning it off removes it; live check on app.devagotchi.com | not started |
 | D2 | Machine connect as Desktop Commander's: one line per OS, no sudo, installs for the user and starts with the computer; the machine shows a code, the person approves it in the browser they are signed in with (device grant), and the AI says the machine is online | e2e on Linux and Windows CI: line → code → approve → `machines` online → `run echo ok` | not started |
 | D3 | Tool parity: search sessions, interactive processes and sessions, process list and kill, `edit_block` by range and fuzzy, `write_pdf`, reading PDF/Excel/DOCX, settings get/set, recent tool calls; each with the machine's grants deciding what runs | one test per tool against a real broker; the tool list compared to teardown §1.3 in a test | not started |
 | D4 | Local mode as Desktop Commander's: one line adds Devagotchi to Claude Code, Codex, Claude Desktop, Cursor on the same computer | a test per client config writer | not started |
@@ -95,12 +138,13 @@ R0 with a test, not assumed.
 
 ## Information needed from Jesse
 
-1. **Google sign-in (D1):** a Google OAuth client, type Web application, redirect
-   `https://app.devagotchi.com/auth/provider/google/callback`; you enter its id and secret on
-   `/admin` → Sign-in (never pasted to an agent).
-2. **Mail for Forgot password (D1):** a Resend key entered on the hub's mail settings, or SMTP.
+1. **S0:** Nomen (`nomen-react-go`) gains Client ID Metadata Documents, and id.shippin.cloud
+   runs that build. Say whether I make that change in the Nomen repository, and who deploys
+   id.shippin.cloud.
+2. **Mail for Forgot password (D1):** a Resend key entered on `/admin` → Mail, or SMTP.
 3. **R1:** the new public repository `devagotchi/agenthub` is created by me with `gh repo create`
    once you say so here.
+4. Google with the owner's own client stays optional: with Shippin on, Google works without it.
 
 ## Risks and approved decisions
 
