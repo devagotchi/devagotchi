@@ -48,10 +48,12 @@ hub-up.sh --ct ID --domain NAME [options]
   --domain NAME      the name the hub answers at (required)
   --rp-id NAME       passkeys' relying party: NAME or a parent domain (default NAME)
   --port PORT        the hub's port on the container's loopback (default 8787)
-  --track IMAGE      the image tag the hub follows (default ghcr.io/devagotchi/devagotchi:main)
+  --track IMAGE      the image tag the hub follows (default ghcr.io/devagotchi/devagotchi:latest,
+                     the newest release; :main follows every merge)
   --repo OWNER/NAME --ref REF
                      where the deploy files come from (default devagotchi/devagotchi at
-                     main, resolved to one commit)
+                     the release the track names: :latest the newest release's tag,
+                     :X.Y.Z vX.Y.Z, :main main; resolved to one commit)
   --no-snapshot      do not snapshot the container first
 A hosted hub, who runs it, and how people sign in (passed to install.sh; see its --help):
   --tenancy single|multi  --operators LIST  --trusted-proxies LIST
@@ -65,8 +67,8 @@ The hub's site (crates/hub/README.md, "The site"):
 EOF
 }
 
-ct="" domain="" rp_id="" port=8787 track=ghcr.io/devagotchi/devagotchi:main
-repo=devagotchi/devagotchi ref=main snapshot=true
+ct="" domain="" rp_id="" port=8787 track=ghcr.io/devagotchi/devagotchi:latest
+repo=devagotchi/devagotchi ref="" snapshot=true
 hosted=() env_file="" tenancy="" site="" site_only=false
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -97,6 +99,22 @@ exec > >(tee -a "$log_file") 2>&1
 say() { printf '\n==> %s\n' "$*"; }
 note() { printf '    %s\n' "$*"; }
 die() { printf '\nhub-up.sh: %s\n(log: %s)\n' "$*" "$log_file" >&2; exit 1; }
+# The git ref whose deploy files go with the image the track names (--ref wins): main's for
+# `:main` or a `:sha-` build, the newest release's tag for `:latest`, `vX.Y.Z` for `:X.Y.Z`.
+track_ref() {
+  [[ -n "$ref" ]] && { printf '%s' "$ref"; return; }
+  local tag="${track##*/}" found
+  [[ "$tag" == *:* ]] && tag="${tag##*:}" || tag=latest
+  case "$tag" in
+    main|sha-*) printf main ;;
+    latest)
+      found=$(curl -fsSL -m 30 "https://api.github.com/repos/$repo/releases/latest" \
+        | sed -n 's/^  "tag_name": "\([^"]*\)".*/\1/p' | head -1)
+      [[ -n "$found" ]] || die "could not find the newest release of $repo; pass --ref"
+      printf '%s' "$found" ;;
+    *) printf 'v%s' "$tag" ;;
+  esac
+}
 
 [[ -n "$ct" ]] && { $site_only || [[ -n "$domain" ]]; } || { usage >&2; exit 2; }
 [[ "$ct" =~ ^[0-9]+$ ]] || die "--ct $ct is not a container id"
@@ -120,8 +138,9 @@ work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 push_files() {
   local sha
-  sha=$(curl -fsSL "https://api.github.com/repos/$repo/commits/$ref" | sed -n 's/^  "sha": "\([0-9a-f]\{40\}\)".*/\1/p' | head -1)
-  [[ -n "$sha" ]] || die "could not resolve $repo@$ref"
+  local at; at=$(track_ref)
+  sha=$(curl -fsSL "https://api.github.com/repos/$repo/commits/$at" | sed -n 's/^  "sha": "\([0-9a-f]\{40\}\)".*/\1/p' | head -1)
+  [[ -n "$sha" ]] || die "could not resolve $repo@$at"
   say "the deploy files from $repo@${sha:0:12}"
   for file in install.sh compose.yaml update.sh backup.sh; do
     curl -fsSL "https://raw.githubusercontent.com/$repo/$sha/deploy/compose/$file" -o "$work/$file"

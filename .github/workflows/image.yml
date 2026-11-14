@@ -8,8 +8,8 @@ name: image
 # Each arch is built natively, brought up as a hosted compose stack with no downloads
 # configured, and a machine joins it the way a person's AI tells them to (tests/compose_join.py).
 # Then, for main and release tags only: one multi-arch tag set with a signed build-provenance
-# attestation. Tags: `main` and `sha-<short>` for every main build; the version and `latest` for
-# a release tag. The registry path comes from the repository's owner; nothing is named here.
+# attestation. Tags: `main` and `sha-<short>` for every main build; the version for a release
+# tag, and `latest` for one without a pre-release suffix (what a self-hosted hub follows). The registry path comes from the repository's owner; nothing is named here.
 on:
   workflow_call:
     inputs:
@@ -208,7 +208,7 @@ jobs:
             type=ref,event=branch
             type=sha,prefix=sha-
             type=semver,pattern={{version}}
-            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, '-') }}
       - name: One multi-arch tag set
         working-directory: ${{ runner.temp }}/digests
         run: |

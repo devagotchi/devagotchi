@@ -26,11 +26,14 @@ install.sh --domain NAME [options]
                        external: a proxy elsewhere terminates TLS and reaches the hub's port
   --hub-bind ADDR      where the hub's HTTP port is published (default 127.0.0.1)
   --hub-port PORT      that port (default 8787)
-  --track IMAGE        the image tag to follow (default ghcr.io/devagotchi/devagotchi:main)
+  --track IMAGE        the image tag to follow (default ghcr.io/devagotchi/devagotchi:latest,
+                       the newest release; :main follows every merge)
   --dir DIR            where the stack lives (default /opt/devagotchi-hub)
   --source DIR|URL     where compose.yaml and update.sh come from (default: beside this
                        script, else https://raw.githubusercontent.com/<repo>/<ref>/deploy/compose)
-  --repo OWNER/NAME    (default devagotchi/devagotchi)   --ref REF  (default main)
+  --repo OWNER/NAME    (default devagotchi/devagotchi)
+  --ref REF            (default: the release the track names, so the files match the image:
+                       :latest the newest release's tag, :X.Y.Z vX.Y.Z, :main main)
   --no-timer           do not install the update and backup timers
 The hub's site: its name, copy, colours and pictures (crates/hub/README.md, "The site"):
   --site DIR           check the site directory DIR with the hub image and put it in place
@@ -64,8 +67,8 @@ EOF
 }
 
 domain="" public_url="" rp_id="" edge=caddy hub_bind=127.0.0.1 hub_port=8787
-track=ghcr.io/devagotchi/devagotchi:main dir=/opt/devagotchi-hub source=""
-repo=devagotchi/devagotchi ref=main timer=true site="" site_only=false no_site=false
+track=ghcr.io/devagotchi/devagotchi:latest dir=/opt/devagotchi-hub source=""
+repo=devagotchi/devagotchi ref="" timer=true site="" site_only=false no_site=false
 tenancy="" operators="" proxies="" google=false github=false nomen="" email_from="" env_file=""
 analytics="" analytics_days=""
 while [[ $# -gt 0 ]]; do
@@ -101,6 +104,22 @@ while [[ $# -gt 0 ]]; do
 done
 say() { printf '==> %s\n' "$*"; }
 die() { printf 'install.sh: %s\n' "$*" >&2; exit 1; }
+# The git ref whose deploy files go with the image the track names (--ref wins): main's for
+# `:main` or a `:sha-` build, the newest release's tag for `:latest`, `vX.Y.Z` for `:X.Y.Z`.
+track_ref() {
+  [[ -n "$ref" ]] && { printf '%s' "$ref"; return; }
+  local tag="${track##*/}" found
+  [[ "$tag" == *:* ]] && tag="${tag##*:}" || tag=latest
+  case "$tag" in
+    main|sha-*) printf main ;;
+    latest)
+      found=$(curl -fsSL -m 30 "https://api.github.com/repos/$repo/releases/latest" \
+        | sed -n 's/^  "tag_name": "\([^"]*\)".*/\1/p' | head -1)
+      [[ -n "$found" ]] || die "could not find the newest release of $repo; pass --ref"
+      printf '%s' "$found" ;;
+    *) printf 'v%s' "$tag" ;;
+  esac
+}
 if [[ -n "$site" ]]; then
   [[ -d "$site" && -f "$site/site.json" ]] || die "--site $site is not a site directory (it has no site.json)"
   site="$(cd "$site" && pwd -P)"
@@ -190,7 +209,7 @@ command -v curl >/dev/null || { apt-get update -q && apt-get install -yq curl; }
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 if [[ -z "$source" ]]; then
   if [[ -f "$here/compose.yaml" && -f "$here/update.sh" ]]; then source="$here"
-  else source="https://raw.githubusercontent.com/$repo/$ref/deploy/compose"; fi
+  else source="https://raw.githubusercontent.com/$repo/$(track_ref)/deploy/compose"; fi
 fi
 install -d -m 0755 "$dir"
 for file in compose.yaml update.sh backup.sh; do

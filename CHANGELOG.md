@@ -7,6 +7,16 @@ heading. Agents draft the fragments below; they never tag.
 
 ## Unreleased
 
+### A self-hosted hub runs the release (increment 141)
+- `install.sh`, `hub-up.sh`, `compose.yaml` and `.env.example` follow
+  `ghcr.io/devagotchi/devagotchi:latest`, the newest release, instead of `:main`, every merge.
+  `--track ghcr.io/devagotchi/devagotchi:main` follows main as before. Existing installs keep
+  the track their `.env` names.
+- The deploy files a new install fetches come from the same release as its image (`:latest` the
+  newest release's tag, `:X.Y.Z` `vX.Y.Z`), so `compose.yaml` and the image always match.
+- `:latest` moves only for a release tag without a pre-release suffix (`v0.2.0-alpha.1` does
+  not move it).
+
 ### Connections: call Resend, Stripe, GitHub and more through the hub (increment 140)
 - **You → Connections** (`/app/connections`): connect a service with its key. The hub checks the
   key against the service, keeps it sealed, and shows only its last four characters from then on.

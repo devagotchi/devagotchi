@@ -46,9 +46,9 @@ the self-hosted behaviour as its default. Nothing cloud-specific is in the core.
 
 | Milestone | Task | Dependencies | Acceptance evidence | State |
 |---|---|---|---|---|
-| C1 | First pre-release tag `v0.1.0-alpha.1`: release archives and image `:0.1.0-alpha.1`; `:latest` moves only for tags without a pre-release suffix (today `image.yml` moves it for every `v*` tag) | D3 | Release run on the tag; anonymous pull of the tag | not started |
+| C1 | First pre-release tag `v0.1.0-alpha.1`: release archives and image `:0.1.0-alpha.1`; `:latest` moves only for tags without a pre-release suffix (today `image.yml` moves it for every `v*` tag) | D3 | Release run on the tag; anonymous pull of the tag | superseded: the operator released `v0.1.0` (2026-11-14); the `:latest` gating is done in increment 141 ([self-hosted-and-provenance](self-hosted-and-provenance.md) S1) |
 | C2 | The extension points above, each with its default and tests; no change in behaviour | C1 | hub tests unchanged and new trait tests | not started |
-| C3 | Create the private repository (D1), core as a submodule at the C1 tag, an empty `crates/cloud` that starts the core hub through C2's entry, CI building and testing both | C2, D1 | private CI green; the binary starts and answers `/healthz` | not started |
+| C3 | Create the private repository (D1), core as a submodule at the C1 tag, an empty `crates/cloud` that starts the core hub through C2's entry, CI building and testing both | C2, D1 | private CI green; the binary starts and answers `/healthz` | repository made 2026-11-14: `shippinAI/devagotchi-cloud`, core at `v0.1.0`; crates not started. Its console: [self-hosted-and-provenance](self-hosted-and-provenance.md) K1 |
 | C4 | Billing (D2) and the plan policy from it | C3, the gate in the roadmap | billing tests against the provider's test mode | not started |
 | C5 | Provisioning at scale | C3, the gate | tests on Postgres | not started |
 | C6 | Hosted staging deployment from `deploy/` | C4, C5 | the staging hub answers; a test tenant signs up and connects an AI | not started |
