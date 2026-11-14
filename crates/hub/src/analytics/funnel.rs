@@ -48,23 +48,7 @@ pub const KINDS: [&str; 9] = [
 #[cfg_attr(not(test), allow(dead_code))]
 pub const FAMILIES: [&str; 5] = ["claude", "chatgpt", "grok", "cursor", "other"];
 
-/// The family of the AI client an OAuth client's name says it is: Claude, ChatGPT or Codex,
-/// Grok, Cursor, or another (a terminal, a browser sign-in, anything else).
-pub fn client_family(name: &str) -> &'static str {
-    let name = name.to_ascii_lowercase();
-    let has = |word: &str| name.contains(word);
-    if has("claude") {
-        "claude"
-    } else if has("chatgpt") || has("codex") || has("openai") {
-        "chatgpt"
-    } else if has("grok") {
-        "grok"
-    } else if has("cursor") {
-        "cursor"
-    } else {
-        "other"
-    }
-}
+pub use devagotchi_agenthub::inbox::client_family;
 
 /// A milestone's detail as kept: at most 64 characters of `[a-z0-9_.-]`.
 fn detail(text: &str) -> String {

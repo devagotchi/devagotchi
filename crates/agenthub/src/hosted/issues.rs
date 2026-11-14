@@ -1,11 +1,11 @@
 use super::*;
-use crate::agenthub::issue_lifecycle::{
+use crate::issue_lifecycle::{
     ContextReceipt, ContextWrite, DeliveryReceipt, IssueContext, IssueWebhookEvent, SourceIssue,
     hash,
 };
 
 impl HostedBoard {
-    pub(crate) async fn issue_source(&self, ticket: &str) -> BridgeResult<Option<SourceIssue>> {
+    pub async fn issue_source(&self, ticket: &str) -> BridgeResult<Option<SourceIssue>> {
         transaction!(&self.store, |connection| {
             self.scope(connection).await?;
             let text: Option<String> = sqlx::query_scalar(
@@ -41,7 +41,7 @@ impl HostedBoard {
             .transpose()
     }
 
-    pub(crate) async fn ingest_issue(
+    pub async fn ingest_issue(
         &self,
         event: &IssueWebhookEvent,
         delivery: &str,
@@ -220,7 +220,7 @@ impl HostedBoard {
         })
     }
 
-    pub(crate) async fn issue_context(
+    pub async fn issue_context(
         &self,
         repository: u64,
         number: u64,
@@ -276,7 +276,7 @@ impl HostedBoard {
         })
     }
 
-    pub(crate) async fn write_issue_context(
+    pub async fn write_issue_context(
         &self,
         actor: &str,
         repository: u64,
@@ -334,7 +334,7 @@ impl HostedBoard {
                 .into());
             }
             if ticket.holder.is_some() {
-                crate::agenthub::lease::check_held(&ticket, actor, payload.fence)?;
+                crate::lease::check_held(&ticket, actor, payload.fence)?;
             }
             let note = self
                 .insert_note(

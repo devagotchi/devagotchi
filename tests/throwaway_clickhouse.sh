@@ -2,7 +2,7 @@
 # A throwaway ClickHouse for a CI job on Linux: the image the compose stack pins, as the
 # container dvg-ch on 127.0.0.1:18123, user devagotchi with a password made here and
 # handed to the job's later steps through $GITHUB_ENV (masked) or printed for a local run.
-# The hub exports its board events there (crates/hub/src/warehouse.rs):
+# The hub exports its board events there (crates/agenthub/src/clickhouse.rs):
 #   tests/throwaway_clickhouse.sh
 #   DEVAGOTCHI_CLICKHOUSE_URL=http://127.0.0.1:18123 DEVAGOTCHI_CLICKHOUSE_USER=devagotchi \
 #   DEVAGOTCHI_CLICKHOUSE_PASSWORD=... devagotchi hub serve …

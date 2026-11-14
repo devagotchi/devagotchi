@@ -10,6 +10,8 @@
 - Non-goals: a separate crate. The board uses the hub's store, tenancy, orgs, preferences,
   signals and warehouse throughout (64 references the other way too); a crate comes after those
   are their own crate.
+- Followed by: [AgentHub as its own crate](agenthub-crate.md) (increment 137): the engine is now
+  `crates/agenthub` on `crates/store`; this folder keeps the hub's side of it.
 - Canonical architecture / related plan: [agent-board](../../../docs/agent-board.md)
 
 ## Milestones and tasks

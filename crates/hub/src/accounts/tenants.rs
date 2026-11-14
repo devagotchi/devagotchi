@@ -42,17 +42,7 @@ pub fn new_tenant_id(random: [u8; 16]) -> String {
     )
 }
 
-/// A tenant id the hub made: `t-` and a lowercase UUID.
-pub fn valid_tenant_id(id: &str) -> bool {
-    let Some(uuid) = id.strip_prefix(TENANT_PREFIX) else {
-        return false;
-    };
-    uuid.len() == 36
-        && uuid.bytes().enumerate().all(|(i, b)| match i {
-            8 | 13 | 18 | 23 => b == b'-',
-            _ => b.is_ascii_digit() || (b'a'..=b'f').contains(&b),
-        })
-}
+pub use devagotchi_store::valid_tenant_id;
 
 /// A short, stable tag of a tenant for names that must not collide across tenants (machine
 /// names on a hosted hub): `t` and the first 12 hex digits of its UUID.

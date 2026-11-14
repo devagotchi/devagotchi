@@ -126,6 +126,8 @@ This desktop implementation does not yet provide file/search/edit tools, PTY inp
 | MCP adapter | `crates/mcp/src/main.rs` | Official `rmcp` 3.5.1 stdio transport and four typed tools |
 | Desktop app | `apps/desktop` | Tauri 2 native host and React/TypeScript inspector |
 | Website and public reference service | [`apps/website`](apps/website/README.md) | Product documentation, source download, and read-only HTTP/MCP reference routes |
+| AgentHub | [`crates/agenthub`](crates/agenthub/src/lib.rs) | The agents' board: tickets claimed under a lease, worked, noted and handed off, approvals, notes that reach agents; a local SQLite file or the Postgres of record, events exported to ClickHouse when there is one. The hub serves it (MCP tools, `board` command line, pages) from `crates/hub/src/agenthub/` |
+| Store | [`crates/store`](crates/store/src/lib.rs) | The database the hub and AgentHub share: Postgres in its own schema with tenant row-level security, or SQLite; retrying transactions; the migrations |
 | Contract authority | `crates/contracts/src/lib.rs` | Rust DTOs, strict decoding, generated JSON Schema and TypeScript |
 | Verification | `tests`, module tests, `verification` | Real process and protocol checks plus recorded evidence |
 

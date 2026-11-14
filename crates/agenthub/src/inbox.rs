@@ -27,8 +27,8 @@ pub const MAX_BODY: usize = 6_000;
 /// A recipient that has everything but has not marked it read hears about it this often.
 pub const REMIND_EVERY_MS: i64 = 15 * 60 * 1000;
 /// Addressed notes one read looks at.
-pub(super) const SCAN: i64 = 500;
-pub(super) const KEY: &str = "inbox";
+pub const SCAN: i64 = 500;
+pub const KEY: &str = "inbox";
 
 /// Where one recipient is up to on one board.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -96,7 +96,7 @@ impl Delivery {
 /// that calls itself Hermes is reached as `hermes`.
 pub fn client_aliases(name: &str) -> Vec<String> {
     let mut aliases = Vec::new();
-    let family = crate::analytics::funnel::client_family(name);
+    let family = crate::inbox::client_family(name);
     if family != "other" {
         aliases.push(family.to_string());
     }
@@ -138,7 +138,7 @@ fn cursor_of(cursors: &Cursors, to: Option<&String>) -> Cursor {
 }
 
 /// The earliest note any of `who` could still care about.
-pub(super) fn floor(cursors: &Cursors, who: &[String]) -> i64 {
+pub fn floor(cursors: &Cursors, who: &[String]) -> i64 {
     who.iter()
         .map(|name| cursors.get(name).map_or(0, |cursor| cursor.acked))
         .min()
@@ -146,13 +146,7 @@ pub(super) fn floor(cursors: &Cursors, who: &[String]) -> i64 {
 }
 
 /// What to tell `who` now, moving their positions as if it was told.
-pub(super) fn plan(
-    notes: &[Note],
-    who: &[String],
-    me: &str,
-    cursors: &mut Cursors,
-    now: i64,
-) -> Delivery {
+pub fn plan(notes: &[Note], who: &[String], me: &str, cursors: &mut Cursors, now: i64) -> Delivery {
     let mut delivery = Delivery::default();
     let mut chars = 0;
     let mut already = 0;
@@ -200,7 +194,7 @@ pub(super) fn plan(
 }
 
 /// Mark `who` as having been handed `notes`.
-pub(super) fn mark_delivered(cursors: &mut Cursors, notes: &[InboxNote], now: i64) {
+pub fn mark_delivered(cursors: &mut Cursors, notes: &[InboxNote], now: i64) {
     for note in notes {
         let cursor = cursors.entry(note.to.clone()).or_default();
         cursor.delivered = cursor.delivered.max(note.seq);
@@ -210,7 +204,7 @@ pub(super) fn mark_delivered(cursors: &mut Cursors, notes: &[InboxNote], now: i6
 
 /// Mark everything through `through` read for `who`. What it had not been handed yet counts as
 /// handed: it asked to be done with it.
-pub(super) fn acknowledge(cursors: &mut Cursors, who: &[String], through: i64) {
+pub fn acknowledge(cursors: &mut Cursors, who: &[String], through: i64) {
     for name in who {
         let cursor = cursors.entry(name.clone()).or_default();
         cursor.acked = cursor.acked.max(through);
@@ -219,12 +213,7 @@ pub(super) fn acknowledge(cursors: &mut Cursors, who: &[String], through: i64) {
 }
 
 /// Everything addressed to `who` that it has not marked read, whether handed yet or not.
-pub(super) fn unread(
-    notes: &[Note],
-    who: &[String],
-    me: &str,
-    cursors: &Cursors,
-) -> Vec<InboxNote> {
+pub fn unread(notes: &[Note], who: &[String], me: &str, cursors: &Cursors) -> Vec<InboxNote> {
     wanted(notes, who, me)
         .filter(|note| note.seq > cursor_of(cursors, note.to_principal.as_ref()).acked)
         .map(InboxNote::from)
@@ -348,5 +337,23 @@ impl Board {
             let notes = Self::local_addressed(w.tx, floor(&cursors, who))?;
             Ok(unread(&notes, who, actor.id, &cursors))
         })
+    }
+}
+
+/// The family of the AI client an OAuth client's name says it is: Claude, ChatGPT or Codex,
+/// Grok, Cursor, or another (a terminal, a browser sign-in, anything else).
+pub fn client_family(name: &str) -> &'static str {
+    let name = name.to_ascii_lowercase();
+    let has = |word: &str| name.contains(word);
+    if has("claude") {
+        "claude"
+    } else if has("chatgpt") || has("codex") || has("openai") {
+        "chatgpt"
+    } else if has("grok") {
+        "grok"
+    } else if has("cursor") {
+        "cursor"
+    } else {
+        "other"
     }
 }

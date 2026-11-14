@@ -36,7 +36,7 @@ pub struct NextFilter {
 
 /// Holder and fence must match and the lease must be live. Shared by every
 /// mutation of a held ticket.
-pub(crate) fn check_held(ticket: &Ticket, actor: &str, fence: Option<i64>) -> BridgeResult<()> {
+pub fn check_held(ticket: &Ticket, actor: &str, fence: Option<i64>) -> BridgeResult<()> {
     let Some(fence) = fence else {
         return Err(fail("stale_fence", "fence is required for a held ticket"));
     };
@@ -386,18 +386,18 @@ impl Board {
     }
 }
 
-pub(super) fn beat_every(ttl_ms: i64) -> i64 {
+pub fn beat_every(ttl_ms: i64) -> i64 {
     (ttl_ms / 3).max(1_000)
 }
 
-pub(super) fn clamp_ttl(settings: &Settings, asked: Option<i64>) -> i64 {
+pub fn clamp_ttl(settings: &Settings, asked: Option<i64>) -> i64 {
     asked
         .filter(|ttl| *ttl > 0)
         .unwrap_or(settings.lease_ttl_ms)
         .clamp(settings.lease_min_ttl_ms, settings.lease_max_ttl_ms)
 }
 
-pub(super) fn release_state(workflow: &Workflow, ticket: &Ticket) -> String {
+pub fn release_state(workflow: &Workflow, ticket: &Ticket) -> String {
     workflow
         .lane_by_active(&ticket.state)
         .map(|l| l.release_to.clone())

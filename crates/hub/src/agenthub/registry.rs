@@ -1,5 +1,6 @@
-use super::*;
-use crate::{agenthub::Board, store::Lookup};
+use crate::agenthub::{Board, fail, hosted::*};
+use crate::store::{Backend, Lookup, Store, transaction};
+use devagotchi_contracts::BridgeResult;
 use std::sync::Arc;
 
 pub(crate) struct Registry {
@@ -23,7 +24,7 @@ impl Registry {
         &self,
         future: impl std::future::Future<Output = BridgeResult<T>>,
     ) -> BridgeResult<T> {
-        blocking(&self.runtime, future)
+        crate::agenthub::hosted::blocking(&self.runtime, future)
     }
 
     async fn tenant(&self, owner: &str) -> BridgeResult<String> {
@@ -144,21 +145,5 @@ impl Registry {
             false
         };
         Ok(Some((Arc::new(Board::from_hosted(board).await?), created)))
-    }
-}
-
-pub(crate) fn blocking<T>(
-    runtime: &tokio::runtime::Handle,
-    future: impl std::future::Future<Output = BridgeResult<T>>,
-) -> BridgeResult<T> {
-    match tokio::runtime::Handle::try_current() {
-        Ok(handle) if handle.runtime_flavor() == tokio::runtime::RuntimeFlavor::MultiThread => {
-            tokio::task::block_in_place(|| runtime.block_on(future))
-        }
-        Ok(_) => Err(fail(
-            "board_runtime",
-            "synchronous hosted board calls require a blocking worker or multi-thread runtime",
-        )),
-        Err(_) => runtime.block_on(future),
     }
 }

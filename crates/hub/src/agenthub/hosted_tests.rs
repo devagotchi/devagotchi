@@ -1,5 +1,6 @@
-use super::*;
-use crate::store::testing;
+use super::{registry, *};
+use crate::agenthub::hosted::*;
+use crate::store::{Backend, Store, testing, transaction};
 
 use crate::agenthub::{
     AnchorPatch, Anchors, DepKind, Filter, NextFilter, Patch, ProjectSettings, approval::Verdict,
@@ -400,8 +401,8 @@ async fn shared_runtime_resolver_uses_postgres_without_board_files_and_observes_
         boards.bind("bob", "demo", &[]).unwrap();
         let alice = boards.open_account("alice", "demo").unwrap().unwrap();
         let bob = boards.open_account("bob", "demo").unwrap().unwrap();
-        assert!(alice.connection.is_none());
-        assert!(bob.connection.is_none());
+        assert!(!alice.is_local());
+        assert!(!bob.is_local());
         let actor = Actor::agent("cli");
         let ticket = alice
             .create(
@@ -465,7 +466,7 @@ async fn shared_runtime_resolver_uses_postgres_without_board_files_and_observes_
         );
         assert_ne!(one.unwrap().unwrap().created, two.unwrap().unwrap().created);
         let shared = boards.open("shared").unwrap();
-        assert!(shared.connection.is_none());
+        assert!(!shared.is_local());
         assert_eq!(shared.project(), "shared");
         assert!(!dir.path().join("never-created-shared").exists());
         assert!(!dir.path().join("never-created-accounts").exists());
