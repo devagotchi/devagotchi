@@ -255,7 +255,38 @@ async fn answer(
     response
 }
 
-/// The hub's sign-in when it sends mail; else the page saying a reset isn't available.
+/// Why a password reset by email is not available, from the sign-ins this hub actually has.
+fn reset_unavailable(hub: &HubSignIn) -> String {
+    let labels: Vec<String> = hub
+        .providers
+        .current()
+        .iter()
+        .map(|provider| provider.config.label())
+        .collect();
+    if labels.is_empty() {
+        "Password reset isn't available by email on this hub. Sign in with the password you set when you claimed it. On the hub's host, run devagotchi hub owner to print a new setup link.".into()
+    } else {
+        format!(
+            "Password reset isn't available by email on this hub. Sign in with {}.",
+            join_or(&labels)
+        )
+    }
+}
+
+fn join_or(labels: &[String]) -> String {
+    match labels {
+        [] => String::new(),
+        [one] => one.clone(),
+        [first, second] => format!("{first} or {second}"),
+        _ => {
+            let (last, rest) = labels.split_last().expect("at least one label");
+            format!("{} or {last}", rest.join(", "))
+        }
+    }
+}
+
+/// The hub's sign-in when it sends mail; else the page saying a reset isn't available,
+/// naming the sign-ins that are configured (or the owner-link path when there are none).
 fn mailing(state: &AppState) -> Result<std::sync::Arc<HubSignIn>, Response> {
     let hub = state
         .passkeys
@@ -265,10 +296,11 @@ fn mailing(state: &AppState) -> Result<std::sync::Arc<HubSignIn>, Response> {
         return Ok(hub);
     }
     let words = &hub.site().messages.sign_in;
+    let why = reset_unavailable(&hub);
     Err(pages::message(
         StatusCode::OK,
         &words.forgot,
-        &words.reset_unavailable,
+        &why,
         Some(("/auth/login", &words.title)),
     ))
 }

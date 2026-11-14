@@ -2,7 +2,7 @@
   "mcpServers": {
     "devagotchi": {
       "type": "http",
-      "url": "https://app.devagotchi.com/mcp"
+      "url": "https://hub.example.com/mcp"
     }
   }
 }

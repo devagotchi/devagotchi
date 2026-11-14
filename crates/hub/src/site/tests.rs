@@ -158,7 +158,7 @@ fn the_built_in_site_checks_out_and_says_what_the_hub_always_said() {
         site.mcp_instructions("https://hub.example.org")
             .starts_with("Devagotchi gives you the user's own machines (servers, PCs and devspaces) through this hub at https://hub.example.org. Docs: https://hub.example.org/docs; for AI agents: https://hub.example.org/llms.txt.")
     );
-    assert_eq!(site.hosted_hub(), Some("https://app.devagotchi.com"));
+    assert_eq!(site.hosted_hub(), None);
     let (subject, body) = site.sign_in_email("https://hub.example.org/auth/email#t");
     assert_eq!(subject, "Your Devagotchi sign-in link");
     assert!(body.starts_with(

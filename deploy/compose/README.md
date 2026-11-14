@@ -101,7 +101,8 @@ Docker's repository if it is missing, `.env` from its flags (Postgres sized for 
 image pinned by digest, and two systemd timers:
 
 - `devagotchi-hub-update.timer`, every 5 minutes, runs `update.sh`. When the track
-  (`DEVAGOTCHI_TRACK`, `:main` by default) points at a new digest, it backs the database up,
+  (`DEVAGOTCHI_TRACK`; the release channel, `:latest`, unless `--channel`, `--tag` or
+  `--track` said otherwise) points at a new digest, it backs the database up,
   deploys that digest and keeps it only if `/healthz` answers healthy. Otherwise it goes back
   to the digest that ran before, which migrations allow (they add; an older hub opens a
   newer store), and never tries that digest again. What it did is in
@@ -119,8 +120,12 @@ image pinned by digest, and two systemd timers:
   an archive of the state volume in `/var/backups/devagotchi-hub`, 14 days kept. Copy them
   off the host too.
 
-This project is alpha, so installs follow `:main` and every merge reaches them within minutes.
-No release has been tagged, so `:latest` has nothing to pull.
+A self-hosted install follows the release channel: `ghcr.io/devagotchi/devagotchi:latest`.
+`:latest` moves only when a stable tag is published (a `v*` tag with no prerelease suffix).
+A prerelease such as `v0.1.0-alpha.1` is published as `:0.1.0-alpha.1` and does not move
+`:latest`. Until the first stable tag exists, pass `--tag v0.1.0-alpha.1` or
+`--channel main`. `--channel main` follows `:main`, so every merge reaches that hub within
+minutes. `--track IMAGE` names an image outright.
 
 ClickHouse is started with the stack and never waited for, so a sick ClickHouse cannot undo a
 healthy deploy. The boards work without it and `/healthz` reports `analytics` as degraded.
@@ -203,7 +208,7 @@ deploy that never became healthy, that is at most the minutes it ran.
 ```bash
 sudo ./install.sh --domain app.example.com --rp-id example.com --tenancy multi \
   --operators email:you@example.com \
-  --google --github --nomen https://id.shippin.cloud \
+  --google --github --nomen https://id.example.com \
   --email-from "Devagotchi <sign-in@example.com>" \
   --env-file /root/hub-secrets.env
 ```
@@ -213,7 +218,7 @@ sudo ./install.sh --domain app.example.com --rp-id example.com --tenancy multi \
 - `--operators` lists who operates it: `email:<verified address>`, or `<provider>:<subject>`
   (`google:`, `github:`, `nomen:`). Their sign-in is the hub's owner, with no claim. A
   one-owner hub with operators set is not claimed either.
-- `--google`, `--github`, `--nomen ISSUER` (Sign in with Shippin) and `--email-from ADDRESS`
+- `--google`, `--github`, `--nomen ISSUER` (OpenID Connect at the issuer you pass) and `--email-from ADDRESS`
   (sign-in links by email) turn on each way in. Their ids and secrets come from `--env-file`
   (KEY=VALUE lines, as the secret store writes them) or from the environment, and stay in
   `.env` (0600): `DEVAGOTCHI_GOOGLE_CLIENT_ID`/`_SECRET`, `DEVAGOTCHI_GITHUB_CLIENT_ID`/`_SECRET`,
@@ -272,8 +277,8 @@ shows the failure, and people keep signing in by password, passkey and provider.
 
 GitHub builds the hub image from every commit that lands on `main` (and every release tag),
 natively on x86_64 and ARM64, and publishes one multi-arch image to GHCR
-(`.github/workflows/image.yml`, run by `release.yml` once the release builds are done): `:main` and `:sha-<commit>` for main, the version and
-`:latest` for a release. Each carries a signed build-provenance attestation, so you can check
+(`.github/workflows/image.yml`, run by `release.yml` once the release builds are done): `:main` and `:sha-<commit>` for main, the version for every `v*` tag, and
+`:latest` only for a stable tag (no prerelease suffix). Each carries a signed build-provenance attestation, so you can check
 the image you pulled was built by this repository's workflow from a given commit:
 
 ```bash
@@ -325,7 +330,7 @@ Everything is in `.env`; each has a default (`.env.example` lists them).
 |---|---|---|
 | `DEVAGOTCHI_DOMAIN` | (required) | The name the hub is reached at; Caddy gets its certificate for it. `localhost` works for a try-out, with Caddy's own certificate. |
 | `DEVAGOTCHI_PUBLIC_URL` | `https://<DEVAGOTCHI_DOMAIN>` | The URL clients use, when it differs (another port, another proxy in front). Passkeys and AI clients are bound to it. |
-| `DEVAGOTCHI_IMAGE` | `ghcr.io/devagotchi/devagotchi:main` | The hub image. `docker compose up --build` builds it from this checkout instead. |
+| `DEVAGOTCHI_IMAGE` | `ghcr.io/devagotchi/devagotchi:latest` | The hub image. `install.sh` writes a digest pin. `docker compose up --build` builds it from this checkout instead. |
 | `DEVAGOTCHI_HTTP_PORT`, `DEVAGOTCHI_HTTPS_PORT` | `80`, `443` | Where Caddy listens on the host. |
 | `DEVAGOTCHI_PG_SHARED_BUFFERS` | `256MB` | About a quarter of the box's RAM. |
 | `DEVAGOTCHI_PG_EFFECTIVE_CACHE_SIZE` | `768MB` | About three quarters of the box's RAM. |

@@ -15,7 +15,7 @@
 ## Shape of the private repository
 
 ```
-devagotchi-cloud/                 private; organisation: decision D1
+devagotchi-cloud/                 private; organisation: shippinAI (D1, decided 2026-11-14)
   core/                           git submodule: devagotchi/devagotchi at a v* tag
   Cargo.toml                      workspace: crates/*, depending on core/crates/* by path
   crates/cloud/                   the hosted binary: the core hub plus the extensions below
@@ -46,8 +46,8 @@ the self-hosted behaviour as its default. Nothing cloud-specific is in the core.
 
 | Milestone | Task | Dependencies | Acceptance evidence | State |
 |---|---|---|---|---|
-| C1 | First pre-release tag `v0.1.0-alpha.1`: release archives and image `:0.1.0-alpha.1`; `:latest` moves only for tags without a pre-release suffix (today `image.yml` moves it for every `v*` tag) | D3 | Release run on the tag; anonymous pull of the tag | not started |
-| C2 | The extension points above, each with its default and tests; no change in behaviour | C1 | hub tests unchanged and new trait tests | not started |
+| C1 | First pre-release tag `v0.1.0-alpha.1`: release archives and image `:0.1.0-alpha.1`; `:latest` moves only for tags without a pre-release suffix | D3 | Release run on the tag; anonymous pull of the tag | image rule done in `image.yml`; release notes drafted under CHANGELOG `Unreleased`; the tag is not created here (the operator tags after review) |
+| C2 | The extension points above, each with its default and tests; no change in behaviour | none for the interfaces; the cloud pins them at the C1 tag | `extensions` tests; hub behaviour unchanged for the defaults | implemented: `serve_with`, `PlanPolicy`, `TenantHooks`, `EventHook`, `RouteMount` in `crates/hub/src/extensions.rs`. Pending merge |
 | C3 | Create the private repository (D1), core as a submodule at the C1 tag, an empty `crates/cloud` that starts the core hub through C2's entry, CI building and testing both | C2, D1 | private CI green; the binary starts and answers `/healthz` | not started |
 | C4 | Billing (D2) and the plan policy from it | C3, the gate in the roadmap | billing tests against the provider's test mode | not started |
 | C5 | Provisioning at scale | C3, the gate | tests on Postgres | not started |
@@ -67,5 +67,6 @@ Each milestone records its own.
 
 ## Delivery
 
-Implementation: not started. Push: not_verified. PR: per milestone.
-**DELIVERY INCOMPLETE: NOT STARTED**
+C1's image rule and C2's interfaces are in this repository, not merged. The tag `v0.1.0-alpha.1` is not created. C3 onwards wait on the private repository, which does not exist.
+Implementation: in progress. Push: not_verified. PR: per milestone.
+**DELIVERY INCOMPLETE: NOT MERGED TO MAIN**

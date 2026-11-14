@@ -22,3 +22,11 @@ Rules:
 
 Already in this repository and marked for review against rule 2 and 3: `tenancy.mode multi`,
 `/operator` (waiting list and plans) and plan limits. The private cloud repository does not exist yet; the [cloud edition plan](../dev/plans/cloud-edition.md) says what comes first.
+
+Decided by the operator on 2026-11-14, and recorded so this repository does not invent them:
+
+- The commercial cloud is a marketing site and a hosted service at devagotchi.com, with a free tier. Its repository will be `shippinAI/devagotchi-cloud`. It does not exist yet, and none of its deployment belongs in this repository.
+- Sign-in for that hosted service is Nomen, the operator's OpenID Connect provider. This core does not default to it. An operator types the issuer on `/admin`, or passes it to `install.sh --nomen`.
+- Billing, when the cloud repository exists, is Stripe. Plugin submission comes later.
+- A self-hosted install names its own hub. No hostname, address, or identity-provider URL is a default in code, scripts, or examples.
+- What the cloud replaces is `crates/hub/src/extensions.rs`: extra routes, plan limits, tenant lifecycle, and an in-process event hook. Each default is what a self-hosted hub already does.

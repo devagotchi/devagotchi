@@ -18,7 +18,7 @@ pub const USAGE: &str = "Usage: devagotchi connect [claude-code|codex|claude-des
 
 Points your AI clients at Devagotchi. Each gets an MCP server named `devagotchi` that runs
 this binary:
-  --hub [URL]  (the default once `devagotchi login` has signed you in) the hosted hub, as your
+  --hub [URL]  (the hub `devagotchi login` saved, or DEVAGOTCHI_HUB) that hub, as your
                account: every machine you linked, the boards and approvals
   --local      this machine's own broker (started in the background when it is not running)
 Clients (default: every one found here):

@@ -23,15 +23,18 @@ Re-running it is safe. Every value comes from its flags (`--help`); none names a
 `tests/proxmox_hub_up.py` runs it against a stand-in Proxmox host in CI, and
 `tests/deploy_scripts.sh` runs what it installs for real.
 
-A hosted hub (as app.devagotchi.com runs) takes install.sh's flags for its tenancy,
-operators and sign-ins, and a secrets file on the Proxmox host that is pushed into the
-container 0600 for install.sh alone and removed after it:
+A hosted hub takes install.sh's flags for its tenancy, operators and sign-ins, and a
+secrets file on the Proxmox host that is pushed into the container 0600 for install.sh
+alone and removed after it. With no `--channel`, `--tag` or `--track`, the container
+follows the release channel (`:latest`). The commercial cloud at devagotchi.com is a
+deployment of this same script with that operator's own values, which are not in this
+repository.
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/devagotchi/devagotchi/main/deploy/proxmox/hub-up.sh \
-  | bash -s -- --ct 110 --domain app.devagotchi.com --rp-id devagotchi.com --tenancy multi \
-      --operators email:you@example.com --google --github --nomen https://id.shippin.cloud \
-      --email-from "Devagotchi <sign-in@devagotchi.com>" --env-file /root/devagotchi-hub.env
+  | bash -s -- --ct <id> --domain hub.example.com --rp-id example.com --tenancy multi \
+      --operators email:you@example.com --google --github --nomen https://id.example.com \
+      --email-from "Hub <sign-in@example.com>" --env-file /root/devagotchi-hub.env
 ```
 
 The hub's site (its name, copy, colours and pictures: `crates/hub/README.md`, "The site")

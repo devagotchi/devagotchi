@@ -21,7 +21,7 @@
 | Connections: outside services through the hub | [connections-gateway.md](connections-gateway.md) | X1 and X2 built: 11 services, keys sealed, `connections` and `connection_call` | X3 apps (Lovable) call through the hub with an API key, X4 Resend end to end, X5 Vaultix as the secret source |
 | Plugins for Claude, Codex and Grok | [plugins.md](plugins.md) | One marketplace in this repository: the `devagotchi` connector and skills, the `devagotchi-agenthub` hooks; validated and installed in throwaway Claude Code and Codex homes | G2 guided install on the hub, G3 views the API opens (MCP Apps), G4 live notices in Claude Code |
 | Full browser | [browser-experience.md](browser-experience.md) | The desktop shows the phone's single column with the tab bar at the bottom | B1 wide layout with a side rail, B2 board as columns |
-| Cloud edition | [cloud-edition.md](cloud-edition.md) | Boundary written ([editions](../../docs/editions.md)); license BSL 1.1; public image; no tag, no extension points, no private repo | C1 first pre-release tag, C2 extension points in core, C3 private repo with core as a submodule |
+| Cloud edition | [cloud-edition.md](cloud-edition.md) | Boundary written ([editions](../../docs/editions.md)); license BSL 1.1; public image; `:latest` only for a stable tag; extension points in `crates/hub/src/extensions.rs`; no tag yet; no private repo | Operator tags `v0.1.0-alpha.1` after review, then C3: `shippinAI/devagotchi-cloud` with core as a submodule |
 
 ## Order
 
@@ -44,9 +44,9 @@ Kept from the [factory board plan](../../../docs/agenthub-factory-board-plan.md)
 
 | # | Decision | Recommendation | Blocks |
 |---|---|---|---|
-| D1 | Which GitHub organisation owns the private cloud repository: `devagotchi`, `shippinAI` or `shippin-tech` | The organisation that will own the hosted business and its billing; "powered by shippin.ai" points to `shippinAI` | C3 |
-| D2 | Billing provider | Stripe (subscriptions, customer portal, webhooks) | C4 |
-| D3 | When to tag `v0.1.0-alpha.1` | Now: a pin needs a tag, and pre-release tags do not move `:latest` (C1) | C1 |
+| D1 | Which GitHub organisation owns the private cloud repository | **Decided 2026-11-14: `shippinAI`.** The repository is not created yet | C3 |
+| D2 | Billing provider | **Decided 2026-11-14: Stripe** (subscriptions, customer portal, webhooks). No billing code is in this repository | C4 |
+| D3 | When to tag `v0.1.0-alpha.1` | Release notes are drafted. **The operator tags after review.** This change does not create or push the tag. A pre-release tag does not move `:latest` | C1 |
 | D4 | Project marker: keep `.devagotchi/` or move to `.agenthub/` (factory plan decision 1) | Keep `.devagotchi/`, read `.agenthub/` too | F1 |
 | D5 | What counts as verified (factory plan decision 3) | Every required check green, the reviewer is not the worker | F4 |
 
