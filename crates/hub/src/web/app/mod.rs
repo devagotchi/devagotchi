@@ -6,6 +6,7 @@
 //! the stylesheet so the app opens offline on `/app/offline`.
 
 mod agenthub;
+mod connections;
 mod home;
 mod keys;
 mod machine;
@@ -43,6 +44,14 @@ pub fn routes() -> Router<AppState> {
             axum::routing::post(agenthub::ticket_actions::act),
         )
         .route("/app/me", get(me::page).post(me::save))
+        .route(
+            "/app/connections",
+            get(connections::page).post(connections::add),
+        )
+        .route(
+            "/app/connections/{name}/remove",
+            axum::routing::post(connections::remove),
+        )
         .route("/app/keys", get(keys::page).post(keys::create))
         .route("/app/keys/{id}/revoke", axum::routing::post(keys::revoke))
         .route("/app/keys/{id}/rotate", axum::routing::post(keys::rotate))

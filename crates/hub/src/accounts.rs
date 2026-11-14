@@ -15,6 +15,7 @@ pub mod analytics_settings;
 pub mod api_keys;
 pub mod claim;
 pub mod clients;
+pub mod connections;
 pub mod email;
 pub mod identities;
 pub mod oauth;

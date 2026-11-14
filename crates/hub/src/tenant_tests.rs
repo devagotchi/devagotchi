@@ -155,6 +155,13 @@ pub(crate) async fn hosted_with_ingress(
             offers: Some(Arc::new(
                 crate::offers::Offers::from_config(&config, accounts.clone()).unwrap(),
             )),
+            connections: Some(Arc::new(
+                crate::connections::Connections::new(
+                    accounts.clone(),
+                    crate::sealed::Sealer::ephemeral(),
+                )
+                .unwrap(),
+            )),
             routed: Default::default(),
         },
         issue_store: Arc::new(ingress),
@@ -600,10 +607,17 @@ async fn isolation(hub: Hosted) {
             leaks_beyond(name, &answer.to_string(), &arguments.to_string());
             // `workflow_list` takes nothing: it lists the site's workflows, never anyone's.
             // `offers` and `offers_accept` name no machine, board or workflow: they read
-            // and keep the caller's own tenant's yes, never another's.
+            // and keep the caller's own tenant's yes, never another's. `connections` lists the
+            // caller's own tenant's connections only (`connection_call` with B's name is
+            // refused below like every other tool).
             if !matches!(
                 name,
-                "whoami" | "machines" | "workflow_list" | "offers" | "offers_accept"
+                "whoami"
+                    | "machines"
+                    | "workflow_list"
+                    | "offers"
+                    | "offers_accept"
+                    | "connections"
             ) {
                 // Every other tool names a machine, a board or a workflow of B's here:
                 // refused by the tool itself, never for want of arguments it could read.

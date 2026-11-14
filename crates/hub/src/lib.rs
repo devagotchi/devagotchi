@@ -19,6 +19,9 @@ mod audit;
 mod auth;
 mod config;
 mod connect;
+mod connections;
+#[cfg(test)]
+mod connections_tests;
 mod devices;
 mod downloads;
 mod files;
@@ -1005,6 +1008,19 @@ async fn run(state_dir: PathBuf, config_path: PathBuf) -> BridgeResult<()> {
         )),
         None => None,
     };
+    // Outside services the account's agents call through the hub (`connections.rs`): keys
+    // sealed with the same key file as the settings page's secrets.
+    let connections = match &accounts {
+        Some(accounts) => Some(Arc::new(
+            connections::Connections::new(
+                accounts.clone(),
+                sealed::Sealer::open(&state_dir)
+                    .map_err(|why| BridgeError::new("invalid_config", why))?,
+            )
+            .map_err(|why| BridgeError::new("invalid_config", why))?,
+        )),
+        None => None,
+    };
     let verifier = Arc::new(Verifier::from_hub_config(&config, &state_dir, accounts).await?);
     let web = match (&config.web, &config.auth) {
         (
@@ -1104,6 +1120,7 @@ async fn run(state_dir: PathBuf, config_path: PathBuf) -> BridgeResult<()> {
             analytics,
             workflows,
             offers,
+            connections,
             routed: Default::default(),
         },
         issue_store,
@@ -2335,6 +2352,7 @@ mod tests {
                 analytics: None,
                 workflows: None,
                 offers: None,
+                connections: None,
                 routed: Default::default(),
             },
             issue_store: Arc::new(
@@ -2564,6 +2582,7 @@ mod tests {
                 analytics: None,
                 workflows: None,
                 offers: None,
+                connections: None,
                 routed: Default::default(),
             },
             issue_store: Arc::new(

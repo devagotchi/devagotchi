@@ -42,8 +42,8 @@
 
 | Milestone | Task | Dependencies | Acceptance evidence | State |
 |---|---|---|---|---|
-| X1 | Catalog and connections: a template per service (host, auth placement, a test call), stored connections per tenant with the secret sealed (`settings.key`), a Connections page in the app (desktop and phone) to add, check and remove one | none | store tests both backends; page tests | not started |
-| X2 | Agents call through the hub: MCP `connection_call {connection, method, path, body}` restricted to the template's host and allowed paths; the hub attaches the credential, strips it from anything echoed back, audits per agent seat; `connections` lists what an agent may use (names only) | X1 | MCP tests against stand-ins; a secret never appears in a result | not started |
+| X1 | Catalog and connections: a template per service (host, auth placement, a test call), stored connections per tenant with the secret sealed (`settings.key`), a Connections page in the app (desktop and phone) to add, check and remove one | none | store tests both backends; page tests | done (increment 140): 11 services (Resend, Stripe, GitHub, Slack, Vercel, Supabase, Linear, OpenAI, Anthropic, Postmark, Notion), API keys first |
+| X2 | Agents call through the hub: MCP `connection_call {connection, method, path, body}` restricted to the template's host and allowed paths; the hub attaches the credential, strips it from anything echoed back, audits per agent seat; `connections` lists what an agent may use (names only) | X1 | MCP tests against stand-ins; a secret never appears in a result | done (increment 140) |
 | X3 | Apps call through the hub: `POST /api/v1/connections/{name}/…` with a Devagotchi API key limited to named connections (`KeyLimits`), for a Lovable or any other app's server code; CORS closed (server-to-server) | X2, API keys | HTTP tests; a key for one connection cannot use another | not started |
 | X4 | Resend first, end to end: template, `email_send` as a typed tool over X2, a guide on the page for a Lovable app (its edge function calls the hub with its key) | X3 | stand-in test; operator receipt with a real Resend key | not started |
 | X5 | Vaultix as the secret source: a connection's secret may be a Vaultix reference (`vaultix://org/project/env/path#KEY`); the hub signs in to Vaultix with a machine identity (universal auth) set on `/admin`, reads the value at call time, never stores it | X2 | stand-in Vaultix test; operator receipt against their Vaultix | not started |
@@ -60,9 +60,20 @@
 
 ## Verification receipts
 
-Each milestone records its own.
+X1 and X2, 2026-11-14, Windows 11, Postgres 18 (docker), branch `increment-140/connections`:
+- `connections_tests::a_connection_is_called_through_the_hub_and_its_key_never_leaves_it` on
+  SQLite and Postgres (a database made, so the Postgres half and its row-level security ran),
+  against a stand-in service that echoes the key back: a refused key is not kept; another
+  site's form, an unknown service and a bad name are refused; a good key is checked, sealed and
+  shown as its last four; `connections` lists it by name; `connection_call` reaches the service
+  with the key and returns the answer with the key redacted; five calls that try to leave the
+  service or use another method reach nothing; another account neither sees nor uses it; removal
+  ends it.
+- `devagotchi-agenthub` `connections::tests`: the path and origin rules, each service's key
+  placement, redaction, the catalog's own consistency.
+- Not run: any real service (a Resend key is needed for X4's receipt).
 
 ## Delivery
 
-Implementation: not started (plan). Push: not_verified. PR: not_created. Main: not_verified.
-**DELIVERY INCOMPLETE: NOT STARTED**
+Implementation: X1 and X2 done. Push: not_verified. PR: not_created. Main: not_verified.
+**DELIVERY INCOMPLETE: X3 TO X7 NOT STARTED**

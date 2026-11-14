@@ -1518,6 +1518,7 @@ mod bound {
                 analytics: None,
                 workflows: None,
                 offers: None,
+                connections: None,
                 routed: Default::default(),
                 push: None,
                 boards: Arc::new(crate::agenthub::mcp::Boards::from_config(&config, dir)),

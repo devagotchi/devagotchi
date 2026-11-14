@@ -7,6 +7,16 @@ heading. Agents draft the fragments below; they never tag.
 
 ## Unreleased
 
+### Connections: call Resend, Stripe, GitHub and more through the hub (increment 140)
+- **You → Connections** (`/app/connections`): connect a service with its key. The hub checks the
+  key against the service, keeps it sealed, and shows only its last four characters from then on.
+  Resend, Stripe, GitHub, Slack, Vercel, Supabase, Linear, OpenAI, Anthropic, Postmark and Notion.
+- Agents call them with `connection_call` and list them with `connections`: the hub adds the key,
+  sends the call only to that service, takes the key out of the answer, and records the call
+  under the agent's name. Agents never see the keys; another account never sees your connections.
+- In a wide browser window the app's tabs become a rail on the left and pages get room; the
+  phone keeps its tab bar.
+
 ### Assign a ticket to an agent (increment 139)
 - A ticket's page has **Assign to an agent**: pick from the board's roster (the AI clients
   you connected, agents with a webhook, agents already on the ticket, and Claude, Codex,

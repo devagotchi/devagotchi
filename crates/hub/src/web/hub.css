@@ -379,3 +379,23 @@ label.check input { flex: none; margin: 2px 0 0; }
 .leave form { margin-top: 12px; }
 .leave p { margin: 0; }
 .leave button { width: 100%; padding: 14px; color: var(--revoked); border-color: var(--revoked); font-weight: 600; }
+
+/* A wide browser window (plan B1, browser-experience.md): the tabs become a rail on the left,
+   the page gets room, and pages built in columns (`.connections`) set their cards side by side.
+   The phone keeps one column and the tab bar at the bottom. */
+@media (min-width: 1024px) {
+  body.app { display: grid; grid-template-columns: 216px minmax(0, 1fr);
+    grid-template-rows: auto auto minmax(0, 1fr); }
+  body.app > .bar, body.app > .nudge { grid-column: 1 / -1; }
+  body.app > main { grid-column: 2; grid-row: 3; width: 100%; max-width: 1280px;
+    padding: 28px clamp(24px, 4vw, 56px) 40px; }
+  body.app > .tabs { grid-column: 1; grid-row: 3; flex-direction: column; gap: 2px;
+    border-top: 0; border-right: 1px solid var(--line); padding: 16px 8px; overflow-y: auto; }
+  body.app > .tabs a { flex: none; padding: 10px 14px; border-radius: var(--radius-s);
+    text-align: left; font-size: .95rem; }
+  body.app > .tabs a[aria-current="page"] { background: var(--sunk);
+    box-shadow: inset 3px 0 0 var(--accent); }
+  .connections { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px;
+    align-items: start; }
+  .connections > .card { margin: 0; }
+}
