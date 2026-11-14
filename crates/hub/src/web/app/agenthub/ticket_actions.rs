@@ -1,6 +1,8 @@
 //! What the ticket page's forms do (`ticket.rs`): `POST /app/tickets/<project>/<id>/<action>`
-//! with `comment`, `assign`, `close`, `undo` or `hand`, each one board call as the person
-//! (`Actor::human`), audited as the board tools audit theirs.
+//! with `comment`, `assign`, `delegate`, `close`, `undo` or `hand`, each the board calls the
+//! MCP tools make, as the person (`Actor::human`), audited as the board tools audit theirs.
+//! `delegate` assigns the ticket to an agent by name and leaves that agent a note, so it hears
+//! of it on its next call (the inbox banner) and at once when it has a webhook (`wake`).
 
 use axum::{
     Form,
@@ -88,12 +90,12 @@ pub async fn act(
     };
     let tool = match action.as_str() {
         "comment" => "board_note",
-        "assign" | "close" | "undo" | "hand" => "board_update",
+        "assign" | "delegate" | "close" | "undo" | "hand" => "board_update",
         _ => return unknown(),
     };
     let me = subject.id.clone();
     let ticket = id.clone();
-    let addressed = (action == "comment")
+    let addressed = (action == "comment" || action == "delegate")
         .then(|| act.to.trim().to_string())
         .filter(|to| !to.is_empty());
     let wakes = board.clone();
@@ -162,6 +164,20 @@ fn apply(
             ..Patch::default()
         })
         .map(|_| "done=assign".into()),
+        "delegate" => {
+            let copy = &words().messages.app.delegate;
+            let to = act.to.trim();
+            if !crate::agenthub::valid_name(to) {
+                return Err(crate::agenthub::fail("invalid", copy.invalid.clone()));
+            }
+            update(Patch {
+                assignee: Some(Some(to.to_string())),
+                ..Patch::default()
+            })?;
+            board
+                .add_note(actor, id, "note", &copy.note, Some(to), None)
+                .map(|_| "done=delegate".into())
+        }
         "close" => {
             let current = board.get(id)?.ticket;
             // Done when the workflow goes there from here, else its first closed state that it does.

@@ -925,6 +925,39 @@ pub struct Messages {
     pub focus: FocusCopy,
 }
 
+/// The words of the ticket page's "Assign to an agent": the field, its suggestions' heading,
+/// the button, what the page says after, and the note the agent receives.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields, default)]
+pub struct DelegateCopy {
+    pub label: String,
+    pub hint: String,
+    pub button: String,
+    pub done: String,
+    pub note: String,
+    pub invalid: String,
+}
+
+impl Default for DelegateCopy {
+    fn default() -> Self {
+        let s = |text: &str| text.to_string();
+        Self {
+            label: s("Assign to an agent"),
+            hint: s("claude, codex, grok, or your agent's name"),
+            button: s("Assign"),
+            done: s(
+                "Assigned. The agent is told on its next call, and at once if it has a webhook.",
+            ),
+            note: s(
+                "This ticket is assigned to you. Claim it with board_claim when you take it on.",
+            ),
+            invalid: s(
+                "An agent's name is lowercase letters, digits and dashes, like codex or my-agent.",
+            ),
+        }
+    }
+}
+
 /// The words of the app's Go to sheet: its button, title and the places it lists. Its sections
 /// are named after the tabs.
 #[derive(Debug, Clone, Deserialize)]
@@ -1308,6 +1341,9 @@ pub struct AppCopy {
     pub done_undo: String,
     pub done_hand: String,
     pub undo_late: String,
+    /// The ticket page's "Assign to an agent" (`web/app/agenthub/ticket.rs`).
+    #[serde(default)]
+    pub delegate: DelegateCopy,
     pub not_changed: String,
     pub board_unknown: String,
     pub board_unknown_text: String,

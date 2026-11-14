@@ -7,6 +7,16 @@ heading. Agents draft the fragments below; they never tag.
 
 ## Unreleased
 
+### Assign a ticket to an agent (increment 139)
+- A ticket's page has **Assign to an agent**: pick from the board's roster (the AI clients
+  you connected, agents with a webhook, agents already on the ticket, and Claude, Codex,
+  Grok, Cursor, Gemini) or type any agent's name. The ticket is assigned to it and the agent
+  gets a note, so it hears on its next call, or at once when it has a webhook; it claims its
+  assigned tickets first.
+- Plans: the [connections gateway](.ai/dev/plans/connections-gateway.md) (Resend, Vaultix,
+  Nomen and the well-known services, called through the hub with the secret never leaving
+  it) and the factory plan's second research pass (F12 to F17).
+
 ### Your ClickHouse from the settings page, and where your boards are (increment 138)
 - `/admin`, Data and signals: connect the ClickHouse AgentHub sends its board events to
   (address, database, user, password), checked when you save, the password sealed, and in use
