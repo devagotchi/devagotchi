@@ -72,6 +72,10 @@ pub fn router(hub_authorization: bool) -> Router<AppState> {
             "/admin/sign-in/{name}",
             post(super::hub_settings::save_sign_in),
         )
+        .route(
+            "/admin/analytics",
+            post(super::hub_settings::save_analytics),
+        )
         .route("/operator", get(operator::page))
         .route("/operator/admit", post(operator::admit))
         .route("/operator/plan", post(operator::plan))

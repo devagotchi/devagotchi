@@ -103,6 +103,11 @@ impl HubSignIn {
     }
 
     /// This sign-in with the config's providers and email link (`Providers::from_config`).
+    /// What seals the secrets set on the settings page (`crate::sealed`).
+    pub fn sealer(&self) -> &crate::sealed::Sealer {
+        self.providers.sealer()
+    }
+
     pub fn with_providers(mut self, providers: super::providers::Providers) -> Self {
         self.providers = providers;
         self

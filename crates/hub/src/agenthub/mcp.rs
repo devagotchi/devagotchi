@@ -63,8 +63,8 @@ pub struct Boards {
     /// What people told the hub they want, kept beside the organisations.
     preferences: Option<crate::preferences::PreferenceStore>,
     /// The export of these boards' events to ClickHouse (`crate::warehouse`), when the hub
-    /// has one.
-    warehouse: std::sync::OnceLock<Arc<crate::warehouse::Warehouse>>,
+    /// has one: from the config at start, or from the settings page at any time.
+    warehouse: std::sync::RwLock<Option<Arc<crate::warehouse::Warehouse>>>,
     /// The hub's signal sinks (`crate::signals`), set once at start.
     sinks: std::sync::OnceLock<Vec<Arc<crate::signals::Sink>>>,
     dirs: BTreeMap<String, PathBuf>,
@@ -158,7 +158,7 @@ impl Boards {
             hosted: None,
             orgs: None,
             preferences: None,
-            warehouse: std::sync::OnceLock::new(),
+            warehouse: std::sync::RwLock::new(None),
             sinks: std::sync::OnceLock::new(),
             dirs: config
                 .boards
@@ -206,14 +206,21 @@ impl Boards {
         self.preferences.as_ref()
     }
 
-    /// Export these boards' events to ClickHouse through `warehouse` (set once, at start).
-    pub(crate) fn set_warehouse(&self, warehouse: Arc<crate::warehouse::Warehouse>) {
-        let _ = self.warehouse.set(warehouse);
+    /// Export these boards' events to ClickHouse through `warehouse`, or stop exporting
+    /// (`None`). The export it replaces is stopped; its caller runs the new one.
+    pub(crate) fn set_warehouse(&self, warehouse: Option<Arc<crate::warehouse::Warehouse>>) {
+        let old = std::mem::replace(
+            &mut *self.warehouse.write().expect("warehouse lock"),
+            warehouse,
+        );
+        if let Some(old) = old {
+            old.stop();
+        }
     }
 
     /// The ClickHouse export, when the hub has one.
-    pub(crate) fn warehouse(&self) -> Option<&Arc<crate::warehouse::Warehouse>> {
-        self.warehouse.get()
+    pub(crate) fn warehouse(&self) -> Option<Arc<crate::warehouse::Warehouse>> {
+        self.warehouse.read().expect("warehouse lock").clone()
     }
 
     /// How many signal sinks this hub sends to.

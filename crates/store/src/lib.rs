@@ -69,6 +69,9 @@ pub struct Store {
     /// Whether the hub's queries are held to row-level security (Postgres, running as a
     /// role without superuser or BYPASSRLS).
     enforced: bool,
+    /// Where it is, with no credentials in it ([`place_of`]), and its Postgres schema.
+    place: String,
+    schema: Option<String>,
     /// The same database without the role switch, for tests that set up rows under the API.
     #[cfg(any(test, feature = "testing"))]
     admin: AnyPool,
@@ -439,9 +442,23 @@ impl Store {
             pool,
             backend,
             enforced,
+            place: place_of(url),
+            schema,
             #[cfg(any(test, feature = "testing"))]
             admin,
         })
+    }
+
+    /// Where the store is, to show a person: Postgres's host, port and database, or the
+    /// SQLite file; never a user name or password.
+    pub fn place(&self) -> &str {
+        &self.place
+    }
+
+    /// The Postgres schema its tables are in, when one was named (else `public`, before
+    /// migration 0007 moves them to `devagotchi`).
+    pub fn schema(&self) -> Option<&str> {
+        self.schema.as_deref()
     }
 
     pub fn backend(&self) -> Backend {
@@ -831,4 +848,53 @@ pub fn valid_tenant_id(id: &str) -> bool {
             8 | 13 | 18 | 23 => b == b'-',
             _ => b.is_ascii_digit() || (b'a'..=b'f').contains(&b),
         })
+}
+
+/// A store's URL without what must not be shown: the user and password before `@`, and the
+/// query (which may carry a password too). A SQLite URL becomes its file's path.
+pub fn place_of(url: &str) -> String {
+    if let Some(path) = sqlite_path(url) {
+        return path.display().to_string();
+    }
+    let rest = url.split_once("://").map_or(url, |(_, rest)| rest);
+    let rest = rest.split(['?', '#']).next().unwrap_or_default();
+    let (authority, path) = rest.split_once('/').unwrap_or((rest, ""));
+    let host = authority
+        .rsplit_once('@')
+        .map_or(authority, |(_, host)| host);
+    let host = if host.is_empty() {
+        "local socket"
+    } else {
+        host
+    };
+    format!("{host}/{path}")
+}
+
+#[cfg(test)]
+mod place_tests {
+    use super::*;
+
+    #[test]
+    fn a_stores_place_never_shows_its_user_password_or_query() {
+        for (url, place) in [
+            (
+                "postgres://hub:s3cret@db.internal:5432/devagotchi",
+                "db.internal:5432/devagotchi",
+            ),
+            (
+                "postgresql://hub@10.40.0.30/devagotchi?sslmode=require&password=x",
+                "10.40.0.30/devagotchi",
+            ),
+            (
+                "postgres:///devagotchi?host=/run/postgresql",
+                "local socket/devagotchi",
+            ),
+            ("postgres://a:b@c@host/db", "host/db"),
+        ] {
+            assert_eq!(place_of(url), place, "{url}");
+            assert!(!place_of(url).contains("s3cret"));
+        }
+        let file = std::env::temp_dir().join("accounts.sqlite3");
+        assert_eq!(Path::new(&place_of(&sqlite_url(&file))), file);
+    }
 }

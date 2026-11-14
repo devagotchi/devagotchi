@@ -5,7 +5,8 @@
   can extend and integrate with an existing postgres and if they have it clickhouse".
 - PR: not_created
 - Branch / baseline: one `increment-N/<topic>` branch per milestone, from `main`; A1 is
-  `increment-137/agenthub-crate` from `d4166f8`
+  `increment-137/agenthub-crate` from `d4166f8` (PR #184, merged `332bf25`); A4 is
+  `increment-138/agenthub-analytics-settings` from `332bf25`
 - Objective: AgentHub is a library crate (`crates/agenthub`, `devagotchi-agenthub`) that owns
   the board, its storage and its analytics export. It runs on a Postgres the person already
   has (in a schema of its own, beside whatever else lives there) and sends its events to their
@@ -33,7 +34,7 @@
 | A1 | Two crates, no behaviour change: `crates/store` (`devagotchi-store`: the shared database layer, Postgres or SQLite, schema, tenant RLS, retrying transactions, the migrations) and `crates/agenthub` (`devagotchi-agenthub`: the board engine, leases, workflow, approvals, inbox, wake, welcome, the hosted Postgres board, the local-to-hosted import, issue types, the ClickHouse export). The hub keeps its glue: MCP tools (`impl Hub`), the board CLI and its hub client, the tenant registry, web routes. Hub paths (`crate::agenthub::…`, `crate::store::…`) keep working through re-exports | none | the whole workspace test suite on SQLite and Postgres (CI), `cargo tree` shows the agenthub crate does not depend on the hub | done (this PR) |
 | A2 | AgentHub's own migration chain: board tables created and changed by `devagotchi-agenthub`'s migrations, tracked in their own table, idempotent over a hub that already made them (0014, 0015, 0016, 0018), with no reference to the hub's tenant table (tenant ids checked by format, tenants mirrored into AgentHub's schema) | A1 | parity test both backends; upgrade test from a hub at 0023 with boards in it; fresh-database test | not started |
 | A3 | AgentHub on a separate Postgres: the hub opens the board store at its own URL and schema when given one (default: the hub's own), so a person's existing database holds their boards. Tenants mirrored on first use; RLS role made when the login role may, refused clearly when it may not | A2 | tests on two databases; `tests/deploy_scripts.sh` | not started |
-| A4 | Both connections in the UI: an AgentHub card in `/admin` (grouped with storage): board database (the hub's, or a URL and schema), ClickHouse (URL, database, user, password sealed with `settings.key`), a Check button for each, the outbox backlog and last export; ClickHouse applies without a restart, the board database at the next start with the page saying so. Environment variables still win, and the card shows when they do | A3, hub-settings M4 | hub_settings tests; browser test | not started |
+| A4 | Both connections in the UI: an AgentHub card in `/admin` (grouped with storage): board database (the hub's, or a URL and schema), ClickHouse (URL, database, user, password sealed with `settings.key`), a Check button for each, the outbox backlog and last export; ClickHouse applies without a restart, the board database at the next start with the page saying so. Environment variables still win, and the card shows when they do | A3, hub-settings M4 | `hub_settings_tests`: owner only, same origin, bad address or database refused, ClickHouse down refuses and saves nothing, saved sealed and exporting at once with the password, kept on a second save, off, started again after a restart, shown not changed when the config sets it, refused on SQLite | done (increment 138), except the board database's address, which stays an environment setting: the hub cannot move itself while it runs, so the page shows where it is and the steps |
 | A5 | What others build on: a documented SQL surface (views over tickets, events and notes in AgentHub's schema, read-only role), the ClickHouse table's columns as a contract, and the crate's API for the cloud edition (C2) | A2 | docs and a test that the views answer | not started |
 
 ## Risks and approved decisions
@@ -59,9 +60,17 @@ A1, 2026-11-13, Windows 11, Postgres 18 (docker `dvg-pg`), branch `increment-137
 - `cargo tree -p devagotchi-agenthub -e normal`: contracts, connectors, store and third-party
   crates only; no `devagotchi-hub`.
 - Not run here: Linux CI jobs, `tests/deploy_scripts.sh`, a real ClickHouse (`analytics_probe`);
-  CI runs them on the PR.
+  CI ran them on PR #184: 35 passed, 3 skipped (after `deny.toml` let the crate link reqwest).
+
+A4, 2026-11-14, Windows 11, Postgres 18 (docker `dvg-pg`), branch
+`increment-138/agenthub-analytics-settings`:
+- `hub_settings_tests::a_clickhouse_saved_on_the_settings_page_is_checked_sealed_and_exported_to_at_once`
+  on SQLite and Postgres (two fresh databases made, so the Postgres half ran), against a
+  stand-in ClickHouse that is switched down and up.
+- `place_tests`: a store's place shows no user, password or query.
+- Not run: a real ClickHouse from the page (the stand-in answers every query); the browser.
 
 ## Delivery
 
-Implementation: A1 done. Push: not_verified. PR: not_created. Main: not_verified.
+Implementation: A1 done (merged), A4 done. Push: not_verified. PR: not_created. Main: not_verified.
 **DELIVERY INCOMPLETE: NOT PUSHED / NOT MERGED TO MAIN**
