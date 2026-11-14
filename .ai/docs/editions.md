@@ -20,5 +20,7 @@ Rules:
 5. Every setting a person changes has a guided page, grouped by what it is for. A setting that only
    exists as a file or an environment variable is unfinished.
 
-Already in this repository and marked for review against rule 2 and 3: `tenancy.mode multi`,
-`/operator` (waiting list and plans) and plan limits. The private cloud repository does not exist yet; the [cloud edition plan](../dev/plans/cloud-edition.md) says what comes first.
+Ruled 2026-11-14 (operator): the free edition is one developer's hub on their own VM. Multi-tenancy
+(`tenancy.mode multi`, `/operator`, plan limits) stays in this repository but as its own module,
+`modules/tenancy`, outside the default build ([free edition plan](../dev/plans/free-edition.md), R4).
+The private cloud repository is `shippinAI/devagotchi-cloud`.
