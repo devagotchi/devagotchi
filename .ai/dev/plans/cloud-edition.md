@@ -3,7 +3,7 @@
 - Contract: DG-DELIVERY-1; stage: read [project.json](../../project.json)
 - Issue / request: operator, 2026-11-11: move towards starting the official cloud commercial
   version as its own submodule; only what is truly cloud goes there.
-- PR: not_created
+- PR: https://github.com/devagotchi/devagotchi/pull/189
 - Branch / baseline: C1 and C2 in this repository; C3 onwards in the private repository
 - Objective: the hosted, paid service is built in a private repository that uses this core
   unchanged, pinned to a release, and moves forward by bumping the pin.
