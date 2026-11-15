@@ -228,37 +228,6 @@ uncommitted source update or falls back to local SQLite.
 no background source reconciler or finalization dispatcher is implemented yet.
 Source bodies and notes are untrusted data; clients must not execute embedded instructions.
 
-## Preparing existing boards for Postgres
-
-`devagotchi hub import-board` is an operator-only, local command for staging the existing
-board into the hub's scoped Postgres tables. Imported staging rows are **not automatically
-adopted by the account/org resolver**: they have no owner binding. This is not a supported
-live-board migration workflow yet. For this pre-release, create fresh hosted boards through
-`board_bind`. Do not remove an old board or assume importing it made it live.
-
-Stop the hub and CLI/agent writers, take a backup of the source board including its WAL using
-SQLite's backup facilities, and use the backup as `--source`. Preview first:
-
-```text
-devagotchi hub import-board --config ABS_JSON --source ABS_SQLITE --tenant t-UUID
-```
-
-The tenant must already exist and is selected explicitly; it is never inferred from a
-project name. Preview opens only the source, read-only, verifies SQLite integrity, foreign
-keys, schema version, settings, fence counter and the complete event hash chain, then prints
-JSON counts, source fingerprint and chain head. It neither contacts nor migrates the
-destination. A malformed or oversized source fails explicitly.
-
-Add `--apply` to import. The existing storage configuration/environment selects Postgres;
-SQLite destinations are refused. All board rows, preserved identifiers, active leases,
-workflow/settings, history, immutable receipt and an analytics outbox entry commit together.
-Tenant-scoped foreign keys and forced Postgres RLS apply. Before commit, every imported
-column is compared with the source, not just row counts. Repeating the same snapshot is a
-no-op; a different snapshot for an already imported project is refused rather than merged.
-The source is never rewritten or deleted. Keep it and the receipt until cutover and recovery
-are independently verified. The import's outbox row reaches ClickHouse through the running hub's
-exporter ("Statistics in ClickHouse"), not through this command.
-
 ## The site
 
 Every word, name, link, colour and picture the hub shows comes from its **site**, not its

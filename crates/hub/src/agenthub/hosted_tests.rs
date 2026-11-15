@@ -363,22 +363,18 @@ async fn shared_runtime_resolver_uses_postgres_without_board_files_and_observes_
                 "listen":"127.0.0.1:8787","public_url":"http://127.0.0.1:8787",
                 "auth":{"mode":"dev","tokens_file":dir.path().join("tokens.json")},
                 "brokers":[],"grants":[],
-                "boards":[{"project":"shared","dir":dir.path().join("never-created-shared")}],
-                "account_boards":{"dir":dir.path().join("never-created-accounts")}
+                "boards":[{"project":"shared"}],
+                "account_boards":{}
             })
             .to_string(),
             |_| None,
         )
         .unwrap();
         let boards = std::sync::Arc::new(
-            crate::agenthub::mcp::Boards::from_config(&config, dir.path())
-                .using_postgres(test.store.clone())
-                .unwrap(),
+            crate::agenthub::mcp::Boards::new(&config, test.store.clone()).unwrap(),
         );
         let peer = std::sync::Arc::new(
-            crate::agenthub::mcp::Boards::from_config(&config, dir.path())
-                .using_postgres(test.store.clone())
-                .unwrap(),
+            crate::agenthub::mcp::Boards::new(&config, test.store.clone()).unwrap(),
         );
         let bound = boards.bind("alice", "demo", &[]).unwrap();
         assert!(bound.created);
@@ -475,16 +471,14 @@ async fn listener_reconnect_invalidates_waiters_even_without_a_new_event() {
         &serde_json::json!({
             "listen":"127.0.0.1:8787","public_url":"http://127.0.0.1:8787",
             "auth":{"mode":"dev","tokens_file":dir.path().join("tokens.json")},
-            "brokers":[],"grants":[],"boards":[{"project":"shared","dir":dir.path().join("unused")}]
+            "brokers":[],"grants":[],"boards":[{"project":"shared"}]
         })
         .to_string(),
         |_| None,
     )
     .unwrap();
     let boards = std::sync::Arc::new(
-        crate::agenthub::mcp::Boards::from_config(&config, dir.path())
-            .using_postgres(test.store.clone())
-            .unwrap(),
+        crate::agenthub::mcp::Boards::new(&config, test.store.clone()).unwrap(),
     );
     let board = boards.open("shared").unwrap();
     let mut changes = board.changes();

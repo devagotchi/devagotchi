@@ -60,13 +60,12 @@ pub(crate) async fn hosted_with_ingress(
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let url = format!("http://{}", listener.local_addr().unwrap());
     let dir = tempfile::tempdir().unwrap();
-    let boards = dir.path().join("account-boards");
     let mut value = json!({
         "listen": "127.0.0.1:1",
         "public_url": url,
         "auth": { "mode": "hub" },
         "tenancy": { "mode": "multi", "starts_per_hour": 100, "anonymous_connect": true },
-        "account_boards": { "dir": boards.to_string_lossy(), "free_limit": 5 },
+        "account_boards": { "free_limit": 5 },
         "brokers": [{ "name": "wi1", "link": true }],
         "grants": []
     });
@@ -115,11 +114,7 @@ pub(crate) async fn hosted_with_ingress(
     let downloads = config.downloads.as_ref().map(|dir| {
         Arc::new(crate::machines::downloads::Downloads::open(std::path::Path::new(dir)).unwrap())
     });
-    let boards = Arc::new(
-        agenthub::mcp::Boards::from_config(&config, dir.path())
-            .using_postgres(accounts.store().clone())
-            .unwrap(),
-    );
+    let boards = Arc::new(agenthub::mcp::Boards::new(&config, accounts.store().clone()).unwrap());
     let board_changes = agenthub::mcp::Boards::postgres_listener(&store_url)
         .await
         .unwrap();

@@ -19,8 +19,7 @@
 //! as another's seat. A seat is never a person.
 
 use std::{
-    collections::{BTreeMap, HashMap, HashSet},
-    path::{Path, PathBuf},
+    collections::{BTreeMap, BTreeSet, HashMap, HashSet},
     sync::{Arc, Mutex},
     time::Duration,
 };
@@ -36,7 +35,6 @@ use serde::{Deserialize, Serialize};
 use super::{
     Actor, AnchorPatch, Anchors, Board, ChainStatus, Dep, DepKind, Event, Filter, Lease, NewTicket,
     NextFilter, Note, Patch, Prime, Ticket, TicketView, approval::ApprovalStatus, face::ME,
-    open_project,
 };
 use crate::{
     audit::AuditEntry,
@@ -56,7 +54,9 @@ pub(crate) const SHARED_OWNER: &str = "@shared";
 /// The boards a hub serves, opened on first use and kept open; plus the last fence
 /// handed to each subject per ticket, so a caller may omit it.
 pub struct Boards {
-    hosted: Option<super::registry::Registry>,
+    /// The hub's boards, in its Postgres (`registry.rs`): account, organisation and
+    /// configured ones alike.
+    hosted: super::registry::Registry,
     /// Organisations, their members and who works which project (`crate::orgs`): in the
     /// hub's store, beside the hosted boards.
     orgs: Option<crate::orgs::Orgs>,
@@ -67,7 +67,8 @@ pub struct Boards {
     warehouse: std::sync::RwLock<Option<Arc<crate::warehouse::Warehouse>>>,
     /// The hub's signal sinks (`crate::signals`), set once at start.
     sinks: std::sync::OnceLock<Vec<Arc<crate::signals::Sink>>>,
-    dirs: BTreeMap<String, PathBuf>,
+    /// The boards the hub's config names (`boards`), shared by grant.
+    configured: BTreeSet<String>,
     accounts: Option<Accounts>,
     /// The site a new board's getting-started ticket comes from, and the hub's address
     /// in its steps.
@@ -82,9 +83,8 @@ pub struct Boards {
     wake_limits: Arc<super::wake::Limiter>,
 }
 
-/// Where account boards live and who may have how many.
+/// Who may hold how many account boards.
 struct Accounts {
-    dir: PathBuf,
     free_limit: usize,
     unlimited: HashSet<String>,
     /// The hub's owner, who has no limit; in hub mode it can be learned after start.
@@ -140,31 +140,21 @@ const READ_ONLY_TOOLS: &[&str] = &[
 ];
 
 impl Boards {
-    pub fn from_config(config: &HubConfig, state_dir: &Path) -> Self {
-        let accounts = config.account_boards.as_ref().map(|a| {
-            let unlimited: HashSet<String> = a.unlimited.iter().cloned().collect();
-            Accounts {
-                owner: config.owner_handle(),
-                dir: a
-                    .dir
-                    .as_deref()
-                    .map(PathBuf::from)
-                    .unwrap_or_else(|| state_dir.join("account-boards")),
-                free_limit: a.free_limit.unwrap_or(DEFAULT_FREE_LIMIT) as usize,
-                unlimited,
-            }
+    /// The boards a hub with `config` serves, from its Postgres `store`, with the hub's
+    /// organisations and people's preferences beside them.
+    pub(crate) fn new(config: &HubConfig, store: crate::store::Store) -> BridgeResult<Self> {
+        let accounts = config.account_boards.as_ref().map(|a| Accounts {
+            owner: config.owner_handle(),
+            free_limit: a.free_limit.unwrap_or(DEFAULT_FREE_LIMIT) as usize,
+            unlimited: a.unlimited.iter().cloned().collect(),
         });
-        Self {
-            hosted: None,
-            orgs: None,
-            preferences: None,
+        Ok(Self {
+            hosted: super::registry::Registry::new(store.clone())?,
+            orgs: Some(crate::orgs::Orgs::new(store.clone())),
+            preferences: Some(crate::preferences::PreferenceStore::new(store)),
             warehouse: std::sync::RwLock::new(None),
             sinks: std::sync::OnceLock::new(),
-            dirs: config
-                .boards
-                .iter()
-                .map(|b| (b.project.clone(), PathBuf::from(&b.dir)))
-                .collect(),
+            configured: config.boards.iter().map(|b| b.project.clone()).collect(),
             accounts,
             site: config.site_cell(),
             public_url: config.public_url.clone(),
@@ -173,18 +163,11 @@ impl Boards {
             activity: Arc::new(tokio::sync::Notify::new()),
             inbox_checks: Mutex::new(HashMap::new()),
             wake_limits: Arc::new(super::wake::Limiter::default()),
-        }
+        })
     }
 
     pub fn is_empty(&self) -> bool {
-        self.dirs.is_empty() && self.accounts.is_none()
-    }
-
-    pub(crate) fn using_postgres(mut self, store: crate::store::Store) -> BridgeResult<Self> {
-        self.orgs = Some(crate::orgs::Orgs::new(store.clone()));
-        self.preferences = Some(crate::preferences::PreferenceStore::new(store.clone()));
-        self.hosted = Some(super::registry::Registry::new(store)?);
-        Ok(self)
+        self.configured.is_empty() && self.accounts.is_none()
     }
 
     /// This hub's organisations, when it keeps them (always under `hub serve`).
@@ -296,41 +279,14 @@ impl Boards {
         self.accounts.is_some()
     }
 
-    fn account_file(accounts: &Accounts, subject: &str, project: &str) -> PathBuf {
-        accounts
-            .dir
-            .join(subject)
-            .join(format!("{project}.sqlite3"))
-    }
-
     /// The account boards `subject` holds here, by name, sorted.
     pub fn account_boards(&self, subject: &str) -> BridgeResult<Vec<String>> {
-        if let Some(hosted) = &self.hosted {
-            return hosted.blocking(hosted.names(subject));
-        }
-        let Some(accounts) = &self.accounts else {
-            return Ok(Vec::new());
-        };
-        let entries = match std::fs::read_dir(accounts.dir.join(subject)) {
-            Ok(entries) => entries,
-            Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(Vec::new()),
-            Err(error) => return Err(BridgeError::new("board_io", error.to_string())),
-        };
-        let mut names: Vec<String> = entries
-            .filter_map(|e| e.ok())
-            .filter_map(|e| {
-                let name = e.file_name().into_string().ok()?;
-                let project = name.strip_suffix(".sqlite3")?;
-                (valid_name(project) && e.path().is_file()).then(|| project.to_string())
-            })
-            .collect();
-        names.sort();
-        Ok(names)
+        self.hosted.blocking(self.hosted.names(subject))
     }
 
     /// Who owns the boards `subject` makes and finds: its org when the identity provider
     /// named one (B13), otherwise the account itself. Org ids and account ids never
-    /// collide on disk: an org's directory is `org-<id>`.
+    /// collide: an org's is `org-<id>`.
     pub fn owner_of(subject: &Subject) -> String {
         match &subject.org {
             Some(org) => format!("org-{org}"),
@@ -340,36 +296,27 @@ impl Boards {
 
     /// The account's own board named `project`, if it has one.
     pub fn open_account(&self, subject: &str, project: &str) -> BridgeResult<Option<Arc<Board>>> {
-        let Some(accounts) = &self.accounts else {
+        if self.accounts.is_none() {
             return Ok(None);
-        };
+        }
         if !valid_name(project) {
             return Ok(None);
         }
         let key = format!("{subject}/{project}");
-        let mut open = self.open.lock().expect("boards lock");
-        if let Some(board) = open.get(&key) {
+        if let Some(board) = self.open.lock().expect("boards lock").get(&key) {
             return Ok(Some(board.clone()));
         }
-        if let Some(hosted) = &self.hosted {
-            drop(open);
-            let board = hosted.blocking(hosted.open(subject, project, false, None))?;
-            return Ok(board.map(|(board, _)| {
-                self.open
-                    .lock()
-                    .expect("boards lock")
-                    .entry(key)
-                    .or_insert(board)
-                    .clone()
-            }));
-        }
-        let file = Self::account_file(accounts, subject, project);
-        if !file.is_file() {
-            return Ok(None);
-        }
-        let board = Arc::new(Board::open(&file, project)?.reporting_to(self.activity.clone()));
-        open.insert(key, board.clone());
-        Ok(Some(board))
+        let board = self
+            .hosted
+            .blocking(self.hosted.open(subject, project, false, None))?;
+        Ok(board.map(|(board, _)| {
+            self.open
+                .lock()
+                .expect("boards lock")
+                .entry(key)
+                .or_insert(board)
+                .clone()
+        }))
     }
 
     /// Make (or find) the account's board for `project`. `shared` is every configured
@@ -462,54 +409,19 @@ impl Boards {
     /// or an organisation's `org-t-<uuid>`) with its getting-started ticket; whether it was
     /// new. `limit` caps how many `owner` holds (hosted boards check it in the store).
     fn make_owned(&self, owner: &str, project: &str, limit: Option<usize>) -> BridgeResult<bool> {
-        if let Some(hosted) = &self.hosted {
-            let (board, fresh) = hosted
-                .blocking(hosted.open(owner, project, true, limit))?
-                .ok_or_else(|| BridgeError::new("board_store", "created board was not returned"))?;
-            let (title, steps) = self.site.get().welcome(&self.public_url);
-            board.welcome_if_new(&Actor::agent("devagotchi"), &title, &steps)?;
-            self.open
-                .lock()
-                .expect("boards lock")
-                .entry(format!("{owner}/{project}"))
-                .or_insert(board);
-            return Ok(fresh);
-        }
-        let Some(accounts) = &self.accounts else {
-            return Err(BridgeError::new(
-                "not_offered",
-                "this hub does not host account boards; its boards are the ones its operator configured",
-            ));
-        };
-        let file = Self::account_file(accounts, owner, project);
-        if file.is_file() {
-            return Ok(false);
-        }
-        let dir = accounts.dir.join(owner);
-        std::fs::create_dir_all(&dir)
-            .map_err(|e| BridgeError::new("board_io", format!("{}: {e}", dir.display())))?;
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt;
-            let _ = std::fs::set_permissions(&accounts.dir, std::fs::Permissions::from_mode(0o700));
-            let _ = std::fs::set_permissions(&dir, std::fs::Permissions::from_mode(0o700));
-        }
-        let board = Board::open(&file, project)?.reporting_to(self.activity.clone());
-        // A new board starts with the getting-started steps (B12).
+        let (board, fresh) = self
+            .hosted
+            .blocking(self.hosted.open(owner, project, true, limit))?
+            .ok_or_else(|| BridgeError::new("board_store", "created board was not returned"))?;
         let (title, steps) = self.site.get().welcome(&self.public_url);
-        if let Err(error) = board.welcome_if_new(&Actor::agent("devagotchi"), &title, &steps) {
-            eprintln!(
-                "devagotchi hub: board {project}: getting-started ticket: {}",
-                error.message
-            );
-        }
+        board.welcome_if_new(&Actor::agent("devagotchi"), &title, &steps)?;
         self.open
             .lock()
             .expect("boards lock")
-            .insert(format!("{owner}/{project}"), Arc::new(board));
-        Ok(true)
+            .entry(format!("{owner}/{project}"))
+            .or_insert(board);
+        Ok(fresh)
     }
-
     /// Make (or find) an organisation's board for `project`: no free limit, since an
     /// organisation's plan is its own (`crate::orgs`). Whether it was new.
     pub(crate) fn make_for_org(&self, owner: &str, project: &str) -> BridgeResult<bool> {
@@ -525,162 +437,58 @@ impl Boards {
         self.make_owned(owner, project, None)
     }
 
-    /// The board named `project`, opened if this is its first use. A directory that was
-    /// initialised under another project name is refused: ids embed the prefix.
+    /// The configured board named `project` (owned by `@shared`), made on its first use with
+    /// the steps to check the hub works, so the first session never finds it empty.
     pub fn open(&self, project: &str) -> BridgeResult<Arc<Board>> {
-        let mut open = self.open.lock().expect("boards lock");
-        if let Some(board) = open.get(project) {
+        if let Some(board) = self.open.lock().expect("boards lock").get(project) {
             return Ok(board.clone());
         }
-        let dir = self.dirs.get(project).ok_or_else(|| {
-            BridgeError::new(
+        if !self.configured.contains(project) {
+            return Err(BridgeError::new(
                 "unknown_board",
                 format!("no board for project {project:?} is configured on this hub"),
-            )
-        })?;
-        if let Some(hosted) = &self.hosted {
-            drop(open);
-            let (board, _) = hosted
-                .blocking(hosted.open(SHARED_OWNER, project, true, None))?
-                .ok_or_else(|| {
-                    BridgeError::new("board_store", "configured board was not returned")
-                })?;
-            let (title, steps) = self.site.get().welcome(&self.public_url);
-            board.welcome_if_new(&Actor::agent("devagotchi"), &title, &steps)?;
-            return Ok(self
-                .open
-                .lock()
-                .expect("boards lock")
-                .entry(project.into())
-                .or_insert(board)
-                .clone());
-        }
-        let (config, board) = open_project(dir)?;
-        let board = board.reporting_to(self.activity.clone());
-        if config.project != project {
-            return Err(BridgeError::new(
-                "board_mismatch",
-                format!(
-                    "{} was initialised as project {:?}; the hub config names it {project:?}",
-                    dir.display(),
-                    config.project
-                ),
             ));
         }
-        // A board that has never had a ticket starts with the steps to check that the hub
-        // works, so the first session never finds it empty.
+        let (board, _) = self
+            .hosted
+            .blocking(self.hosted.open(SHARED_OWNER, project, true, None))?
+            .ok_or_else(|| BridgeError::new("board_store", "configured board was not returned"))?;
         let (title, steps) = self.site.get().welcome(&self.public_url);
-        if let Err(error) = board.welcome_if_new(&Actor::agent("devagotchi"), &title, &steps) {
-            eprintln!(
-                "devagotchi hub: board {project}: getting-started ticket: {}",
-                error.message
-            );
-        }
-        let board = Arc::new(board);
-        open.insert(project.to_string(), board.clone());
-        Ok(board)
+        board.welcome_if_new(&Actor::agent("devagotchi"), &title, &steps)?;
+        Ok(self
+            .open
+            .lock()
+            .expect("boards lock")
+            .entry(project.into())
+            .or_insert(board)
+            .clone())
     }
-
     /// Keep leases honest without a sweep timer: sleep until the first lease on any open
     /// board lapses, or until a board changes (a claim, heartbeat or release moves that
     /// moment), then expire what has lapsed. Runs for the life of the hub.
     pub async fn reap_on_time(self: Arc<Self>) {
-        if let Some(hosted) = &self.hosted {
-            loop {
-                match hosted.next_lease_delay().await {
-                    Ok(Some(delay)) if delay <= 0 => {
-                        if let Err(error) = hosted.reap_due().await {
-                            eprintln!("devagotchi hub: persisted lease recovery failed: {error}");
-                            tokio::time::sleep(Duration::from_secs(5)).await;
-                        }
-                    }
-                    Ok(Some(delay)) => {
-                        tokio::select! {
-                            _=self.activity.notified()=>{}
-                            _=tokio::time::sleep(Duration::from_millis(delay as u64))=>{}
-                        }
-                    }
-                    Ok(None) => self.activity.notified().await,
-                    Err(error) => {
-                        eprintln!("devagotchi hub: persisted lease schedule unavailable: {error}");
-                        tokio::time::sleep(Duration::from_secs(5)).await;
-                    }
-                }
-            }
-        }
+        let hosted = &self.hosted;
         loop {
-            let boards = self.clone();
-            let next = tokio::task::spawn_blocking(move || boards.next_lease_expiry())
-                .await
-                .unwrap_or(None);
-            let now = crate::agenthub::system_clock()();
-            match next {
-                Some(at) if at <= now => {
-                    let boards = self.clone();
-                    let failed = tokio::task::spawn_blocking(move || {
-                        let mut failed = false;
-                        for (project, result) in boards.reap_all() {
-                            if let Err(error) = result {
-                                eprintln!("devagotchi hub: board {project}: reap failed: {error}");
-                                failed = true;
-                            }
-                        }
-                        failed
-                    })
-                    .await
-                    .unwrap_or(true);
-                    if failed {
-                        // A store that cannot be written now is not retried in a tight loop.
+            match hosted.next_lease_delay().await {
+                Ok(Some(delay)) if delay <= 0 => {
+                    if let Err(error) = hosted.reap_due().await {
+                        eprintln!("devagotchi hub: persisted lease recovery failed: {error}");
                         tokio::time::sleep(Duration::from_secs(5)).await;
                     }
                 }
-                Some(at) => {
-                    let lapse = Duration::from_millis((at - now) as u64);
+                Ok(Some(delay)) => {
                     tokio::select! {
-                        _ = self.activity.notified() => {}
-                        _ = tokio::time::sleep(lapse) => {}
+                        _=self.activity.notified()=>{}
+                        _=tokio::time::sleep(Duration::from_millis(delay as u64))=>{}
                     }
                 }
-                None => self.activity.notified().await,
+                Ok(None) => self.activity.notified().await,
+                Err(error) => {
+                    eprintln!("devagotchi hub: persisted lease schedule unavailable: {error}");
+                    tokio::time::sleep(Duration::from_secs(5)).await;
+                }
             }
         }
-    }
-
-    /// The first moment a lease on any open board lapses.
-    fn next_lease_expiry(&self) -> Option<i64> {
-        let open: Vec<_> = self
-            .open
-            .lock()
-            .expect("boards lock")
-            .values()
-            .cloned()
-            .collect();
-        open.iter()
-            .filter_map(|board| match board.next_lease_expiry() {
-                Ok(at) => at,
-                Err(error) => {
-                    eprintln!("devagotchi hub: lease check failed: {error}");
-                    None
-                }
-            })
-            .min()
-    }
-
-    /// Expire lapsed leases on every open board.
-    pub fn reap_all(&self) -> Vec<(String, BridgeResult<usize>)> {
-        let open: Vec<_> = self
-            .open
-            .lock()
-            .expect("boards lock")
-            .iter()
-            .map(|(name, board)| (name.clone(), board.clone()))
-            .collect();
-        open.into_iter()
-            .map(|(name, board)| {
-                let reaped = board.reap();
-                (name, reaped)
-            })
-            .collect()
     }
 
     fn remember_fence(&self, subject: &str, project: &str, ticket: &str, fence: i64) {
@@ -2730,7 +2538,6 @@ impl Hub {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::agenthub::{BOARD_DIR, BOARD_FILE, ProjectConfig};
 
     fn hub_config(project: &str, dir: &std::path::Path) -> HubConfig {
         HubConfig::parse(
@@ -2739,7 +2546,7 @@ mod tests {
                 "public_url": "http://127.0.0.1:1",
                 "auth": { "mode": "dev", "tokens_file": dir.join("tokens.json") },
                 "brokers": [],
-                "boards": [{ "project": project, "dir": dir.join("project") }],
+                "boards": [{ "project": project }],
                 "grants": [{ "subject": "agent", "boards": [project] }],
             })
             .to_string(),
@@ -2747,33 +2554,16 @@ mod tests {
         .expect("config")
     }
 
-    fn init(dir: &std::path::Path, project: &str) {
-        let board_dir = dir.join("project").join(BOARD_DIR);
-        std::fs::create_dir_all(&board_dir).unwrap();
-        let board = Board::open(&board_dir.join(BOARD_FILE), project).unwrap();
-        let config = ProjectConfig {
-            project: project.into(),
-            prefix: board.prefix().into(),
-            created_at: 0,
-            hub: None,
-        };
-        std::fs::write(
-            board_dir.join("config.json"),
-            serde_json::to_string(&config).unwrap(),
-        )
-        .unwrap();
-    }
-
     /// The reaper sleeps until a lease lapses, then expires it: the ticket is back in its
     /// queue within moments of the lapse, with no sweep timer.
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn a_lapsed_lease_is_reaped_when_it_lapses() {
+        let test = or_skip!(crate::store::testing::postgres());
         let dir = tempfile::tempdir().unwrap();
-        init(dir.path(), "site");
-        let boards = Arc::new(Boards::from_config(
-            &hub_config("site", dir.path()),
-            dir.path(),
-        ));
+        let boards = Arc::new(Boards::new(&hub_config("site", dir.path()), test.store).unwrap());
+        // A hosted board hears of its changes as `hub serve` does: Postgres notifications.
+        let changes = Boards::postgres_listener(&test.url).await.unwrap();
+        tokio::spawn(boards.clone().listen_postgres(changes));
         let board = boards.open("site").unwrap();
         let operator = Actor::human("jesse");
         let mut settings = board.settings().unwrap();
@@ -2820,17 +2610,17 @@ mod tests {
                 "auth": { "mode": "dev", "tokens_file": dir.join("tokens.json") },
                 "owner": "300000000000000001",
                 "brokers": [],
-                "boards": [{ "project": "shared", "dir": dir.join("project") }],
+                "boards": [{ "project": "shared" }],
                 "grants": [{ "subject": "300000000000000002", "boards": ["shared"] }],
-                "account_boards": { "dir": dir.join("accounts"), "unlimited": unlimited },
+                "account_boards": { "unlimited": unlimited },
             })
             .to_string(),
         )
         .expect("config")
     }
 
-    #[test]
-    fn org_boards_belong_to_the_org_and_every_member_works_them() {
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn org_boards_belong_to_the_org_and_every_member_works_them() {
         use crate::auth::Subject;
         let member = |id: &str, org: Option<&str>| Subject {
             id: id.into(),
@@ -2859,12 +2649,14 @@ mod tests {
             "no org: the account's own"
         );
 
+        let test = or_skip!(crate::store::testing::postgres());
         let dir = tempfile::tempdir().unwrap();
         // The paid org is unlimited by its org id; Carol's org is free.
-        let boards = Boards::from_config(
+        let boards = Boards::new(
             &hosted_config(dir.path(), &["395263680805142530"]),
-            dir.path(),
-        );
+            test.store,
+        )
+        .unwrap();
         let bind = |who: &Subject, project: &str| {
             let ids: Vec<&str> = std::iter::once(who.id.as_str())
                 .chain(who.org.as_deref())
@@ -2914,22 +2706,14 @@ mod tests {
             boards.open_account(&solo.id, "site").unwrap().is_none(),
             "an account with no org has only its own"
         );
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt;
-            let mode = std::fs::metadata(dir.path().join("accounts/org-395263680805142530"))
-                .unwrap()
-                .permissions()
-                .mode();
-            assert_eq!(mode & 0o777, 0o700);
-        }
     }
 
-    #[test]
-    fn account_boards_are_bound_per_account_counted_and_never_named_like_a_shared_one() {
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn account_boards_are_bound_per_account_counted_and_never_named_like_a_shared_one() {
+        let test = or_skip!(crate::store::testing::postgres());
         let dir = tempfile::tempdir().unwrap();
         let only_configured =
-            Boards::from_config(&hub_config("devagotchi", dir.path()), dir.path());
+            Boards::new(&hub_config("devagotchi", dir.path()), test.store.clone()).unwrap();
         assert_eq!(
             only_configured
                 .bind("someone", "theirs", &[])
@@ -2939,10 +2723,11 @@ mod tests {
         );
         assert!(!only_configured.hosts_accounts());
 
-        let boards = Boards::from_config(
+        let boards = Boards::new(
             &hosted_config(dir.path(), &["300000000000000003"]),
-            dir.path(),
-        );
+            test.store,
+        )
+        .unwrap();
         assert!(boards.hosts_accounts());
         let free = "300000000000000002";
         assert!(boards.account_boards(free).unwrap().is_empty());
@@ -2955,23 +2740,6 @@ mod tests {
         assert!(bound.created);
         assert_eq!(bound.boards, vec!["mine".to_string(), "shared".to_string()]);
         assert_eq!(bound.limit, Some(1));
-        assert!(
-            dir.path()
-                .join("accounts")
-                .join(free)
-                .join("mine.sqlite3")
-                .is_file()
-        );
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt;
-            let mode = std::fs::metadata(dir.path().join("accounts").join(free))
-                .unwrap()
-                .permissions()
-                .mode()
-                & 0o777;
-            assert_eq!(mode, 0o700, "{mode:o}");
-        }
         let again = boards.bind(free, "mine", &["shared".into()]).unwrap();
         assert!(!again.created, "binding is idempotent");
         assert_eq!(
@@ -2979,15 +2747,7 @@ mod tests {
             vec!["mine".to_string()]
         );
         let opened = boards.open_account(free, "mine").unwrap().expect("bound");
-        assert_eq!(
-            opened.prefix(),
-            Board::open(
-                &dir.path().join("accounts").join(free).join("mine.sqlite3"),
-                "mine"
-            )
-            .unwrap()
-            .prefix()
-        );
+        assert_eq!(opened.prefix(), "mine");
 
         assert_eq!(
             boards.bind(free, "another", &[]).expect_err("limit").code,
@@ -3028,42 +2788,20 @@ mod tests {
         assert!(!boards.is_empty());
     }
 
-    #[test]
-    fn an_uninitialised_or_renamed_project_is_refused_not_created() {
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn a_board_opens_once_and_the_fence_memory_follows_the_lease() {
+        let test = or_skip!(crate::store::testing::postgres());
         let dir = tempfile::tempdir().unwrap();
-        let boards = Boards::from_config(&hub_config("devagotchi", dir.path()), dir.path());
+        let boards = Boards::new(&hub_config("devagotchi", dir.path()), test.store).unwrap();
         assert!(!boards.is_empty());
-        let error = boards.open("devagotchi").err().expect("refused");
-        assert_eq!(error.code, "no_board");
-        assert!(error.message.contains("board init"), "{}", error.message);
-        assert!(
-            !dir.path().join("project").join(BOARD_DIR).exists(),
-            "nothing was created"
-        );
-        assert_eq!(
-            boards.open("other").err().expect("refused").code,
-            "unknown_board"
-        );
-
-        init(dir.path(), "something-else");
-        let error = boards.open("devagotchi").err().expect("refused");
-        assert_eq!(error.code, "board_mismatch");
-        assert!(
-            error.message.contains("something-else"),
-            "{}",
-            error.message
-        );
-    }
-
-    #[test]
-    fn a_board_opens_once_and_the_fence_memory_follows_the_lease() {
-        let dir = tempfile::tempdir().unwrap();
-        init(dir.path(), "devagotchi");
-        let boards = Boards::from_config(&hub_config("devagotchi", dir.path()), dir.path());
         let first = boards.open("devagotchi").unwrap();
         let again = boards.open("devagotchi").unwrap();
         assert!(Arc::ptr_eq(&first, &again), "one open board per project");
-        assert_eq!(boards.reap_all().len(), 1);
+        assert_eq!(
+            boards.open("other").err().expect("refused").code,
+            "unknown_board",
+            "a project the config does not name is no board"
+        );
 
         let missing = boards
             .fence_for("agent", "devagotchi", "dvg-1", None)

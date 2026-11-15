@@ -3,7 +3,7 @@
 
 use super::*;
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn signing_in_shows_the_account_and_machines_and_signing_out_ends_it() {
     let w = or_skip!(world());
     let first = w.get("/account", None).await;
@@ -123,7 +123,7 @@ async fn signing_in_shows_the_account_and_machines_and_signing_out_ends_it() {
     assert_eq!(me.status(), StatusCode::UNAUTHORIZED);
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_person_sees_only_their_granted_machines_by_session_or_bearer() {
     let w = or_skip!(world());
     let session = w.sign_in("tok-other").await;
@@ -176,7 +176,7 @@ async fn a_person_sees_only_their_granted_machines_by_session_or_bearer() {
     );
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn the_callback_needs_this_browsers_state_once_and_the_right_verifier() {
     let w = or_skip!(world());
     let (login, state, code) = w.authorize("/account", "tok-owner", 3600).await;
@@ -230,7 +230,7 @@ async fn the_callback_needs_this_browsers_state_once_and_the_right_verifier() {
     assert!(set_cookie(&wrong, "dg_session").is_none());
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn refusals_outages_and_cancelled_sign_ins_never_open_a_session() {
     let w = or_skip!(world());
     // Nomen issued a token the hub does not accept (another client, another project...).
@@ -273,7 +273,7 @@ async fn refusals_outages_and_cancelled_sign_ins_never_open_a_session() {
     );
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn sessions_end_with_the_token_and_return_paths_stay_on_the_hub() {
     let w = or_skip!(world());
     let (login, state, code) = w.authorize("//evil.example/steal", "tok-owner", 1).await;
@@ -302,7 +302,7 @@ async fn sessions_end_with_the_token_and_return_paths_stay_on_the_hub() {
     );
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn return_paths_cookies_dates_and_escaping() {
     for (asked, kept) in [
         ("/account", "/account"),
@@ -340,7 +340,7 @@ async fn return_paths_cookies_dates_and_escaping() {
     );
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn the_phone_stays_signed_in_across_a_restart_and_through_refreshes() {
     let w = or_skip!(world());
     w.fake.refresh_on_code.store(true, SeqCst);

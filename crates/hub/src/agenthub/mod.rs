@@ -12,7 +12,6 @@ pub use devagotchi_agenthub::*;
 pub mod cli;
 pub mod issue_lifecycle;
 pub mod mcp;
-pub(crate) mod migration;
 pub(crate) mod registry;
 pub mod remote;
 

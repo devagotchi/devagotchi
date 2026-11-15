@@ -1496,7 +1496,7 @@ mod bound {
             "auth": {"mode": "dev", "tokens_file": dir.join("tokens.json")},
             "brokers": [],
             "grants": [],
-            "account_boards": { "dir": dir.join("accounts") }
+            "account_boards": {}
         });
         for (key, more) in extra.as_object().unwrap() {
             value[key] = more.clone();
@@ -1505,6 +1505,7 @@ mod bound {
         let devices = crate::machines::devices::test_registry().await?;
         let audit = crate::audit::test_audit().await?;
         let links = Arc::new(Links::new(config.clone(), devices.clone(), audit.clone()));
+        let store = crate::store::testing::postgres().await?.store;
         let state = AppState {
             verifier: Arc::new(Verifier::Dev(
                 std::iter::once(("tok-member".to_string(), MEMBER.to_string()))
@@ -1519,7 +1520,7 @@ mod bound {
                 connections: None,
                 routed: Default::default(),
                 push: None,
-                boards: Arc::new(crate::agenthub::mcp::Boards::from_config(&config, dir)),
+                boards: Arc::new(crate::agenthub::mcp::Boards::new(&config, store).unwrap()),
                 config,
                 audit,
                 links,
@@ -1864,24 +1865,17 @@ mod bound {
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn board_settings_from_the_command_line_on_the_hub_and_who_may_change_them() {
         const AGENT: &str = "300000000000000007";
+        const PERSON: &str = "300000000000000008";
         let dir = tempfile::tempdir().unwrap();
-        // A configured board the agent holds a grant for (not a person's).
-        let shared = dir.path().join("shared");
-        std::fs::create_dir_all(&shared).unwrap();
-        let (code, _, err) = run(
-            &shared,
-            &dir.path().join("none.json"),
-            None,
-            &["init", "--project", "shared"],
-        );
-        assert_eq!(code, EXIT_OK, "{err}");
+        // A configured board the agent holds a grant for (not a person's), and a person too.
         let url = or_skip!(hub_with(
             dir.path(),
             json!({
-                "boards": [{ "project": "shared", "dir": shared }],
-                "grants": [{ "subject": AGENT, "boards": ["shared"] }]
+                "boards": [{ "project": "shared" }],
+                "grants": [{ "subject": AGENT, "boards": ["shared"] },
+                           { "subject": PERSON, "boards": ["shared"], "human": true }]
             }),
-            &[("tok-agent", AGENT)],
+            &[("tok-agent", AGENT), ("tok-person", PERSON)],
         ));
         let project = dir.path().join("m").join("demo");
         std::fs::create_dir_all(&project).unwrap();
@@ -1955,8 +1949,10 @@ mod bound {
         .await;
         assert_eq!(refused["isError"], true, "{refused}");
         assert!(refused.to_string().contains("not_owner"), "{refused}");
-        let (_, board) = crate::agenthub::open_project(&shared).unwrap();
-        assert_eq!(board.settings().unwrap().repo, None);
+        let ask = json!({ "project": "shared" });
+        let read = tool(&url, "tok-person", "board_settings", ask).await;
+        assert_eq!(read["isError"], false, "{read}");
+        assert!(read["structuredContent"]["repo"].is_null(), "{read}");
         // And the member's own board is not the agent's to reach at all.
         let refused = tool(
             &url,

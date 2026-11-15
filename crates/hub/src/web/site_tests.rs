@@ -19,7 +19,7 @@ async fn text(world: &World, path: &str, cookie: Option<&str>) -> (StatusCode, S
     (status, response.text().await.unwrap())
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn every_page_of_a_hub_with_a_neutral_site_names_only_that_site() {
     let world = or_skip!(world_with_site(&neutral_dir()));
     assert_eq!(world.config.site().name(), "Lumen Relay");
@@ -163,7 +163,7 @@ async fn every_page_of_a_hub_with_a_neutral_site_names_only_that_site() {
     assert_no_brand("email", &format!("{subject}\n{body}"));
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn the_built_in_site_is_what_a_hub_shows_with_no_directory() {
     let world = or_skip!(super::passkey_tests::world());
     let (_, home) = text(&world, "/", None).await;

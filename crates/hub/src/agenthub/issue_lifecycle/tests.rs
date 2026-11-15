@@ -69,8 +69,8 @@ fn signatures_use_library_verification_and_require_delivery_headers() {
 
 async fn hub() -> Option<(Hosted, testing::TestStore)> {
     let test = testing::postgres().await?;
-    let hub=hosted_with_ingress(Some(&test.url),|dir,_|json!({
-        "boards":[{"project":"source","dir":dir.join("never-local")}],
+    let hub=hosted_with_ingress(Some(&test.url),|_,_|json!({
+        "boards":[{"project":"source"}],
         "github":{"repositories":[{"repository_id":123,"repository":"acme/demo","project":"source"}]}
     }),IssueLifecycleStore::with_secret(SECRET.into()).unwrap()).await?;
     Some((hub, test))

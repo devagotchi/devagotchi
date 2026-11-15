@@ -71,7 +71,7 @@ pub(crate) fn block_on<T>(work: impl Future<Output = BridgeResult<T>>) -> Bridge
 /// database holds (`DEVAGOTCHI_TEST_POSTGRES_URL`; none without it).
 #[cfg(test)]
 pub mod testing {
-    pub use devagotchi_store::testing::{POSTGRES_ENV, TestStore, empty_postgres};
+    pub use devagotchi_store::testing::{TestStore, empty_postgres};
 
     /// A new database made as a hub makes its own, or `None` without a test Postgres.
     pub async fn postgres() -> Option<TestStore> {

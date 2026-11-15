@@ -170,9 +170,6 @@ pub struct StorageConfig {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct AccountBoardsConfig {
-    /// Legacy local-fixture directory; hosted Postgres boards ignore it.
-    #[serde(default)]
-    pub dir: Option<String>,
     /// How many projects a free account may bind here (D21: realistically one). The owner
     /// and the `unlimited` accounts have no limit.
     #[serde(default)]
@@ -266,12 +263,10 @@ pub const DEFAULT_FREE_LIMIT: u32 = 1;
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct BoardEntry {
-    /// The project name callers pass as `project`; `[a-z0-9][a-z0-9-]{0,62}`. It must be
-    /// the name the board was initialised with (`.devagotchi/config.json`), because ticket
-    /// ids embed its prefix.
+    /// The project name callers pass as `project`; `[a-z0-9][a-z0-9-]{0,62}`. The board is in
+    /// the hub's Postgres, owned by `@shared`, and made on its first use; the grants that
+    /// name it say who works it.
     pub project: String,
-    /// Absolute path of the project directory holding `.devagotchi/board.sqlite3`.
-    pub dir: String,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -884,21 +879,8 @@ impl HubConfig {
                     board.project
                 )));
             }
-            if !Path::new(&board.dir).is_absolute() {
-                return Err(invalid(format!(
-                    "board {:?}: dir must be an absolute path",
-                    board.project
-                )));
-            }
         }
         if let Some(accounts) = &self.account_boards {
-            if let Some(dir) = &accounts.dir
-                && !Path::new(dir).is_absolute()
-            {
-                return Err(invalid(
-                    "account_boards.dir must be an absolute path".into(),
-                ));
-            }
             for subject in &accounts.unlimited {
                 valid_subject(subject)
                     .map_err(|why| invalid(format!("account_boards.unlimited {why}")))?;
@@ -1226,20 +1208,17 @@ mod tests {
     }
 
     #[test]
-    fn account_boards_need_an_absolute_dir_and_real_account_ids() {
+    fn account_boards_need_real_account_ids_and_no_directory() {
         let mut hosted = good();
         hosted["account_boards"] = serde_json::json!({});
         let config = parse(&hosted).unwrap();
         let accounts = config.account_boards.as_ref().unwrap();
-        assert!(
-            accounts.dir.is_none()
-                && accounts.free_limit.is_none()
-                && accounts.unlimited.is_empty()
-        );
+        assert!(accounts.free_limit.is_none() && accounts.unlimited.is_empty());
 
-        let mut relative = good();
-        relative["account_boards"] = serde_json::json!({ "dir": "boards" });
-        assert_eq!(parse(&relative).unwrap_err().code, "invalid_config");
+        // Boards are in the hub's Postgres: there is no directory to name.
+        let mut dir = good();
+        dir["account_boards"] = serde_json::json!({ "dir": "/srv/boards" });
+        assert_eq!(parse(&dir).unwrap_err().code, "invalid_config");
 
         let mut email = good();
         email["account_boards"] = serde_json::json!({ "unlimited": ["someone@example.test"] });
@@ -1490,16 +1469,10 @@ mod tests {
         }
     }
 
-    #[cfg(unix)]
-    const PROJECT_DIR: &str = "/srv/projects/devagotchi";
-    #[cfg(windows)]
-    const PROJECT_DIR: &str = r"D:\projects\devagotchi";
-
     #[test]
     fn boards_are_granted_like_brokers_and_people_are_declared() {
         let mut with_boards = good();
-        with_boards["boards"] =
-            serde_json::json!([{ "project": "devagotchi", "dir": PROJECT_DIR }]);
+        with_boards["boards"] = serde_json::json!([{ "project": "devagotchi" }]);
         with_boards["grants"] = serde_json::json!([
             { "subject": "jesse", "brokers": ["gold-ws"], "boards": ["devagotchi"], "human": true },
             { "subject": "claude-on-gus", "boards": ["devagotchi"] },
@@ -1519,7 +1492,7 @@ mod tests {
             config.brokers_for("claude-on-gus").is_empty(),
             "a board grant is not a broker grant"
         );
-        assert_eq!(config.board("devagotchi").unwrap().dir, PROJECT_DIR);
+        assert!(config.board("devagotchi").is_some());
 
         // A hub may serve boards alone, with no broker at all, or nothing yet.
         let mut boards_only = with_boards.clone();
@@ -1537,9 +1510,10 @@ mod tests {
         dangling["grants"][1]["boards"] = serde_json::json!(["other"]);
         assert_eq!(parse(&dangling).unwrap_err().code, "invalid_config");
 
-        let mut relative = with_boards.clone();
-        relative["boards"][0]["dir"] = serde_json::json!("projects/devagotchi");
-        assert_eq!(parse(&relative).unwrap_err().code, "invalid_config");
+        // A board is in the hub's Postgres: a directory for it is refused.
+        let mut dir = with_boards.clone();
+        dir["boards"][0]["dir"] = serde_json::json!("/srv/projects/devagotchi");
+        assert_eq!(parse(&dir).unwrap_err().code, "invalid_config");
 
         let mut bad_name = with_boards.clone();
         bad_name["boards"][0]["project"] = serde_json::json!("Devagotchi Main");
@@ -1549,7 +1523,7 @@ mod tests {
         twice["boards"]
             .as_array_mut()
             .unwrap()
-            .push(serde_json::json!({ "project": "devagotchi", "dir": PROJECT_DIR }));
+            .push(serde_json::json!({ "project": "devagotchi" }));
         assert_eq!(parse(&twice).unwrap_err().code, "invalid_config");
     }
 
