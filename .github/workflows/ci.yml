@@ -57,9 +57,11 @@ jobs:
         with:
           tool: cargo-nextest
       # Default members: contracts, ipc, core, broker, mcp, hub. The Tauri inspector
-      # is a workspace member but needs native webview toolchains; it gets its
-      # own job when it enters CI.
+      # is a workspace member outside them: Linux and macOS need native webview
+      # toolchains for it, Windows needs nothing, so it is compiled there.
       - run: cargo build --locked --bins
+      - if: matrix.os == 'windows-2025'
+        run: cargo check --locked -p devagotchi-desktop --all-targets
       # nextest runs every test binary (library, binary and integration tests),
       # one process per test, with the profile in .config/nextest.toml.
       - run: cargo nextest run --locked --profile ci

@@ -144,6 +144,7 @@ fn unexpected(expected: &str, actual: &ResponseBody) -> BridgeError {
         ResponseBody::Listing(_) => "listing",
         ResponseBody::Written(_) => "written",
         ResponseBody::Revision(_) => "revision",
+        ResponseBody::Info(_) => "info",
     };
     BridgeError::new(
         "unexpected_broker_response",

@@ -31,12 +31,16 @@ pub async fn empty_postgres() -> Option<String> {
     let server = std::env::var(POSTGRES_ENV).ok().filter(|u| !u.is_empty())?;
     static DRIVERS: Once = Once::new();
     DRIVERS.call_once(install_default_drivers);
-    let name = format!("dvg_test_{}", hex::encode(random::<8>()));
+    let name = format!("{PREFIX}{}_{}", now_secs(), hex::encode(random::<8>()));
     let admin = AnyPoolOptions::new()
         .max_connections(1)
         .connect(&server)
         .await
         .expect("the test Postgres server");
+    static SWEPT: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+    if !SWEPT.swap(true, std::sync::atomic::Ordering::SeqCst) {
+        sweep(&admin).await;
+    }
     admin
         .execute(sqlx::AssertSqlSafe(format!("CREATE DATABASE {name}")))
         .await
@@ -45,6 +49,49 @@ pub async fn empty_postgres() -> Option<String> {
     let base = server.split('?').next().unwrap();
     let (root, _) = base.rsplit_once('/').unwrap();
     Some(format!("{root}/{name}"))
+}
+
+/// A test database's name: this prefix, the second it was made, then random hex.
+const PREFIX: &str = "dvg_test_";
+/// How old a test database is before the next test run drops it. No test runs this long; a
+/// run elsewhere on the same server keeps its own, which are younger.
+const STALE_SECS: u64 = 2 * 60 * 60;
+
+pub(crate) fn now_secs() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_secs()
+}
+
+/// The test databases older than `STALE_SECS`, which a run left behind (tests do not drop
+/// their own: a store's pool outlives the test that made it), dropped once per process. A
+/// developer's test server otherwise fills until it runs out of shared memory.
+pub(crate) async fn sweep(admin: &sqlx::AnyPool) {
+    let names: Vec<(String,)> =
+        sqlx::query_as("SELECT datname::text FROM pg_database WHERE datname LIKE 'dvg\\_test\\_%'")
+            .fetch_all(admin)
+            .await
+            .unwrap_or_default();
+    let cutoff = now_secs().saturating_sub(STALE_SECS);
+    for (name,) in names {
+        if made_at(&name).is_some_and(|made| made < cutoff) {
+            let drop = format!("DROP DATABASE IF EXISTS {name} WITH (FORCE)");
+            let _ = admin.execute(sqlx::AssertSqlSafe(drop)).await;
+        }
+    }
+}
+
+/// The second a test database was made, from its name; `None` for any other database. A name
+/// from before names carried the second (`dvg_test_` and 16 hex digits) counts as made at 0.
+pub(crate) fn made_at(name: &str) -> Option<u64> {
+    let hex = |s: &str| !s.is_empty() && s.bytes().all(|b| b.is_ascii_hexdigit());
+    let rest = name.strip_prefix(PREFIX)?;
+    match rest.split_once('_') {
+        Some((secs, random)) if hex(random) => secs.parse().ok(),
+        None if rest.len() == 16 && hex(rest) => Some(0),
+        _ => None,
+    }
 }
 
 /// `migrations` run on the database at `url` up to `version` and no further, as a build
