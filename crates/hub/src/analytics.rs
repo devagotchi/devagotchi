@@ -166,7 +166,7 @@ impl Analytics {
         };
         let mut salt = self.salt.lock().expect("analytics salt");
         if salt.as_ref().is_none_or(|salt| salt.day != day) {
-            let mut bytes = crate::link::random::<32>();
+            let mut bytes = crate::machines::random::<32>();
             let key = hmac::Key::new(hmac::HMAC_SHA256, &bytes);
             bytes.fill(0);
             std::hint::black_box(&bytes);
@@ -183,7 +183,7 @@ impl Analytics {
         self.event(
             Owner::Tenant(tenant.to_string()),
             kind,
-            crate::devices::now_secs(),
+            crate::machines::now_secs(),
         );
     }
 
@@ -192,7 +192,7 @@ impl Analytics {
         self.event(
             Owner::Account(account.to_string()),
             kind,
-            crate::devices::now_secs(),
+            crate::machines::now_secs(),
         );
     }
 

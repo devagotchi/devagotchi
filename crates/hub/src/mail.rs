@@ -230,7 +230,7 @@ Content-Type: text/plain; charset=utf-8\r\nContent-Transfer-Encoding: 8bit\r\n\r
         clean(message.from),
         clean(message.to),
         clean(message.subject),
-        hex::encode(crate::link::random::<12>()),
+        hex::encode(crate::machines::random::<12>()),
         id_host
     );
     for line in message.body.replace("\r\n", "\n").split('\n') {

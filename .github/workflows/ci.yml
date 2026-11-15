@@ -303,7 +303,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - run: shellcheck deploy/linux/*.sh crates/hub/src/join/join.sh
+      - run: shellcheck deploy/linux/*.sh crates/hub/src/machines/join/join.sh
       - run: rustup toolchain install
       - run: cargo build --locked --bins
       - name: Start a throwaway Postgres

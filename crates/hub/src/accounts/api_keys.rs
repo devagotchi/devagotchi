@@ -260,7 +260,7 @@ impl NewKey {
 fn fresh_secret() -> String {
     format!(
         "{PREFIX}{}",
-        base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(crate::link::random::<32>())
+        base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(crate::machines::random::<32>())
     )
 }
 
@@ -334,7 +334,7 @@ impl Accounts {
             ))));
         }
         let key = ApiKey {
-            id: format!("key_{}", hex::encode(crate::link::random::<8>())),
+            id: format!("key_{}", hex::encode(crate::machines::random::<8>())),
             name: new.name.trim().to_string(),
             hint: hint_of(secret),
             scopes: new.scopes.clone(),

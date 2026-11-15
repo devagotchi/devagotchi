@@ -19,7 +19,7 @@ use sha2::{Digest, Sha256};
 use super::*;
 use crate::{
     accounts::identities::Proven,
-    devices::now_secs,
+    machines::now_secs,
     tenant_tests::{Hosted, Person, hosted_with, set_cookie},
 };
 
@@ -524,7 +524,7 @@ async fn get_my_command_issues_the_line_and_the_step_ticks_once_online() {
         assert_eq!(hub.devices.held(&subject).unwrap(), 1);
         let cookies = format!("{line_cookie}; {browser}");
         let code = code_in(&cookies);
-        assert!(crate::join::valid_code(&code), "{code}");
+        assert!(crate::machines::join::valid_code(&code), "{code}");
         let (_, body) = page(&hub, &path, Some(&cookies)).await;
         assert!(
             body.contains(&format!(

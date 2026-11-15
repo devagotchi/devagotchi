@@ -548,7 +548,7 @@ impl WebLogin {
 
 /// 32 random bytes, base64url: a `state`, a PKCE verifier (43 characters) or a session id.
 fn random_token() -> String {
-    URL_SAFE_NO_PAD.encode(crate::link::random::<32>())
+    URL_SAFE_NO_PAD.encode(crate::machines::random::<32>())
 }
 
 fn digest(id: &str) -> [u8; 32] {

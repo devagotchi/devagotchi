@@ -42,7 +42,7 @@ async fn claim(accounts: &Accounts, code: &str, now: u64) -> BridgeResult<(Accou
             code,
             Some("Jesse"),
             [7; 16],
-            crate::link::random::<32>(),
+            crate::machines::random::<32>(),
             now,
         )
         .await

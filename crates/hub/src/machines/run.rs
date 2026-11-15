@@ -106,7 +106,7 @@ impl Hub {
             }
         };
         let start = StartInput {
-            idempotency_key: format!("run-{}", hex::encode(crate::link::random::<16>())),
+            idempotency_key: format!("run-{}", hex::encode(crate::machines::random::<16>())),
             executable: String::new(),
             args: Vec::new(),
             command: Some(input.command),

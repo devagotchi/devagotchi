@@ -110,7 +110,7 @@ impl Authenticator {
         Authenticator {
             alg,
             key,
-            id: crate::link::random::<16>().to_vec(),
+            id: crate::machines::random::<16>().to_vec(),
             count: 0,
             rp_id: rp_id.to_string(),
             origin: origin.to_string(),

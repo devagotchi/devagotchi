@@ -33,7 +33,7 @@ fn hash_with(password: &[u8], salt: &[u8]) -> Option<String> {
 
 /// The argon2id PHC string of `password`, under a fresh salt, off the async threads.
 async fn hash_of(password: &str) -> BridgeResult<String> {
-    let (password, salt) = (password.to_string(), crate::link::random::<16>());
+    let (password, salt) = (password.to_string(), crate::machines::random::<16>());
     tokio::task::spawn_blocking(move || hash_with(password.as_bytes(), &salt))
         .await
         .ok()
@@ -90,8 +90,10 @@ impl Accounts {
             .then(|| Err(taken()))
             .unwrap_or(Ok(()))?;
         let (hash, now) = (hash_of(password).await?, now_secs());
-        let (tenant_random, account_random) =
-            (crate::link::random::<16>(), crate::link::random::<16>());
+        let (tenant_random, account_random) = (
+            crate::machines::random::<16>(),
+            crate::machines::random::<16>(),
+        );
         let account = transaction!(&self.store, |connection| {
             // Any account this address already reaches, by password or email link, is taken.
             if self

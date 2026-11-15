@@ -34,7 +34,7 @@ impl Sealer {
         let bytes = match std::fs::read(&path) {
             Ok(bytes) => bytes,
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
-                let bytes = crate::link::random::<32>().to_vec();
+                let bytes = crate::machines::random::<32>().to_vec();
                 crate::push::write_private(&path, &bytes).map_err(|error| error.message)?;
                 bytes
             }
@@ -45,11 +45,11 @@ impl Sealer {
 
     /// A sealer with a key of its own, gone with the process.
     pub fn ephemeral() -> Self {
-        Self::from_bytes(&crate::link::random::<32>()).expect("a 32-byte key")
+        Self::from_bytes(&crate::machines::random::<32>()).expect("a 32-byte key")
     }
 
     pub fn seal(&self, name: &str, secret: &str) -> String {
-        let nonce = crate::link::random::<NONCE_LEN>();
+        let nonce = crate::machines::random::<NONCE_LEN>();
         let mut sealed = secret.as_bytes().to_vec();
         self.key
             .seal_in_place_append_tag(

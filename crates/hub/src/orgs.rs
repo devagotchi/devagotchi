@@ -20,7 +20,7 @@
 
 use std::sync::Arc;
 
-use base64::Engine as _;
+use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
 use devagotchi_contracts::{BridgeError, BridgeResult};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -314,7 +314,7 @@ impl Orgs {
         check_subject(by)?;
         check_name("organisation", slug)?;
         let name = check_title(name)?;
-        let id = new_tenant_id(crate::link::random::<16>());
+        let id = new_tenant_id(crate::machines::random::<16>());
         let now = self.now();
         transaction!(&self.store, |connection| {
             let taken = sqlx::query("SELECT 1 FROM tenancy_tenants WHERE slug = $1")
@@ -1172,7 +1172,7 @@ impl Orgs {
             .filter(|note| !note.is_empty());
         let token = format!(
             "inv_{}",
-            base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(crate::link::random::<32>())
+            URL_SAFE_NO_PAD.encode(crate::machines::random::<32>())
         );
         let hash = token_hash(&token);
         let now = self.now();

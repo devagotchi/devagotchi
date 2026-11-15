@@ -29,8 +29,13 @@ impl Accounts {
         account: &str,
         passkey: Option<&[u8]>,
     ) -> BridgeResult<String> {
-        self.open_session_at(account, passkey, crate::link::random::<32>(), now_secs())
-            .await
+        self.open_session_at(
+            account,
+            passkey,
+            crate::machines::random::<32>(),
+            now_secs(),
+        )
+        .await
     }
 
     pub(crate) async fn open_session_at(
@@ -149,7 +154,7 @@ impl Accounts {
             Some((purpose, token)),
             None,
             now_secs(),
-            Some(crate::link::random::<32>()),
+            Some(crate::machines::random::<32>()),
         )
         .await?
         .ok_or_else(|| BridgeError::new("account_store", "no session was opened"))

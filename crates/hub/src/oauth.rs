@@ -230,7 +230,7 @@ fn oauth_error(error: &str, description: &str) -> BridgeError {
 }
 
 fn random_token() -> String {
-    URL_SAFE_NO_PAD.encode(crate::link::random::<32>())
+    URL_SAFE_NO_PAD.encode(crate::machines::random::<32>())
 }
 
 fn digest(value: &str) -> [u8; 32] {
@@ -971,7 +971,7 @@ impl Authority {
                 !name.is_empty() && name.len() <= 128 && !name.chars().any(char::is_control)
             })
             .unwrap_or("MCP client");
-        let client_id = format!("dg_client_{}", hex::encode(crate::link::random::<16>()));
+        let client_id = format!("dg_client_{}", hex::encode(crate::machines::random::<16>()));
         let connection = self.connection.lock().expect("oauth lock");
         connection
             .execute(
@@ -1145,8 +1145,8 @@ impl Authority {
         let device_code = random_token();
         let user_code = format!(
             "{}-{}",
-            &hex::encode(crate::link::random::<2>()).to_uppercase(),
-            &hex::encode(crate::link::random::<2>()).to_uppercase()
+            &hex::encode(crate::machines::random::<2>()).to_uppercase(),
+            &hex::encode(crate::machines::random::<2>()).to_uppercase()
         );
         let connection = self.connection.lock().expect("oauth lock");
         connection

@@ -1477,9 +1477,9 @@ mod bound {
         audit::Audit,
         auth::Verifier,
         config::HubConfig,
-        devices::Devices,
         hub::Hub,
-        link::Links,
+        machines::devices::Devices,
+        machines::link::Links,
     };
 
     const MEMBER: &str = "300000000000000002";

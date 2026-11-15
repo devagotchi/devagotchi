@@ -18,9 +18,9 @@ use crate::{
     audit::Audit,
     auth::Verifier,
     config::HubConfig,
-    devices::Devices,
     hub::Hub,
-    link::Links,
+    machines::devices::Devices,
+    machines::link::Links,
 };
 
 pub(super) struct World {

@@ -35,7 +35,7 @@ use sha2::{Digest, Sha256};
 use sqlx::{AnyConnection, Row, any::AnyRow};
 
 use crate::{
-    devices::now_secs,
+    machines::{now_secs, random},
     store::{Failed, Lookup, Store, secs, store_error, transaction, unsecs},
 };
 
@@ -293,8 +293,8 @@ impl Accounts {
     /// The accounts in `store`. Its challenge key is made the first time, once, whichever
     /// hub instance gets there first.
     pub async fn open(store: Store) -> BridgeResult<Self> {
-        let fresh = crate::link::random::<32>().to_vec();
-        let home = tenants::new_tenant_id(crate::link::random::<16>());
+        let fresh = random::<32>().to_vec();
+        let home = tenants::new_tenant_id(random::<16>());
         let now = now_secs();
         let key = transaction!(&store, |connection| {
             sqlx::query(
@@ -476,7 +476,7 @@ impl Accounts {
     /// its SHA-256 is kept; a new link of the same purpose supersedes the account's unused
     /// one.
     pub async fn issue_link(&self, purpose: LinkPurpose, account: &str) -> BridgeResult<String> {
-        self.issue_link_at(purpose, account, crate::link::random::<32>(), now_secs())
+        self.issue_link_at(purpose, account, random::<32>(), now_secs())
             .await
     }
 
@@ -488,14 +488,8 @@ impl Accounts {
         purpose: LinkPurpose,
         account: &str,
     ) -> BridgeResult<String> {
-        self.issue(
-            purpose,
-            account,
-            crate::link::random::<32>(),
-            now_secs(),
-            true,
-        )
-        .await
+        self.issue(purpose, account, random::<32>(), now_secs(), true)
+            .await
     }
 
     async fn issue_link_at(
@@ -778,7 +772,7 @@ impl Accounts {
     /// A challenge for one ceremony: to register a passkey on `account`, or to sign in
     /// (`None`). Making one stores nothing.
     pub fn challenge(&self, purpose: Ceremony, account: Option<&str>) -> Vec<u8> {
-        self.challenge_at(purpose, account, crate::link::random::<16>(), now_secs())
+        self.challenge_at(purpose, account, random::<16>(), now_secs())
     }
 
     pub(crate) fn challenge_at(
@@ -836,7 +830,7 @@ impl Accounts {
     /// start over, in one transaction that no ceremony can interleave with: every challenge
     /// made before fails once, every one made after works.
     async fn clock_set_back(&self, now: u64) -> BridgeResult<bool> {
-        let key = crate::link::random::<32>();
+        let key = random::<32>();
         let replaced = transaction!(&self.store, |connection| {
             if now.saturating_add(CHALLENGE_TTL_SECS) > spent_horizon(connection).await? {
                 return Ok(false);

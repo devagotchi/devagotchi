@@ -262,7 +262,7 @@ impl Accounts {
             return Err(BridgeError::new("expired", "the link no longer works"));
         }
         let key = hash(token);
-        let random = crate::link::random::<32>();
+        let random = crate::machines::random::<32>();
         transaction!(&self.store, |connection| {
             let Some(tenant) = self.enter(connection, Lookup::Offer(&key)).await? else {
                 return Err(refused("expired", "the link no longer works"));

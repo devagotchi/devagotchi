@@ -754,10 +754,10 @@ impl HubConfig {
                 )));
             }
         }
-        config.downloads = crate::downloads::choose(
+        config.downloads = crate::machines::downloads::choose(
             config.downloads.take(),
-            env(crate::downloads::DOWNLOADS_ENV),
-            crate::downloads::built_in(),
+            env(crate::machines::downloads::DOWNLOADS_ENV),
+            crate::machines::downloads::built_in(),
         );
         config.validate(&env)?;
         if let Some(dir) = env(crate::site::SITE_ENV).filter(|dir| !dir.trim().is_empty()) {

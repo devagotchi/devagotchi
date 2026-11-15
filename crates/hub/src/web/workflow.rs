@@ -51,7 +51,7 @@ use crate::{
         workflows::{WorkflowRow, browser_hash, new_browser_secret},
     },
     auth::Subject,
-    devices::{CODE_TTL_SECS, now_secs},
+    machines::{devices::CODE_TTL_SECS, join::valid_code, now_secs, random},
     site::{
         Ctx, Site,
         workflows::{AI_CLIENT, MACHINE, PHONE, SECURE_ACCOUNT},
@@ -197,7 +197,7 @@ fn succeeded(status: &WorkflowStatus) -> bool {
 fn browser_secret(state: &AppState, headers: &HeaderMap) -> (String, String) {
     let secret = cookie_value(headers, browser_cookie(state))
         .filter(|secret| browser_hash(secret).is_some())
-        .unwrap_or_else(|| new_browser_secret(crate::link::random::<32>()));
+        .unwrap_or_else(|| new_browser_secret(random::<32>()));
     let set = cookie(
         state,
         browser_cookie(state),
@@ -610,8 +610,7 @@ data-return-to=\"{}\" disabled>{}</button></p><p class=\"meta\" id=\"passkey-sta
         let live = shown.and_then(|value| {
             let mut parts = value.splitn(3, '.');
             let (id, at, code) = (parts.next()?, parts.next()?, parts.next()?);
-            (id == self.row.id && at == index.to_string() && crate::join::valid_code(code))
-                .then_some(code)
+            (id == self.row.id && at == index.to_string() && valid_code(code)).then_some(code)
         });
         if let (Some(code), Some(stored)) = (live, stored)
             && matches!(self.state.hub.links.live_code(code), Ok(Some(device)) if device == stored)
@@ -964,14 +963,7 @@ pub async fn client(
     let client = step.client.clone().unwrap_or_default();
     match workflows
         .accounts()
-        .client_session(
-            &row.tenant,
-            &row.id,
-            &browser,
-            &client,
-            crate::link::random::<32>(),
-            now,
-        )
+        .client_session(&row.tenant, &row.id, &browser, &client, random::<32>(), now)
         .await
     {
         Ok(session) => see_other(
@@ -1041,7 +1033,7 @@ pub async fn keep(
             &row.id,
             &browser,
             workflows.link_ttl(),
-            crate::link::random::<32>(),
+            random::<32>(),
             now,
         )
         .await

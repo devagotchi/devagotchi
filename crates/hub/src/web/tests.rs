@@ -17,8 +17,8 @@ use sha2::{Digest, Sha256};
 
 use super::*;
 use crate::{
-    AppState, audit::Audit, auth::Verifier, config::HubConfig, devices::Devices, hub::Hub,
-    link::Links,
+    AppState, audit::Audit, auth::Verifier, config::HubConfig, hub::Hub,
+    machines::devices::Devices, machines::link::Links,
 };
 
 const OWNER: &str = "300000000000000001";
@@ -143,7 +143,7 @@ async fn world() -> World {
 }
 
 /// The world, handing out `downloads` to joining machines (`/join`, `/dist`).
-async fn world_with(downloads: Option<Arc<crate::downloads::Downloads>>) -> World {
+async fn world_with(downloads: Option<Arc<crate::machines::downloads::Downloads>>) -> World {
     let nomen = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let fake = Arc::new(FakeNomen {
         issuer: format!("http://{}", nomen.local_addr().unwrap()),
@@ -195,7 +195,7 @@ async fn world_with(downloads: Option<Arc<crate::downloads::Downloads>>) -> Worl
     let devices = Arc::new(Devices::open(&dir.path().join("devices.sqlite3")).unwrap());
     for name in ["gus", "old"] {
         let code = devices
-            .issue_code(name, crate::link::random::<16>())
+            .issue_code(name, crate::machines::random::<16>())
             .unwrap();
         devices.enroll(name, &code, "test-key", true).unwrap();
     }
@@ -242,7 +242,7 @@ async fn world_with(downloads: Option<Arc<crate::downloads::Downloads>>) -> Worl
     let hub = state.hub.clone();
     let app = router(true)
         .layer(axum::middleware::from_fn_with_state(state.clone(), bar))
-        .merge(crate::join::routes())
+        .merge(crate::machines::join::routes())
         .with_state(state);
     tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
     let http = reqwest::Client::builder()
@@ -1560,7 +1560,7 @@ async fn the_one_line_joins_once_and_downloads_only_what_the_hub_vouches_for() {
     std::fs::write(dist.path().join("SHA256SUMS"), sums).unwrap();
     std::fs::write(dist.path().join("VERSION"), "main-test123\n").unwrap();
     std::fs::write(dist.path().join("not-listed.txt"), "secret").unwrap();
-    let downloads = Arc::new(crate::downloads::Downloads::open(dist.path()).unwrap());
+    let downloads = Arc::new(crate::machines::downloads::Downloads::open(dist.path()).unwrap());
     let w = world_with(Some(downloads.clone())).await;
     let other = w.sign_in("tok-other").await;
     let page = w
@@ -1674,7 +1674,7 @@ async fn api_add_machine_is_bearer_only_and_the_code_joins_for_that_account() {
     }
     std::fs::write(dist.path().join("SHA256SUMS"), sums).unwrap();
     std::fs::write(dist.path().join("VERSION"), "main-test123\n").unwrap();
-    let downloads = Arc::new(crate::downloads::Downloads::open(dist.path()).unwrap());
+    let downloads = Arc::new(crate::machines::downloads::Downloads::open(dist.path()).unwrap());
     let w = world_with(Some(downloads)).await;
 
     let cookie = w.sign_in("tok-other").await;

@@ -47,7 +47,7 @@ struct Authorize {
 }
 
 async fn authorize(State(stub): State<Shared>, Query(asked): Query<Authorize>) -> Response {
-    let code = format!("code-{}", hex::encode(crate::link::random::<8>()));
+    let code = format!("code-{}", hex::encode(crate::machines::random::<8>()));
     stub.lock().unwrap().codes.push((
         code.clone(),
         asked.nonce.unwrap_or_default(),
@@ -96,8 +96,8 @@ async fn oidc_token(
         "email_verified": person.verified,
         "name": "Stub Person",
         "nonce": nonce,
-        "exp": crate::devices::now_secs() + 300,
-        "iat": crate::devices::now_secs(),
+        "exp": crate::machines::now_secs() + 300,
+        "iat": crate::machines::now_secs(),
     });
     let id_token = format!(
         "{}.{}.{}",

@@ -17,10 +17,10 @@ use axum::{
     response::{IntoResponse, Response},
 };
 
-use crate::{AppState, config::valid_name, downloads::Downloads};
+use crate::{AppState, config::valid_name, machines::downloads::Downloads};
 
-const SH: &str = include_str!("join/join.sh");
-const PS1: &str = include_str!("join/join.ps1");
+const SH: &str = include_str!("join.sh");
+const PS1: &str = include_str!("join.ps1");
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Shell {

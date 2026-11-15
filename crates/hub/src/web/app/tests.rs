@@ -366,7 +366,7 @@ async fn a_machines_page_shows_its_state_and_jobs_and_updates_from_here_only() {
         &ResponseBody::Operation(view("op-0", "failed", Some(1))),
     );
     let jobs = links.recent_jobs(&device);
-    assert_eq!(jobs.len(), crate::link::RECENT_JOBS);
+    assert_eq!(jobs.len(), crate::machines::link::RECENT_JOBS);
     assert_eq!(jobs[0].operation_id, "op-24");
     assert_eq!(
         (jobs[0].state.as_str(), jobs[0].exit_code),

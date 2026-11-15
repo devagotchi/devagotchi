@@ -63,7 +63,7 @@ pub(super) fn new_user_code() -> String {
     let mut code = String::with_capacity(9);
     while code.len() < 9 {
         // 240 is the largest multiple of 20 a byte holds: no letter is likelier.
-        for byte in crate::link::random::<16>() {
+        for byte in crate::machines::random::<16>() {
             if byte < 240 && code.len() < 9 {
                 if code.len() == 4 {
                     code.push('-');
@@ -96,7 +96,7 @@ impl Accounts {
     ) -> BridgeResult<DeviceStart> {
         let device_code = format!(
             "dgd_{}",
-            URL_SAFE_NO_PAD.encode(crate::link::random::<32>())
+            URL_SAFE_NO_PAD.encode(crate::machines::random::<32>())
         );
         let user_code = new_user_code();
         let stored = normalize_user_code(&user_code).expect("a code this hub made");
@@ -217,8 +217,11 @@ impl Accounts {
         client: &str,
         now: u64,
     ) -> BridgeResult<DevicePoll> {
-        let family = URL_SAFE_NO_PAD.encode(crate::link::random::<16>());
-        let fresh = (crate::link::random::<32>(), crate::link::random::<32>());
+        let family = URL_SAFE_NO_PAD.encode(crate::machines::random::<16>());
+        let fresh = (
+            crate::machines::random::<32>(),
+            crate::machines::random::<32>(),
+        );
         transaction!(&self.store, |connection| {
             let row = sqlx::query(
                 "SELECT client, scope, resource, account, denied, polled_at, expires_at

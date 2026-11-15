@@ -1,5 +1,4 @@
-# Rust files over the 500-line cap when the cap arrived (main d58e9f4, 2026-11-14:
-# re-measured where #185 landed after #186-#189, as #185 itself re-measured after #184).
+# Rust files over the 500-line cap when the cap arrived (main 332bf25, 2026-11-13).
 # <lines><TAB><path>, sorted by path. A listed file may shrink, never grow; a file that is
 # not listed may not exceed the cap. Never add a line or raise a number to make the test
 # pass: see .ai/patterns/layout.md.
@@ -15,11 +14,11 @@
 838	crates/core/src/execution/platform/windows.rs
 1221	crates/devagotchi/tests/one_binary.rs
 1153	crates/hub/src/account.rs
-1274	crates/hub/src/accounts.rs
+1268	crates/hub/src/accounts.rs
 507	crates/hub/src/accounts/access.rs
 511	crates/hub/src/accounts/access/tests.rs
 576	crates/hub/src/accounts/api_keys.rs
-653	crates/hub/src/accounts/oauth.rs
+647	crates/hub/src/accounts/oauth.rs
 699	crates/hub/src/accounts/oauth/tests.rs
 545	crates/hub/src/accounts/tenants.rs
 776	crates/hub/src/accounts/tenants/tests.rs
@@ -35,12 +34,12 @@
 575	crates/hub/src/analytics/tests.rs
 723	crates/hub/src/auth.rs
 1895	crates/hub/src/config.rs
-827	crates/hub/src/devices.rs
 1131	crates/hub/src/hub.rs
 567	crates/hub/src/hub_settings_tests.rs
 2093	crates/hub/src/identity.rs
-2769	crates/hub/src/lib.rs
-1614	crates/hub/src/link.rs
+2768	crates/hub/src/lib.rs
+827	crates/hub/src/machines/devices.rs
+1609	crates/hub/src/machines/link.rs
 539	crates/hub/src/mail.rs
 702	crates/hub/src/nomen.rs
 786	crates/hub/src/nomen/tests.rs
@@ -54,7 +53,7 @@
 1651	crates/hub/src/site/model.rs
 843	crates/hub/src/site/tests.rs
 574	crates/hub/src/site/workflows.rs
-915	crates/hub/src/tenant_tests.rs
+914	crates/hub/src/tenant_tests.rs
 599	crates/hub/src/web.rs
 607	crates/hub/src/web/analytics.rs
 546	crates/hub/src/web/app/agenthub/ticket_tests.rs
@@ -70,7 +69,7 @@
 949	crates/hub/src/web/providers.rs
 687	crates/hub/src/web/routes.rs
 1984	crates/hub/src/web/tests.rs
-1096	crates/hub/src/web/workflow.rs
+1088	crates/hub/src/web/workflow.rs
 1773	crates/hub/src/workflow_tests.rs
 587	crates/hub/src/workflows.rs
 531	crates/hub/src/workflows/mcp.rs

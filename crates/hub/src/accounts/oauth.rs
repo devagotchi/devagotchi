@@ -126,10 +126,7 @@ impl Accounts {
                 "1 to 10 redirect URIs, each https or http on loopback, with no fragment",
             ));
         }
-        let id = format!(
-            "dgc_{}",
-            URL_SAFE_NO_PAD.encode(crate::link::random::<16>())
-        );
+        let id = format!("dgc_{}", URL_SAFE_NO_PAD.encode(random::<16>()));
         let uris = serde_json::to_string(redirect_uris).unwrap_or_default();
         let now = now_secs();
         let max = secs(self.tokens.max_clients);
@@ -219,10 +216,7 @@ impl Accounts {
         scope: &str,
         now: u64,
     ) -> BridgeResult<String> {
-        let code = format!(
-            "dga_{}",
-            URL_SAFE_NO_PAD.encode(crate::link::random::<32>())
-        );
+        let code = format!("dga_{}", URL_SAFE_NO_PAD.encode(random::<32>()));
         let expires = secs(now.saturating_add(self.tokens.code_secs));
         transaction!(&self.store, |connection| {
             let tenant = self
@@ -279,8 +273,8 @@ impl Accounts {
         resource: Option<&str>,
         now: u64,
     ) -> BridgeResult<Tokens> {
-        let family = URL_SAFE_NO_PAD.encode(crate::link::random::<16>());
-        let fresh = (crate::link::random::<32>(), crate::link::random::<32>());
+        let family = URL_SAFE_NO_PAD.encode(random::<16>());
+        let fresh = (random::<32>(), random::<32>());
         transaction!(&self.store, |connection| {
             let Some(tenant) = self.enter(connection, Lookup::Code(&hash(code))).await? else {
                 return Ok(Err(invalid_grant()));
@@ -364,7 +358,7 @@ impl Accounts {
         resource: Option<&str>,
         now: u64,
     ) -> BridgeResult<Tokens> {
-        let fresh = (crate::link::random::<32>(), crate::link::random::<32>());
+        let fresh = (random::<32>(), random::<32>());
         transaction!(&self.store, |connection| {
             let Some(tenant) = self
                 .enter(connection, Lookup::Token(&hash(refresh)))

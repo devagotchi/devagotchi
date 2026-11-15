@@ -224,7 +224,7 @@ pub async fn register(State(state): State<AppState>, body: axum::body::Bytes) ->
                 StatusCode::CREATED,
                 Json(json!({
                     "client_id": client.id,
-                    "client_id_issued_at": crate::devices::now_secs(),
+                    "client_id_issued_at": crate::machines::now_secs(),
                     "client_name": client.name,
                     "redirect_uris": client.redirect_uris,
                     "grant_types": ["authorization_code", "refresh_token"],

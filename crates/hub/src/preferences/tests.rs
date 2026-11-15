@@ -7,7 +7,7 @@ use super::*;
 use crate::store::testing;
 
 async fn tenant(store: &Store) -> String {
-    let id = crate::accounts::tenants::new_tenant_id(crate::link::random::<16>());
+    let id = crate::accounts::tenants::new_tenant_id(crate::machines::random::<16>());
     transaction!(store, |connection| {
         store.scope(connection, &id).await?;
         sqlx::query("INSERT INTO tenancy_tenants (id, created_at) VALUES ($1, 1)")

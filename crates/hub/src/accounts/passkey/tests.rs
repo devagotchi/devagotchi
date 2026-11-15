@@ -23,14 +23,14 @@ fn stored(credential: &NewCredential) -> Stored<'_> {
 fn every_algorithm_registers_and_signs_in() {
     for alg in [Alg::Es256, Alg::EdDsa, Alg::Rs256] {
         let mut phone = Authenticator::new(alg);
-        let challenge = crate::link::random::<32>();
+        let challenge = crate::machines::random::<32>();
         let credential =
             verify_registration(RP, &challenge, phone.register(&challenge).registration())
                 .unwrap_or_else(|refusal| panic!("{alg:?} registration: {refusal}"));
         assert_eq!(credential.id, phone.id);
         assert_eq!(credential.alg, alg);
         assert_eq!(credential.public_key, phone.spki());
-        let challenge = crate::link::random::<32>();
+        let challenge = crate::machines::random::<32>();
         let sent = phone.assert(&challenge);
         let count = check_assertion(RP, &challenge, stored(&credential), sent.assertion())
             .unwrap_or_else(|refusal| panic!("{alg:?} assertion: {refusal}"));

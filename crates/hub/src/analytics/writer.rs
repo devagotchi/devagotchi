@@ -27,7 +27,7 @@ use tokio::sync::mpsc;
 
 use super::{DAY, Owner, Record, day_of, funnel};
 use crate::{
-    devices::now_secs,
+    machines::now_secs,
     store::{Failed, Lookup, Store, transaction, unsecs},
 };
 
