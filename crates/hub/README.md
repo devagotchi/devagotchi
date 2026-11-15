@@ -625,7 +625,7 @@ gets an account and a tenant (`t-<uuid>`) of their own, made on the spot:
   client's name), secured (with the sign-in), waiting, admitted (in the account store's
   transaction), first machine, first operation (with its latest, a day at a time) and first
   board. Writes go through a bounded queue to one writer in batches (a full queue drops and
-  counts, said in the log). Every hour it rolls the finished days into `hub_analytics_daily`
+  counts, said in the log). Every hour it rolls the finished days into `analytics_daily`
   (kept): each day inside `analytics.retention_days` again from its raw visits, so a visit
   written late (a backlog, another instance's queue) is counted the next pass; a day past
   the retention once more, its raw visits deleted in the same transaction. A pass that
@@ -651,7 +651,7 @@ gets an account and a tenant (`t-<uuid>`) of their own, made on the spot:
   sign-in, waiting now, and active (a command run) in the last 7 and 30 days.
   `/operator/analytics.csv?days=N` downloads the daily totals behind it (`day,metric,item,
   views,visitors`; a field a spreadsheet would read as a formula is written as text).
-  Finished days come from `hub_analytics_daily`, today (and a day not rolled up yet) from
+  Finished days come from `analytics_daily`, today (and a day not rolled up yet) from
   the raw rows (`analytics/report.rs`). Server-rendered, no script, nothing third-party;
   colours and fonts are the site's tokens through `hub.css`, light and dark; every word is
   `content/messages.json` `analytics`.

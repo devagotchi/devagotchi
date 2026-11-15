@@ -65,7 +65,7 @@ fn run(args: Vec<OsString>) -> ExitCode {
             args,
             paths::config_dir().map(|d| d.join(devagotchi_hub::login::FILE_NAME)),
         ),
-        Some("broker") => devagotchi_broker::cli(args),
+        Some("broker") => devagotchi_machine_engine::service::cli(args),
         Some("hub") => devagotchi_hub::cli(args),
         Some("link") => devagotchi_link::cli(args, env!("DEVAGOTCHI_BUILD")),
         Some(verb @ ("login" | "logout" | "whoami")) => account(verb, args),
@@ -174,7 +174,7 @@ fn dunce_path(path: std::path::PathBuf) -> std::path::PathBuf {
 /// its own process so the broker is not left a child of the AI client's adapter).
 #[cfg(any(target_os = "linux", windows))]
 fn local_broker(state: &std::path::Path) -> Result<std::path::PathBuf, String> {
-    if let Some(endpoint) = devagotchi_broker::background::answering(state) {
+    if let Some(endpoint) = devagotchi_machine_engine::service::background::answering(state) {
         return Ok(endpoint);
     }
     let exe = std::env::current_exe().map_err(|e| format!("cannot find this binary: {e}"))?;
@@ -186,11 +186,11 @@ fn local_broker(state: &std::path::Path) -> Result<std::path::PathBuf, String> {
         .stderr(std::process::Stdio::inherit())
         .status()
         .map_err(|e| format!("could not start your broker: {e}"))?;
-    devagotchi_broker::background::answering(state).ok_or_else(|| {
+    devagotchi_machine_engine::service::background::answering(state).ok_or_else(|| {
         format!(
             "your broker is not answering ({started}); the lines above say why, and {} has its output",
             state
-                .join(devagotchi_broker::background::LOG_FILE)
+                .join(devagotchi_machine_engine::service::background::LOG_FILE)
                 .display()
         )
     })
@@ -199,7 +199,7 @@ fn local_broker(state: &std::path::Path) -> Result<std::path::PathBuf, String> {
 /// Where no execution provider exists yet there is no broker to start.
 #[cfg(not(any(target_os = "linux", windows)))]
 fn local_broker(state: &std::path::Path) -> Result<std::path::PathBuf, String> {
-    let file = state.join(devagotchi_broker::ENDPOINT_FILE);
+    let file = state.join(devagotchi_machine_engine::service::ENDPOINT_FILE);
     match std::fs::read_to_string(&file) {
         Ok(text) if !text.trim().is_empty() => Ok(std::path::PathBuf::from(text.trim())),
         _ => Err(format!(

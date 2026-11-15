@@ -72,7 +72,7 @@ pub async fn note_in(
     macro_rules! insert {
         ($on_conflict:literal) => {
             concat!(
-                "INSERT INTO hub_analytics_events (tenant_id, kind, detail, at, last_at)
+                "INSERT INTO analytics_events (tenant_id, kind, detail, at, last_at)
                  SELECT $1, $2, $3, $4, $4
                  WHERE EXISTS (SELECT 1 FROM tenancy_tenants WHERE id = $1 AND home = 0) ",
                 $on_conflict
@@ -82,7 +82,7 @@ pub async fn note_in(
     let sql = if kind == OPERATION {
         insert!(
             "ON CONFLICT (tenant_id, kind) DO UPDATE SET last_at = excluded.last_at
-             WHERE hub_analytics_events.last_at < excluded.last_at"
+             WHERE analytics_events.last_at < excluded.last_at"
         )
     } else {
         insert!("ON CONFLICT (tenant_id, kind) DO NOTHING")

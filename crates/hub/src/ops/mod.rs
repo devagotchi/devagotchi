@@ -5,7 +5,7 @@
 //! # Owns
 //!
 //! In the hub's Postgres: `audit_entries` (migration 0027, the hash chain, `audit`);
-//! `hub_analytics_events`, `hub_analytics_views` and `hub_analytics_daily` (migration 0009,
+//! `analytics_events`, `analytics_views` and `analytics_daily` (migration 0009,
 //! `analytics`); `analytics_settings` (the ClickHouse connection set on `/admin`, kept
 //! through the account store, `analytics_settings`). Board events reach ClickHouse through
 //! AgentHub's own outbox (`devagotchi_agenthub::clickhouse`, re-exported by `warehouse`).

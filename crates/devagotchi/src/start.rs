@@ -173,7 +173,7 @@ pub fn run(args: Vec<OsString>) -> ExitCode {
             account_line(&dir.join(devagotchi_hub::login::FILE_NAME));
         }
     }
-    match devagotchi_broker::serve_blocking(state, config) {
+    match devagotchi_machine_engine::service::serve_blocking(state, config) {
         Ok(()) => ExitCode::SUCCESS,
         Err(error) => {
             eprintln!("devagotchi start: {error}");
@@ -190,7 +190,7 @@ fn background(
     workspace: Option<PathBuf>,
     grants: &[PathBuf],
 ) -> ExitCode {
-    use devagotchi_broker::background;
+    use devagotchi_machine_engine::service::background;
     if let Some(endpoint) = background::answering(state) {
         eprintln!(
             "devagotchi: your broker is already running: {}",

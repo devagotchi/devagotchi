@@ -74,7 +74,7 @@ pub async fn daily_in(
 ) -> Result<Vec<DailyRow>, sqlx::Error> {
     let today = day_of(now);
     let mut rows: Vec<DailyRow> = sqlx::query(
-        "SELECT day, metric, item, views, visitors FROM hub_analytics_daily
+        "SELECT day, metric, item, views, visitors FROM analytics_daily
          WHERE day >= $1 ORDER BY day, metric, item",
     )
     .bind(from)
@@ -92,18 +92,18 @@ pub async fn daily_in(
     })
     .collect::<Result<_, sqlx::Error>>()?;
     let rolled: Option<i64> =
-        sqlx::query_scalar("SELECT MAX(day) FROM hub_analytics_daily WHERE metric = 'total'")
+        sqlx::query_scalar("SELECT MAX(day) FROM analytics_daily WHERE metric = 'total'")
             .fetch_one(&mut *connection)
             .await?;
     let mut day = match rolled {
         Some(rolled) => (rolled + DAY).max(from),
         None => {
             // Nothing rolled up yet: from the first day anything was counted.
-            let first: Option<i64> = sqlx::query_scalar("SELECT MIN(day) FROM hub_analytics_views")
+            let first: Option<i64> = sqlx::query_scalar("SELECT MIN(day) FROM analytics_views")
                 .fetch_one(&mut *connection)
                 .await?;
             let first_event: Option<i64> =
-                sqlx::query_scalar("SELECT MIN(at) FROM hub_analytics_events")
+                sqlx::query_scalar("SELECT MIN(at) FROM analytics_events")
                     .fetch_one(&mut *connection)
                     .await?;
             let first_event = first_event.map(|at| at - at.rem_euclid(DAY));
@@ -132,18 +132,18 @@ pub async fn report(store: &Store, days: i64, now: u64) -> BridgeResult<Report> 
         for (name, sql, since) in [
             (
                 "made",
-                "SELECT COUNT(*) FROM hub_analytics_events WHERE kind = 'made' AND at >= $1",
+                "SELECT COUNT(*) FROM analytics_events WHERE kind = 'made' AND at >= $1",
                 from,
             ),
             (
                 "active_week",
-                "SELECT COUNT(*) FROM hub_analytics_events
+                "SELECT COUNT(*) FROM analytics_events
                  WHERE kind = 'operation' AND last_at >= $1",
                 now_i - 7 * DAY,
             ),
             (
                 "active_month",
-                "SELECT COUNT(*) FROM hub_analytics_events
+                "SELECT COUNT(*) FROM analytics_events
                  WHERE kind = 'operation' AND last_at >= $1",
                 now_i - 30 * DAY,
             ),
@@ -156,9 +156,9 @@ pub async fn report(store: &Store, days: i64, now: u64) -> BridgeResult<Report> 
         }
         // How far the accounts made in the range got.
         for row in sqlx::query(
-            "SELECT kind, COUNT(*) FROM hub_analytics_events
+            "SELECT kind, COUNT(*) FROM analytics_events
              WHERE kind IN ('secured', 'admitted', 'machine', 'operation')
-               AND tenant_id IN (SELECT tenant_id FROM hub_analytics_events
+               AND tenant_id IN (SELECT tenant_id FROM analytics_events
                                  WHERE kind = 'made' AND at >= $1)
              GROUP BY kind",
         )
@@ -172,7 +172,7 @@ pub async fn report(store: &Store, days: i64, now: u64) -> BridgeResult<Report> 
         for kind in ["made", "secured"] {
             let mut found = Vec::new();
             for row in sqlx::query(
-                "SELECT detail, COUNT(*) FROM hub_analytics_events
+                "SELECT detail, COUNT(*) FROM analytics_events
                  WHERE kind = $1 AND at >= $2 GROUP BY detail ORDER BY 2 DESC, 1",
             )
             .bind(kind)

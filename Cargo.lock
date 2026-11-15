@@ -849,7 +849,6 @@ dependencies = [
 name = "devagotchi"
 version = "0.1.0"
 dependencies = [
- "devagotchi-broker",
  "devagotchi-hub",
  "devagotchi-link",
  "devagotchi-machine-engine",
@@ -878,18 +877,6 @@ dependencies = [
  "serde_json",
  "sha2 0.11.1",
  "sqlx",
- "tempfile",
- "tokio",
-]
-
-[[package]]
-name = "devagotchi-broker"
-version = "0.1.0"
-dependencies = [
- "devagotchi-contracts",
- "devagotchi-ipc",
- "devagotchi-machine-engine",
- "serde_json",
  "tempfile",
  "tokio",
 ]

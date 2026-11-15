@@ -120,9 +120,9 @@ impl Termination {
 /// `<state>/endpoint` once bound.
 #[cfg(any(target_os = "linux", windows))]
 pub async fn serve(state: PathBuf, config_path: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
+    use crate::broker::{Broker, BrokerConfig};
     use devagotchi_contracts::*;
     use devagotchi_ipc::{self as ipc, StateGuard};
-    use devagotchi_machine_engine::broker::{Broker, BrokerConfig};
     use std::{io::Read, sync::Arc};
 
     let metadata = std::fs::metadata(&config_path)?;

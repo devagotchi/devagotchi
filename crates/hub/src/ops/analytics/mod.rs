@@ -21,10 +21,10 @@
 //! - **Writes never slow or fail a page**: the queue is bounded, a full one drops the
 //!   record and counts it (`dropped`, said in the log), and one task writes what arrives in
 //!   batches (`writer.rs`). It also rolls each finished day into daily totals
-//!   (`hub_analytics_daily`, kept) and deletes raw visits older than
+//!   (`analytics_daily`, kept) and deletes raw visits older than
 //!   `analytics.retention_days`.
 //!
-//! The tables are migration 0009's (`hub_analytics_*`): hub-scoped, like `hub_secrets`.
+//! The tables are migration 0009's, `analytics_*` since 0030: hub-scoped, like `hub_secrets`.
 
 pub mod funnel;
 pub mod report;
