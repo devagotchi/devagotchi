@@ -135,7 +135,7 @@ async fn write(store: &Store, batch: &[Record], retention_days: u32) -> BridgeRe
                 Record::View(view) if view.day < keep_from => {}
                 Record::View(view) => {
                     sqlx::query(
-                        "INSERT INTO hub_analytics_views
+                        "INSERT INTO analytics_views
                            (day, hour, path, utm_source, utm_medium, utm_campaign, referrer, device, visitor)
                          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
                     )
@@ -181,25 +181,25 @@ pub async fn totals_in(
 ) -> Result<Vec<(String, String, i64, i64)>, sqlx::Error> {
     const TOTALS: [&str; 8] = [
         "SELECT 'total', '', COUNT(*), COUNT(DISTINCT visitor)
-         FROM hub_analytics_views WHERE day = $1",
+         FROM analytics_views WHERE day = $1",
         "SELECT 'path', path, COUNT(*), COUNT(DISTINCT visitor)
-         FROM hub_analytics_views WHERE day = $1 GROUP BY path",
+         FROM analytics_views WHERE day = $1 GROUP BY path",
         "SELECT 'referrer', referrer, COUNT(*), COUNT(DISTINCT visitor)
-         FROM hub_analytics_views WHERE day = $1 AND referrer <> '' GROUP BY referrer",
+         FROM analytics_views WHERE day = $1 AND referrer <> '' GROUP BY referrer",
         "SELECT 'campaign', utm_source || '|' || utm_medium || '|' || utm_campaign, COUNT(*),
            COUNT(DISTINCT visitor)
-         FROM hub_analytics_views
+         FROM analytics_views
          WHERE day = $1 AND (utm_source <> '' OR utm_medium <> '' OR utm_campaign <> '')
          GROUP BY utm_source, utm_medium, utm_campaign",
         "SELECT 'device', device, COUNT(*), COUNT(DISTINCT visitor)
-         FROM hub_analytics_views WHERE day = $1 GROUP BY device",
+         FROM analytics_views WHERE day = $1 GROUP BY device",
         "SELECT 'event', kind, COUNT(*), CAST(0 AS BIGINT)
-         FROM hub_analytics_events WHERE at >= $1 AND at < $1 + 86400 GROUP BY kind",
+         FROM analytics_events WHERE at >= $1 AND at < $1 + 86400 GROUP BY kind",
         "SELECT 'client', detail, COUNT(*), CAST(0 AS BIGINT)
-         FROM hub_analytics_events WHERE kind = 'made' AND at >= $1 AND at < $1 + 86400
+         FROM analytics_events WHERE kind = 'made' AND at >= $1 AND at < $1 + 86400
          GROUP BY detail",
         "SELECT 'sign_in', detail, COUNT(*), CAST(0 AS BIGINT)
-         FROM hub_analytics_events WHERE kind = 'secured' AND at >= $1 AND at < $1 + 86400
+         FROM analytics_events WHERE kind = 'secured' AND at >= $1 AND at < $1 + 86400
          GROUP BY detail",
     ];
     let mut out = Vec::new();
@@ -220,7 +220,7 @@ pub async fn totals_in(
     Ok(out)
 }
 
-/// Roll the finished days into `hub_analytics_daily` and let raw visits past
+/// Roll the finished days into `analytics_daily` and let raw visits past
 /// `retention_days` go: each day inside the retention again (late visits count), each day
 /// past it that still has visits once more before they go, and any finished day not rolled
 /// up yet. Safe to run again, and from several hub instances at once.
@@ -230,20 +230,19 @@ pub async fn maintain(store: &Store, retention_days: u32, now: u64) -> BridgeRes
     let keep_from = keep_from(retention_days, now);
     let (rolled, raw, first_event) = transaction!(store, |connection| {
         let rolled: Vec<i64> = sqlx::query_scalar(
-            "SELECT day FROM hub_analytics_daily WHERE metric = 'total' AND day <= $1",
+            "SELECT day FROM analytics_daily WHERE metric = 'total' AND day <= $1",
         )
         .bind(last)
         .fetch_all(&mut *connection)
         .await?;
         let raw: Vec<i64> =
-            sqlx::query_scalar("SELECT DISTINCT day FROM hub_analytics_views WHERE day <= $1")
+            sqlx::query_scalar("SELECT DISTINCT day FROM analytics_views WHERE day <= $1")
                 .bind(last)
                 .fetch_all(&mut *connection)
                 .await?;
-        let first_event: Option<i64> =
-            sqlx::query_scalar("SELECT MIN(at) FROM hub_analytics_events")
-                .fetch_one(&mut *connection)
-                .await?;
+        let first_event: Option<i64> = sqlx::query_scalar("SELECT MIN(at) FROM analytics_events")
+            .fetch_one(&mut *connection)
+            .await?;
         Ok::<_, Failed>((rolled, raw, first_event))
     })?;
     let rolled: BTreeSet<i64> = rolled.into_iter().collect();
@@ -274,27 +273,25 @@ pub async fn maintain(store: &Store, retention_days: u32, now: u64) -> BridgeRes
 /// stay and only the milestones' are counted again.
 async fn roll(store: &Store, day: i64, purge: bool) -> BridgeResult<()> {
     transaction!(store, |connection| {
-        let visits: i64 =
-            sqlx::query_scalar("SELECT COUNT(*) FROM hub_analytics_views WHERE day = $1")
-                .bind(day)
-                .fetch_one(&mut *connection)
-                .await?;
-        let kept =
-            sqlx::query("SELECT 1 FROM hub_analytics_daily WHERE day = $1 AND metric = 'total'")
-                .bind(day)
-                .fetch_optional(&mut *connection)
-                .await?
-                .is_some();
+        let visits: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM analytics_views WHERE day = $1")
+            .bind(day)
+            .fetch_one(&mut *connection)
+            .await?;
+        let kept = sqlx::query("SELECT 1 FROM analytics_daily WHERE day = $1 AND metric = 'total'")
+            .bind(day)
+            .fetch_optional(&mut *connection)
+            .await?
+            .is_some();
         let from_visits = visits > 0 || !kept;
         let totals = totals_in(connection, day).await?;
         if from_visits {
-            sqlx::query("DELETE FROM hub_analytics_daily WHERE day = $1")
+            sqlx::query("DELETE FROM analytics_daily WHERE day = $1")
                 .bind(day)
                 .execute(&mut *connection)
                 .await?;
         } else {
             sqlx::query(
-                "DELETE FROM hub_analytics_daily
+                "DELETE FROM analytics_daily
                  WHERE day = $1 AND metric IN ('event', 'client', 'sign_in')",
             )
             .bind(day)
@@ -306,7 +303,7 @@ async fn roll(store: &Store, day: i64, purge: bool) -> BridgeResult<()> {
                 continue;
             }
             sqlx::query(
-                "INSERT INTO hub_analytics_daily (day, metric, item, views, visitors)
+                "INSERT INTO analytics_daily (day, metric, item, views, visitors)
                  VALUES ($1, $2, $3, $4, $5)",
             )
             .bind(day)
@@ -318,7 +315,7 @@ async fn roll(store: &Store, day: i64, purge: bool) -> BridgeResult<()> {
             .await?;
         }
         if purge && visits > 0 {
-            sqlx::query("DELETE FROM hub_analytics_views WHERE day = $1")
+            sqlx::query("DELETE FROM analytics_views WHERE day = $1")
                 .bind(day)
                 .execute(&mut *connection)
                 .await?;

@@ -234,7 +234,7 @@ async fn the_visitor_key_lives_one_day_so_a_visitor_on_two_days_has_two_ids() {
     assert_ne!(analytics.visitor(monday, address, PHONE), tuesday);
     // Nothing about it reaches the store.
     analytics.flush().await;
-    let kept: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM hub_analytics_views")
+    let kept: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM analytics_views")
         .fetch_one(store.store.pool())
         .await
         .unwrap();
@@ -256,7 +256,7 @@ fn view(day: i64, path: &'static str, device: &'static str, visitor: &str) -> Vi
 /// The daily totals of `day` on `store`, as `metric/item=views/visitors`, sorted.
 async fn daily(store: &crate::store::Store, day: i64) -> Vec<String> {
     let mut rows: Vec<String> =
-        sqlx::query("SELECT metric, item, views, visitors FROM hub_analytics_daily WHERE day = $1")
+        sqlx::query("SELECT metric, item, views, visitors FROM analytics_daily WHERE day = $1")
             .bind(day)
             .fetch_all(store.pool())
             .await
@@ -277,7 +277,7 @@ async fn daily(store: &crate::store::Store, day: i64) -> Vec<String> {
 }
 
 async fn raw_days(store: &crate::store::Store) -> Vec<i64> {
-    let mut days: Vec<i64> = sqlx::query_scalar("SELECT DISTINCT day FROM hub_analytics_views")
+    let mut days: Vec<i64> = sqlx::query_scalar("SELECT DISTINCT day FROM analytics_views")
         .fetch_all(store.pool())
         .await
         .unwrap();
@@ -288,7 +288,7 @@ async fn raw_days(store: &crate::store::Store) -> Vec<i64> {
 /// A raw visit, as the writer writes one, straight into the store.
 async fn insert(store: &crate::store::Store, view: View) {
     sqlx::query(
-        "INSERT INTO hub_analytics_views
+        "INSERT INTO analytics_views
            (day, hour, path, utm_source, utm_medium, utm_campaign, referrer, device, visitor)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
     )
@@ -503,12 +503,11 @@ async fn the_tables_are_the_hubs_own_on_both_engines_and_a_milestone_is_kept_onc
                 .await
                 .unwrap();
         }
-        let rows = sqlx::query(
-            "SELECT tenant_id, kind, at, last_at FROM hub_analytics_events ORDER BY kind",
-        )
-        .fetch_all(&mut *connection)
-        .await
-        .unwrap();
+        let rows =
+            sqlx::query("SELECT tenant_id, kind, at, last_at FROM analytics_events ORDER BY kind")
+                .fetch_all(&mut *connection)
+                .await
+                .unwrap();
         let rows: Vec<(String, String, i64, i64)> = rows
             .iter()
             .map(|row| (row.get(0), row.get(1), row.get(2), row.get(3)))
@@ -542,7 +541,7 @@ async fn the_report_reads_finished_days_from_the_totals_and_today_from_the_visit
             .await
             .unwrap();
         // Yesterday's visits gone: its totals are what the report reads.
-        sqlx::query("DELETE FROM hub_analytics_views WHERE day < $1")
+        sqlx::query("DELETE FROM analytics_views WHERE day < $1")
             .bind(today)
             .execute(store.admin())
             .await

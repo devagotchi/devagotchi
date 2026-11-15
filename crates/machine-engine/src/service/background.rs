@@ -6,7 +6,7 @@
 //! - Still one broker per user: the state directory is made by the IPC layer that checks
 //!   it, exactly as the broker makes it, and a start finds a broker that already holds it
 //!   (starting up, or running and not answering yet) and waits for that one instead.
-//! - Detached (`devagotchi_machine_engine::execution::detached`): a session of its own (Linux), or no
+//! - Detached (`crate::execution::detached`): a session of its own (Linux), or no
 //!   console, its own process group and out of the caller's job where allowed (Windows);
 //!   it inherits nothing but the null device and its log, so an AI client's pipes are never
 //!   held open; it runs in its state directory with a pared-down environment. The process
@@ -34,7 +34,7 @@ pub const START_WITHIN: Duration = Duration::from_secs(20);
 /// The endpoint this user's broker answers on, when one does: the endpoint file names it,
 /// and a real request over it is answered.
 pub fn answering(state: &Path) -> Option<PathBuf> {
-    let text = std::fs::read_to_string(state.join(crate::ENDPOINT_FILE)).ok()?;
+    let text = std::fs::read_to_string(state.join(crate::service::ENDPOINT_FILE)).ok()?;
     let endpoint = PathBuf::from(text.trim());
     if endpoint.as_os_str().is_empty() {
         return None;
@@ -171,8 +171,8 @@ fn spawn(
     program: &Path,
     args: &[OsString],
     state: &Path,
-) -> std::io::Result<devagotchi_machine_engine::execution::detached::Detached> {
-    use devagotchi_machine_engine::execution::detached;
+) -> std::io::Result<crate::execution::detached::Detached> {
+    use crate::execution::detached;
     let env = detached::environment(std::env::vars_os());
     detached::spawn(&detached::DetachedSpec {
         program,
@@ -227,11 +227,11 @@ mod tests {
     fn nothing_answers_without_an_endpoint_file_or_with_a_dead_one() {
         let dir = tempfile::tempdir().unwrap();
         assert_eq!(answering(dir.path()), None);
-        std::fs::write(dir.path().join(crate::ENDPOINT_FILE), "\n").unwrap();
+        std::fs::write(dir.path().join(crate::service::ENDPOINT_FILE), "\n").unwrap();
         assert_eq!(answering(dir.path()), None, "an empty file names nothing");
         let dead = dir.path().join("gone.sock");
         std::fs::write(
-            dir.path().join(crate::ENDPOINT_FILE),
+            dir.path().join(crate::service::ENDPOINT_FILE),
             format!("{}\n", dead.display()),
         )
         .unwrap();

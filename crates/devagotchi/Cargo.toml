@@ -16,7 +16,6 @@ name = "devagotchi"
 path = "src/main.rs"
 
 [dependencies]
-devagotchi-broker = { path = "../broker" }
 devagotchi-machine-engine = { workspace = true }
 devagotchi-hub = { path = "../hub" }
 devagotchi-link = { path = "../link" }

@@ -43,7 +43,7 @@ async fn views(hub: &Hosted) -> Vec<Vec<String>> {
     hub.hub.analytics.as_ref().unwrap().flush().await;
     sqlx::query(
         "SELECT CAST(day AS TEXT), CAST(hour AS TEXT), path, utm_source, utm_medium, utm_campaign,
-           referrer, device, visitor FROM hub_analytics_views ORDER BY path, visitor",
+           referrer, device, visitor FROM analytics_views ORDER BY path, visitor",
     )
     .fetch_all(hub.accounts.store().admin())
     .await
@@ -59,7 +59,7 @@ async fn milestones(hub: &Hosted, tenant: &str) -> Vec<String> {
         analytics.flush().await;
     }
     let mut kept: Vec<String> =
-        sqlx::query("SELECT kind, detail FROM hub_analytics_events WHERE tenant_id = $1")
+        sqlx::query("SELECT kind, detail FROM analytics_events WHERE tenant_id = $1")
             .bind(tenant)
             .fetch_all(hub.accounts.store().admin())
             .await
@@ -231,7 +231,7 @@ async fn a_hub_that_does_not_count_keeps_nothing_and_says_so() {
         .as_str()
         .unwrap()
         .to_string();
-    for table in ["hub_analytics_views", "hub_analytics_events"] {
+    for table in ["analytics_views", "analytics_events"] {
         let kept: i64 =
             sqlx::query_scalar(sqlx::AssertSqlSafe(format!("SELECT COUNT(*) FROM {table}")))
                 .fetch_one(hub.accounts.store().admin())
@@ -367,7 +367,7 @@ async fn milestones_once(hub: Hosted) {
         ]
     );
     let rows: i64 =
-        sqlx::query_scalar("SELECT COUNT(*) FROM hub_analytics_events WHERE tenant_id = $1")
+        sqlx::query_scalar("SELECT COUNT(*) FROM analytics_events WHERE tenant_id = $1")
             .bind(&tenant)
             .fetch_one(hub.accounts.store().admin())
             .await
@@ -403,4 +403,50 @@ async fn milestones_once(hub: Hosted) {
             .is_ok()
     );
     assert!(milestones(&hub, &home).await.is_empty());
+}
+
+#[tokio::test]
+async fn a_hub_that_counted_before_0030_keeps_its_numbers_under_the_ops_prefix() {
+    let url = or_skip!(crate::store::testing::empty_postgres());
+    // A store as migration 29 left it, with a day's totals and a milestone in it.
+    crate::store::testing::migrated_to(&url, 29).await;
+    let mut old = <sqlx::AnyConnection as sqlx::Connection>::connect(&url)
+        .await
+        .unwrap();
+    for sql in [
+        "INSERT INTO devagotchi.hub_analytics_daily (day, metric, item, views, visitors)
+         VALUES (20000, 'total', '', 7, 3)",
+        "INSERT INTO devagotchi.hub_analytics_events (tenant_id, kind, at, last_at)
+         VALUES ('t-old', 'made', 5, 5)",
+    ] {
+        sqlx::query(sql).execute(&mut old).await.unwrap();
+    }
+    <sqlx::AnyConnection as sqlx::Connection>::close(old)
+        .await
+        .unwrap();
+    let store = crate::store::open(&url).await.unwrap();
+    let admin = store.admin();
+    let names: Vec<String> = sqlx::query_scalar(
+        "SELECT relname::text FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+         WHERE n.nspname = 'devagotchi' AND relname LIKE '%analytics%' ORDER BY 1",
+    )
+    .fetch_all(admin)
+    .await
+    .unwrap();
+    assert!(
+        names.iter().all(|n| !n.starts_with("hub_analytics")),
+        "{names:?}"
+    );
+    for table in ["analytics_daily", "analytics_events", "analytics_views"] {
+        assert!(names.iter().any(|n| n == table), "{table} in {names:?}");
+    }
+    assert!(
+        names.iter().any(|n| n == "analytics_events_by_at"),
+        "{names:?}"
+    );
+    let views: i64 = sqlx::query_scalar("SELECT views FROM devagotchi.analytics_daily")
+        .fetch_one(admin)
+        .await
+        .unwrap();
+    assert_eq!(views, 7, "the totals came through");
 }
