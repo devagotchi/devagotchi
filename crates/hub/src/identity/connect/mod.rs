@@ -371,5 +371,4 @@ impl Management {
 }
 
 #[cfg(test)]
-#[path = "connect/tests.rs"]
 mod tests;

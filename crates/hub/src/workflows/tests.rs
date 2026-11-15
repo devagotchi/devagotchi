@@ -77,7 +77,7 @@ async fn stores() -> Vec<Option<String>> {
 /// The built-in site with a "Get started" of every step kind: machine, phone, keeping the
 /// account, done.
 fn every_kind_site(dir: &Path) -> PathBuf {
-    let site = crate::offers_tests::builtin_with(dir, |_| {});
+    let site = crate::offers::tests::builtin_with(dir, |_| {});
     let file = site.join("content/workflows.json");
     let mut value: Value = serde_json::from_str(&std::fs::read_to_string(&file).unwrap()).unwrap();
     let step =
@@ -107,12 +107,7 @@ fn every_kind_site(dir: &Path) -> PathBuf {
 
 /// A site directory in `dir`: the built-in site.json with `edit` applied.
 fn site_dir(dir: &Path, edit: impl FnOnce(&mut Value)) -> PathBuf {
-    let mut value: Value = serde_json::from_str(include_str!("../site/default/site.json")).unwrap();
-    edit(&mut value);
-    let site = dir.join("site");
-    std::fs::create_dir_all(&site).unwrap();
-    std::fs::write(site.join("site.json"), value.to_string()).unwrap();
-    site
+    crate::tenancy::tests::access::site_dir(dir, "site", edit)
 }
 
 async fn structured(hub: &Hosted, person: &mut Person, tool: &str, arguments: Value) -> Value {

@@ -41,6 +41,8 @@ mod discovery_tests;
 mod email;
 mod hosted;
 mod hub_settings;
+#[cfg(test)]
+mod hub_settings_tests;
 mod landing;
 #[cfg(test)]
 mod landing_tests;

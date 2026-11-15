@@ -70,6 +70,9 @@ pub(crate) fn block_on<T>(work: impl Future<Output = BridgeResult<T>>) -> Bridge
 /// Stores for the hub's tests: a new database on the test Postgres with everything a hub's
 /// database holds (`DEVAGOTCHI_TEST_POSTGRES_URL`; none without it).
 #[cfg(test)]
+mod tests;
+
+#[cfg(test)]
 pub mod testing {
     pub use devagotchi_store::testing::{TestStore, empty_postgres};
 

@@ -2,7 +2,7 @@
 //! new board's getting-started steps from the hub's site. The protocol itself is AgentHub's
 //! own tests (`crates/agenthub/src/tests/`).
 
-use super::{Actor, Board, Filter, NewTicket};
+use crate::agenthub::{Actor, Board, Filter, NewTicket, welcome};
 
 /// A local board in a directory of its own, for the getting-started tests.
 pub(super) struct Fixture {
@@ -551,7 +551,7 @@ fn a_new_board_starts_with_the_getting_started_steps_once() {
     assert_eq!(welcome.id, id);
     assert_eq!(welcome.title, title);
     assert_eq!(welcome.state, "needs_attention");
-    assert_eq!(welcome.labels, vec![super::welcome::LABEL.to_string()]);
+    assert_eq!(welcome.labels, vec![welcome::LABEL.to_string()]);
     assert!(
         welcome
             .description

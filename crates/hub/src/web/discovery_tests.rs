@@ -626,7 +626,7 @@ async fn each_file_answers_on_both_hosts_naming_its_own_and_the_app_steps_stay_o
 #[tokio::test]
 async fn a_site_with_no_marketing_domain_keeps_everything_at_the_hubs_address() {
     let hub = or_skip!(hosted_with(None, |dir, _| {
-        let site = crate::offers_tests::builtin_with(dir, |v| v["product"]["domain"] = "".into());
+        let site = crate::offers::tests::builtin_with(dir, |v| v["product"]["domain"] = "".into());
         json!({ "site": { "dir": site.to_string_lossy() } })
     }));
     let url = &hub.url;

@@ -13,7 +13,11 @@ use crate::*;
 
 /// A site directory under `dir`: the built-in site with `edit` applied to its site.json
 /// (every other file the built-in one's).
-fn site_dir(dir: &Path, name: &str, edit: impl FnOnce(&mut Value)) -> std::path::PathBuf {
+pub(crate) fn site_dir(
+    dir: &Path,
+    name: &str,
+    edit: impl FnOnce(&mut Value),
+) -> std::path::PathBuf {
     let mut value: Value =
         serde_json::from_str(include_str!("../../../site/default/site.json")).unwrap();
     edit(&mut value);

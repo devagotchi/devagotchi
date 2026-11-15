@@ -10,25 +10,14 @@
 extern crate devagotchi_store;
 pub mod account;
 pub mod agenthub;
-#[cfg(test)]
-mod ahead_tests;
 mod config;
-mod connect;
 mod connections;
-#[cfg(test)]
-mod connections_tests;
 pub mod extensions;
 mod hub;
-#[cfg(test)]
-mod hub_settings_tests;
 mod identity;
 mod machines;
-#[cfg(test)]
-mod notes_tests;
 mod notify;
 mod offers;
-#[cfg(test)]
-mod offers_tests;
 mod ops;
 #[cfg(test)]
 mod output_schema;
@@ -36,14 +25,10 @@ mod output_schema;
 mod plugin_tests;
 mod site;
 mod store;
-#[cfg(test)]
-mod store_tests;
 mod tenancy;
 #[cfg(test)]
 mod test_keys;
 mod web;
-#[cfg(test)]
-mod workflow_tests;
 mod workflows;
 
 use std::{
@@ -104,7 +89,7 @@ enum Command {
     },
     /// One-time code that makes the first claimed account the owner. Refuses when
     /// `hub.json` already names an owner.
-    ConnectNomen(connect::Connect),
+    ConnectNomen(identity::connect::Connect),
     /// Read and check a site directory as `serve` would, and say whether it checks out.
     CheckSite {
         dir: PathBuf,
@@ -246,7 +231,7 @@ fn parse_connect(args: Vec<OsString>) -> BridgeResult<Command> {
         (Some(state), Some(config), Some(client_id), Some(project))
             if state.is_absolute() && config.is_absolute() =>
         {
-            Ok(Command::ConnectNomen(connect::Connect {
+            Ok(Command::ConnectNomen(identity::connect::Connect {
                 state,
                 config,
                 issuer: issuer.ok_or_else(|| {
@@ -482,7 +467,7 @@ fn manage(command: Command) -> BridgeResult<()> {
                 .build()
                 .map_err(|error| BridgeError::new("runtime", error.to_string()))?;
             runtime.block_on(async {
-                connect::run(&connect, &mut std::io::stderr()).await?;
+                identity::connect::run(&connect, &mut std::io::stderr()).await?;
                 let store = store::for_command(&connect.state, Some(&connect.config)).await?;
                 operator_event(&Audit::new(store), "nomen.connect", "", "ok").await
             })?;
