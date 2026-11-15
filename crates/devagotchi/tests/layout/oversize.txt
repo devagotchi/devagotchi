@@ -27,7 +27,7 @@
 1620	crates/hub/src/agenthub/cli.rs
 875	crates/hub/src/agenthub/hosted_tests.rs
 626	crates/hub/src/agenthub/issue_lifecycle/tests.rs
-3719	crates/hub/src/agenthub/mcp.rs
+3719	crates/hub/src/agenthub/mcp/mod.rs
 2670	crates/hub/src/agenthub/tests.rs
 1017	crates/hub/src/ai.rs
 651	crates/hub/src/ai/tests.rs
@@ -45,7 +45,7 @@
 3431	crates/hub/src/oauth.rs
 845	crates/hub/src/offers_tests.rs
 1570	crates/hub/src/orgs.rs
-776	crates/hub/src/orgs/api.rs
+776	crates/hub/src/orgs/api/mod.rs
 764	crates/hub/src/provider_tests.rs
 597	crates/hub/src/signals.rs
 717	crates/hub/src/site.rs

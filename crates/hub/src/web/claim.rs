@@ -102,14 +102,16 @@ pub async fn claim(
     // that cannot be recorded is refused, and its link is never handed out.
     let done = tokio::spawn(async move {
         let (owner, link) = accounts.claim(&input.code, name.as_deref()).await?;
-        audit.record(&AuditEntry {
-            subject: &owner.id,
-            via: "claim",
-            tool: "account.claim",
-            broker: "",
-            operation_id: "",
-            outcome: "ok",
-        })?;
+        audit
+            .record(&AuditEntry {
+                subject: &owner.id,
+                via: "claim",
+                tool: "account.claim",
+                broker: "",
+                operation_id: "",
+                outcome: "ok",
+            })
+            .await?;
         Ok::<_, devagotchi_contracts::BridgeError>((owner, link))
     })
     .await;

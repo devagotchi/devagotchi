@@ -1474,7 +1474,6 @@ mod bound {
         AppState,
         account::{self, Account, Stored},
         agenthub::cli::{self, EXIT_OK, EXIT_REFUSED, EXIT_UNAVAILABLE, Invocation},
-        audit::Audit,
         auth::Verifier,
         config::HubConfig,
         hub::Hub,
@@ -1504,7 +1503,7 @@ mod bound {
         }
         let config = Arc::new(HubConfig::parse(&value.to_string()).unwrap());
         let devices = crate::machines::devices::test_registry().await?;
-        let audit = Arc::new(Audit::open(&dir.join("audit.sqlite3")).unwrap());
+        let audit = crate::audit::test_audit().await?;
         let links = Arc::new(Links::new(config.clone(), devices.clone(), audit.clone()));
         let state = AppState {
             verifier: Arc::new(Verifier::Dev(

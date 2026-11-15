@@ -538,8 +538,8 @@ fn prepare_state_dir(state_dir: &std::path::Path) -> BridgeResult<()> {
 }
 
 /// Record an operator command on the hub's audit chain: who ran it and what it did.
-fn operator_event(
-    state: &std::path::Path,
+async fn operator_event(
+    audit: &Audit,
     tool: &str,
     device: &str,
     outcome: &str,
@@ -548,14 +548,16 @@ fn operator_event(
         .or_else(|_| env::var("USERNAME"))
         .unwrap_or_else(|_| "unknown".into());
     let subject = format!("operator:{user}");
-    Audit::open(&state.join("audit.sqlite3"))?.record(&audit::AuditEntry {
-        subject: &subject,
-        via: "cli",
-        tool,
-        broker: device,
-        operation_id: "",
-        outcome,
-    })?;
+    audit
+        .record(&audit::AuditEntry {
+            subject: &subject,
+            via: "cli",
+            tool,
+            broker: device,
+            operation_id: "",
+            outcome,
+        })
+        .await?;
     Ok(())
 }
 
@@ -669,10 +671,11 @@ fn manage(command: Command) -> BridgeResult<()> {
                         .issue_link(accounts::LinkPurpose::Owner, &owner.id)
                         .await?
                 };
+                // The link itself is never audited or logged; only that one was issued.
+                let audit = Audit::new(accounts.store().clone());
+                operator_event(&audit, "account.owner_link", &owner.id, "ok").await?;
                 Ok::<_, BridgeError>((owner, token))
             })?;
-            // The link itself is never audited or logged; only that one was issued.
-            operator_event(&state, "account.owner_link", &owner.id, "ok")?;
             // The link is the one secret this prints; it goes to stdout only, once.
             println!("{}/owner#{token}", config.public_url.trim_end_matches('/'));
             eprintln!(
@@ -692,8 +695,11 @@ fn manage(command: Command) -> BridgeResult<()> {
                 .enable_all()
                 .build()
                 .map_err(|error| BridgeError::new("runtime", error.to_string()))?;
-            runtime.block_on(connect::run(&connect, &mut std::io::stderr()))?;
-            operator_event(&connect.state, "nomen.connect", "", "ok")?;
+            runtime.block_on(async {
+                connect::run(&connect, &mut std::io::stderr()).await?;
+                let store = store::for_command(&connect.state, Some(&connect.config)).await?;
+                operator_event(&Audit::new(store), "nomen.connect", "", "ok").await
+            })?;
         }
         Command::CheckSite { dir } => {
             let site = site::Site::load(&dir).map_err(|why| {
@@ -886,7 +892,7 @@ async fn run(
             identity::rename_account_dir(&boards, from, to)?;
         }
     }
-    let audit = Arc::new(Audit::open(&state_dir.join("audit.sqlite3"))?);
+    let audit = Arc::new(Audit::new(board_store.clone()));
     // A hub with its own accounts knows its owner from them, and refuses to start when its
     // config names someone else.
     let accounts = if config.has_accounts() {
@@ -1140,14 +1146,18 @@ async fn run(
     };
     if claim_code.is_some() {
         // That a code was issued, and when; never the code.
-        state.hub.audit.record(&audit::AuditEntry {
-            subject: "hub",
-            via: "start",
-            tool: "account.claim_code",
-            broker: "",
-            operation_id: "",
-            outcome: "ok",
-        })?;
+        state
+            .hub
+            .audit
+            .record(&audit::AuditEntry {
+                subject: "hub",
+                via: "start",
+                tool: "account.claim_code",
+                broker: "",
+                operation_id: "",
+                outcome: "ok",
+            })
+            .await?;
     }
     // Everything worth reading at start comes before the ready line callers wait for.
     if let Some(owner) = config.owner_id() {
@@ -1355,15 +1365,19 @@ fn bearer_token(headers: &HeaderMap) -> Option<String> {
         .map(str::to_string)
 }
 
-fn audit_settings(state: &AppState, subject: &auth::Subject, outcome: &str) {
-    let _ = state.hub.audit.record(&audit::AuditEntry {
-        subject: &subject.id,
-        via: subject.via,
-        tool: "admin.settings",
-        broker: "",
-        operation_id: "",
-        outcome,
-    });
+async fn audit_settings(state: &AppState, subject: &auth::Subject, outcome: &str) {
+    let _ = state
+        .hub
+        .audit
+        .record(&audit::AuditEntry {
+            subject: &subject.id,
+            via: subject.via,
+            tool: "admin.settings",
+            broker: "",
+            operation_id: "",
+            outcome,
+        })
+        .await;
 }
 
 async fn require_operator(
@@ -1388,7 +1402,7 @@ async fn require_operator(
         }
     };
     if !state.hub.config.is_operator(&subject.id) {
-        audit_settings(state, &subject, "denied");
+        audit_settings(state, &subject, "denied").await;
         return Err(settings_error(
             StatusCode::FORBIDDEN,
             "forbidden",
@@ -1436,12 +1450,12 @@ async fn admin_settings_put(
                 settings.provisional.starts_per_hour,
                 settings.provisional.unclaimed_cap
             );
-            audit_settings(&state, &subject, &outcome);
+            audit_settings(&state, &subject, &outcome).await;
             Json(settings).into_response()
         }
         Err(error) => {
             let outcome = format!("rejected {}", error.message);
-            audit_settings(&state, &subject, &outcome);
+            audit_settings(&state, &subject, &outcome).await;
             settings_error(StatusCode::BAD_REQUEST, &error.code, &error.message)
         }
     }
@@ -1759,7 +1773,7 @@ async fn healthz(State(state): State<AppState>) -> Response {
             })),
         }
     }
-    let audit = state.hub.audit.verify();
+    let audit = state.hub.audit.verify().await;
     let chain_ok = audit.as_ref().map(|status| status.ok).unwrap_or(false);
     let auth = if let Some(authority) = state.verifier.authority() {
         authority.readiness().await
@@ -2130,6 +2144,13 @@ mod tests {
 
     #[test]
     fn the_owner_command_makes_the_owner_once_and_only_in_hub_mode() {
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .unwrap();
+        let Some(url) = runtime.block_on(store::testing::empty_postgres()) else {
+            return;
+        };
         let dir = tempfile::tempdir().unwrap();
         let state = dir.path().join("state");
         let config = dir.path().join("hub.json");
@@ -2139,7 +2160,8 @@ mod tests {
                 "public_url": "http://127.0.0.1:8787",
                 "auth": auth,
                 "brokers": [],
-                "grants": []
+                "grants": [],
+                "storage": { "url": url }
             });
             if let Some(owner) = owner {
                 value["owner"] = owner.into();
@@ -2169,24 +2191,18 @@ mod tests {
         );
         run(Some("Jesse")).unwrap();
         run(None).unwrap();
-        let owner = tokio::runtime::Builder::new_current_thread()
-            .enable_all()
-            .build()
-            .unwrap()
-            .block_on(async {
-                let url = store::sqlite_url(&state.join("accounts.sqlite3"));
-                let accounts = accounts::Accounts::open(store::Store::open(&url).await.unwrap())
-                    .await
-                    .unwrap();
-                accounts.owner().await.unwrap().unwrap()
-            });
+        let (owner, chain) = runtime.block_on(async {
+            let store = store::Store::open(&url).await.unwrap();
+            let accounts = accounts::Accounts::open(store.clone()).await.unwrap();
+            let chain = Audit::new(store).verify().await.unwrap();
+            (accounts.owner().await.unwrap().unwrap(), chain)
+        });
         assert_eq!(
             (owner.id.as_str(), owner.name.as_str()),
             ("395290028818825218", "Jesse")
         );
         // Each run is on the audit chain, without the link.
-        let audit = Audit::open(&state.join("audit.sqlite3")).unwrap();
-        assert!(audit.verify().unwrap().ok);
+        assert!(chain.ok && chain.entries == 2, "{chain:?}");
 
         // A config naming someone else than the hub's owner is refused.
         write(
@@ -2349,7 +2365,7 @@ mod tests {
             .unwrap(),
         );
         let devices = or_skip!(crate::machines::devices::test_registry());
-        let audit = Arc::new(Audit::open(&dir.path().join("audit.sqlite3")).unwrap());
+        let audit = or_skip!(crate::audit::test_audit());
         let links = Arc::new(machines::link::Links::new(
             config.clone(),
             devices,
@@ -2513,7 +2529,7 @@ mod tests {
         assert!(after.provisional_warning);
         assert_eq!(after.provisional_until, before.provisional_until);
 
-        let rows = audit.recorded();
+        let rows = audit.recorded().await;
         assert!(
             rows.iter().any(|(subject, tool, outcome)| {
                 subject == &stranger && tool == "admin.settings" && outcome == "denied"
@@ -2535,7 +2551,7 @@ mod tests {
             }),
             "{rows:?}"
         );
-        assert!(audit.verify().unwrap().ok);
+        assert!(audit.verify().await.unwrap().ok);
 
         let reloaded = oauth::Authority::open(dir.path(), "http://127.0.0.1:9").unwrap();
         assert_eq!(reloaded.operator_settings().provisional.ttl_days, 90);
@@ -2583,7 +2599,7 @@ mod tests {
             .clone()
             .and_then(|accounts| web::HubSignIn::new(config.clone(), accounts).map(Arc::new));
         let devices = machines::devices::test_registry().await?;
-        let audit = Arc::new(Audit::open(&dir.join("audit.sqlite3")).unwrap());
+        let audit = crate::audit::test_audit().await?;
         let links = Arc::new(Links::new(config.clone(), devices, audit.clone()));
         Some(AppState {
             verifier: Arc::new(

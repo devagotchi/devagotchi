@@ -1,14 +1,19 @@
-//! Append-only, hash-chained audit of every routed call. The chain is verified on
-//! health checks so a truncated or edited log is visible, not silent.
-
-use std::{path::Path, sync::Mutex};
+//! Append-only, hash-chained audit of every routed call, in the hub's Postgres
+//! (`audit_entries`, migration 0027). The chain is verified on health checks so a truncated
+//! or edited log is visible, not silent. Appends take one advisory lock, so every hub
+//! instance and an operator command writing at the same moment extend one chain.
 
 use devagotchi_contracts::{BridgeError, BridgeResult};
-use rusqlite::{Connection, OptionalExtension, params};
 use sha2::{Digest, Sha256};
+use sqlx::Row;
+
+use crate::store::{Store, transaction};
+
+/// The advisory lock every append holds: "devagotchi audit" as a number.
+const CHAIN_LOCK: i64 = 0x6476_6761_7564_6974;
 
 pub struct Audit {
-    connection: Mutex<Connection>,
+    store: Store,
 }
 
 #[derive(Debug, Clone)]
@@ -28,150 +33,123 @@ pub struct ChainStatus {
     pub head: String,
 }
 
+/// One recorded call, as the signal sinks read it (`signals.rs`).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Recorded {
+    pub seq: u64,
+    pub at: String,
+    pub subject: String,
+    pub via: String,
+    pub tool: String,
+    pub broker: String,
+    pub operation_id: String,
+    pub outcome: String,
+    pub hash: String,
+}
+
+fn read_error(error: impl std::fmt::Display) -> BridgeError {
+    BridgeError::new("audit_read", error.to_string())
+}
+
 impl Audit {
-    pub fn open(path: &Path) -> BridgeResult<Self> {
-        let connection = Connection::open(path)
-            .map_err(|error| BridgeError::new("audit_open", error.to_string()))?;
-        connection
-            .execute_batch(
-                "PRAGMA journal_mode = WAL;
-                 PRAGMA synchronous = FULL;
-                 PRAGMA busy_timeout = 5000;
-                 CREATE TABLE IF NOT EXISTS audit (
-                   seq INTEGER PRIMARY KEY AUTOINCREMENT,
-                   at TEXT NOT NULL,
-                   subject TEXT NOT NULL,
-                   via TEXT NOT NULL,
-                   tool TEXT NOT NULL,
-                   broker TEXT NOT NULL,
-                   operation_id TEXT NOT NULL,
-                   outcome TEXT NOT NULL,
-                   prev_hash TEXT NOT NULL,
-                   hash TEXT NOT NULL
-                 );",
-            )
-            .map_err(|error| BridgeError::new("audit_open", error.to_string()))?;
-        Ok(Self {
-            connection: Mutex::new(connection),
-        })
+    /// The chain in the hub's store.
+    pub fn new(store: Store) -> Self {
+        Self { store }
     }
 
-    pub fn record(&self, entry: &AuditEntry<'_>) -> BridgeResult<u64> {
-        let mut connection = self.connection.lock().expect("audit lock");
-        // IMMEDIATE takes the write lock before reading the head, so the hub and an
-        // operator command writing at the same moment cannot fork the chain.
-        let transaction = connection
-            .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)
-            .map_err(|error| BridgeError::new("audit_write", error.to_string()))?;
+    pub async fn record(&self, entry: &AuditEntry<'_>) -> BridgeResult<u64> {
         let at = now_rfc3339();
-        let prev: String = transaction
-            .query_row(
-                "SELECT hash FROM audit ORDER BY seq DESC LIMIT 1",
-                [],
-                |row| row.get(0),
+        transaction!(&self.store, |connection| {
+            sqlx::query("SELECT pg_advisory_xact_lock($1)")
+                .bind(CHAIN_LOCK)
+                .execute(&mut *connection)
+                .await?;
+            let prev: Option<String> =
+                sqlx::query_scalar("SELECT hash FROM audit_entries ORDER BY seq DESC LIMIT 1")
+                    .fetch_optional(&mut *connection)
+                    .await?;
+            let prev = prev.unwrap_or_else(|| "0".repeat(64));
+            let hash = row_hash(&prev, &at, entry);
+            let seq: i64 = sqlx::query_scalar(
+                "INSERT INTO audit_entries
+                   (at, subject, via, tool, broker, operation_id, outcome, prev_hash, hash)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING seq",
             )
-            .optional()
-            .map_err(|error| BridgeError::new("audit_write", error.to_string()))?
-            .unwrap_or_else(|| "0".repeat(64));
-        let hash = row_hash(&prev, &at, entry);
-        transaction
-            .execute(
-                "INSERT INTO audit (at, subject, via, tool, broker, operation_id, outcome, prev_hash, hash)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
-                params![at, entry.subject, entry.via, entry.tool, entry.broker, entry.operation_id, entry.outcome, prev, hash],
-            )
-            .map_err(|error| BridgeError::new("audit_write", error.to_string()))?;
-        let seq = transaction.last_insert_rowid() as u64;
-        transaction
-            .commit()
-            .map_err(|error| BridgeError::new("audit_write", error.to_string()))?;
-        Ok(seq)
+            .bind(&at)
+            .bind(entry.subject)
+            .bind(entry.via)
+            .bind(entry.tool)
+            .bind(entry.broker)
+            .bind(entry.operation_id)
+            .bind(entry.outcome)
+            .bind(&prev)
+            .bind(&hash)
+            .fetch_one(&mut *connection)
+            .await?;
+            Ok(u64::try_from(seq).unwrap_or(0))
+        })
+        .map_err(|error| BridgeError::new("audit_write", error.message))
     }
 
-    /// Up to `limit` entries after `seq`, oldest first: `(seq, at, subject, via, tool,
-    /// broker, operation_id, outcome, hash)`. What the signal sinks read (`signals.rs`).
-    #[allow(clippy::type_complexity)]
-    pub fn after(
-        &self,
-        seq: u64,
-        limit: usize,
-    ) -> BridgeResult<
-        Vec<(
-            u64,
-            String,
-            String,
-            String,
-            String,
-            String,
-            String,
-            String,
-            String,
-        )>,
-    > {
-        let connection = self.connection.lock().expect("audit lock");
-        let mut statement = connection
-            .prepare(
-                "SELECT seq, at, subject, via, tool, broker, operation_id, outcome, hash
-                 FROM audit WHERE seq > ?1 ORDER BY seq LIMIT ?2",
-            )
-            .map_err(|error| BridgeError::new("audit_read", error.to_string()))?;
-        let rows = statement
-            .query_map(params![seq as i64, limit as i64], |row| {
-                Ok((
-                    row.get::<_, i64>(0)? as u64,
-                    row.get(1)?,
-                    row.get(2)?,
-                    row.get(3)?,
-                    row.get(4)?,
-                    row.get(5)?,
-                    row.get(6)?,
-                    row.get(7)?,
-                    row.get(8)?,
-                ))
+    /// Up to `limit` entries after `seq`, oldest first: what the signal sinks read.
+    pub async fn after(&self, seq: u64, limit: usize) -> BridgeResult<Vec<Recorded>> {
+        let mut connection = self.store.read().await?;
+        let rows = sqlx::query(
+            "SELECT seq, at, subject, via, tool, broker, operation_id, outcome, hash
+             FROM audit_entries WHERE seq > $1 ORDER BY seq LIMIT $2",
+        )
+        .bind(i64::try_from(seq).unwrap_or(i64::MAX))
+        .bind(i64::try_from(limit).unwrap_or(i64::MAX))
+        .fetch_all(&mut *connection)
+        .await
+        .map_err(read_error)?;
+        rows.iter()
+            .map(|row| {
+                Ok(Recorded {
+                    seq: u64::try_from(row.try_get::<i64, _>("seq")?).unwrap_or(0),
+                    at: row.try_get("at")?,
+                    subject: row.try_get("subject")?,
+                    via: row.try_get("via")?,
+                    tool: row.try_get("tool")?,
+                    broker: row.try_get("broker")?,
+                    operation_id: row.try_get("operation_id")?,
+                    outcome: row.try_get("outcome")?,
+                    hash: row.try_get("hash")?,
+                })
             })
-            .map_err(|error| BridgeError::new("audit_read", error.to_string()))?;
-        rows.collect::<Result<Vec<_>, _>>()
-            .map_err(|error| BridgeError::new("audit_read", error.to_string()))
+            .collect::<Result<_, sqlx::Error>>()
+            .map_err(read_error)
     }
 
     /// The last entry's seq (0 for none): how far a signal sink can be behind.
-    pub fn last_seq(&self) -> BridgeResult<u64> {
-        let connection = self.connection.lock().expect("audit lock");
-        connection
-            .query_row("SELECT COALESCE(MAX(seq), 0) FROM audit", [], |row| {
-                row.get::<_, i64>(0)
-            })
-            .map(|seq| seq as u64)
-            .map_err(|error| BridgeError::new("audit_read", error.to_string()))
+    pub async fn last_seq(&self) -> BridgeResult<u64> {
+        let mut connection = self.store.read().await?;
+        let seq: i64 = sqlx::query_scalar("SELECT COALESCE(MAX(seq), 0) FROM audit_entries")
+            .fetch_one(&mut *connection)
+            .await
+            .map_err(read_error)?;
+        Ok(u64::try_from(seq).unwrap_or(0))
     }
 
     /// Walk the whole chain. Small logs only; a paged walk arrives with the audit UI.
-    pub fn verify(&self) -> BridgeResult<ChainStatus> {
-        let connection = self.connection.lock().expect("audit lock");
-        let mut statement = connection
-            .prepare("SELECT at, subject, via, tool, broker, operation_id, outcome, prev_hash, hash FROM audit ORDER BY seq")
-            .map_err(|error| BridgeError::new("audit_read", error.to_string()))?;
-        let rows = statement
-            .query_map([], |row| {
-                Ok((
-                    row.get::<_, String>(0)?,
-                    row.get::<_, String>(1)?,
-                    row.get::<_, String>(2)?,
-                    row.get::<_, String>(3)?,
-                    row.get::<_, String>(4)?,
-                    row.get::<_, String>(5)?,
-                    row.get::<_, String>(6)?,
-                    row.get::<_, String>(7)?,
-                    row.get::<_, String>(8)?,
-                ))
-            })
-            .map_err(|error| BridgeError::new("audit_read", error.to_string()))?;
+    pub async fn verify(&self) -> BridgeResult<ChainStatus> {
+        let mut connection = self.store.read().await?;
+        let rows = sqlx::query(
+            "SELECT at, subject, via, tool, broker, operation_id, outcome, prev_hash, hash
+             FROM audit_entries ORDER BY seq",
+        )
+        .fetch_all(&mut *connection)
+        .await
+        .map_err(read_error)?;
         let mut prev = "0".repeat(64);
         let mut entries = 0u64;
         let mut ok = true;
-        for row in rows {
-            let (at, subject, via, tool, broker, operation_id, outcome, prev_hash, hash) =
-                row.map_err(|error| BridgeError::new("audit_read", error.to_string()))?;
+        for row in &rows {
+            let text = |column: &str| row.try_get::<String, _>(column).map_err(read_error);
+            let (at, prev_hash, hash) = (text("at")?, text("prev_hash")?, text("hash")?);
+            let (subject, via, tool) = (text("subject")?, text("via")?, text("tool")?);
+            let (broker, operation_id, outcome) =
+                (text("broker")?, text("operation_id")?, text("outcome")?);
             let entry = AuditEntry {
                 subject: &subject,
                 via: &via,
@@ -194,15 +172,51 @@ impl Audit {
     }
 
     #[cfg(test)]
-    pub(crate) fn recorded(&self) -> Vec<(String, String, String)> {
-        let connection = self.connection.lock().expect("audit lock");
-        let mut statement = connection
-            .prepare("SELECT subject, tool, outcome FROM audit ORDER BY seq")
-            .expect("audit read");
-        let rows = statement
-            .query_map([], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)))
-            .expect("audit rows");
-        rows.map(|row| row.expect("audit row")).collect()
+    pub(crate) async fn recorded(&self) -> Vec<(String, String, String)> {
+        let mut connection = self.store.read().await.expect("audit read");
+        sqlx::query("SELECT subject, tool, outcome FROM audit_entries ORDER BY seq")
+            .fetch_all(&mut *connection)
+            .await
+            .expect("audit rows")
+            .iter()
+            .map(|row| (row.get(0), row.get(1), row.get(2)))
+            .collect()
+    }
+}
+
+impl crate::hub::Hub {
+    /// Record one call in the audit chain. A call that cannot be audited is not a call
+    /// this bastion made, so a failure here fails the call. An operation that started
+    /// (`operation_start`, or `run`) is also its tenant's operation milestone
+    /// (`analytics::funnel`): the first, and the latest a day at a time.
+    pub(crate) async fn record(
+        &self,
+        subject: &crate::auth::Subject,
+        tool: &str,
+        broker: &str,
+        operation_id: &str,
+        outcome: &str,
+    ) -> Result<(), rmcp::Json<BridgeError>> {
+        if let (Some(analytics), Some(tenant)) = (&self.analytics, &subject.tenant)
+            && matches!(
+                (tool, outcome),
+                ("operation_start", "ok") | ("run", "ok") | ("run", "running")
+            )
+        {
+            analytics.tenant_event(tenant, crate::analytics::funnel::OPERATION);
+        }
+        self.audit
+            .record(&AuditEntry {
+                subject: &subject.id,
+                via: subject.via,
+                tool,
+                broker,
+                operation_id,
+                outcome,
+            })
+            .await
+            .map(|_| ())
+            .map_err(rmcp::Json)
     }
 }
 
@@ -248,39 +262,61 @@ fn now_rfc3339() -> String {
     )
 }
 
+/// A chain on a new database of the test server, or `None` without one.
+#[cfg(test)]
+pub(crate) async fn test_audit() -> Option<std::sync::Arc<Audit>> {
+    let test = crate::store::testing::postgres().await?;
+    Some(std::sync::Arc::new(Audit::new(test.store)))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    #[test]
-    fn chain_links_rows_and_detects_tampering() {
-        let dir = tempfile::tempdir().unwrap();
-        let audit = Audit::open(&dir.path().join("audit.sqlite3")).unwrap();
-        for i in 0..3 {
-            let id = format!("op-{i}");
-            audit
-                .record(&AuditEntry {
-                    subject: "jesse",
-                    via: "dev",
-                    tool: "operation_start",
-                    broker: "gold-ws",
-                    operation_id: &id,
-                    outcome: "ok",
-                })
-                .unwrap();
+    fn entry(id: &str) -> AuditEntry<'_> {
+        AuditEntry {
+            subject: "jesse",
+            via: "dev",
+            tool: "operation_start",
+            broker: "gold-ws",
+            operation_id: id,
+            outcome: "ok",
         }
-        let status = audit.verify().unwrap();
+    }
+
+    #[tokio::test]
+    async fn chain_links_rows_and_detects_tampering() {
+        let audit = or_skip!(test_audit());
+        for i in 0..3 {
+            audit.record(&entry(&format!("op-{i}"))).await.unwrap();
+        }
+        let status = audit.verify().await.unwrap();
         assert_eq!(status.entries, 3);
         assert!(status.ok);
-        {
-            let connection = audit.connection.lock().unwrap();
-            connection
-                .execute("UPDATE audit SET outcome = 'denied' WHERE seq = 2", [])
-                .unwrap();
-        }
-        let tampered = audit.verify().unwrap();
+        // The hub's role may not change a row; the table's owner can, and verify sees it.
+        sqlx::query("UPDATE devagotchi.audit_entries SET outcome = 'denied' WHERE seq = 2")
+            .execute(audit.store.admin())
+            .await
+            .unwrap();
+        let tampered = audit.verify().await.unwrap();
         assert_eq!(tampered.entries, 3);
         assert!(!tampered.ok);
+    }
+
+    #[tokio::test]
+    async fn many_writers_at_once_keep_one_chain() {
+        let audit = or_skip!(test_audit());
+        let writers = (0..16).map(|i| {
+            let audit = audit.clone();
+            tokio::spawn(async move { audit.record(&entry(&format!("op-{i}"))).await.unwrap() })
+        });
+        for writer in writers {
+            writer.await.unwrap();
+        }
+        let status = audit.verify().await.unwrap();
+        assert_eq!((status.entries, status.ok), (16, true));
+        assert_eq!(audit.last_seq().await.unwrap(), 16);
+        assert_eq!(audit.after(14, 10).await.unwrap().len(), 2);
     }
 
     #[test]

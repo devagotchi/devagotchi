@@ -7,37 +7,7 @@ use std::path::Path;
 use devagotchi_contracts::{BridgeError, BridgeResult};
 
 use super::devices::Devices;
-use crate::{config, operator_event, prepare_state_dir, read_config, store};
-
-/// The machine registry in the hub's Postgres for `enroll`, `revoke` and `devices`: the
-/// storage `config` names, or `DEVAGOTCHI_HUB_STORAGE_URL`. Run `work` on it to the end.
-fn with_registry<T>(
-    state_dir: &Path,
-    config: Option<&Path>,
-    work: impl AsyncFnOnce(&Devices) -> BridgeResult<T>,
-) -> BridgeResult<T> {
-    prepare_state_dir(state_dir)?;
-    let storage = match config {
-        Some(path) => read_config(path)?.storage,
-        None => None,
-    };
-    let url = store::url_for(storage.as_ref().and_then(|s| s.url.as_deref()), state_dir);
-    if !url.starts_with("postgres://") && !url.starts_with("postgresql://") {
-        return Err(BridgeError::new(
-            "invalid_config",
-            "machines are kept in the hub's Postgres: pass --config with the hub's config, or set DEVAGOTCHI_HUB_STORAGE_URL",
-        ));
-    }
-    let schema = store::schema_for(storage.as_ref().and_then(|s| s.schema.as_deref()));
-    tokio::runtime::Builder::new_current_thread()
-        .enable_all()
-        .build()
-        .map_err(|error| BridgeError::new("runtime", error.to_string()))?
-        .block_on(async {
-            let store = store::Store::open_in(&url, schema.as_deref()).await?;
-            work(&Devices::new(store)).await
-        })
-}
+use crate::{audit::Audit, config, operator_event, store};
 
 /// A one-time code that binds one machine's key to `device`, printed once.
 pub(crate) fn enroll(state: &Path, config: Option<&Path>, device: &str) -> BridgeResult<()> {
@@ -47,11 +17,15 @@ pub(crate) fn enroll(state: &Path, config: Option<&Path>, device: &str) -> Bridg
             "device must be [a-z0-9][a-z0-9-]{0,62}, the broker name in the hub config",
         ));
     }
-    let code = with_registry(state, config, async |devices| {
-        devices.issue_code(device, super::random::<16>()).await
+    let code = store::block_on(async {
+        let store = store::for_command(state, config).await?;
+        let code = Devices::new(store.clone())
+            .issue_code(device, super::random::<16>())
+            .await?;
+        // The code itself is never audited or logged; only that one was issued.
+        operator_event(&Audit::new(store), "link.code_issued", device, "ok").await?;
+        Ok(code)
     })?;
-    // The code itself is never audited or logged; only that one was issued.
-    operator_event(state, "link.code_issued", device, "ok")?;
     // The code is the one secret this prints; it goes to stdout only, once.
     println!("{code}");
     eprintln!(
@@ -63,14 +37,13 @@ pub(crate) fn enroll(state: &Path, config: Option<&Path>, device: &str) -> Bridg
 
 /// Revoke `device` and cancel its unused codes; its link closes within seconds.
 pub(crate) fn revoke(state: &Path, config: Option<&Path>, device: &str) -> BridgeResult<()> {
-    let (revoked, cancelled) =
-        with_registry(state, config, async |devices| devices.revoke(device).await)?;
-    operator_event(
-        state,
-        "link.revoke",
-        device,
-        &format!("revoked={revoked} codes_cancelled={cancelled}"),
-    )?;
+    let (revoked, cancelled) = store::block_on(async {
+        let store = store::for_command(state, config).await?;
+        let (revoked, cancelled) = Devices::new(store.clone()).revoke(device).await?;
+        let outcome = format!("revoked={revoked} codes_cancelled={cancelled}");
+        operator_event(&Audit::new(store), "link.revoke", device, &outcome).await?;
+        Ok((revoked, cancelled))
+    })?;
     match (revoked, cancelled) {
         (false, 0) => {
             return Err(BridgeError::new(
@@ -88,7 +61,11 @@ pub(crate) fn revoke(state: &Path, config: Option<&Path>, device: &str) -> Bridg
 
 /// Every enrolled machine, as JSON.
 pub(crate) fn devices(state: &Path, config: Option<&Path>) -> BridgeResult<()> {
-    let list = with_registry(state, config, async |devices| devices.list().await)?;
+    let list = store::block_on(async {
+        Devices::new(store::for_command(state, config).await?)
+            .list()
+            .await
+    })?;
     println!(
         "{}",
         serde_json::to_string_pretty(&list).unwrap_or_default()

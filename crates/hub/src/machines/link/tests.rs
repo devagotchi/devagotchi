@@ -17,7 +17,7 @@ macro_rules! links {
     };
 }
 
-async fn test_links(dir: &std::path::Path) -> Option<Links> {
+async fn test_links(_dir: &std::path::Path) -> Option<Links> {
     let config = HubConfig::parse(
         &serde_json::json!({
             "listen": "127.0.0.1:8787",
@@ -30,11 +30,7 @@ async fn test_links(dir: &std::path::Path) -> Option<Links> {
     )
     .unwrap();
     let devices = crate::machines::devices::test_registry().await?;
-    let links = Links::new(
-        Arc::new(config),
-        devices,
-        Arc::new(Audit::open(&dir.join("audit.sqlite3")).unwrap()),
-    );
+    let links = Links::new(Arc::new(config), devices, crate::audit::test_audit().await?);
     Some(links)
 }
 

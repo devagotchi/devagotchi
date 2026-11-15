@@ -19,11 +19,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    agenthub::mcp::Boards,
-    audit::{Audit, AuditEntry},
-    auth::Subject,
-    config::HubConfig,
-    machines::link::Links,
+    agenthub::mcp::Boards, audit::Audit, auth::Subject, config::HubConfig, machines::link::Links,
 };
 
 #[derive(Clone)]
@@ -361,6 +357,7 @@ impl Hub {
         let asked = self
             .links
             .request_update(&device, input.force, &subject.id, subject.via)
+            .await
             .map_err(Json)?;
         let (state, detail) = match asked {
             crate::machines::link::UpdateAsked::AlreadyOn(build) => {
@@ -479,39 +476,6 @@ impl Hub {
         }
     }
 
-    /// Record one call in the audit chain. A call that cannot be audited is not a call
-    /// this bastion made, so a failure here fails the call. An operation that started
-    /// (`operation_start`, or `run`) is also its tenant's operation milestone
-    /// (`analytics::funnel`): the first, and the latest a day at a time.
-    pub(crate) fn record(
-        &self,
-        subject: &Subject,
-        tool: &str,
-        broker: &str,
-        operation_id: &str,
-        outcome: &str,
-    ) -> Result<(), Json<BridgeError>> {
-        if let (Some(analytics), Some(tenant)) = (&self.analytics, &subject.tenant)
-            && matches!(
-                (tool, outcome),
-                ("operation_start", "ok") | ("run", "ok") | ("run", "running")
-            )
-        {
-            analytics.tenant_event(tenant, crate::analytics::funnel::OPERATION);
-        }
-        self.audit
-            .record(&AuditEntry {
-                subject: &subject.id,
-                via: subject.via,
-                tool,
-                broker,
-                operation_id,
-                outcome,
-            })
-            .map(|_| ())
-            .map_err(Json)
-    }
-
     pub(crate) async fn call(
         &self,
         tool: &str,
@@ -557,7 +521,8 @@ impl Hub {
             Ok(ResponseBody::Start(output)) => output.operation.operation_id.clone(),
             _ => operation_id,
         };
-        self.record(&subject, tool, broker, &recorded_id, &outcome)?;
+        self.record(&subject, tool, broker, &recorded_id, &outcome)
+            .await?;
         result
     }
 }
@@ -938,6 +903,7 @@ impl ServerHandler for Hub {
             && let Some(why) = limits.check(&request.name, request.arguments.as_ref())
         {
             self.record(subject, &request.name, "", "", "key_denied")
+                .await
                 .map_err(|Json(error)| rmcp::ErrorData::internal_error(error.message, None))?;
             return Ok(
                 rmcp::model::CallToolResult::error(vec![rmcp::model::ContentBlock::text(why)])
@@ -951,6 +917,7 @@ impl ServerHandler for Hub {
             && let Some(answer) = self.waiting_result(subject)
         {
             self.record(subject, &request.name, "", "", "early_access")
+                .await
                 .map_err(|Json(error)| rmcp::ErrorData::internal_error(error.message, None))?;
             return Ok(answer.into());
         }

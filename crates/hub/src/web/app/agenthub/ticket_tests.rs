@@ -207,13 +207,10 @@ async fn a_person_works_a_ticket_from_the_phone_and_the_board_records_it() {
             .any(|e| e["action"].as_str().unwrap_or_default().starts_with("note")),
         "{mine:?}"
     );
-    let audit = rusqlite::Connection::open(hub.dir.path().join("audit.sqlite3")).unwrap();
-    let audited: Vec<(String, String)> = audit
-        .prepare("SELECT tool, outcome FROM audit WHERE broker = 'alpha' AND operation_id = ?1 AND subject = ?2 ORDER BY seq")
-        .unwrap()
-        .query_map([&id, &me], |row| Ok((row.get(0)?, row.get(1)?)))
-        .unwrap()
-        .map(Result::unwrap)
+    let audited: Vec<(String, String)> = (hub.hub.audit.after(0, 10_000).await.unwrap())
+        .into_iter()
+        .filter(|r| r.broker == "alpha" && r.operation_id == id && r.subject == me)
+        .map(|r| (r.tool, r.outcome))
         .filter(|(tool, _)| tool == "board_note" || tool == "board_update")
         .collect();
     let tools: Vec<&str> = audited.iter().map(|(tool, _)| tool.as_str()).collect();

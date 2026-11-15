@@ -83,7 +83,7 @@ async fn world_configured(owner: Option<&str>, site: Option<&std::path::Path>) -
         .unwrap(),
     );
     let devices = crate::machines::devices::test_registry().await?;
-    let audit = Arc::new(Audit::open(&dir.path().join("audit.sqlite3")).unwrap());
+    let audit = crate::audit::test_audit().await?;
     let links = Arc::new(Links::new(config.clone(), devices.clone(), audit.clone()));
     let push = Arc::new(crate::push::Push::open(dir.path(), &url, devices).unwrap());
     let state = AppState {

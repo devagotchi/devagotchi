@@ -101,7 +101,8 @@ impl Hub {
         let route = match self.route(&subject, &input.machine).await {
             Ok(route) => route,
             Err(Json(error)) => {
-                self.record(&subject, "run", &input.machine, "", &error.code)?;
+                self.record(&subject, "run", &input.machine, "", &error.code)
+                    .await?;
                 return Err(Json(error));
             }
         };
@@ -123,14 +124,16 @@ impl Hub {
         let ran = match ran {
             Ok(ran) => ran,
             Err(Failed::NotStarted(error)) => {
-                self.record(&subject, "run", &input.machine, "", &error.code)?;
+                self.record(&subject, "run", &input.machine, "", &error.code)
+                    .await?;
                 return Err(Json(error));
             }
             Err(Failed::Started {
                 operation_id,
                 error,
             }) => {
-                self.record(&subject, "run", &input.machine, &operation_id, &error.code)?;
+                self.record(&subject, "run", &input.machine, &operation_id, &error.code)
+                    .await?;
                 return Err(Json(outdated(error, &input.machine)));
             }
             Err(Failed::Cancelled { operation_id }) => {
@@ -140,7 +143,8 @@ impl Hub {
                     &input.machine,
                     &operation_id,
                     "request_cancelled",
-                )?;
+                )
+                .await?;
                 return Err(Json(BridgeError::new(
                     "request_cancelled",
                     format!(
@@ -157,7 +161,8 @@ impl Hub {
             &input.machine,
             &ran.operation_id,
             if running { "running" } else { "ok" },
-        )?;
+        )
+        .await?;
         Ok(Json(RunOutput {
             next: running.then(|| {
                 format!(

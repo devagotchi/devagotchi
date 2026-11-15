@@ -407,14 +407,10 @@ async fn a_machines_page_shows_its_state_and_jobs_and_updates_from_here_only() {
         html.contains("id=\"update-result\"") && html.contains("Update: failed"),
         "{html}"
     );
-    let audit = rusqlite::Connection::open(hub.dir.path().join("audit.sqlite3")).unwrap();
-    let asked: i64 = audit
-        .query_row(
-            "SELECT count(*) FROM audit WHERE tool = 'machine.update' AND broker = ?1",
-            [&device],
-            |row| row.get(0),
-        )
-        .unwrap();
+    let audit = hub.hub.audit.after(0, 10_000).await.unwrap();
+    let asked = (audit.iter())
+        .filter(|r| r.tool == "machine.update" && r.broker == device)
+        .count();
     assert_eq!(asked, 1, "the update is in the audit");
 
     // Not B's: no page, no update, and the name says nothing about A.

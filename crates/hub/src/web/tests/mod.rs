@@ -17,8 +17,8 @@ use sha2::{Digest, Sha256};
 
 use super::*;
 use crate::{
-    AppState, audit::Audit, auth::Verifier, config::HubConfig, hub::Hub,
-    machines::devices::Devices, machines::link::Links,
+    AppState, auth::Verifier, config::HubConfig, hub::Hub, machines::devices::Devices,
+    machines::link::Links,
 };
 
 const OWNER: &str = "300000000000000001";
@@ -205,7 +205,7 @@ async fn world_with(
         devices.enroll(name, &code, "test-key", true).await.unwrap();
     }
     devices.revoke("old").await.unwrap();
-    let audit = Arc::new(Audit::open(&dir.path().join("audit.sqlite3")).unwrap());
+    let audit = crate::audit::test_audit().await?;
     let links = Arc::new(Links::new(config.clone(), devices.clone(), audit.clone()));
     // The token check itself (Nomen introspection) has its own tests; here tokens map to
     // subjects directly so the flow around them is what is tested.

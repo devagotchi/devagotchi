@@ -174,7 +174,7 @@ async fn a_sink_gets_every_signal_once_it_answers_and_never_more_than_it_takes()
             .await
             .unwrap();
     }
-    let audit = Arc::new(Audit::open(&test.dir.path().join("audit.sqlite3")).unwrap());
+    let audit = Arc::new(Audit::new(test.store.clone()));
     for (tool, outcome) in [
         ("board_create", "ok"),
         ("board_create", "read_only"),
@@ -189,6 +189,7 @@ async fn a_sink_gets_every_signal_once_it_answers_and_never_more_than_it_takes()
                 operation_id: "op-1",
                 outcome,
             })
+            .await
             .unwrap();
     }
 

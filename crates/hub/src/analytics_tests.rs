@@ -336,6 +336,7 @@ async fn milestones_once(hub: Hosted) {
     assert!(
         hub.hub
             .record(&caller, "operation_start", "laptop", "", "broker_offline")
+            .await
             .is_ok()
     );
     assert!(
@@ -348,6 +349,7 @@ async fn milestones_once(hub: Hosted) {
         assert!(
             hub.hub
                 .record(&caller, tool, "laptop", "op-1", outcome)
+                .await
                 .is_ok()
         );
     }
@@ -396,6 +398,7 @@ async fn milestones_once(hub: Hosted) {
     assert!(
         hub.hub
             .record(&owner, "run", "laptop", "op-2", "ok")
+            .await
             .is_ok()
     );
     assert!(milestones(&hub, &home).await.is_empty());

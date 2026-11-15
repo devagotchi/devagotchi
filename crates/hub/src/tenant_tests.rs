@@ -98,7 +98,7 @@ pub(crate) async fn hosted_with_ingress(
         .counts_visits()
         .then(|| analytics::Analytics::start(accounts.store().clone(), config.analytics, &url));
     let devices = crate::machines::devices::test_registry().await?;
-    let audit = Arc::new(Audit::open(&dir.path().join("audit.sqlite3")).unwrap());
+    let audit = crate::audit::test_audit().await?;
     let changes = Arc::new(tokio::sync::Notify::new());
     let links = Arc::new(
         Links::new(config.clone(), devices.clone(), audit.clone())

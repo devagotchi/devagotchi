@@ -112,9 +112,9 @@ async fn a_new_hub_is_claimed_from_the_browser_with_the_code_from_its_log() {
 
     // The right one, typed back in lower case: the owner, named, and their passkey; the
     // claim is on the audit chain.
-    let before = world.audit.verify().unwrap().entries;
+    let before = world.audit.verify().await.unwrap().entries;
     let (session, account) = world.claim(&code.to_lowercase(), Some("Jesse")).await;
-    let after = world.audit.verify().unwrap();
+    let after = world.audit.verify().await.unwrap();
     assert!(after.ok && after.entries == before + 1, "{after:?}");
     assert!(
         world.config.is_owner(&account),

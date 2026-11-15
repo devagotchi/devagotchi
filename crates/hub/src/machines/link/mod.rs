@@ -31,8 +31,7 @@ use crate::{
     audit::{Audit, AuditEntry},
     config::HubConfig,
     machines::{
-        devices::{Device, Devices, OWNED_LIMIT},
-        join::Shell,
+        devices::{Devices, OWNED_LIMIT},
         now_secs,
         update::Update,
     },
@@ -457,124 +456,6 @@ impl Links {
         self
     }
 
-    /// The enrolled record for `device`, if any (revoked ones included).
-    pub async fn device(&self, device: &str) -> BridgeResult<Option<Device>> {
-        self.devices.get(device).await
-    }
-
-    /// The machines `owner` added, revoked ones included.
-    pub async fn owned_by(&self, owner: &str) -> BridgeResult<Vec<Device>> {
-        self.devices.owned_by(owner).await
-    }
-
-    /// How many machines `owner` holds against its quota: enrolled and not revoked, or
-    /// with a live code.
-    pub async fn held(&self, owner: &str) -> BridgeResult<usize> {
-        self.devices.held(owner).await
-    }
-
-    /// Move machines, codes, and push subscriptions from one account id to another
-    /// after a provisional account is merged.
-    pub async fn reassign_owner(&self, from: &str, to: &str) -> BridgeResult<usize> {
-        self.devices.reassign_owner(from, to).await
-    }
-
-    /// Spend an account's one-time code and bind `public_key` to `name`. The code is
-    /// the secret; this is the same check the link handshake uses.
-    pub async fn enroll_owned(
-        &self,
-        name: &str,
-        code: &str,
-        public_key: &str,
-    ) -> BridgeResult<Device> {
-        let device = self.devices.enroll(name, code, public_key, false).await?;
-        self.event(
-            device.owner.as_deref().unwrap_or(""),
-            "join",
-            "link.enroll",
-            name,
-            "",
-            "ok",
-        );
-        self.joined(device.owner.as_deref());
-        Ok(device)
-    }
-
-    /// A one-time code for `owner` to add a machine named `device` ("Add a machine"). The
-    /// names in the hub config are the operator's. Audited without the code.
-    pub async fn issue_owned_code(&self, owner: &str, device: &str) -> BridgeResult<String> {
-        self.issue_owned_code_within(owner, device, None).await
-    }
-
-    /// `issue_owned_code`, holding the owner to `limit` machines instead of the usual
-    /// quota when one is given (an account nobody secured, `tenant_machines.rs`).
-    pub async fn issue_owned_code_within(
-        &self,
-        owner: &str,
-        device: &str,
-        limit: Option<usize>,
-    ) -> BridgeResult<String> {
-        if !crate::config::valid_name(device) {
-            return Err(BridgeError::new(
-                "invalid_name",
-                "a machine name is 1 to 63 lowercase letters, digits and dashes, starting with a letter or digit",
-            ));
-        }
-        if self.config.broker(device).is_some() {
-            return Err(BridgeError::new(
-                "name_taken",
-                format!("{device:?} is already in use on this hub; choose another name"),
-            ));
-        }
-        let limit = if self.config.is_owner(owner) {
-            usize::MAX
-        } else {
-            limit.unwrap_or(OWNED_LIMIT)
-        };
-        let issued = self
-            .devices
-            .issue_owned_code(owner, device, random::<16>(), limit)
-            .await;
-        let outcome = match &issued {
-            Ok(_) => "ok".to_string(),
-            Err(error) => error.code.clone(),
-        };
-        self.event(owner, "web", "link.code_issued", device, "", &outcome);
-        issued
-    }
-
-    /// The machine a live code is for, so `/join` can write its script; audited with
-    /// the machine's name, never the code. Looking does not spend the code.
-    pub async fn join_script(&self, code: &str, shell: Shell) -> BridgeResult<Option<String>> {
-        let device = self.devices.live_code(code).await?;
-        if let Some(device) = &device {
-            let shell = match shell {
-                Shell::Sh => "sh",
-                Shell::PowerShell => "powershell",
-            };
-            self.event(
-                &format!("device:{device}"),
-                "join",
-                "link.join_script",
-                device,
-                "",
-                shell,
-            );
-        }
-        Ok(device)
-    }
-
-    /// Revoke one of `owner`'s machines; its open link closes within seconds.
-    pub async fn revoke_owned(&self, owner: &str, device: &str) -> BridgeResult<(bool, usize)> {
-        let result = self.devices.revoke_owned(owner, device).await;
-        let outcome = match &result {
-            Ok((revoked, cancelled)) => format!("revoked={revoked} codes_cancelled={cancelled}"),
-            Err(error) => error.code.clone(),
-        };
-        self.event(owner, "web", "link.revoke", device, "", &outcome);
-        result
-    }
-
     /// `device` as if its link had just connected, for tests elsewhere in the hub: it shows
     /// online, and a workflow waiting on it wakes. The receiver gets the calls routed to it.
     #[cfg(test)]
@@ -692,7 +573,7 @@ impl Links {
     /// Ask a connected machine to update to the build this hub hands out, now; with
     /// `force`, without waiting for its running jobs. `subject` and `via` are who asked
     /// (`hub`, `auto` for the hourly round), for the audit.
-    pub fn request_update(
+    pub async fn request_update(
         &self,
         device: &str,
         force: bool,
@@ -706,7 +587,8 @@ impl Links {
             Err(error) => (self.offered.clone(), error.code.clone()),
         };
         let version = version.unwrap_or_default();
-        self.event(subject, via, "machine.update", device, &version, &outcome);
+        self.event(subject, via, "machine.update", device, &version, &outcome)
+            .await;
         asked
     }
 
@@ -802,7 +684,8 @@ impl Links {
                 device,
                 &target,
                 &outcome,
-            );
+            )
+            .await;
         }
         self.update_changed.notify_waiters();
     }
@@ -822,7 +705,7 @@ impl Links {
 
     /// Ask each connected machine that is due an update for one (`super::update::select`),
     /// when `machines.auto_update` is on and this hub hands out a build.
-    pub fn auto_update_now(&self) {
+    pub async fn auto_update_now(&self) {
         let (true, Some(version)) = (self.auto_update, self.offered.as_deref()) else {
             return;
         };
@@ -838,7 +721,7 @@ impl Links {
             super::update::select(&live, version, &updates, now_secs())
         };
         for device in chosen {
-            let _ = self.request_update(&device, false, "hub", "auto");
+            let _ = self.request_update(&device, false, "hub", "auto").await;
         }
     }
 
@@ -847,26 +730,38 @@ impl Links {
         let mut every = tokio::time::interval(super::update::EVERY);
         loop {
             every.tick().await;
-            self.auto_update_now();
+            self.auto_update_now().await;
         }
     }
 
-    fn event(&self, subject: &str, via: &str, tool: &str, broker: &str, key: &str, outcome: &str) {
-        if let Err(error) = self.audit.record(&AuditEntry {
-            subject,
-            via,
-            tool,
-            broker,
-            operation_id: key,
-            outcome,
-        }) {
+    async fn event(
+        &self,
+        subject: &str,
+        via: &str,
+        tool: &str,
+        broker: &str,
+        key: &str,
+        outcome: &str,
+    ) {
+        if let Err(error) = self
+            .audit
+            .record(&AuditEntry {
+                subject,
+                via,
+                tool,
+                broker,
+                operation_id: key,
+                outcome,
+            })
+            .await
+        {
             eprintln!("devagotchi hub: link audit failed: {error}");
         }
     }
 
     /// Audit a refused handshake, at most once a second. The claimed name is recorded as
     /// unverified; the peer address is the TCP peer (the edge, when behind Caddy).
-    fn refused(&self, claimed: Option<&str>, peer: SocketAddr, error: &BridgeError) {
+    async fn refused(&self, claimed: Option<&str>, peer: SocketAddr, error: &BridgeError) {
         let now = now_secs();
         let suppressed = {
             let mut log = self.refusals.lock().expect("refusals");
@@ -890,7 +785,8 @@ impl Links {
             "devagotchi hub: link refused from {peer} claiming {claimed:?}: {}",
             error
         );
-        self.event(&subject, &via, "link.refused", &claimed, "", &outcome);
+        self.event(&subject, &via, "link.refused", &claimed, "", &outcome)
+            .await;
     }
 
     /// Serve one device connection until it closes, idles out or is revoked.
@@ -925,7 +821,7 @@ impl Links {
         }) = &hello
             && let Err(error) = self.may_enroll(code).await
         {
-            self.refused(claimed.as_deref(), peer, &error);
+            self.refused(claimed.as_deref(), peer, &error).await;
             let _ = send(&mut sink, &wire_refusal(&error)).await;
             let _ = tokio::time::timeout(SEND_TIMEOUT, sink.close()).await;
             return;
@@ -938,7 +834,7 @@ impl Links {
         } = match self.admit(hello, &nonce).await {
             Ok(admitted) => admitted,
             Err(error) => {
-                self.refused(claimed.as_deref(), peer, &error);
+                self.refused(claimed.as_deref(), peer, &error).await;
                 let _ = send(&mut sink, &wire_refusal(&error)).await;
                 let _ = tokio::time::timeout(SEND_TIMEOUT, sink.close()).await;
                 return;
@@ -971,7 +867,8 @@ impl Links {
             &device,
             &fingerprint(&key),
             "ok",
-        );
+        )
+        .await;
         if let (Some(owner), Some(push)) = (joined_for, self.push.clone()) {
             let print = fingerprint(&key);
             let name = device.clone();
@@ -1003,7 +900,7 @@ impl Links {
         }
         // An update that brought this build is done; then any machine due one is asked.
         self.connected_on(&device, build.as_deref()).await;
-        self.auto_update_now();
+        self.auto_update_now().await;
 
         let mut revocation = tokio::time::interval(REVOCATION_CHECK);
         let mut idle = Box::pin(tokio::time::sleep(IDLE_TIMEOUT));
@@ -1080,7 +977,8 @@ impl Links {
             &device,
             &fingerprint(&key),
             reason,
-        );
+        )
+        .await;
     }
 
     /// The session is gone; which drop this was, when it was the device's live session.
@@ -1173,7 +1071,8 @@ impl Links {
                     Some(owner) => format!("ok owner={owner}"),
                     None => "ok".into(),
                 },
-            );
+            )
+            .await;
             self.joined(bound.owner.as_deref());
             return Ok(Admitted {
                 device,
@@ -1242,5 +1141,6 @@ pub fn random<const N: usize>() -> [u8; N] {
     bytes
 }
 
+mod registry;
 #[cfg(test)]
 mod tests;
