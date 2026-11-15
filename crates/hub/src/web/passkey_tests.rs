@@ -619,6 +619,15 @@ async fn a_hub_alone_signs_people_in_with_no_identity_provider() {
         html.contains("href=\"/claim\"") && !html.contains("Shippin"),
         "{html}"
     );
+    // Forgot password names the recovery that exists here: the owner link, not Google.
+    let forgot = world.get("/auth/password/forgot", None).await;
+    assert_eq!(forgot.status(), 200);
+    let forgot_html = forgot.text().await.unwrap();
+    assert!(
+        forgot_html.contains("devagotchi hub owner")
+            && !forgot_html.to_ascii_lowercase().contains("google"),
+        "{forgot_html}"
+    );
     // Signed out, pages send you to the hub's own sign-in, never to another service.
     let account = world.get("/account", None).await;
     assert_eq!(account.status(), 303);

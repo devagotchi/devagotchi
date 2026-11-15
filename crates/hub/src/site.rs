@@ -654,10 +654,14 @@ impl Site {
         )
     }
 
-    /// The hub `devagotchi login` signs in at when none is named: the site's
-    /// `links.hosted_hub`.
+    /// A site may name `links.hosted_hub` for its own pages. The command line does not
+    /// read it: a login names its hub with `--hub` or `DEVAGOTCHI_HUB`.
     pub fn hosted_hub(&self) -> Option<&str> {
-        self.info.links.get("hosted_hub").map(String::as_str)
+        self.info
+            .links
+            .get("hosted_hub")
+            .map(String::as_str)
+            .filter(|url| !url.is_empty())
     }
 }
 

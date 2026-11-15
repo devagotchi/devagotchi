@@ -7,6 +7,23 @@ heading. Agents draft the fragments below; they never tag.
 
 ## Unreleased
 
+These notes are what the operator promotes when tagging `v0.1.0-alpha.1`. This file does not
+create that tag, and a prerelease tag does not move the `:latest` image.
+
+### A hub names its own deployment (prepared for v0.1.0-alpha.1)
+- `devagotchi login` and `devagotchi mcp` no longer assume a hub. Pass `--hub`, set
+  `DEVAGOTCHI_HUB`, or reuse the hub the last login saved. `connect-nomen` requires
+  `--issuer`. The admin OpenID Connect card starts empty; the operator types the issuer.
+- A fresh hub still claims itself with no mail and no third-party sign-in: the claim link,
+  then a password. Forgot password names the sign-ins that hub actually has, or
+  `devagotchi hub owner` when it has none.
+- `install.sh` follows the release channel (`ghcr.io/devagotchi/devagotchi:latest`) unless
+  `--channel main`, `--tag vX.Y.Z`, or `--track IMAGE` says otherwise. `:latest` moves only
+  for a stable tag. Until one exists, pin `--tag v0.1.0-alpha.1` or use `--channel main`.
+- A hosted edition starts the same hub through `serve_with` and replaces plan limits, tenant
+  lifecycle, in-process events, and extra routes. The defaults are what a self-hosted hub
+  already does. No billing or hosted deployment is in this repository.
+
 ### Connections: call Resend, Stripe, GitHub and more through the hub (increment 140)
 - **You → Connections** (`/app/connections`): connect a service with its key. The hub checks the
   key against the service, keeps it sealed, and shows only its last four characters from then on.

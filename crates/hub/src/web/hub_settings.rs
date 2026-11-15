@@ -79,17 +79,17 @@ const GUIDES: [Guide; 3] = [
         callback_label: "Authorization callback URL",
     },
     Guide {
-        name: "nomen",
+        name: "oidc",
         kind: "oidc",
-        title: "Shippin (Nomen)",
-        issuer: Some("https://id.shippin.cloud"),
-        label: "Shippin",
-        open_label: "Open Shippin",
-        open_url: "https://id.shippin.cloud",
+        title: "OpenID Connect",
+        issuer: None,
+        label: "",
+        open_label: "",
+        open_url: "",
         steps: [
-            "Create an OpenID Connect client for a web application.",
+            "In your identity provider, create an OpenID Connect client for a web application.",
             "Paste the address below as its redirect URI.",
-            "Copy its client ID and secret into the fields below.",
+            "Copy its issuer, client ID and secret into the fields below.",
         ],
         callback_label: "Redirect URI",
     },
@@ -225,7 +225,7 @@ fn sign_in_card(
             .filter(|l| !l.is_empty())
             .unwrap_or(guide.label);
         format!(
-            "<label>Issuer<input type=\"url\" name=\"issuer\" autocomplete=\"off\" spellcheck=\"false\" value=\"{}\" placeholder=\"https://\" required></label>\
+            "<label>Issuer<input type=\"url\" name=\"issuer\" autocomplete=\"off\" spellcheck=\"false\" value=\"{}\" placeholder=\"https://id.example.com\" required></label>\
 <label>Button label<input type=\"text\" name=\"label\" maxlength=\"40\" value=\"{}\" placeholder=\"Continue with …\"></label>",
             escape(issuer),
             escape(label)
@@ -266,7 +266,7 @@ fn new_provider_card() -> String {
 <label>Name<input type=\"text\" name=\"name\" pattern=\"[a-z0-9][a-z0-9-]{{0,31}}\" maxlength=\"32\" autocomplete=\"off\" spellcheck=\"false\" placeholder=\"okta\" required></label>\
 <p class=\"meta\">Lowercase letters, digits and dashes. It is part of the redirect address.</p>\
 <label>Button label<input type=\"text\" name=\"label\" maxlength=\"40\" placeholder=\"Okta\" required></label>\
-<label>Issuer<input type=\"url\" name=\"issuer\" autocomplete=\"off\" spellcheck=\"false\" placeholder=\"https://\" required></label>\
+<label>Issuer<input type=\"url\" name=\"issuer\" autocomplete=\"off\" spellcheck=\"false\" placeholder=\"https://id.example.com\" required></label>\
 <label>Client ID<input type=\"text\" name=\"client_id\" autocomplete=\"off\" spellcheck=\"false\" required></label>\
 <label>Client secret<input type=\"password\" name=\"client_secret\" autocomplete=\"new-password\" placeholder=\"Leave empty for a public client\"></label>\
 <label class=\"check\"><input type=\"checkbox\" name=\"enabled\" value=\"on\" checked><span>Offer it on the sign-in page</span></label>\
@@ -491,7 +491,7 @@ pub async fn page(
 <a class=\"chip\" href=\"#access\">AI access</a><a class=\"chip\" href=\"#people\">People</a>\
 <a class=\"chip\" href=\"#data\">Data and signals</a></nav>\
 <section class=\"card\" id=\"sign-in\"><h2>Sign-in</h2><p class=\"note help\">How people sign in to this hub: \
-Google, GitHub, Shippin, or your own identity provider. Secrets are encrypted in this hub's Postgres.</p>{cards}\
+Google, GitHub, or any OpenID Connect provider. The issuer is the one you type; nothing is filled in for you. Secrets are encrypted in this hub's Postgres.</p>{cards}\
 <ul class=\"rows\">{mail}</ul></section>\
 <section class=\"card\" id=\"access\"><h2>AI access</h2><ul class=\"rows\">{connect}{keys}</ul></section>\
 <section class=\"card\" id=\"people\"><h2>People</h2><ul class=\"rows\">{orgs}</ul></section>\

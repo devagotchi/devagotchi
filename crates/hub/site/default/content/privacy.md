@@ -5,7 +5,7 @@ description: What {product} keeps about you, why, and for how long.
 ---
 # Privacy policy
 
-{product} at app.devagotchi.com and {domain} is run by {operator} ("we"). This page says
+{product} at this hub and {domain} is run by {operator} ("we"). This page says
 what the service keeps about you, why, and for how long.
 
 ## What we keep

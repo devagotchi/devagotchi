@@ -1972,9 +1972,13 @@ mod first_connect {
             .await;
         assert_eq!(right.status(), 303);
         assert_eq!(location(&right), authorize);
-        // Forgot password on a hub that sends no mail: said plainly.
+        // Forgot password on a hub that sends no mail, with Google configured: name Google.
         let (status, page) = Hosted::text(hub.get("/auth/password/forgot", None).await).await;
         assert_eq!(status, 200);
-        assert!(page.contains("Password reset isn"), "{page}");
+        assert!(
+            page.contains("Password reset isn") && page.contains("Sign in with Google"),
+            "{page}"
+        );
+        assert!(!page.contains("devagotchi hub owner"), "{page}");
     }
 }

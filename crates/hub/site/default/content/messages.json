@@ -255,7 +255,7 @@
     "short": "Use at least 8 characters.",
     "slow_down": "Too many tries. Wait a few minutes.",
     "reset_sent": "Check your email for a sign-in link.",
-    "reset_unavailable": "Password reset isn't available yet — sign in with Google.",
+    "reset_unavailable": "Password reset isn't available by email on this hub. Sign in with a method this hub offers, or ask its operator.",
     "set_password": "Set a password",
     "link_title": "{email} already has an account. Link Google to it?",
     "link": "Link",

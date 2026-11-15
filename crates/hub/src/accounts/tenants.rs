@@ -425,6 +425,7 @@ impl Accounts {
             Ok((token, access))
         })?;
         let (token, access) = token;
+        self.extensions.tenant_created(&tenant, "first connect");
         Ok((
             Account {
                 id,

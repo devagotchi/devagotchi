@@ -86,8 +86,8 @@ impl<T> Variants<T> {
 pub struct SiteFile {
     pub product: Product,
     pub operator: Operator,
-    /// Public links by name: `{link:<name>}` in the copy. `hosted_hub` is the hub
-    /// `devagotchi login` signs in at by default.
+    /// Public links by name: `{link:<name>}` in the copy. `hosted_hub`, when a site sets
+    /// it, is that site's own hub address. The command line does not use it as a default.
     #[serde(default)]
     pub links: BTreeMap<String, String>,
     #[serde(default)]
@@ -1403,7 +1403,7 @@ impl Default for SignInMessages {
             slow_down: s("Too many tries. Wait a few minutes."),
             reset_sent: s("Check your email for a sign-in link."),
             reset_unavailable: s(
-                "Password reset isn't available yet \u{2014} sign in with Google.",
+                "Password reset isn't available by email on this hub. Sign in with a method this hub offers, or ask its operator.",
             ),
             set_password: s("Set a password"),
             link_title: s("{email} already has an account. Link Google to it?"),

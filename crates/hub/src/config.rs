@@ -135,6 +135,10 @@ pub struct HubConfig {
     /// the running hub whenever its directory changes (`site::watch`).
     #[serde(skip, default = "default_site")]
     loaded_site: Arc<crate::site::SiteCell>,
+    /// What a hosted edition replaces. Not in the config file: `serve_with` sets it, and
+    /// a file leaves the core defaults (`extensions.rs`).
+    #[serde(skip, default)]
+    pub extensions: crate::extensions::Extensions,
 }
 
 fn default_site() -> Arc<crate::site::SiteCell> {
@@ -307,7 +311,7 @@ pub enum AuthConfig {
     /// tokens, so the hub asks Nomen about each one (token introspection, RFC 7662),
     /// signing in to Nomen as its own API application with a private-key JWT.
     Nomen {
-        /// Nomen's issuer URL exactly as Nomen states it, e.g. `https://id.shippin.cloud`.
+        /// The issuer URL exactly as that provider states it, e.g. `https://id.example.com`.
         /// Tokens are checked at `<issuer>/oauth/v2/introspect`.
         issuer: String,
         /// Nomen project ids whose tokens this hub accepts. Nomen reports a token active
