@@ -127,6 +127,11 @@ A prerelease such as `v0.1.0-alpha.1` is published as `:0.1.0-alpha.1` and does 
 `--channel main`. `--channel main` follows `:main`, so every merge reaches that hub within
 minutes. `--track IMAGE` names an image outright.
 
+The stack's own files (`compose.yaml`, `update.sh`, `backup.sh`) come from the same place as the
+image, so they always match it: the newest release's tag for the release channel, the tag for
+`--tag`, `main` for `--channel main` (`--ref` names another). `install.sh --print-ref` prints that
+ref and installs nothing; `deploy/proxmox/hub-up.sh` pushes the files of the same ref.
+
 ClickHouse is started with the stack and never waited for, so a sick ClickHouse cannot undo a
 healthy deploy. The boards work without it and `/healthz` reports `analytics` as degraded.
 

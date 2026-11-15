@@ -99,7 +99,11 @@ state = json.load(open(os.path.join(fake, "state.json")))
 args = sys.argv[1:]
 url = [a for a in args if a.startswith("http")][-1]
 out = args[args.index("-o") + 1] if "-o" in args else None
+if url.endswith("/releases/latest"):
+    print('{\n  "tag_name": "v9.8.7",\n  "name": "9.8.7"\n}'); sys.exit(0)
 if url.startswith("https://api.github.com/repos/"):
+    with open(os.path.join(fake, "refs.txt"), "a") as refs:
+        refs.write(url.rsplit("/commits/", 1)[1] + "\n")
     print('{\n  "sha": "' + state["sha"] + '",\n  "node_id": "x"\n}'); sys.exit(0)
 if url.startswith("https://raw.githubusercontent.com/"):
     assert "/" + state["sha"] + "/deploy/compose/" in url, url
@@ -141,6 +145,8 @@ def run(case: str, *, config: str, extra=(), **state) -> tuple[int, str, dict]:
             env=env, capture_output=True, text=True, timeout=60,
         )
         result = json.loads((fake / "state.json").read_text())
+        refs = fake / "refs.txt"
+        result["refs"] = refs.read_text().split() if refs.exists() else []
         result["pushed"] = sorted(p.name for p in (fake / "pushed").iterdir())
         for name in result["pushed"]:
             if name == "secrets.env":
@@ -187,6 +193,13 @@ def main() -> int:
     check("edge: claim link", f"https://{DOMAIN}/claim#ABCD-EFGH-JKMN-PQRS-TVWX-YZ23" in out
           and "Claim it now" in out, out)
     print("PASS an unprivileged container behind its own Caddy is reloaded as the hub")
+
+    # 1b. The deploy files come from the release the image comes from: the newest release's
+    #     tag by default (the release channel), main for --channel main.
+    check("release files", s["refs"] == ["v9.8.7"], out)
+    code, out, s = run("main files", config=UNPRIVILEGED, edge=True, extra=["--channel", "main"])
+    check("main files", code == 0 and s["refs"] == ["main"], out)
+    print("PASS the deploy files pushed are the ones of the release the hub will run")
 
     # 2. A privileged container with nesting already on and no Caddy: no restart, no
     #    keyctl, the stack's own Caddy; no snapshot when the storage takes none.
