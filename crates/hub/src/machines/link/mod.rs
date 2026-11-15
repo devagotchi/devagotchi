@@ -89,7 +89,7 @@ pub struct Links {
     refusals: Mutex<RefusalLog>,
     next: AtomicU64,
     /// Tells an account's phones when a machine it added joins (increment 29a).
-    push: Option<Arc<crate::push::Push>>,
+    push: Option<Arc<crate::notify::push::Push>>,
     /// Whether the account that issued a code may enroll a machine with it now.
     gate: Option<EnrollGate>,
     /// Where an account's first machine is counted (`analytics::funnel`), on a hub that counts.
@@ -447,7 +447,7 @@ impl Links {
 
     /// Push "your machine joined" to the owner's phones when a machine an account added
     /// enrolls.
-    pub fn notifying(mut self, push: Option<Arc<crate::push::Push>>) -> Self {
+    pub fn notifying(mut self, push: Option<Arc<crate::notify::push::Push>>) -> Self {
         self.push = push;
         self
     }

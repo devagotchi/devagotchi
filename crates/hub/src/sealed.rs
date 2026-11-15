@@ -35,7 +35,7 @@ impl Sealer {
             Ok(bytes) => bytes,
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
                 let bytes = crate::machines::random::<32>().to_vec();
-                crate::push::write_private(&path, &bytes).map_err(|error| error.message)?;
+                crate::notify::push::write_private(&path, &bytes).map_err(|error| error.message)?;
                 bytes
             }
             Err(error) => return Err(format!("{}: {error}", path.display())),

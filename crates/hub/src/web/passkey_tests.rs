@@ -79,7 +79,7 @@ async fn world_configured(owner: Option<&str>, site: Option<&std::path::Path>) -
     let devices = crate::machines::devices::test_registry().await?;
     let audit = crate::ops::audit::test_audit().await?;
     let links = Arc::new(Links::new(config.clone(), devices.clone(), audit.clone()));
-    let push = Arc::new(crate::push::Push::open(dir.path(), &url, devices).unwrap());
+    let push = Arc::new(crate::notify::push::Push::open(dir.path(), &url, devices).unwrap());
     let state = AppState {
         verifier: Arc::new(
             Verifier::from_hub_config(&config, accounts.store(), Some(accounts.clone()))

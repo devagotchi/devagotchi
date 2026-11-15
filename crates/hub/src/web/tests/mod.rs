@@ -18,7 +18,7 @@ use sha2::{Digest, Sha256};
 use super::*;
 use crate::{
     AppState, auth::Verifier, config::HubConfig, hub::Hub, machines::devices::Devices,
-    machines::link::Links,
+    machines::link::Links, notify::push::Push,
 };
 
 const OWNER: &str = "300000000000000001";
@@ -214,7 +214,7 @@ async fn world_with(
         sessions.clone(),
     )
     .unwrap();
-    let push = Arc::new(crate::push::Push::open(dir.path(), &url, devices.clone()).unwrap());
+    let push = Arc::new(Push::open(dir.path(), &url, devices.clone()).unwrap());
     let state = AppState {
         verifier: Arc::new(verifier),
         hub: Hub {
@@ -757,7 +757,7 @@ async fn notify_this_phone_then_an_approval_buzzes_it_encrypted() {
         authorization.starts_with("vapid t=") && authorization.ends_with(&format!(", k={key}"))
     );
     let payload: Value =
-        serde_json::from_slice(&crate::push::decrypt(&phone, &auth, body)).unwrap();
+        serde_json::from_slice(&crate::notify::push::decrypt(&phone, &auth, body)).unwrap();
     assert_eq!(payload["title"], "Approval needed");
     assert_eq!(payload["body"], "Restart the hub on Texas");
     assert_eq!(payload["url"], format!("/approvals#estate-{}", asked.id));
@@ -946,7 +946,7 @@ async fn a_new_board_says_how_to_start_and_one_tap_tests_the_phone() {
         "the test goes to the person who asked, once"
     );
     let payload: Value =
-        serde_json::from_slice(&crate::push::decrypt(&phone, &auth, &pushes[0])).unwrap();
+        serde_json::from_slice(&crate::notify::push::decrypt(&phone, &auth, &pushes[0])).unwrap();
     assert_eq!(payload["title"], "Approval needed");
     assert_eq!(payload["body"], "Test: tap Approve");
 

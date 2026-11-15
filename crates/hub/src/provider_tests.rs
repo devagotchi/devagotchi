@@ -178,12 +178,12 @@ async fn stub_server(person: Person) -> Shared {
 struct World {
     hub: Hosted,
     stub: Shared,
-    mail: crate::mail::stub::Stub,
+    mail: crate::notify::mail::stub::Stub,
 }
 
 async fn world(person: Person) -> Option<World> {
     let stub = stub_server(person).await;
-    let mail = crate::mail::stub::start("hub").await;
+    let mail = crate::notify::mail::stub::start("hub").await;
     let stub_url = stub.lock().unwrap().url.clone();
     let mail_url = mail.url.clone();
     let hub = hosted_with(None, |dir, _| {

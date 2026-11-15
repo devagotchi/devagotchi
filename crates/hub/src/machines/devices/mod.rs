@@ -1,6 +1,6 @@
 //! Machines enrolled to reach this hub over the link (plan N20), kept in the hub's Postgres
 //! (migration 0026: `machine_devices`, `machine_enroll_codes`; phones in `push_subscriptions`,
-//! `push_subscriptions.rs`). A device is a name bound to one Ed25519 public key. Binding happens once, with a one-time code; the code itself is
+//! `crate::notify::push::subscriptions`). A device is a name bound to one Ed25519 public key. Binding happens once, with a one-time code; the code itself is
 //! never stored, only its SHA-256. The hub operator issues codes for the brokers in the hub
 //! config; a signed-in account issues them for machines of its own, which only that account
 //! reaches (owned machines, increment 29a). People's phones and browsers that receive
@@ -26,7 +26,8 @@ pub const CODE_TTL_SECS: u64 = 15 * 60;
 pub const OWNED_LIMIT: usize = 16;
 
 pub struct Devices {
-    store: Store,
+    /// Read by the push subscriptions' methods (`crate::notify::push::subscriptions`).
+    pub(crate) store: Store,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
@@ -464,9 +465,6 @@ pub(crate) async fn test_registry() -> Option<std::sync::Arc<Devices>> {
     let test = crate::store::testing::postgres().await?;
     Some(std::sync::Arc::new(Devices::new(test.store)))
 }
-
-mod push_subscriptions;
-pub use push_subscriptions::PushSubscription;
 
 #[cfg(test)]
 mod tests;

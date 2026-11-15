@@ -4,9 +4,8 @@
 //! # Owns
 //!
 //! In the hub's Postgres (migration 0026, Postgres only): `machine_devices` (each machine's
-//! name, key, owner, revocation) and `machine_enroll_codes` (one-time join codes, as SHA-256);
-//! `push_subscriptions` (people's phones, `devices/push_subscriptions.rs`) until the notify
-//! domain takes them. Nothing in the state directory.
+//! name, key, owner, revocation) and `machine_enroll_codes` (one-time join codes, as SHA-256).
+//! People's phones (`push_subscriptions`) are `crate::notify`'s. Nothing in the state directory.
 //!
 //! # Serves
 //!

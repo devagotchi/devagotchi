@@ -29,7 +29,7 @@ pub struct Hub {
     /// The project boards this hub serves (`board_*` tools, `crate::agenthub::mcp`).
     pub boards: Arc<Boards>,
     /// Web Push to people's phones when an approval waits; present with browser sign-in.
-    pub push: Option<Arc<crate::push::Push>>,
+    pub push: Option<Arc<crate::notify::push::Push>>,
     /// The build this hub hands to machines that join it (`/join`, `/dist`), when configured.
     pub downloads: Option<Arc<crate::machines::downloads::Downloads>>,
     /// What a hosted hub counts for its operator (`crate::analytics`), when it counts.

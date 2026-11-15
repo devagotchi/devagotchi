@@ -219,7 +219,7 @@ impl EmailConfig {
                 .ok_or_else(|| format!("auth.email: {variable} is not set"))?,
             _ => return Err("auth.email: smtp_url or smtp_url_env, one of them".into()),
         };
-        crate::mail::Server::parse(&url).map_err(|why| format!("auth.email: {why}"))?;
+        crate::notify::mail::Server::parse(&url).map_err(|why| format!("auth.email: {why}"))?;
         if self.password_env.is_some() && self.password_file.is_some() {
             return Err("auth.email: password_env or password_file, not both".into());
         }
@@ -228,7 +228,7 @@ impl EmailConfig {
         {
             return Err("auth.email: password_file must be an absolute path".into());
         }
-        if crate::mail::address_of(&self.from).is_none() {
+        if crate::notify::mail::address_of(&self.from).is_none() {
             return Err(format!("auth.email: from {:?} has no address", self.from));
         }
         if !(1..=100).contains(&self.per_address_per_hour) {

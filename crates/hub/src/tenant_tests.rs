@@ -109,7 +109,7 @@ pub(crate) async fn hosted_with_ingress(
     // As `run` wires them: phones on a hub with its own accounts, and the build it hands out
     // when the config names one (`workflow_tests.rs` does).
     let push = Some(Arc::new(
-        crate::push::Push::open(dir.path(), &url, devices.clone()).unwrap(),
+        crate::notify::push::Push::open(dir.path(), &url, devices.clone()).unwrap(),
     ));
     let downloads = config.downloads.as_ref().map(|dir| {
         Arc::new(crate::machines::downloads::Downloads::open(std::path::Path::new(dir)).unwrap())
