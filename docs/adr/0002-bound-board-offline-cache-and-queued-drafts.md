@@ -1,6 +1,8 @@
 # ADR 0002: bound-board offline cache and explicitly pending operations
 
-Status: accepted. Date: 2026-11-09.
+Status: accepted. Date: 2026-11-09. Superseded in part on 2026-11-15 by
+[ADR 0005](0005-agenthub-postgres-everywhere.md): there is no standalone SQLite board; the
+offline queue below, when built, is a pending-operation queue, never a board.
 
 ## Authority and scope
 
