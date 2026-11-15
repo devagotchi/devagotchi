@@ -113,3 +113,9 @@ fn an_approval_waits_for_a_person_and_records_the_verdict() {
         "invalid"
     );
 }
+
+#[test]
+fn a_kind_approved_ahead_of_time_is_approved_the_moment_it_is_asked() {
+    let f = fixture();
+    super::standing::standing_approvals_hold(&f.board, Some(&|ms| f.advance(ms)));
+}

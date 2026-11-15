@@ -16,10 +16,6 @@ pub(crate) mod registry;
 #[cfg(test)]
 mod hosted_tests;
 #[cfg(test)]
-pub(crate) mod inbox_tests;
-#[cfg(test)]
 mod settings_tests;
-#[cfg(test)]
-pub(crate) mod standing_tests;
 #[cfg(test)]
 mod tests;

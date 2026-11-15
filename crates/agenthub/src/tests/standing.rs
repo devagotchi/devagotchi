@@ -4,7 +4,7 @@
 //! command under the same label still waits for the person, and steps a person keeps
 //! approving are offered.
 
-use super::{
+use crate::{
     Actor, Board,
     approval::{self, Ask, SUGGEST_AFTER, Standing, Verdict},
 };

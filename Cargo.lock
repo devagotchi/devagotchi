@@ -863,6 +863,7 @@ dependencies = [
 name = "devagotchi-agenthub"
 version = "0.1.0"
 dependencies = [
+ "axum",
  "devagotchi-connectors",
  "devagotchi-contracts",
  "devagotchi-store",

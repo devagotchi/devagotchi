@@ -38,5 +38,7 @@ reqwest = { version = "0.13", default-features = false, features = ["rustls", "j
 percent-encoding = "2"
 
 [dev-dependencies]
+# A webhook endpoint for the wake tests.
+axum = { version = "0.8", default-features = false, features = ["http1", "tokio"] }
 devagotchi-store = { workspace = true, features = ["testing"] }
 tempfile = { workspace = true }

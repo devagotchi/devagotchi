@@ -1,43 +1,22 @@
 //! AgentHub as the hub serves it: the board command line against a real hub (`mod bound`), a
-//! new board's getting-started steps from the hub's site, and the fixture the inbox and
-//! standing-approval tests share with the hosted board's. The protocol itself is AgentHub's
+//! new board's getting-started steps from the hub's site. The protocol itself is AgentHub's
 //! own tests (`crates/agenthub/src/tests/`).
-
-use std::sync::{
-    Arc,
-    atomic::{AtomicI64, Ordering},
-};
 
 use super::{Actor, Board, Filter, NewTicket};
 
+/// A local board in a directory of its own, for the getting-started tests.
 pub(super) struct Fixture {
     pub(super) board: Board,
-    now: Arc<AtomicI64>,
     _dir: tempfile::TempDir,
 }
 
 pub(super) fn fixture() -> Fixture {
     let dir = tempfile::tempdir().expect("tempdir");
-    let now = Arc::new(AtomicI64::new(1_700_000_000_000));
-    let clock = now.clone();
-    let board = Board::open_with_clock(
-        &dir.path().join("board.sqlite3"),
-        "devagotchi",
-        Arc::new(move || clock.load(Ordering::SeqCst)),
-    )
-    .expect("open board");
-    Fixture {
-        board,
-        now,
-        _dir: dir,
-    }
+    let board = Board::open(&dir.path().join("board.sqlite3"), "devagotchi").expect("open board");
+    Fixture { board, _dir: dir }
 }
 
 impl Fixture {
-    fn advance(&self, ms: i64) {
-        self.now.fetch_add(ms, Ordering::SeqCst);
-    }
-
     fn new_ticket(&self, actor: &Actor<'_>, title: &str) -> String {
         self.board
             .create(
@@ -610,10 +589,4 @@ fn a_new_board_starts_with_the_getting_started_steps_once() {
     );
     assert_eq!(used.board.list(&Filter::default()).expect("list").len(), 1);
     assert!(f.board.verify_chain().expect("chain").ok);
-}
-
-#[test]
-fn a_kind_approved_ahead_of_time_is_approved_the_moment_it_is_asked() {
-    let f = fixture();
-    super::standing_tests::standing_approvals_hold(&f.board, Some(&|ms| f.advance(ms)));
 }

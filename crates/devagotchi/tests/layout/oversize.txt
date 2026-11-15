@@ -24,10 +24,9 @@
 768	crates/hub/src/accounts/tenants/tests.rs
 919	crates/hub/src/accounts/tests.rs
 681	crates/hub/src/accounts/workflows.rs
-853	crates/hub/src/agenthub/hosted_tests.rs
 626	crates/hub/src/agenthub/issue_lifecycle/tests.rs
-3070	crates/hub/src/agenthub/mcp/mod.rs
-619	crates/hub/src/agenthub/tests.rs
+3003	crates/hub/src/agenthub/mcp/mod.rs
+592	crates/hub/src/agenthub/tests.rs
 1017	crates/hub/src/ai.rs
 651	crates/hub/src/ai/tests.rs
 575	crates/hub/src/analytics/tests.rs

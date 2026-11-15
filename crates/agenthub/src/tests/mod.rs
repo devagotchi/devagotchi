@@ -55,7 +55,28 @@ impl Fixture {
 
 mod anchors;
 mod approvals;
+mod hosted;
+mod hosted_lifecycle;
+mod inbox;
 mod lanes;
 mod schema;
+mod standing;
 mod updates;
 mod workflow;
+
+/// A new database on the test Postgres with AgentHub's tables, or `None` without one.
+pub(super) async fn postgres() -> Option<devagotchi_store::testing::TestStore> {
+    devagotchi_store::testing::postgres_with(&[&crate::migrations::MIGRATIONS]).await
+}
+
+/// The stores a test runs on: [`postgres`], or none.
+pub(super) async fn stores() -> Vec<devagotchi_store::testing::TestStore> {
+    postgres().await.into_iter().collect()
+}
+
+/// The board change channel a hosted board notifies, heard on `url`.
+pub(super) async fn board_changes(url: &str) -> sqlx::postgres::PgListener {
+    let mut listener = sqlx::postgres::PgListener::connect(url).await.unwrap();
+    listener.listen("devagotchi_board_changes").await.unwrap();
+    listener
+}
