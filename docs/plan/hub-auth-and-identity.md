@@ -1,5 +1,10 @@
 # Hub auth and identity
 
+> **Superseded 2026-11-15 (increment 147, free-edition R3).** `auth.mode devagotchi` and its
+> code (`oauth.rs`, `identity.rs`, `setup-code`, the `*.sqlite3` stores) are deleted. A hub
+> has one account system, `auth.mode hub`, in Postgres: [docs/auth.md](../auth.md). This file is
+> kept as the history of that design; nothing in it describes the code.
+
 Plan for Devagotchi's own accounts and its own OAuth authorization server. Nomen and shippin.cloud are other products. They may be offered as "sign in with" and nothing more. The hub must serve with none of them configured.
 
 This file is the design the implementation follows. It is grounded in the tree as of the commit that added the verdict. Production `hub.json` is not in the repository.

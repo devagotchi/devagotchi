@@ -454,7 +454,7 @@ PY
         } | write_as_user "$HUB_CONFIG" 0600
         HUB_CHANGED=1
         echo "    wrote $HUB_CONFIG: listen $LISTEN, public_url $PUBLIC_URL, auth ${AUTH_MODE:-dev}, storage Postgres, ${#board_names[@]} boards, $(( ${#PEOPLE[@]} + ${#AGENTS[@]} )) grants"
-        echo "    machines join by adding {\"name\": \"<device>\", \"link\": true} to \"brokers\" and a grant, then devagotchi hub enroll"
+        echo "    machines join by adding {\"name\": \"<device>\", \"link\": true} to \"brokers\" and a grant, then devagotchi hub enroll --config $HUB_CONFIG --device <device>"
     fi
 
     # ---- tokens: minted here, shown once, never logged (dev mode only; with an identity

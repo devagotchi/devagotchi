@@ -1,5 +1,10 @@
 # Devagotchi identity
 
+> **Superseded 2026-11-15 (increment 147, free-edition R3).** `auth.mode devagotchi` and its
+> code (`oauth.rs`, `identity.rs`, `setup-code`, the `*.sqlite3` stores) are deleted. A hub
+> has one account system, `auth.mode hub`, in Postgres: [docs/auth.md](auth.md). This file is
+> kept as the history of that design; nothing in it describes the code.
+
 One account system, on the hub, that an AI can open and a person can claim. Nomen is a way in, not the account. This is the model for the hosted service at devagotchi.com and for any hub in `auth.mode` `devagotchi`. It is written from the hub code (commit `190978ae`) and from the passkey work on `main` (`crates/hub/src/accounts.rs`, `web/passkeys.rs`, `devagotchi hub owner`). Hosts and container ids are not part of this model; `docs/deploy.md` says where an operator names them.
 
 Nothing in this document deploys.

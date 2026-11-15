@@ -338,11 +338,10 @@ second sender. The boundaries it sits inside:
   comes from the environment (`password_env`, set from the secret store) or a 0600 file
   (`password_file`). TLS from the first byte (`smtps://…:465`) or STARTTLS (`smtp://…:587`);
   plain SMTP only to this machine's loopback, for tests. Nothing logs the password or a body.
-- **Two account systems, one sender.** `auth.mode hub` sends through `auth.email`.
-  `auth.mode devagotchi` has no sender: its magic link is `local.deliver` `off` or `log` (the
-  journal and `{state}/login-outbox/`). [auth.md](auth.md) says so; "no SMTP client in the hub
-  today" in [plan/hub-auth-and-identity.md](plan/hub-auth-and-identity.md) is that plan's
-  history, not current status.
+- **One account system, one sender.** `auth.mode hub` sends through `auth.email`
+  (`auth.mode devagotchi`, which had none, was deleted in increment 147). "No SMTP client in
+  the hub today" in [plan/hub-auth-and-identity.md](plan/hub-auth-and-identity.md) is that
+  plan's history, not current status.
 
 Where an operator configures it, from the outside in. Each is the place its neighbours
 (providers, operators, analytics) are already configured; none is new:

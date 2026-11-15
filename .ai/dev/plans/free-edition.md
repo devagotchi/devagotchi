@@ -121,7 +121,7 @@ settled in R1 with a test, not assumed.
 | R0 | Extend `.ai/patterns/layout.md`: the front-door sections (*Owns*, *Serves*, *Settings*, *Depends on*) and table prefixes; a test that every migration's tables carry a domain prefix | the test fails on an unprefixed table; the pattern doc diff | done in increment 145 (receipt below) |
 | R1 | AgentHub as `devagotchi/agenthub` (new public repo), pulled in as a submodule at `crates/agenthub`, owning its `board_*` migrations; the hub's `agenthub/` folder becomes its MCP and page wiring only | AgentHub's own CI runs its tests on Postgres; this repo builds with the submodule | not started |
 | R2 | [structure-cleanup](structure-cleanup.md) S1 to S4, reconciled with #184 first (its open item); `crates/core` becomes `machine-engine` | each step's own evidence there | not started |
-| R3 | Postgres only: machines, push, audit, browser sessions, Nomen sign-ins move into their domains' tables; `auth.mode devagotchi`, the store's SQLite backend and twin migrations, and the hub's SQLite board fallback are deleted | a hub test runs `hub serve` with every feature exercised and finds no `*.sqlite3` in the state directory; `grep -rln rusqlite crates/hub crates/store` empty | not started |
+| R3 | Postgres only: machines, push, audit, browser sessions, Nomen sign-ins move into their domains' tables; `auth.mode devagotchi`, the store's SQLite backend and twin migrations, and the hub's SQLite board fallback are deleted | a hub test runs `hub serve` with every feature exercised and finds no `*.sqlite3` in the state directory; `grep -rln rusqlite crates/hub crates/store` empty | in progress, increment 147 (#195): machines, push, audit, browser sessions and Nomen sign-ins on Postgres; `auth.mode devagotchi`, the SQLite backend and twin migrations deleted; every table prefixed (receipt below). Left: the hub's SQLite board fallback and the rusqlite in `crates/hub` (board CLI, board import, `ai` journal), which move out with R1/R2 |
 | R4 | `tenancy` as its own crate, out of the default build; a one-owner hub has no tenant code in its binary | the default binary's symbols carry no `tenancy`; a hub built with it passes the tenant tests | not started |
 | U0 | The UI contract: each domain's pages listed in its front door; `/admin` grouped by domain; the CI check that every config key has a page or is a listed deploy-time value | the check fails on a config key with neither | not started |
 | S0 | Nomen accepts Client ID Metadata Documents (public client, PKCE, redirect checked against the hub's document); in `nomen-react-go`, with its tests | Nomen's tests; a hub on a fresh domain signs in through id.shippin.cloud with nothing registered | not started |
@@ -159,6 +159,17 @@ passed, including `every_table_in_the_hub_schema_carries_its_domain_prefix`. Wit
 `connections` taken off `UNPREFIXED` it fails naming `connections`; restored, it passes.
 `cargo test -p devagotchi --test layout`: 7 passed (`crates/store/src/lib.rs` 900 to 874,
 its tests moved to `src/tests.rs`).
+
+R3, increment 147 so far (Windows 11, Postgres 18 in Docker, 2026-11-15; PR #195 at
+`69d1c7d`): `cargo test --no-fail-fast --features devagotchi-store/testing` with
+`DEVAGOTCHI_TEST_POSTGRES_URL` set: 641 passed, 0 failed (hub 504, store 3, layout 7,
+one_binary 7). `python tests/e2e.py` on a new database: E2E PASSED, 291 checks. Docker: the
+compose stack first ran `ghcr.io/devagotchi/devagotchi:main` (`ca35ac0`); its hub container
+was replaced by this branch's image on the same database and volume: migrations to 0029
+applied; one row seeded in each of the five old-named tables came through under its new name,
+no old name and no unprefixed table left, `api_key_tenant` and `machine_pushes_of` answer
+(also as `devagotchi_hub`), row-level security forced; `/healthz` ok, `tenant_rls` true, audit
+chain verifying on Postgres; the old hub's `*.sqlite3` files untouched since it stopped.
 
 ## Delivery
 

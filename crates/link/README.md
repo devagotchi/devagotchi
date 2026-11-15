@@ -15,7 +15,7 @@ AI client ──▶ hub (/mcp) ──call──▶ /link ◀──outbound WSS�
 On the hub host, issue a one-time code for the broker name (valid 15 minutes, one use):
 
 ```bash
-devagotchi-hub enroll --state-dir ~/.local/state/devagotchi-hub --device gus
+devagotchi hub enroll --state-dir ~/.local/state/devagotchi-hub --config ~/.config/devagotchi/hub.json --device gus
 # dvg-3f0c…   (stdout, shown once)
 ```
 
