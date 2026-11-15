@@ -3,9 +3,10 @@
 //!
 //! # Owns
 //!
-//! Today the machine registry is still a SQLite file in the state directory
-//! (`devices.sqlite3`: machines, join codes, phones' push subscriptions); free-edition R3 moves
-//! it to Postgres tables prefixed `machine_` (push subscriptions to `push_`).
+//! In the hub's Postgres (migration 0026, Postgres only): `machine_devices` (each machine's
+//! name, key, owner, revocation) and `machine_enroll_codes` (one-time join codes, as SHA-256);
+//! `push_subscriptions` (people's phones, `devices/push_subscriptions.rs`) until the notify
+//! domain takes them. Nothing in the state directory.
 //!
 //! # Serves
 //!
@@ -28,6 +29,7 @@
 //! reaches its people's phones), `crate::config`, `crate::site` (the words), the `link` and
 //! `contracts` crates.
 
+pub(crate) mod cli;
 pub mod devices;
 pub mod downloads;
 pub mod files;

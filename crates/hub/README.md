@@ -240,7 +240,7 @@ Stop the hub and CLI/agent writers, take a backup of the source board including 
 SQLite's backup facilities, and use the backup as `--source`. Preview first:
 
 ```text
-devagotchi hub import-board --state-dir ABS_PATH --config ABS_JSON --source ABS_SQLITE --tenant t-UUID
+devagotchi hub import-board --config ABS_JSON --source ABS_SQLITE --tenant t-UUID
 ```
 
 The tenant must already exist and is selected explicitly; it is never inferred from a
@@ -355,9 +355,9 @@ opens on the machine. The device proves its enrolled Ed25519 key over a fresh ch
 the hub then sends one call per routed request and waits up to 30 s for the answer.
 
 ```bash
-devagotchi hub enroll  --state-dir DIR --device gus   # one-time code, 15 minutes, stdout only; supersedes older ones
-devagotchi hub revoke  --state-dir DIR --device gus   # link closes within 2 s; pending codes cancelled
-devagotchi hub devices --state-dir DIR                # enrolled machines, JSON
+devagotchi hub enroll  --state-dir DIR --config HUB_JSON --device gus   # one-time code, 15 minutes, stdout only; supersedes older ones
+devagotchi hub revoke  --state-dir DIR --config HUB_JSON --device gus   # link closes within 2 s; pending codes cancelled
+devagotchi hub devices --state-dir DIR --config HUB_JSON                # enrolled machines, JSON
 ```
 
 ### Add a machine with one line
@@ -481,24 +481,15 @@ A linked broker that is not connected answers `broker_offline`; one that never e
 
 ## Authentication
 
-Two modes give the hub accounts of its own, side by side in the code; a hub runs the one its
-config names, and they share no tables or routes:
-
-- `auth.mode` `hub` (below): passkey accounts in SQLite or Postgres (`src/store.rs`), the
-  hub's own OAuth 2.1 server for AI clients at `/oauth/*` (32b), and the browser claim of a
-  new hub (`/claim`, 16c). This is the mode `deploy/compose/` runs.
-- `auth.mode` `devagotchi` (PR #79): the hub is the authorization server at `/register`,
-  `/authorize`, `/token` and `/device`, accounts (`dg_…`) live in `identities.sqlite3`, an AI
-  can open a provisional account that a person claims later, and Nomen is an optional
-  "sign in with". Operator detail is [docs/auth.md](../../docs/auth.md).
-
-Each mounts its own `/claim` and `/.well-known/oauth-authorization-server`; the router never
-mounts both (`app_builds_in_every_auth_mode` in `src/lib.rs`).
+The hub has one account system, `auth.mode` `hub` (below): accounts in the hub's Postgres
+(`src/store.rs`), the hub's own OAuth 2.1 server for AI clients at `/oauth/*` (32b), and the
+browser claim of a new hub (`/claim`, 16c). This is the mode `deploy/compose/` runs. The other
+modes check tokens another issuer made and keep no accounts. Overview:
+[docs/auth.md](../../docs/auth.md).
 
 | Mode | Bearer token | Who it is for |
 |---|---|---|
 | `hub` | The hub's own `dgh_` tokens, issued to AI clients at `/oauth/token` (32b); with an optional `nomen` block, Nomen tokens as in `nomen` mode. People sign in with local email/password, optional providers, or passkeys | Any hub that should work with nothing else deployed (D25), devagotchi.com included |
-| `devagotchi` | ES256 JWTs the hub signs and checks locally (`src/oauth.rs`); upstream OpenID Connect providers are optional sign-in buttons | A hub whose AIs open accounts for people who claim them later ([docs/auth.md](../../docs/auth.md)) |
 | `nomen` | Any Nomen access token, opaque or JWT, checked by asking Nomen (introspection) as the hub's own API application | Shippin: your sign-in at console.shippin.cloud, relayed by mcp.shippin.cloud; `shippin-bridge` sessions |
 | `oidc` | A JWT from any OpenID Connect issuer: `iss`, `exp`, `aud`, `sub` required; RS256/384/512 or ES256/384; keys from the issuer's JWKS, refreshed on an unknown `kid` at most once a minute | Self-hosters whose identity provider issues JWT access tokens |
 | `dev` | A static token from a 0600 file `{ "<token>": "<subject>" }` | Tests only (plan D21): accepted when `public_url` is loopback http; a hub at an address people reach refuses to start with it |
@@ -509,22 +500,26 @@ provider cannot be reached the hub answers `503`, never `401`.
 
 ## The store
 
-The storage layer supports Postgres and SQLite fixtures, but the running hub now requires
-Postgres for its accounts and boards (ADR 0001). Any number of hub instances share it.
-SQLite remains available for standalone local boards, local journals and offline client
-storage, not hosted account/board authority. Where the hub store is, first match wins:
+The hub keeps everything in Postgres (ADR 0001): accounts, boards, machines, push
+subscriptions, the audit chain, browser sessions and Nomen sign-ins. Its state directory holds
+keys only. Any number of hub instances share the database. SQLite stays where ADR 0002 puts
+it: standalone local boards, the machine's job journal and a client's offline cache. Where the
+hub's Postgres is, first match wins:
 
 1. `DEVAGOTCHI_HUB_STORAGE_URL` in the environment: how a Postgres password arrives, from
    the secret store (Vaultix), never from a file.
 2. The config's `"storage": { "url": "postgres://hub@db.internal/devagotchi" }` (no password:
    one in the config is refused).
-3. Missing Postgres configuration, including the old SQLite default, is refused at startup.
+3. Neither: `hub serve` refuses to start, and so do the operator commands (`hub enroll`,
+   `revoke`, `devices`, `owner` …), which read the same `--config`.
 
-On Postgres the hub's tables live in the `devagotchi` schema, named by their part of the hub:
-`auth_*` (accounts, passkeys, sessions, links, linked sign-ins, email links), `oauth_*`,
-`tenancy_*` (tenants and their event chains), `hub_*` (its keys) and `board_*`
-(scoped board state, append-only history and the analytics outbox). Migration 0007 moved and
-renamed them once. On a Postgres something else also uses, `"storage": { "schema":
+The hub's tables live in the `devagotchi` schema, each named by its domain's prefix
+(`.ai/patterns/layout.md` rule 8, held by a test): `auth_*` (accounts, passkeys, sessions,
+links, linked sign-ins, email links, passwords, preferences, API keys, sign-in settings,
+browser sessions, Nomen sign-ins), `oauth_*`, `tenancy_*` (tenants and their event chains),
+`org_*` and `project_*`, `hub_*` (its keys), `machine_*` (machines and join codes), `push_*`,
+`signal_*`, `audit_*`, `analytics_*`, `connector_*` (connector keys) and `board_*` (scoped
+board state, append-only history and the analytics outbox). On a Postgres something else also uses, `"storage": { "schema":
 "devagotchi_hub" }` (or `DEVAGOTCHI_HUB_STORAGE_SCHEMA`) keeps the migration record in a schema
 of its own, made if missing, and `public` stays as it was. One database holds one hub. On a
 Supabase project this matters: Supabase's REST API serves the `public` schema to anyone with
@@ -532,9 +527,8 @@ the project's public key, so the hub's tables never go there. Use the project's 
 pooler** connection string (port 5432): the transaction pooler (6543) does not keep a session,
 and the direct `db.<ref>.supabase.co` host answers on IPv6 only.
 
-The schema is migrated at start (`migrations/<backend>/`, kept in step). On Postgres every
-write runs SERIALIZABLE and runs again when it collided with another instance's; on SQLite
-it takes the write lock up front.
+The schema is migrated at start (`crates/store/migrations/postgres/`). Every write runs
+SERIALIZABLE and runs again when it collided with another instance's.
 
 **Tenants are kept apart by the database (Postgres).** `tenant_id` leads the key of every
 table that holds a tenant's rows, and a child row's foreign key is `(tenant_id, account)`, so
@@ -556,8 +550,6 @@ other tenant's rows.
   NOBYPASSRLS; GRANT devagotchi_hub TO <login role>;` once, before the hub starts.
 - **A hosted hub** (`tenancy.mode multi`) on Postgres does not start unless its queries are
   held to row-level security. A one-owner hub starts either way and reports it in `/healthz`.
-- **SQLite fixtures** have no row-level security. They exercise the shared account/storage
-  contract in tests; the running hub will not use them as its authority.
 - **Rolling back across migration 0007** is the one rollback a new image cannot do by
   itself: an older hub does not read the moved tables. Restore the backup `update.sh` takes
   before every deploy ([deploy/compose/README.md](../../deploy/compose/README.md#rolling-back-across-the-tenant-migration-0007)).
@@ -990,8 +982,8 @@ How it holds up:
   weaker than an MCP call, and Nomen down is a 503 page, never "not accepted".
 - The browser gets only a random session id, in a `__Host-` cookie (`Secure`, `HttpOnly`,
   `SameSite=Lax`). The hub keeps only its SHA-256, and Nomen's tokens sealed on disk:
-  AES-256-GCM under `session.key` (0600) in the state directory, in `sessions.sqlite3`
-  (0600). A restart signs nobody out, so a phone that turned on notifications opens a
+  AES-256-GCM under `session.key` (0600) in the state directory, in `auth_web_sessions`.
+  A restart signs nobody out, so a phone that turned on notifications opens a
   push straight onto Approve.
 - The hub asks for `offline_access`. With a refresh token, a session lasts up to 90 days
   and ends after 30 days unused. The hub renews the access token through Nomen as it runs
@@ -1147,7 +1139,7 @@ fact it changed), so a signals sink (`docs/signals.md`) sees people's choices as
 
 ## Audit and health
 
-Every routed call appends one row to `audit.sqlite3` in the state directory: time, subject,
+Every routed call appends one row to `audit_entries` in the hub's Postgres: time, subject,
 how it authenticated, tool, broker, operation id, outcome, `prev_hash`, `hash`. A call that
 cannot be recorded is refused. `GET /healthz` reports each broker's reachability and walks
 the chain (`{"ok": true, "brokers": [...], "audit": {"entries": N, "ok": true, "head": "…"}}`).

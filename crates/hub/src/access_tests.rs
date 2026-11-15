@@ -2,7 +2,7 @@
 //! serves (`accounts/access.rs`, `tenant_access.rs`): a person waiting to be let in is
 //! answered and not served on every write path, an operator lets them in and their next
 //! call works, sign-up opening lets everyone in on their next call, and a plan's limits
-//! hold at the boundary. On SQLite, and on Postgres when the test server is set (CI).
+//! hold at the boundary. On the test Postgres (`DEVAGOTCHI_TEST_POSTGRES_URL`; CI sets it).
 
 use std::path::Path;
 
@@ -38,7 +38,7 @@ fn plans(value: &mut Value) {
 
 /// A hosted hub on `store` serving the site `edit` makes; an account nobody secured adds
 /// ten machines, so the plan's limit is the one reached.
-async fn hub_with(store: Option<&str>, edit: fn(&mut Value)) -> Hosted {
+async fn hub_with(store: Option<&str>, edit: fn(&mut Value)) -> Option<Hosted> {
     hosted_with(store, move |dir, _| {
         let site = site_dir(dir, "site", edit);
         json!({
@@ -62,17 +62,18 @@ async fn whoami(hub: &Hosted, person: &mut Person) -> Value {
 }
 
 async fn stores() -> Vec<Option<String>> {
-    let mut out = vec![None];
-    if let Some(url) = store::testing::empty_postgres().await {
-        out.push(Some(url));
-    }
+    let out: Vec<Option<String>> = crate::store::testing::empty_postgres()
+        .await
+        .into_iter()
+        .map(Some)
+        .collect();
     out
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_waiting_tenant_is_answered_not_served_until_an_operator_lets_it_in() {
     for store in stores().await {
-        waiting(hub_with(store.as_deref(), early_access).await).await;
+        waiting(or_skip!(hub_with(store.as_deref(), early_access))).await;
     }
 }
 
@@ -137,6 +138,7 @@ async fn waiting(hub: Hosted) {
     let code = hub
         .devices
         .issue_owned_code(&subject, &stored, [7; 16], 16)
+        .await
         .unwrap();
     let enrolled = hub
         .http
@@ -149,7 +151,7 @@ async fn waiting(hub: Hosted) {
     let enrolled: Value = enrolled.json().await.unwrap();
     assert_eq!(enrolled["error"], "early_access");
     assert!(
-        hub.devices.get(&stored).unwrap().is_none(),
+        hub.devices.get(&stored).await.unwrap().is_none(),
         "nothing joined"
     );
     // Its pages say where it stands.
@@ -203,9 +205,9 @@ async fn waiting(hub: Hosted) {
     );
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn opening_sign_up_lets_everyone_waiting_in_and_closing_it_puts_nobody_back() {
-    let hub = hub_with(None, early_access).await;
+    let hub = or_skip!(hub_with(None, early_access));
     let mut early = hub.first_connect("Claude").await;
     assert_eq!(whoami(&hub, &mut early).await["access"], "waiting");
     let refusal = hub.call(&mut early, "machines", json!({})).await;
@@ -248,7 +250,7 @@ async fn opening_sign_up_lets_everyone_waiting_in_and_closing_it_puts_nobody_bac
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_plans_limits_hold_at_the_boundary_and_name_the_plan() {
     for store in stores().await {
-        limits(hub_with(store.as_deref(), plans).await).await;
+        limits(or_skip!(hub_with(store.as_deref(), plans))).await;
     }
 }
 
@@ -341,11 +343,11 @@ async fn limits(hub: Hosted) {
     limited(&refused_now, &["Free"]);
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_tenant_let_in_hears_so_by_email_when_it_has_a_verified_address() {
     let mail = crate::mail::stub::start("hub").await;
     let mail_url = mail.url.clone();
-    let hub = hosted_with(None, |dir, _| {
+    let hub = or_skip!(hosted_with(None, |dir, _| {
         let site = site_dir(dir, "site", early_access);
         let password = dir.join("smtp-password");
         std::fs::write(&password, "mail-pass\n").unwrap();
@@ -359,8 +361,7 @@ async fn a_tenant_let_in_hears_so_by_email_when_it_has_a_verified_address() {
             "auth": { "email": { "smtp_url": mail_url, "password_file": password.to_string_lossy(),
                                  "from": "Hub <hub@hub.test>" } }
         })
-    })
-    .await;
+    }));
     let mailer = web::Providers::from_config(&hub.config)
         .unwrap()
         .email

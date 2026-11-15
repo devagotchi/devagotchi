@@ -231,7 +231,7 @@ impl Hub {
         })
     }
 
-    fn record_offers<T>(
+    async fn record_offers<T>(
         &self,
         subject: &Subject,
         tool: &str,
@@ -241,7 +241,7 @@ impl Hub {
             Ok(_) => "ok".to_string(),
             Err(Json(error)) => error.code.clone(),
         };
-        self.record(subject, tool, "", "", &outcome)?;
+        self.record(subject, tool, "", "", &outcome).await?;
         result
     }
 }
@@ -264,7 +264,9 @@ impl Hub {
     ) -> Result<Json<OffersView>, Json<BridgeError>> {
         let subject = self.subject(&context)?;
         let result = self.offers_view(&subject).await;
-        self.record_offers(&subject, "offers", result).map(Json)
+        self.record_offers(&subject, "offers", result)
+            .await
+            .map(Json)
     }
 
     #[tool(
@@ -287,6 +289,7 @@ impl Hub {
         let subject = self.subject(&context)?;
         let result = self.accept(&subject, &input.consent).await;
         self.record_offers(&subject, "offers_accept", result)
+            .await
             .map(Json)
     }
 }

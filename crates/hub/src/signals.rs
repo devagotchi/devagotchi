@@ -29,7 +29,7 @@ use sha2::Sha256;
 use crate::{
     audit::Audit,
     config::{SinkConfig, SinkFields},
-    store::{Backend, Store, transaction},
+    store::{Store, transaction},
 };
 
 #[cfg(test)]
@@ -203,12 +203,6 @@ impl Sink {
         audit: Arc<Audit>,
         env: impl Fn(&str) -> Option<String>,
     ) -> BridgeResult<Self> {
-        if store.backend() != Backend::Postgres {
-            return Err(BridgeError::new(
-                "invalid_config",
-                "signal sinks read the hub's Postgres; this store is not Postgres",
-            ));
-        }
         let read = |name: &Option<String>| -> BridgeResult<Option<String>> {
             match name {
                 None => Ok(None),
@@ -501,26 +495,23 @@ impl Sink {
         loop {
             let after = self.position(Source::Audit, "").await?.max(0) as u64;
             let room = (BATCH - batch.signals.len()).max(1);
-            let audit = self.audit.clone();
-            let rows = tokio::task::spawn_blocking(move || audit.after(after, room))
-                .await
-                .map_err(|join| BridgeError::new("audit_read", join.to_string()))??;
-            let Some(last) = rows.last().map(|row| row.0) else {
+            let rows = self.audit.after(after, room).await?;
+            let Some(last) = rows.last().map(|row| row.seq) else {
                 return Ok(());
             };
             let full = rows.len() == room;
-            for (seq, at, subject, via, tool, broker, operation, outcome, hash) in rows {
+            for row in rows {
                 let mut signal = Signal::new(
-                    format!("audit:{seq}:{}", hash16(&hash)),
+                    format!("audit:{}:{}", row.seq, hash16(&row.hash)),
                     Source::Audit,
-                    format!("tool.{tool}"),
-                    rfc3339_ms(&at).unwrap_or(0),
+                    format!("tool.{}", row.tool),
+                    rfc3339_ms(&row.at).unwrap_or(0),
                 );
-                signal.actor = Some(subject);
-                signal.target = Some(broker).filter(|b| !b.is_empty());
-                signal.operation = Some(operation).filter(|o| !o.is_empty());
-                signal.outcome = Some(outcome);
-                signal.data = Some(json!({ "via": via }));
+                signal.actor = Some(row.subject);
+                signal.target = Some(row.broker).filter(|b| !b.is_empty());
+                signal.operation = Some(row.operation_id).filter(|o| !o.is_empty());
+                signal.outcome = Some(row.outcome);
+                signal.data = Some(json!({ "via": row.via }));
                 batch.signals.push(self.keep(signal));
             }
             batch

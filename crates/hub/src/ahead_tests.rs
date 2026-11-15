@@ -43,7 +43,7 @@ async fn labelled_restart(hub: &Hosted, ai: &mut Person, what: &str) -> Value {
 }
 
 async fn run(store: Option<&str>) {
-    let hub = hosted_with(store, |_, _| json!({})).await;
+    let hub = or_skip!(hosted_with(store, |_, _| json!({})));
     let mut alice = hub.first_connect("Claude").await;
     let bound = hub
         .call(&mut alice, "board_bind", json!({ "project": "site" }))
@@ -144,7 +144,4 @@ async fn run(store: Option<&str>) {
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_kind_approved_ahead_of_time_skips_the_phone_until_the_person_stops_it() {
     run(None).await;
-    if let Some(url) = crate::store::testing::empty_postgres().await {
-        run(Some(&url)).await;
-    }
 }

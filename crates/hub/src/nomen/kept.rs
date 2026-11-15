@@ -1,17 +1,18 @@
-//! Sign-ins Nomen confirmed, kept on disk so a hub restart during a Nomen outage does not
-//! sign everyone out (increment 27b). A row holds the SHA-256 of the token, never the
-//! token, with the account it proved and until when it may be honoured: the token's own
-//! expiry, at most 12 hours after Nomen last confirmed it. The hub reads the rows only
-//! while Nomen cannot be reached; when Nomen answers, its answer decides, and an answer
-//! that the token is no longer good deletes the row. A store that fails is logged and
-//! ignored: sign-in never depends on this file.
+//! Sign-ins Nomen confirmed, kept in the hub's Postgres (`auth_nomen_sign_ins`, migration
+//! 0028) so a hub restart during a Nomen outage does not sign everyone out (increment 27b). A
+//! row holds the SHA-256 of the token, never the token, with the account it proved and until
+//! when it may be honoured: the token's own expiry, at most 12 hours after Nomen last
+//! confirmed it. The hub reads the rows only while Nomen cannot be reached; when Nomen
+//! answers, its answer decides, and an answer that the token is no longer good deletes the
+//! row. A store that fails is logged and ignored: sign-in never depends on it.
 
-use std::{path::Path, sync::Mutex};
+use devagotchi_contracts::BridgeResult;
+use sqlx::Row;
 
-use devagotchi_contracts::{BridgeError, BridgeResult};
-use rusqlite::{Connection, params};
-
-use crate::auth::Subject;
+use crate::{
+    auth::Subject,
+    store::{Store, secs, transaction, unsecs},
+};
 
 /// One confirmed sign-in, as kept.
 pub(super) struct Kept {
@@ -23,60 +24,41 @@ pub(super) struct Kept {
 }
 
 pub(super) struct SignIns {
-    connection: Mutex<Connection>,
-}
-
-fn store_error(error: rusqlite::Error) -> BridgeError {
-    BridgeError::new("sign_in_store", error.to_string())
+    store: Store,
 }
 
 impl SignIns {
-    pub fn open(path: &Path) -> BridgeResult<Self> {
-        let connection = Connection::open(path).map_err(store_error)?;
-        // Losing the last write to a power cut costs one re-check with Nomen, nothing more.
-        connection
-            .execute_batch(
-                "PRAGMA journal_mode = WAL;
-                 PRAGMA synchronous = NORMAL;
-                 PRAGMA busy_timeout = 2000;
-                 CREATE TABLE IF NOT EXISTS confirmed (
-                   digest BLOB PRIMARY KEY,
-                   subject TEXT NOT NULL,
-                   name TEXT,
-                   org TEXT,
-                   confirmed_at INTEGER NOT NULL,
-                   honour_until INTEGER NOT NULL
-                 );",
-            )
-            .map_err(store_error)?;
-        Ok(Self {
-            connection: Mutex::new(connection),
-        })
+    pub fn new(store: Store) -> Self {
+        Self { store }
     }
 
     /// Every sign-in still honourable at `now`; lapsed rows are deleted first.
-    pub fn load(&self, now: u64) -> BridgeResult<Vec<Kept>> {
-        let connection = self.connection.lock().expect("sign-ins");
-        connection
-            .execute(
-                "DELETE FROM confirmed WHERE honour_until <= ?1",
-                params![now as i64],
+    pub async fn load(&self, now: u64) -> BridgeResult<Vec<Kept>> {
+        transaction!(&self.store, |connection| {
+            sqlx::query("DELETE FROM auth_nomen_sign_ins WHERE honour_until <= $1")
+                .bind(secs(now))
+                .execute(&mut *connection)
+                .await?;
+            let rows = sqlx::query(
+                "SELECT digest, subject, name, org, confirmed_at, honour_until
+                 FROM auth_nomen_sign_ins",
             )
-            .map_err(store_error)?;
-        let mut statement = connection
-            .prepare("SELECT digest, subject, name, org, confirmed_at, honour_until FROM confirmed")
-            .map_err(store_error)?;
-        let rows = statement
-            .query_map([], |row| {
-                let digest: Vec<u8> = row.get(0)?;
-                Ok((
+            .fetch_all(&mut *connection)
+            .await?;
+            let mut kept = Vec::new();
+            for row in &rows {
+                let digest: Vec<u8> = row.try_get("digest")?;
+                let Ok(digest) = <[u8; 32]>::try_from(digest.as_slice()) else {
+                    continue;
+                };
+                kept.push(Kept {
                     digest,
-                    Subject {
-                        id: row.get(1)?,
+                    subject: Subject {
+                        id: row.try_get("subject")?,
                         via: "nomen",
                         tenant: None,
-                        name: row.get(2)?,
-                        org: row.get(3)?,
+                        name: row.try_get("name")?,
+                        org: row.try_get("org")?,
                         provisional_until: None,
                         agent: None,
                         claim_code: None,
@@ -84,65 +66,49 @@ impl SignIns {
                         provisional_warning: false,
                         access: None,
                     },
-                    row.get::<_, i64>(4)?,
-                    row.get::<_, i64>(5)?,
-                ))
-            })
-            .map_err(store_error)?;
-        let mut kept = Vec::new();
-        for row in rows {
-            let (digest, subject, confirmed_at, honour_until) = row.map_err(store_error)?;
-            if let Ok(digest) = <[u8; 32]>::try_from(digest.as_slice()) {
-                kept.push(Kept {
-                    digest,
-                    subject,
-                    confirmed_at: confirmed_at.max(0) as u64,
-                    honour_until: honour_until.max(0) as u64,
+                    confirmed_at: unsecs(row.try_get("confirmed_at")?),
+                    honour_until: unsecs(row.try_get("honour_until")?),
                 });
             }
-        }
-        Ok(kept)
+            Ok(kept)
+        })
     }
 
     /// Keep (or refresh) a confirmation; lapsed rows go at the same time.
-    pub fn keep(&self, kept: &Kept) -> BridgeResult<()> {
-        let connection = self.connection.lock().expect("sign-ins");
-        connection
-            .execute(
-                "INSERT INTO confirmed (digest, subject, name, org, confirmed_at, honour_until)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6)
-                 ON CONFLICT(digest) DO UPDATE SET subject = excluded.subject, name = excluded.name,
-                   org = excluded.org, confirmed_at = excluded.confirmed_at,
-                   honour_until = excluded.honour_until",
-                params![
-                    kept.digest.as_slice(),
-                    kept.subject.id,
-                    kept.subject.name,
-                    kept.subject.org,
-                    kept.confirmed_at as i64,
-                    kept.honour_until as i64
-                ],
+    pub async fn keep(&self, kept: &Kept) -> BridgeResult<()> {
+        transaction!(&self.store, |connection| {
+            sqlx::query(
+                "INSERT INTO auth_nomen_sign_ins
+                   (digest, subject, name, org, confirmed_at, honour_until)
+                 VALUES ($1, $2, $3, $4, $5, $6)
+                 ON CONFLICT (digest) DO UPDATE SET subject = excluded.subject,
+                   name = excluded.name, org = excluded.org,
+                   confirmed_at = excluded.confirmed_at, honour_until = excluded.honour_until",
             )
-            .map_err(store_error)?;
-        connection
-            .execute(
-                "DELETE FROM confirmed WHERE honour_until <= ?1",
-                params![kept.confirmed_at as i64],
-            )
-            .map_err(store_error)?;
-        Ok(())
+            .bind(kept.digest.to_vec())
+            .bind(&kept.subject.id)
+            .bind(kept.subject.name.clone())
+            .bind(kept.subject.org.clone())
+            .bind(secs(kept.confirmed_at))
+            .bind(secs(kept.honour_until))
+            .execute(&mut *connection)
+            .await?;
+            sqlx::query("DELETE FROM auth_nomen_sign_ins WHERE honour_until <= $1")
+                .bind(secs(kept.confirmed_at))
+                .execute(&mut *connection)
+                .await?;
+            Ok(())
+        })
     }
 
     /// Nomen said this token is no longer good: never honour it again.
-    pub fn forget(&self, digest: &[u8; 32]) -> BridgeResult<()> {
-        self.connection
-            .lock()
-            .expect("sign-ins")
-            .execute(
-                "DELETE FROM confirmed WHERE digest = ?1",
-                params![digest.as_slice()],
-            )
-            .map_err(store_error)?;
-        Ok(())
+    pub async fn forget(&self, digest: &[u8; 32]) -> BridgeResult<()> {
+        transaction!(&self.store, |connection| {
+            sqlx::query("DELETE FROM auth_nomen_sign_ins WHERE digest = $1")
+                .bind(digest.to_vec())
+                .execute(&mut *connection)
+                .await?;
+            Ok(())
+        })
     }
 }

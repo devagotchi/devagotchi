@@ -18,11 +18,11 @@ use crate::{
     tenant_tests::{Hosted, hosted_with},
 };
 
-async fn hosted() -> Hosted {
+async fn hosted() -> Option<Hosted> {
     hosted_with(None, |_, _| json!({})).await
 }
 
-async fn neutral() -> Hosted {
+async fn neutral() -> Option<Hosted> {
     let dir = site::tests::neutral_dir();
     hosted_with(
         None,
@@ -105,7 +105,7 @@ const PUBLIC: [&str; 6] = ["/", "/docs", "/privacy", "/terms", "/support", "/con
 
 #[tokio::test]
 async fn every_route_answers_with_its_type_and_no_sign_in() {
-    let hub = hosted().await;
+    let hub = or_skip!(hosted());
     for (path, kind) in [
         ("/llms.txt", "text/plain; charset=utf-8"),
         ("/llms-full.txt", "text/plain; charset=utf-8"),
@@ -123,7 +123,7 @@ async fn every_route_answers_with_its_type_and_no_sign_in() {
 
 #[tokio::test]
 async fn robots_lets_every_crawler_read_the_public_pages_and_none_the_private_ones() {
-    let hub = hosted().await;
+    let hub = or_skip!(hosted());
     let (_, _, robots) = get(&hub, "/robots.txt").await;
     // One group for every crawler, AI crawlers included.
     assert_eq!(robots.matches("User-agent:").count(), 1, "{robots}");
@@ -172,7 +172,7 @@ async fn robots_lets_every_crawler_read_the_public_pages_and_none_the_private_on
 
 #[tokio::test]
 async fn the_sitemap_lists_the_public_pages_at_the_sites_own_address() {
-    let hub = hosted().await;
+    let hub = or_skip!(hosted());
     let (_, _, robots) = get(&hub, "/robots.txt").await;
     let (_, _, sitemap) = get(&hub, "/sitemap.xml").await;
     // The same on the marketing host, where each answers too, with no redirect.
@@ -213,7 +213,7 @@ async fn the_sitemap_lists_the_public_pages_at_the_sites_own_address() {
 
 #[tokio::test]
 async fn llms_txt_carries_this_hubs_address_and_the_steps_an_ai_follows() {
-    let hub = hosted().await;
+    let hub = or_skip!(hosted());
     let url = &hub.url;
     let (_, _, llms) = get(&hub, "/llms.txt").await;
     // The llmstxt.org shape: the name, a summary, details without headings, then file
@@ -302,7 +302,7 @@ async fn llms_txt_carries_this_hubs_address_and_the_steps_an_ai_follows() {
 
 #[tokio::test]
 async fn the_landing_pages_json_ld_parses_and_says_only_what_the_page_shows() {
-    let hub = hosted().await;
+    let hub = or_skip!(hosted());
     let url = &hub.url;
     let (_, _, html) = get(&hub, "/").await;
     let data = json_ld(&html);
@@ -370,7 +370,7 @@ async fn the_landing_pages_json_ld_parses_and_says_only_what_the_page_shows() {
 
 #[tokio::test]
 async fn every_public_page_says_what_it_is_where_it_lives_and_how_it_previews() {
-    let hub = hosted().await;
+    let hub = or_skip!(hosted());
     let url = &hub.url;
     for path in PUBLIC {
         let (_, _, html) = get(&hub, path).await;
@@ -441,7 +441,7 @@ async fn every_public_page_says_what_it_is_where_it_lives_and_how_it_previews() 
 
 #[tokio::test]
 async fn the_resource_metadata_and_the_mcp_instructions_name_the_product_and_its_docs() {
-    let hub = hosted().await;
+    let hub = or_skip!(hosted());
     let url = &hub.url;
     for path in [
         "/.well-known/oauth-protected-resource",
@@ -502,7 +502,7 @@ async fn no_other_product_is_named_in_the_site_any_page_or_the_mcp_surface() {
         assert_names_no_other_product(front.key(), &format!("{title}{body}"));
     }
     // Every page and file a hosted hub serves without sign-in.
-    let hub = hosted().await;
+    let hub = or_skip!(hosted());
     for path in [
         "/",
         "/docs",
@@ -533,7 +533,7 @@ async fn no_other_product_is_named_in_the_site_any_page_or_the_mcp_surface() {
 
 #[tokio::test]
 async fn a_neutral_site_shows_none_of_the_built_in_one_to_crawlers_or_agents() {
-    let hub = neutral().await;
+    let hub = or_skip!(neutral());
     let url = &hub.url;
     let (_, _, llms) = get(&hub, "/llms.txt").await;
     assert!(
@@ -581,7 +581,7 @@ async fn a_neutral_site_shows_none_of_the_built_in_one_to_crawlers_or_agents() {
 
 #[tokio::test]
 async fn each_file_answers_on_both_hosts_naming_its_own_and_the_app_steps_stay_on_the_hub() {
-    let hub = hosted().await;
+    let hub = or_skip!(hosted());
     let url = &hub.url;
     for (host, own) in [
         (None, url.to_string()),
@@ -625,11 +625,10 @@ async fn each_file_answers_on_both_hosts_naming_its_own_and_the_app_steps_stay_o
 
 #[tokio::test]
 async fn a_site_with_no_marketing_domain_keeps_everything_at_the_hubs_address() {
-    let hub = hosted_with(None, |dir, _| {
+    let hub = or_skip!(hosted_with(None, |dir, _| {
         let site = crate::offers_tests::builtin_with(dir, |v| v["product"]["domain"] = "".into());
         json!({ "site": { "dir": site.to_string_lossy() } })
-    })
-    .await;
+    }));
     let url = &hub.url;
     let (_, _, landing) = get(&hub, "/").await;
     assert!(landing.contains(&format!("<link rel=\"canonical\" href=\"{url}/\">")));
@@ -648,7 +647,7 @@ async fn a_site_with_no_marketing_domain_keeps_everything_at_the_hubs_address() 
 
 #[tokio::test]
 async fn a_neutral_site_is_at_its_own_domain_on_both_hosts() {
-    let hub = neutral().await;
+    let hub = or_skip!(neutral());
     let url = &hub.url;
     let site = "https://lumen.example.org";
     let (_, _, docs) = get_on(&hub, Some("lumen.example.org"), "/docs").await;

@@ -19,7 +19,7 @@ needs systemd as init; it is tested on Ubuntu 24.04 in CI, on x86_64 and on 64-b
 
 ```bash
 sudo ./install-devagotchi.sh --version 0.2.0 --grant /usr/bin/journalctl   # release archives, sha256 checked
-# on the hub host: devagotchi hub enroll --state-dir … --device wi1   (prints a one-time code)
+# on the hub host: devagotchi hub enroll --state-dir … --config … --device wi1   (prints a one-time code)
 sudo ./install-devagotchi.sh --hub https://hub.example.com --device wi1 --enroll   # paste the code
 # or, from "Add a machine" on the hub's /account page, one line that does all of the above:
 #   curl -fsSL https://hub.example.com/join/dvg-… | sudo sh   (extra installer flags: | sudo sh -s -- --workspace /srv)
@@ -68,7 +68,7 @@ sudo ./install-devagotchi.sh --role hub --version 0.2.1            # upgrade; co
 | Tokens | `~/.config/devagotchi/hub-tokens.json` (0600): `--person NAME` and `--agent NAME` mint a bearer token each, shown once and never logged; the hub reads the file on every request, so a new token needs no restart. A person may force-release and move tickets by hand; an agent never |
 | Boards | `--board NAME` initialises `~/projects/NAME` (or `--board NAME=/abs/dir`, which the account must be able to write) with `devagotchi board init --agents-md`, lists it in the config, and grants it to every `--person` / `--agent` of the same run |
 | Edge | `--caddy` installs Caddy from the distribution when missing, writes `/etc/caddy/devagotchi-hub.caddy` (`<host> { reverse_proxy 127.0.0.1:8787 }`), imports it from the Caddyfile, validates and reloads. An `http://host:port` public URL serves plain HTTP (tests, loopback) |
-| Machines | add `{ "name": "<device>", "link": true }` to `brokers` and a grant, restart the hub, `devagotchi hub enroll --state-dir ~/.local/state/devagotchi-hub --device <device>` as the account, and run the machine role there with `--enroll` |
+| Machines | add `{ "name": "<device>", "link": true }` to `brokers` and a grant, restart the hub, `devagotchi hub enroll --state-dir ~/.local/state/devagotchi-hub --config <hub config> --device <device>` as the account, and run the machine role there with `--enroll` |
 
 An agent's MCP config then points at `https://devagotchi.com/mcp` with its token as the bearer
 token; `whoami` shows what it may reach, `board_prime` is where a session starts. Shippin

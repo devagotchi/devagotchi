@@ -1,5 +1,4 @@
-//! Tenants and accounts made on first connect, on every store this run has (SQLite always,
-//! Postgres when the test server is set, as in CI).
+//! Tenants and accounts made on first connect, on the test Postgres (`DEVAGOTCHI_TEST_POSTGRES_URL`; CI sets it).
 
 use std::net::IpAddr;
 
@@ -58,14 +57,9 @@ fn tenant_ids_are_t_and_a_uuid() {
 }
 
 /// Where a hub from before tenants (migration 4) left its store, with an owner, a passkey
-/// and a session: SQLite always, Postgres when the test server is set.
+/// and a session, on the test Postgres (none without one).
 async fn stores_from_before_tenants() -> Vec<(String, tempfile::TempDir)> {
     let mut out = Vec::new();
-    let dir = tempfile::tempdir().unwrap();
-    out.push((
-        crate::store::sqlite_url(&dir.path().join("accounts.sqlite3")),
-        dir,
-    ));
     if let Some(url) = testing::empty_postgres().await {
         out.push((url, tempfile::tempdir().unwrap()));
     }
@@ -497,9 +491,7 @@ async fn on_postgres_the_hubs_role_reads_and_writes_one_tenants_rows_only() {
     // Database-enforced isolation: whatever a query of the hub's forgets, Postgres shows
     // the hub's role (`devagotchi_hub`, no superuser, no BYPASSRLS) the rows of the tenant
     // its transaction is scoped to and no other's, and none at all unscoped.
-    let Some(test) = testing::postgres().await else {
-        return;
-    };
+    let test = or_skip!(testing::postgres());
     let accounts = Accounts::open(test.store.clone())
         .await
         .unwrap()

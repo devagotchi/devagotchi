@@ -1,14 +1,13 @@
 //! The operator's analytics page (`/operator/analytics`) on a hosted hub, the whole router
 //! as it serves: only the operator sees it or its CSV (anyone else gets an unknown path's
 //! 404), the operator page links to it, and its counts and funnel move as people visit and
-//! connect. On SQLite, and on Postgres when the test server is set (CI).
+//! connect. On the test Postgres (`DEVAGOTCHI_TEST_POSTGRES_URL`; CI sets it).
 
 use serde_json::json;
 
 use super::operator_tests::{hub_on, operator_cookie};
 use crate::{
     site::tests::assert_no_brand,
-    store,
     tenant_tests::{Hosted, hosted_with},
 };
 
@@ -48,12 +47,13 @@ fn step(html: &str, step: &str) -> (String, String) {
 
 #[tokio::test]
 async fn the_operator_sees_the_counts_and_the_funnel_move_and_nobody_else_sees_anything() {
-    let mut stores = vec![None];
-    if let Some(url) = store::testing::empty_postgres().await {
-        stores.push(Some(url));
-    }
+    let stores: Vec<Option<String>> = crate::store::testing::empty_postgres()
+        .await
+        .into_iter()
+        .map(Some)
+        .collect();
     for store in stores {
-        dashboard(hub_on(store.as_deref(), None).await).await;
+        dashboard(or_skip!(hub_on(store.as_deref(), None))).await;
     }
 }
 
@@ -197,11 +197,10 @@ async fn visit_as_operator(hub: &Hosted, operator: &str) {
 
 #[tokio::test]
 async fn a_hub_that_counts_nothing_says_so_to_its_operator() {
-    let hub = hosted_with(
+    let hub = or_skip!(hosted_with(
         None,
         |_, _| json!({ "operators": ["github:42"], "analytics": { "enabled": false } }),
-    )
-    .await;
+    ));
     let operator = operator_cookie(&hub).await;
     let (status, html) = get(&hub, "/operator/analytics", Some(&operator)).await;
     assert_eq!(status, 200);
@@ -219,7 +218,7 @@ async fn a_hub_that_counts_nothing_says_so_to_its_operator() {
 async fn a_neutral_sites_analytics_page_names_only_that_site() {
     static NEUTRAL: std::sync::LazyLock<std::path::PathBuf> =
         std::sync::LazyLock::new(crate::site::tests::neutral_dir);
-    let hub = hub_on(None, Some(NEUTRAL.as_path())).await;
+    let hub = or_skip!(hub_on(None, Some(NEUTRAL.as_path())));
     visit(&hub, "/docs", None).await;
     hub.accounts
         .start_unsecured(std::net::IpAddr::from([198, 51, 100, 9]), "Claude")

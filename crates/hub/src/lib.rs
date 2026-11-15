@@ -4,6 +4,10 @@
 //! is its whole behaviour; `devagotchi hub` and `devagotchi board` are its names, and
 //! `devagotchi login`, `logout` and `whoami` (`account`) are how a machine signs in to one.
 
+// Tests that need the test Postgres skip without one: `or_skip!` (devagotchi-store).
+#[cfg(test)]
+#[macro_use]
+extern crate devagotchi_store;
 #[cfg(test)]
 mod access_tests;
 pub mod account;
@@ -26,7 +30,6 @@ pub mod extensions;
 mod hub;
 #[cfg(test)]
 mod hub_settings_tests;
-mod identity;
 #[cfg(test)]
 mod keys_tests;
 mod machines;
@@ -36,7 +39,6 @@ mod me_tests;
 mod nomen;
 #[cfg(test)]
 mod notes_tests;
-mod oauth;
 mod offers;
 #[cfg(test)]
 mod offers_tests;
@@ -74,20 +76,6 @@ use std::{
     time::Duration,
 };
 
-use axum::{
-    Json, Router,
-    extract::{ConnectInfo, Request, State, ws::WebSocketUpgrade},
-    http::{HeaderMap, HeaderValue, StatusCode, header},
-    middleware::{self, Next},
-    response::{IntoResponse, Response},
-    routing::get,
-};
-use devagotchi_contracts::{BridgeError, BridgeResult};
-use rmcp::transport::streamable_http_server::{
-    StreamableHttpServerConfig, StreamableHttpService, session::local::LocalSessionManager,
-};
-use serde::Deserialize;
-
 use crate::{
     audit::Audit,
     auth::{AuthError, Verifier},
@@ -96,8 +84,20 @@ use crate::{
     machines::devices::Devices,
     machines::link::Links,
 };
+use axum::{
+    Router,
+    extract::{ConnectInfo, Request, State, ws::WebSocketUpgrade},
+    http::{HeaderValue, StatusCode, header},
+    middleware::{self, Next},
+    response::{IntoResponse, Response},
+    routing::get,
+};
+use devagotchi_contracts::{BridgeError, BridgeResult};
+use rmcp::transport::streamable_http_server::{
+    StreamableHttpServerConfig, StreamableHttpService, session::local::LocalSessionManager,
+};
 
-pub const USAGE: &str = "Usage:\n  devagotchi hub serve --state-dir ABS_PATH --config ABS_JSON\n  devagotchi hub enroll --state-dir ABS_PATH --device NAME\n  devagotchi hub revoke --state-dir ABS_PATH --device NAME\n  devagotchi hub devices --state-dir ABS_PATH\n  devagotchi hub owner --state-dir ABS_PATH --config ABS_JSON [--name NAME] [--replace]\n  devagotchi hub setup-code --state-dir ABS_PATH --config ABS_JSON\n  devagotchi hub connect-nomen --state-dir ABS_PATH --config ABS_JSON --issuer URL --client-id ID --project ID\n  devagotchi hub check-site ABS_DIR\n  devagotchi hub check-mail --config ABS_JSON [--to ADDRESS]\n  devagotchi hub analytics-resend --config ABS_JSON\n  devagotchi board <command> …            the agents' board in this project (board --help)\n\nserve starts the bastion: an authenticated Streamable HTTP MCP endpoint at /mcp that routes\nrun and operation_start/get/read/cancel to brokers by name, with whoami, /healthz and RFC 9728\nprotected-resource metadata, and /link where machines' `devagotchi link` connects out.\nWith a `web` section, people sign in with Shippin at /account to see their machines;\n/api/v1/me returns the same view for a session or a bearer token. Put it behind the edge for TLS.\n\nenroll prints a one-time code (15 minutes) that binds one machine's key to NAME;\nrevoke cuts that machine off within seconds; devices lists enrolled machines.\n\nowner (auth.mode hub) prints a one-time link (15 minutes) that makes the owner's passkey:\nthe first time it makes the owner's account, with the config's owner id if it names one;\nagain, it adds a passkey to the owner and ends the owner's other sessions; with --replace the\nlink also removes every other passkey of the owner (to take the account back).\n\nsetup-code (auth.mode devagotchi) prints a one-time code (15 minutes) that makes the account\nclaimed with it the hub's owner at /claim, or the owner already on file.\n\nconnect-nomen joins this hub to a Nomen with its owner's approval: it shows a code to confirm\non any device through the devagotchi-cli app (--client-id) of the hub's Nomen project (--project),\nthen adds the hub's own apps to that project (the key Nomen makes is written to the state\ndirectory, owner-only, and nowhere else), sets auth, owner and web in the config, and keeps a\ncopy of the old one. --issuer is that Nomen's https URL; there is no built-in one.\n\ncheck-site reads and checks a site directory (crates/hub/README.md, \"The site\") as serve would, and\nsays what is wrong and where; serve follows its site.dir and serves a change once it checks out.\n\ncheck-mail (auth.mode hub) connects to auth.email's mail server as serve would, negotiates TLS and\nsigns in as its user, sending nothing; with --to it also sends one email that says this hub's mail\nworks, to read in that mailbox. It prints the server's refusal and never the password; the running\nhub reports the same in /healthz under mail.\n\nanalytics-resend marks every board event in the hub's Postgres to be sent to ClickHouse again,\nas after a ClickHouse that lost its data: the running hub sends them, and ClickHouse keeps one\nrow per event. /healthz reports the export under analytics.";
+pub const USAGE: &str = "Usage:\n  devagotchi hub serve --state-dir ABS_PATH --config ABS_JSON\n  devagotchi hub enroll --state-dir ABS_PATH [--config ABS_JSON] --device NAME\n  devagotchi hub revoke --state-dir ABS_PATH [--config ABS_JSON] --device NAME\n  devagotchi hub devices --state-dir ABS_PATH [--config ABS_JSON]\n  devagotchi hub owner --state-dir ABS_PATH --config ABS_JSON [--name NAME] [--replace]\n  devagotchi hub connect-nomen --state-dir ABS_PATH --config ABS_JSON --issuer URL --client-id ID --project ID\n  devagotchi hub check-site ABS_DIR\n  devagotchi hub check-mail --config ABS_JSON [--to ADDRESS]\n  devagotchi hub analytics-resend --config ABS_JSON\n  devagotchi board <command> …            the agents' board in this project (board --help)\n\nserve starts the bastion: an authenticated Streamable HTTP MCP endpoint at /mcp that routes\nrun and operation_start/get/read/cancel to brokers by name, with whoami, /healthz and RFC 9728\nprotected-resource metadata, and /link where machines' `devagotchi link` connects out.\nWith a `web` section, people sign in with Shippin at /account to see their machines;\n/api/v1/me returns the same view for a session or a bearer token. Put it behind the edge for TLS.\n\nenroll prints a one-time code (15 minutes) that binds one machine's key to NAME;\nrevoke cuts that machine off within seconds; devices lists enrolled machines. All three\nuse the hub's Postgres: the storage --config names, or DEVAGOTCHI_HUB_STORAGE_URL.\n\nowner (auth.mode hub) prints a one-time link (15 minutes) that makes the owner's passkey:\nthe first time it makes the owner's account, with the config's owner id if it names one;\nagain, it adds a passkey to the owner and ends the owner's other sessions; with --replace the\nlink also removes every other passkey of the owner (to take the account back).\n\nconnect-nomen joins this hub to a Nomen with its owner's approval: it shows a code to confirm\non any device through the devagotchi-cli app (--client-id) of the hub's Nomen project (--project),\nthen adds the hub's own apps to that project (the key Nomen makes is written to the state\ndirectory, owner-only, and nowhere else), sets auth, owner and web in the config, and keeps a\ncopy of the old one. --issuer is that Nomen's https URL; there is no built-in one.\n\ncheck-site reads and checks a site directory (crates/hub/README.md, \"The site\") as serve would, and\nsays what is wrong and where; serve follows its site.dir and serves a change once it checks out.\n\ncheck-mail (auth.mode hub) connects to auth.email's mail server as serve would, negotiates TLS and\nsigns in as its user, sending nothing; with --to it also sends one email that says this hub's mail\nworks, to read in that mailbox. It prints the server's refusal and never the password; the running\nhub reports the same in /healthz under mail.\n\nanalytics-resend marks every board event in the hub's Postgres to be sent to ClickHouse again,\nas after a ClickHouse that lost its data: the running hub sends them, and ClickHouse keeps one\nrow per event. /healthz reports the export under analytics.";
 
 #[derive(Debug, PartialEq, Eq)]
 enum Command {
@@ -108,14 +108,17 @@ enum Command {
     },
     Enroll {
         state: PathBuf,
+        config: Option<PathBuf>,
         device: String,
     },
     Revoke {
         state: PathBuf,
+        config: Option<PathBuf>,
         device: String,
     },
     Devices {
         state: PathBuf,
+        config: Option<PathBuf>,
     },
     Owner {
         state: PathBuf,
@@ -126,10 +129,6 @@ enum Command {
     },
     /// One-time code that makes the first claimed account the owner. Refuses when
     /// `hub.json` already names an owner.
-    SetupCode {
-        state: PathBuf,
-        config: PathBuf,
-    },
     ConnectNomen(connect::Connect),
     /// Read and check a site directory as `serve` would, and say whether it checks out.
     CheckSite {
@@ -147,7 +146,6 @@ enum Command {
         config: PathBuf,
     },
     ImportBoard {
-        state: PathBuf,
         config: PathBuf,
         source: PathBuf,
         tenant: String,
@@ -180,9 +178,6 @@ fn parse_args(args: impl IntoIterator<Item = OsString>) -> BridgeResult<Command>
     }
     if args.first().is_some_and(|a| a == "owner") {
         return parse_owner(args.split_off(1));
-    }
-    if args.first().is_some_and(|a| a == "setup-code") {
-        return parse_setup_code(args.split_off(1));
     }
     if args.first().is_some_and(|a| a == "import-board") {
         return parse_board_import(args.split_off(1));
@@ -229,9 +224,7 @@ fn parse_args(args: impl IntoIterator<Item = OsString>) -> BridgeResult<Command>
             .ok_or_else(|| BridgeError::new("invalid_cli", "flag without a value"))?;
         match flag.to_str() {
             Some("--state-dir") if state.is_none() => state = Some(PathBuf::from(value)),
-            Some("--config") if config.is_none() && verb.is_none() => {
-                config = Some(PathBuf::from(value))
-            }
+            Some("--config") if config.is_none() => config = Some(PathBuf::from(value)),
             Some("--device") if device.is_none() && verb.is_some() => {
                 device = Some(value.to_string_lossy().into_owned())
             }
@@ -243,9 +236,21 @@ fn parse_args(args: impl IntoIterator<Item = OsString>) -> BridgeResult<Command>
         .ok_or_else(|| BridgeError::new("invalid_cli", "--state-dir ABS_PATH is required"))?;
     match (verb.as_deref(), config, device) {
         (None, Some(config), None) if config.is_absolute() => Ok(Command::Serve { state, config }),
-        (Some("enroll"), None, Some(device)) => Ok(Command::Enroll { state, device }),
-        (Some("revoke"), None, Some(device)) => Ok(Command::Revoke { state, device }),
-        (Some("devices"), None, None) => Ok(Command::Devices { state }),
+        (Some(_), Some(config), _) if !config.is_absolute() => Err(BridgeError::new(
+            "invalid_cli",
+            "--config must be an absolute path",
+        )),
+        (Some("enroll"), config, Some(device)) => Ok(Command::Enroll {
+            state,
+            config,
+            device,
+        }),
+        (Some("revoke"), config, Some(device)) => Ok(Command::Revoke {
+            state,
+            config,
+            device,
+        }),
+        (Some("devices"), config, None) => Ok(Command::Devices { state, config }),
         _ => Err(BridgeError::new(
             "invalid_cli",
             "see --help for the accepted forms",
@@ -257,7 +262,7 @@ fn parse_board_import(args: Vec<OsString>) -> BridgeResult<Command> {
     if args.len() == 1 && (args[0] == "--help" || args[0] == "-h") {
         return Ok(Command::Help);
     }
-    let (mut state, mut config, mut source, mut tenant) = (None, None, None, None);
+    let (mut config, mut source, mut tenant) = (None, None, None);
     let mut apply = false;
     let mut args = args.into_iter();
     while let Some(flag) = args.next() {
@@ -269,7 +274,6 @@ fn parse_board_import(args: Vec<OsString>) -> BridgeResult<Command> {
             .next()
             .ok_or_else(|| BridgeError::new("invalid_cli", "flag without a value"))?;
         match flag.to_str() {
-            Some("--state-dir") if state.is_none() => state = Some(PathBuf::from(value)),
             Some("--config") if config.is_none() => config = Some(PathBuf::from(value)),
             Some("--source") if source.is_none() => source = Some(PathBuf::from(value)),
             Some("--tenant") if tenant.is_none() => {
@@ -283,15 +287,13 @@ fn parse_board_import(args: Vec<OsString>) -> BridgeResult<Command> {
             }
         }
     }
-    match (state, config, source, tenant) {
-        (Some(state), Some(config), Some(source), Some(tenant))
-            if state.is_absolute()
-                && config.is_absolute()
+    match (config, source, tenant) {
+        (Some(config), Some(source), Some(tenant))
+            if config.is_absolute()
                 && source.is_absolute()
                 && accounts::tenants::valid_tenant_id(&tenant) =>
         {
             Ok(Command::ImportBoard {
-                state,
                 config,
                 source,
                 tenant,
@@ -300,7 +302,7 @@ fn parse_board_import(args: Vec<OsString>) -> BridgeResult<Command> {
         }
         _ => Err(BridgeError::new(
             "invalid_cli",
-            "import-board needs --state-dir ABS_PATH --config ABS_JSON --source ABS_SQLITE --tenant t-UUID [--apply]",
+            "import-board needs --config ABS_JSON --source ABS_SQLITE --tenant t-UUID [--apply]",
         )),
     }
 }
@@ -382,30 +384,6 @@ fn parse_owner(args: Vec<OsString>) -> BridgeResult<Command> {
     }
 }
 
-fn parse_setup_code(args: Vec<OsString>) -> BridgeResult<Command> {
-    let (mut state, mut config) = (None, None);
-    let mut iter = args.into_iter();
-    while let Some(flag) = iter.next() {
-        let value = iter
-            .next()
-            .ok_or_else(|| BridgeError::new("invalid_cli", "flag without a value"))?;
-        match flag.to_str() {
-            Some("--state-dir") if state.is_none() => state = Some(PathBuf::from(value)),
-            Some("--config") if config.is_none() => config = Some(PathBuf::from(value)),
-            _ => return Err(BridgeError::new("invalid_cli", "unexpected flag")),
-        }
-    }
-    match (state, config) {
-        (Some(state), Some(config)) if state.is_absolute() && config.is_absolute() => {
-            Ok(Command::SetupCode { state, config })
-        }
-        _ => Err(BridgeError::new(
-            "invalid_cli",
-            "setup-code needs --state-dir ABS_PATH --config ABS_JSON",
-        )),
-    }
-}
-
 fn parse_check_mail(args: Vec<OsString>) -> BridgeResult<Command> {
     let (mut config, mut to) = (None, None);
     let mut iter = args.into_iter();
@@ -437,36 +415,6 @@ fn parse_check_mail(args: Vec<OsString>) -> BridgeResult<Command> {
     }
 }
 
-/// Lines for `devagotchi hub setup-code`. An owner already on file is reported as
-/// the Devagotchi account id plus `{public_url}/claim`. A new hub gets a code and
-/// that same claim URL. The config file is not rewritten.
-fn setup_code_lines(
-    state: &std::path::Path,
-    config_path: &std::path::Path,
-) -> BridgeResult<Vec<String>> {
-    let mut config = read_config(config_path)?;
-    // Only `auth.mode devagotchi` spends a setup code (its `/claim`). A hub in `auth.mode hub`
-    // prints its own claim link to its log, and `devagotchi hub owner` works on its host.
-    if !matches!(config.auth, config::AuthConfig::Devagotchi { .. }) {
-        return Err(BridgeError::new(
-            "invalid_cli",
-            "setup-code is for auth.mode devagotchi; in auth.mode hub use the claim link in the hub's log or devagotchi hub owner",
-        ));
-    }
-    let store = identity::Store::open(&state.join("identities.sqlite3"))?;
-    let public = config.public_url.trim_end_matches('/').to_string();
-    let claim = format!("{public}/claim");
-    identity::rekey_config(&store, &mut config)?;
-    if let Some(owner) = config.owner.clone().or(store.hub_owner()?) {
-        eprintln!(
-            "devagotchi hub setup-code: owner {owner} already exists; no new code was issued"
-        );
-        return Ok(vec![format!("owner {owner}"), format!("claim {claim}")]);
-    }
-    let code = store.issue_setup_code()?;
-    Ok(vec![format!("code {code}"), format!("claim {claim}")])
-}
-
 fn read_config(path: &std::path::Path) -> BridgeResult<HubConfig> {
     let text = std::fs::read_to_string(path).map_err(|error| {
         BridgeError::new("invalid_config", format!("{}: {error}", path.display()))
@@ -474,14 +422,14 @@ fn read_config(path: &std::path::Path) -> BridgeResult<HubConfig> {
     HubConfig::parse_with(&text, |name| env::var(name).ok())
 }
 
-/// The accounts of a hub whose state is in `state_dir`: in the store `storage` names (see
-/// `store.rs`: the environment's URL, the config's, or the state directory's SQLite file).
+/// The accounts of a hub whose state is in `state_dir`: in the Postgres `storage` names (see
+/// `store.rs`: the environment's URL, else the config's).
 async fn accounts_at(
     state_dir: &std::path::Path,
     config: &HubConfig,
 ) -> BridgeResult<accounts::Accounts> {
     prepare_state_dir(state_dir)?;
-    let url = store::url_for(config.storage_url(), state_dir);
+    let url = store::postgres_url(config.storage_url())?;
     let schema = store::schema_for(config.storage_schema());
     let store = store::Store::open_in(&url, schema.as_deref()).await?;
     configured_accounts(store, config).await
@@ -493,7 +441,7 @@ async fn configured_accounts(
 ) -> BridgeResult<accounts::Accounts> {
     // A hosted hub on Postgres keeps its tenants apart in the database as well: its queries
     // run as a role row-level security holds, or it does not start.
-    if config.multi_tenant() && store.backend() == store::Backend::Postgres && !store.enforced() {
+    if config.multi_tenant() && !store.enforced() {
         return Err(BridgeError::new(
             "account_store",
             "a hosted hub (tenancy.mode multi) on Postgres runs its queries as the role devagotchi_hub, held to row-level security, and its login role cannot switch to that role; see crates/hub/README.md, \"The store\"",
@@ -520,14 +468,9 @@ fn prepare_state_dir(state_dir: &std::path::Path) -> BridgeResult<()> {
     Ok(())
 }
 
-fn devices_at(state_dir: &std::path::Path) -> BridgeResult<Devices> {
-    prepare_state_dir(state_dir)?;
-    Devices::open(&state_dir.join("devices.sqlite3"))
-}
-
 /// Record an operator command on the hub's audit chain: who ran it and what it did.
-fn operator_event(
-    state: &std::path::Path,
+async fn operator_event(
+    audit: &Audit,
     tool: &str,
     device: &str,
     outcome: &str,
@@ -536,21 +479,22 @@ fn operator_event(
         .or_else(|_| env::var("USERNAME"))
         .unwrap_or_else(|_| "unknown".into());
     let subject = format!("operator:{user}");
-    Audit::open(&state.join("audit.sqlite3"))?.record(&audit::AuditEntry {
-        subject: &subject,
-        via: "cli",
-        tool,
-        broker: device,
-        operation_id: "",
-        outcome,
-    })?;
+    audit
+        .record(&audit::AuditEntry {
+            subject: &subject,
+            via: "cli",
+            tool,
+            broker: device,
+            operation_id: "",
+            outcome,
+        })
+        .await?;
     Ok(())
 }
 
 fn manage(command: Command) -> BridgeResult<()> {
     match command {
         Command::ImportBoard {
-            state,
             config,
             source,
             tenant,
@@ -564,19 +508,7 @@ fn manage(command: Command) -> BridgeResult<()> {
                     .build()
                     .map_err(|error| BridgeError::new("runtime", error.to_string()))?;
                 runtime.block_on(async {
-                    let url = store::url_for(
-                        config
-                            .storage
-                            .as_ref()
-                            .and_then(|storage| storage.url.as_deref()),
-                        &state,
-                    );
-                    if !url.starts_with("postgres://") && !url.starts_with("postgresql://") {
-                        return Err(BridgeError::new(
-                            "invalid_config",
-                            "import-board requires Postgres storage",
-                        ));
-                    }
+                    let url = store::postgres_url(config.storage_url())?;
                     let schema = store::schema_for(
                         config
                             .storage
@@ -603,59 +535,17 @@ fn manage(command: Command) -> BridgeResult<()> {
                 }
             );
         }
-        Command::Enroll { state, device } => {
-            if !config::valid_name(&device) {
-                return Err(BridgeError::new(
-                    "invalid_cli",
-                    "device must be [a-z0-9][a-z0-9-]{0,62}, the broker name in the hub config",
-                ));
-            }
-            let code = devices_at(&state)?.issue_code(&device, machines::random::<16>())?;
-            // The code itself is never audited or logged; only that one was issued.
-            operator_event(&state, "link.code_issued", &device, "ok")?;
-            // The code is the one secret this prints; it goes to stdout only, once.
-            println!("{code}");
-            eprintln!(
-                "One-time code for {device}, valid {} minutes; any earlier unused code for {device} no longer works.\nOn that machine, with the code in DEVAGOTCHI_ENROLL_CODE (or on stdin):\n  devagotchi link enroll --state-dir ... --hub ... --device {device} --broker ...",
-                machines::devices::CODE_TTL_SECS / 60
-            );
-        }
-        Command::Revoke { state, device } => {
-            let (revoked, cancelled) = devices_at(&state)?.revoke(&device)?;
-            operator_event(
-                &state,
-                "link.revoke",
-                &device,
-                &format!("revoked={revoked} codes_cancelled={cancelled}"),
-            )?;
-            match (revoked, cancelled) {
-                (false, 0) => {
-                    return Err(BridgeError::new(
-                        "not_enrolled",
-                        format!("no active device or pending code named {device}"),
-                    ));
-                }
-                (true, _) => eprintln!(
-                    "{device} revoked; its link closes within seconds ({cancelled} pending codes cancelled)"
-                ),
-                (false, _) => eprintln!("{cancelled} pending codes for {device} cancelled"),
-            }
-        }
-        Command::Devices { state } => {
-            let list = devices_at(&state)?.list()?;
-            println!(
-                "{}",
-                serde_json::to_string_pretty(&list).unwrap_or_default()
-            );
-        }
-        Command::SetupCode { state, config } => {
-            for line in setup_code_lines(&state, &config)? {
-                if let Some(code) = line.strip_prefix("code ") {
-                    eprintln!("devagotchi hub setup-code: {code}");
-                }
-                println!("{line}");
-            }
-        }
+        Command::Enroll {
+            state,
+            config,
+            device,
+        } => machines::cli::enroll(&state, config.as_deref(), &device)?,
+        Command::Revoke {
+            state,
+            config,
+            device,
+        } => machines::cli::revoke(&state, config.as_deref(), &device)?,
+        Command::Devices { state, config } => machines::cli::devices(&state, config.as_deref())?,
         Command::Owner {
             state,
             config,
@@ -691,10 +581,11 @@ fn manage(command: Command) -> BridgeResult<()> {
                         .issue_link(accounts::LinkPurpose::Owner, &owner.id)
                         .await?
                 };
+                // The link itself is never audited or logged; only that one was issued.
+                let audit = Audit::new(accounts.store().clone());
+                operator_event(&audit, "account.owner_link", &owner.id, "ok").await?;
                 Ok::<_, BridgeError>((owner, token))
             })?;
-            // The link itself is never audited or logged; only that one was issued.
-            operator_event(&state, "account.owner_link", &owner.id, "ok")?;
             // The link is the one secret this prints; it goes to stdout only, once.
             println!("{}/owner#{token}", config.public_url.trim_end_matches('/'));
             eprintln!(
@@ -714,8 +605,11 @@ fn manage(command: Command) -> BridgeResult<()> {
                 .enable_all()
                 .build()
                 .map_err(|error| BridgeError::new("runtime", error.to_string()))?;
-            runtime.block_on(connect::run(&connect, &mut std::io::stderr()))?;
-            operator_event(&connect.state, "nomen.connect", "", "ok")?;
+            runtime.block_on(async {
+                connect::run(&connect, &mut std::io::stderr()).await?;
+                let store = store::for_command(&connect.state, Some(&connect.config)).await?;
+                operator_event(&Audit::new(store), "nomen.connect", "", "ok").await
+            })?;
         }
         Command::CheckSite { dir } => {
             let site = site::Site::load(&dir).map_err(|why| {
@@ -730,13 +624,7 @@ fn manage(command: Command) -> BridgeResult<()> {
         }
         Command::AnalyticsResend { config } => {
             let config = read_config(&config)?;
-            let url = store::url_for(config.storage_url(), std::path::Path::new("."));
-            if !url.starts_with("postgres://") && !url.starts_with("postgresql://") {
-                return Err(BridgeError::new(
-                    "invalid_config",
-                    "analytics-resend reads the hub's Postgres: set storage.url or DEVAGOTCHI_HUB_STORAGE_URL",
-                ));
-            }
+            let url = store::postgres_url(config.storage_url())?;
             let runtime = tokio::runtime::Builder::new_current_thread()
                 .enable_all()
                 .build()
@@ -872,43 +760,19 @@ async fn run(
 ) -> BridgeResult<()> {
     let mut config = read_config(&config_path)?;
     config.extensions = extensions;
-    let url = store::url_for(config.storage_url(), &state_dir);
-    if !url.starts_with("postgres://") && !url.starts_with("postgresql://") {
-        return Err(BridgeError::new(
-            "invalid_config",
-            "hub serve requires Postgres for accounts and boards; set storage.url or DEVAGOTCHI_HUB_STORAGE_URL. SQLite is only for standalone local work and offline client storage.",
-        ));
-    }
+    let url = store::postgres_url(config.storage_url())?;
     let schema = store::schema_for(config.storage_schema());
     let board_store = store::Store::open_in(&url, schema.as_deref()).await?;
-    // Old owner and grant subjects (identity-provider subs) become Devagotchi
-    // account ids in memory. The file is left as the operator wrote it.
-    let rekey = if matches!(config.auth, config::AuthConfig::Devagotchi { .. }) {
-        let store = identity::Store::open(&state_dir.join("identities.sqlite3"))?;
-        let pairs = identity::rekey_config(&store, &mut config)?;
-        Some(pairs)
-    } else {
-        None
-    };
     let config = Arc::new(config);
     // The running hub follows its site directory: a change is served without a restart,
     // and one that does not check out is refused while the site it had stays.
     if let Some(dir) = &config.site.dir {
         site::watch(config.site_cell(), PathBuf::from(dir), site::WATCH_EVERY);
     }
-    let devices = Arc::new(devices_at(&state_dir)?);
-    if let Some(pairs) = &rekey {
-        let boards = config
-            .account_boards
-            .as_ref()
-            .and_then(|accounts| accounts.dir.as_deref().map(std::path::PathBuf::from))
-            .unwrap_or_else(|| state_dir.join("account-boards"));
-        for (from, to) in pairs {
-            devices.reassign_owner(from, to)?;
-            identity::rename_account_dir(&boards, from, to)?;
-        }
-    }
-    let audit = Arc::new(Audit::open(&state_dir.join("audit.sqlite3"))?);
+    // The state directory holds the hub's keys (VAPID, session, settings) and nothing else.
+    prepare_state_dir(&state_dir)?;
+    let devices = Arc::new(Devices::new(board_store.clone()));
+    let audit = Arc::new(Audit::new(board_store.clone()));
     // A hub with its own accounts knows its owner from them, and refuses to start when its
     // config names someone else.
     let accounts = if config.has_accounts() {
@@ -1041,22 +905,8 @@ async fn run(
         )),
         None => None,
     };
-    let verifier = Arc::new(Verifier::from_hub_config(&config, &state_dir, accounts).await?);
-    let web = match (&config.web, &config.auth) {
-        (
-            Some(web),
-            config::AuthConfig::Nomen {
-                issuer, audiences, ..
-            },
-        ) => Some(Arc::new(web::WebLogin::new(
-            issuer,
-            audiences,
-            &web.client_id,
-            &config.public_url,
-            &state_dir,
-        )?)),
-        _ => None,
-    };
+    let verifier = Arc::new(Verifier::from_hub_config(&config, &board_store, accounts).await?);
+    let web = web::WebLogin::for_hub(&config, &state_dir, &board_store)?.map(Arc::new);
     let listen: SocketAddr = config
         .listen
         .parse()
@@ -1084,9 +934,7 @@ async fn run(
             "devagotchi hub: exporting board events to ClickHouse at {} (database {})",
             clickhouse.url, clickhouse.database
         );
-    } else if let Some(hub) = &passkeys
-        && warehouse_store.backend() == store::Backend::Postgres
-    {
+    } else if let Some(hub) = &passkeys {
         // Else the ClickHouse the owner set on the settings page, if any. One it cannot
         // start is said here and on the page; the boards work without it.
         match warehouse::start_stored(&boards, hub.accounts(), hub.sealer(), warehouse_store).await
@@ -1162,14 +1010,18 @@ async fn run(
     };
     if claim_code.is_some() {
         // That a code was issued, and when; never the code.
-        state.hub.audit.record(&audit::AuditEntry {
-            subject: "hub",
-            via: "start",
-            tool: "account.claim_code",
-            broker: "",
-            operation_id: "",
-            outcome: "ok",
-        })?;
+        state
+            .hub
+            .audit
+            .record(&audit::AuditEntry {
+                subject: "hub",
+                via: "start",
+                tool: "account.claim_code",
+                broker: "",
+                operation_id: "",
+                outcome: "ok",
+            })
+            .await?;
     }
     // Everything worth reading at start comes before the ready line callers wait for.
     if let Some(owner) = config.owner_id() {
@@ -1212,7 +1064,6 @@ async fn run(
             config::AuthConfig::Nomen { issuer, .. } => format!("nomen {issuer}"),
             config::AuthConfig::Oidc { issuer, .. } => format!("oidc {issuer}"),
             config::AuthConfig::Dev { .. } => "dev tokens".to_string(),
-            config::AuthConfig::Devagotchi { .. } => "devagotchi".to_string(),
             config::AuthConfig::Hub { .. } => match config.auth.nomen() {
                 Some(nomen) => format!("hub accounts, and nomen {}", nomen.issuer),
                 None => "hub accounts".to_string(),
@@ -1260,11 +1111,6 @@ fn app(state: AppState) -> Router {
             mcp_config,
         )
     };
-    // `auth.mode devagotchi` is its own authorization server (`oauth.rs`), which serves
-    // `/claim`, `/.well-known/oauth-authorization-server` and the sign-in pages; every other
-    // mode gets the hub's (32b, `web/oauth.rs`) and the browser claim (16c). Each path is
-    // mounted once, so the router builds in every mode (`app_builds_in_every_auth_mode`).
-    let authority = state.verifier.authority();
     let router = Router::new()
         .route("/healthz", get(healthz))
         .route("/enroll", axum::routing::post(enroll_with_code))
@@ -1328,145 +1174,15 @@ fn app(state: AppState) -> Router {
         )
         .merge(
             // The bar runs first: it marks the operator's requests, which are not counted.
-            web::router(authority.is_none())
+            web::router(true)
                 .layer(middleware::from_fn_with_state(
                     state.clone(),
                     web::counted::count,
                 ))
                 .layer(middleware::from_fn_with_state(state.clone(), web::bar)),
         );
-    let router = match authority {
-        Some(authority) => router.merge(oauth::http_router(authority)).route(
-            "/api/v1/admin/settings",
-            get(admin_settings_get).put(admin_settings_put),
-        ),
-        None => router,
-    };
     let routes = state.hub.config.extensions.routes.clone();
     routes.mount(router.with_state(state))
-}
-
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
-struct AdminSettingsBody {
-    provisional: oauth::ProvisionalPatch,
-}
-
-fn settings_error(status: StatusCode, error: &str, description: &str) -> Response {
-    (
-        status,
-        Json(serde_json::json!({
-            "error": error,
-            "error_description": description,
-        })),
-    )
-        .into_response()
-}
-
-fn bearer_token(headers: &HeaderMap) -> Option<String> {
-    headers
-        .get(header::AUTHORIZATION)
-        .and_then(|value| value.to_str().ok())
-        .and_then(|value| {
-            value
-                .strip_prefix("Bearer ")
-                .or_else(|| value.strip_prefix("bearer "))
-        })
-        .map(str::trim)
-        .filter(|token| !token.is_empty())
-        .map(str::to_string)
-}
-
-fn audit_settings(state: &AppState, subject: &auth::Subject, outcome: &str) {
-    let _ = state.hub.audit.record(&audit::AuditEntry {
-        subject: &subject.id,
-        via: subject.via,
-        tool: "admin.settings",
-        broker: "",
-        operation_id: "",
-        outcome,
-    });
-}
-
-async fn require_operator(
-    state: &AppState,
-    headers: &HeaderMap,
-) -> Result<auth::Subject, Response> {
-    let Some(token) = bearer_token(headers) else {
-        return Err(settings_error(
-            StatusCode::UNAUTHORIZED,
-            "unauthorized",
-            "bearer token required",
-        ));
-    };
-    let subject = match state.verifier.verify(&token).await {
-        Ok(subject) => subject,
-        Err(_) => {
-            return Err(settings_error(
-                StatusCode::UNAUTHORIZED,
-                "invalid_token",
-                "bearer token was refused",
-            ));
-        }
-    };
-    if !state.hub.config.is_operator(&subject.id) {
-        audit_settings(state, &subject, "denied");
-        return Err(settings_error(
-            StatusCode::FORBIDDEN,
-            "forbidden",
-            "owner or an operator grant is required",
-        ));
-    }
-    Ok(subject)
-}
-
-async fn admin_settings_get(State(state): State<AppState>, headers: HeaderMap) -> Response {
-    if let Err(response) = require_operator(&state, &headers).await {
-        return response;
-    }
-    let Some(authority) = state.verifier.authority() else {
-        return settings_error(
-            StatusCode::NOT_FOUND,
-            "not_available",
-            "admin settings require auth.mode devagotchi",
-        );
-    };
-    Json(authority.operator_settings()).into_response()
-}
-
-async fn admin_settings_put(
-    State(state): State<AppState>,
-    headers: HeaderMap,
-    Json(body): Json<AdminSettingsBody>,
-) -> Response {
-    let subject = match require_operator(&state, &headers).await {
-        Ok(subject) => subject,
-        Err(response) => return response,
-    };
-    let Some(authority) = state.verifier.authority() else {
-        return settings_error(
-            StatusCode::NOT_FOUND,
-            "not_available",
-            "admin settings require auth.mode devagotchi",
-        );
-    };
-    match authority.update_operator_settings(&body.provisional) {
-        Ok(settings) => {
-            let outcome = format!(
-                "ok ttl_days={} starts_per_hour={} unclaimed_cap={}",
-                settings.provisional.ttl_days,
-                settings.provisional.starts_per_hour,
-                settings.provisional.unclaimed_cap
-            );
-            audit_settings(&state, &subject, &outcome);
-            Json(settings).into_response()
-        }
-        Err(error) => {
-            let outcome = format!("rejected {}", error.message);
-            audit_settings(&state, &subject, &outcome);
-            settings_error(StatusCode::BAD_REQUEST, &error.code, &error.message)
-        }
-    }
 }
 
 async fn require_bearer(
@@ -1474,19 +1190,8 @@ async fn require_bearer(
     mut request: Request,
     next: Next,
 ) -> Response {
-    // `auth.mode devagotchi`: accounts merged since the last call take their machines along.
-    if let Some(authority) = state.verifier.authority() {
-        for (from, into) in authority.drain_merges() {
-            let _ = state.hub.links.reassign_owner(&from, &into);
-        }
-    }
     let origin = state.hub.config.public_url.trim_end_matches('/');
-    let (metadata_url, scope) = if state.verifier.authority().is_some() {
-        (
-            format!("{origin}/.well-known/oauth-protected-resource/mcp"),
-            ", scope=\"openid email profile offline_access mcp\"".to_string(),
-        )
-    } else {
+    let (metadata_url, scope) = {
         let scope = match state.hub.config.auth.nomen() {
             _ if state.hub.config.has_accounts() => {
                 format!(", scope=\"{}\"", web::oauth::SCOPES.join(" "))
@@ -1638,9 +1343,6 @@ fn challenge(status: StatusCode, metadata: &str, error: Option<&str>) -> Respons
 }
 
 async fn protected_resource(State(state): State<AppState>) -> Response {
-    if let Some(authority) = state.verifier.authority() {
-        return axum::Json(authority.protected_resource(false)).into_response();
-    }
     let resource = state
         .hub
         .config
@@ -1653,9 +1355,6 @@ async fn protected_resource(State(state): State<AppState>) -> Response {
 /// RFC 9728 §3.1: the metadata at `/.well-known/oauth-protected-resource/mcp` is for the
 /// resource `<public_url>/mcp`, the URL an MCP client was given.
 async fn protected_resource_mcp(State(state): State<AppState>) -> Response {
-    if let Some(authority) = state.verifier.authority() {
-        return axum::Json(authority.protected_resource(true)).into_response();
-    }
     let resource = format!("{}/mcp", state.hub.config.public_url.trim_end_matches('/'));
     resource_metadata(&state, resource)
 }
@@ -1745,6 +1444,7 @@ async fn enroll_with_code(
         .hub
         .links
         .enroll_owned(&body.name, &body.code, &body.public_key)
+        .await
     {
         Ok(device) => (
             StatusCode::CREATED,
@@ -1780,21 +1480,12 @@ async fn healthz(State(state): State<AppState>) -> Response {
             })),
         }
     }
-    let audit = state.hub.audit.verify();
+    let audit = state.hub.audit.verify().await;
     let chain_ok = audit.as_ref().map(|status| status.ok).unwrap_or(false);
-    let auth = if let Some(authority) = state.verifier.authority() {
-        authority.readiness().await
-    } else {
-        serde_json::Value::Null
-    };
-    let signing_ok = auth
-        .get("signing_key")
-        .and_then(|v| v.as_bool())
-        .unwrap_or(true);
     // The identity provider is reported, not counted: an outage there leaves the hub, its
     // links and confirmed sign-ins working (see nomen.rs).
     let mut body = serde_json::json!({
-        "ok": all_up && chain_ok && signing_ok,
+        "ok": all_up && chain_ok,
         "brokers": brokers,
         "audit": audit.ok(),
         "issuer": state.verifier.issuer_health(),
@@ -1805,7 +1496,7 @@ async fn healthz(State(state): State<AppState>) -> Response {
         },
     });
     // The hub's own accounts: whether the database holds its queries to one tenant's rows
-    // (Postgres row-level security; false on SQLite, a standalone hub's own file).
+    // (Postgres row-level security, under a role that cannot bypass it).
     if let Some(passkeys) = &state.passkeys {
         body["store"] = serde_json::json!({ "tenant_rls": passkeys.tenant_rls() });
         // Whether it can send mail and how the last send went: reported, not counted, like
@@ -1828,11 +1519,7 @@ async fn healthz(State(state): State<AppState>) -> Response {
             .map(|sink| sink.health())
             .collect(),
     );
-    // Only `auth.mode devagotchi` reports its authorization server's readiness here.
-    if !auth.is_null() {
-        body["auth"] = auth;
-    }
-    let status = if all_up && chain_ok && signing_ok {
+    let status = if all_up && chain_ok {
         StatusCode::OK
     } else {
         StatusCode::SERVICE_UNAVAILABLE
@@ -2036,8 +1723,6 @@ mod tests {
         let tenant = "t-00000000-0000-4000-8000-000000000001";
         let args = [
             "import-board",
-            "--state-dir",
-            STATE,
             "--config",
             CONFIG,
             "--source",
@@ -2054,13 +1739,13 @@ mod tests {
             Command::ImportBoard { apply: true, .. }
         ));
         let mut relative = args;
-        relative[6] = "relative.sqlite3";
+        relative[4] = "relative.sqlite3";
         assert!(parse_args(relative.map(OsString::from)).is_err());
         let mut missing_tenant = args.to_vec();
-        missing_tenant.truncate(7);
+        missing_tenant.truncate(5);
         assert!(parse_args(missing_tenant.into_iter().map(OsString::from)).is_err());
         let mut bad_tenant = args;
-        bad_tenant[8] = "account-is-not-a-tenant";
+        bad_tenant[6] = "account-is-not-a-tenant";
         assert!(parse_args(bad_tenant.map(OsString::from)).is_err());
         for extra in [
             vec!["--apply", "--apply"],
@@ -2073,7 +1758,7 @@ mod tests {
     }
 
     #[test]
-    fn device_commands_take_a_state_dir_and_a_device() {
+    fn device_commands_take_a_state_dir_a_device_and_maybe_the_hubs_config() {
         let enroll =
             parse_args(["enroll", "--state-dir", STATE, "--device", "gus"].map(OsString::from))
                 .unwrap();
@@ -2081,6 +1766,28 @@ mod tests {
             enroll,
             Command::Enroll {
                 state: PathBuf::from(STATE),
+                config: None,
+                device: "gus".into()
+            }
+        );
+        // The hub's config names the Postgres the machines are kept in.
+        assert_eq!(
+            parse_args(
+                [
+                    "revoke",
+                    "--state-dir",
+                    STATE,
+                    "--config",
+                    CONFIG,
+                    "--device",
+                    "gus"
+                ]
+                .map(OsString::from)
+            )
+            .unwrap(),
+            Command::Revoke {
+                state: PathBuf::from(STATE),
+                config: Some(PathBuf::from(CONFIG)),
                 device: "gus".into()
             }
         );
@@ -2129,6 +1836,13 @@ mod tests {
 
     #[test]
     fn the_owner_command_makes_the_owner_once_and_only_in_hub_mode() {
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .unwrap();
+        let Some(url) = runtime.block_on(store::testing::empty_postgres()) else {
+            return;
+        };
         let dir = tempfile::tempdir().unwrap();
         let state = dir.path().join("state");
         let config = dir.path().join("hub.json");
@@ -2138,7 +1852,8 @@ mod tests {
                 "public_url": "http://127.0.0.1:8787",
                 "auth": auth,
                 "brokers": [],
-                "grants": []
+                "grants": [],
+                "storage": { "url": url }
             });
             if let Some(owner) = owner {
                 value["owner"] = owner.into();
@@ -2168,24 +1883,18 @@ mod tests {
         );
         run(Some("Jesse")).unwrap();
         run(None).unwrap();
-        let owner = tokio::runtime::Builder::new_current_thread()
-            .enable_all()
-            .build()
-            .unwrap()
-            .block_on(async {
-                let url = store::sqlite_url(&state.join("accounts.sqlite3"));
-                let accounts = accounts::Accounts::open(store::Store::open(&url).await.unwrap())
-                    .await
-                    .unwrap();
-                accounts.owner().await.unwrap().unwrap()
-            });
+        let (owner, chain) = runtime.block_on(async {
+            let store = store::Store::open(&url).await.unwrap();
+            let accounts = accounts::Accounts::open(store.clone()).await.unwrap();
+            let chain = Audit::new(store).verify().await.unwrap();
+            (accounts.owner().await.unwrap().unwrap(), chain)
+        });
         assert_eq!(
             (owner.id.as_str(), owner.name.as_str()),
             ("395290028818825218", "Jesse")
         );
         // Each run is on the audit chain, without the link.
-        let audit = Audit::open(&state.join("audit.sqlite3")).unwrap();
-        assert!(audit.verify().unwrap().ok);
+        assert!(chain.ok && chain.entries == 2, "{chain:?}");
 
         // A config naming someone else than the hub's owner is refused.
         write(
@@ -2239,324 +1948,13 @@ mod tests {
         );
     }
 
-    #[test]
-    fn setup_code_reports_the_dg_account_and_the_claim_url() {
-        let dir = tempfile::tempdir().unwrap();
-        let config_path = dir.path().join("hub.json");
-        let subject = "395290028818825218";
-        std::fs::write(
-            &config_path,
-            serde_json::json!({
-                "listen": "127.0.0.1:9",
-                "public_url": "https://app.devagotchi.com",
-                "auth": {
-                    "mode": "devagotchi",
-                    "legacy": { "issuer": "https://id.shippin.cloud" }
-                },
-                "owner": subject,
-                "brokers": [],
-                "grants": []
-            })
-            .to_string(),
-        )
-        .unwrap();
-        let lines = setup_code_lines(dir.path(), &config_path).unwrap();
-        let owner = lines
-            .iter()
-            .find_map(|line| line.strip_prefix("owner "))
-            .unwrap();
-        assert!(owner.starts_with("dg_"), "{lines:?}");
-        assert_ne!(owner, subject);
-        assert!(
-            lines
-                .iter()
-                .any(|line| line == "claim https://app.devagotchi.com/claim"),
-            "{lines:?}"
-        );
-        let again = setup_code_lines(dir.path(), &config_path).unwrap();
-        assert_eq!(again[0], format!("owner {owner}"));
-
-        // A hub in auth.mode hub has its own claim; setup-code leaves its state alone.
-        let hub_state = dir.path().join("hub-mode");
-        std::fs::write(
-            &config_path,
-            serde_json::json!({
-                "listen": "127.0.0.1:9",
-                "public_url": "https://app.devagotchi.com",
-                "auth": { "mode": "hub" },
-                "brokers": [],
-                "grants": []
-            })
-            .to_string(),
-        )
-        .unwrap();
-        assert_eq!(
-            setup_code_lines(&hub_state, &config_path).unwrap_err().code,
-            "invalid_cli"
-        );
-        assert!(!hub_state.join("identities.sqlite3").exists());
-    }
-
-    fn dg(nibble: char) -> String {
-        format!("dg_{}", nibble.to_string().repeat(32))
-    }
-
-    fn access_for(authority: &oauth::Authority, account: &str) -> String {
-        let started = authority.start_device("devagotchi-cli").unwrap();
-        authority
-            .approve_device(started["user_code"].as_str().unwrap(), account)
-            .unwrap();
-        authority
-            .token(&oauth::TokenRequest {
-                grant_type: "urn:ietf:params:oauth:grant-type:device_code".into(),
-                code: None,
-                redirect_uri: None,
-                client_id: Some("devagotchi-cli".into()),
-                code_verifier: None,
-                refresh_token: None,
-                device_code: Some(started["device_code"].as_str().unwrap().into()),
-            })
-            .unwrap()
-            .access_token
-    }
-
-    /// Owner and an operator grant can read and change provisional limits. A stranger
-    /// cannot. Out-of-range values are refused. A saved value is what the next account
-    /// and the expiry warning use, and it survives a new open of the state directory.
-    #[tokio::test]
-    async fn admin_settings_are_authorized_bounded_audited_and_live() {
-        let owner = dg('a');
-        let operator = dg('b');
-        let stranger = dg('c');
-        let dir = tempfile::tempdir().unwrap();
-        #[cfg(unix)]
-        let socket = "/tmp/devagotchi-admin-settings.sock";
-        #[cfg(windows)]
-        let socket = r"\\.\pipe\devagotchi-admin-settings";
-        let config = Arc::new(
-            config::HubConfig::parse(
-                &serde_json::json!({
-                    "listen": "127.0.0.1:1",
-                    "public_url": "http://127.0.0.1:9",
-                    "auth": { "mode": "devagotchi" },
-                    "owner": owner,
-                    "brokers": [{ "name": "lab", "socket": socket }],
-                    "grants": [{ "subject": operator, "operator": true }]
-                })
-                .to_string(),
-            )
-            .unwrap(),
-        );
-        let devices = Arc::new(
-            machines::devices::Devices::open(&dir.path().join("devices.sqlite3")).unwrap(),
-        );
-        let audit = Arc::new(Audit::open(&dir.path().join("audit.sqlite3")).unwrap());
-        let links = Arc::new(machines::link::Links::new(
-            config.clone(),
-            devices,
-            audit.clone(),
-        ));
-        let authority = Arc::new(oauth::Authority::open(dir.path(), "http://127.0.0.1:9").unwrap());
-        let owner_token = access_for(&authority, &owner);
-        let operator_token = access_for(&authority, &operator);
-        let stranger_token = access_for(&authority, &stranger);
-        let state = AppState {
-            verifier: Arc::new(auth::Verifier::Devagotchi(authority.clone())),
-            hub: hub::Hub {
-                boards: Arc::new(agenthub::mcp::Boards::from_config(&config, dir.path())),
-                config,
-                audit: audit.clone(),
-                links,
-                push: None,
-                downloads: None,
-                analytics: None,
-                workflows: None,
-                offers: None,
-                connections: None,
-                routed: Default::default(),
-            },
-            issue_store: Arc::new(
-                crate::agenthub::issue_lifecycle::IssueLifecycleStore::disabled(),
-            ),
-            web: None,
-            passkeys: None,
-        };
-        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
-        let url = format!(
-            "http://{}/api/v1/admin/settings",
-            listener.local_addr().unwrap()
-        );
-        let app = Router::new()
-            .route(
-                "/api/v1/admin/settings",
-                get(admin_settings_get).put(admin_settings_put),
-            )
-            .with_state(state);
-        tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
-        let http = reqwest::Client::new();
-
-        let call =
-            |method: reqwest::Method, token: Option<&str>, body: Option<serde_json::Value>| {
-                let http = http.clone();
-                let url = url.clone();
-                let token = token.map(str::to_string);
-                async move {
-                    let mut request = http.request(method, &url);
-                    if let Some(token) = token {
-                        request = request.bearer_auth(token);
-                    }
-                    if let Some(body) = body {
-                        request = request.json(&body);
-                    }
-                    let response = request.send().await.unwrap();
-                    let status = response.status().as_u16();
-                    let json: serde_json::Value =
-                        response.json().await.unwrap_or(serde_json::Value::Null);
-                    (status, json)
-                }
-            };
-
-        let (status, _) = call(reqwest::Method::GET, None, None).await;
-        assert_eq!(status, 401);
-        let (status, _) = call(reqwest::Method::GET, Some("not-a-token"), None).await;
-        assert_eq!(status, 401);
-        let (status, body) = call(reqwest::Method::GET, Some(&stranger_token), None).await;
-        assert_eq!(status, 403, "{body}");
-        let (status, body) = call(reqwest::Method::GET, Some(&owner_token), None).await;
-        assert_eq!(status, 200, "{body}");
-        assert_eq!(body["provisional"]["ttl_days"], 14);
-        assert_eq!(body["provisional"]["starts_per_hour"], 8);
-        assert_eq!(body["provisional"]["unclaimed_cap"], 500);
-
-        for (field, value) in [
-            ("ttl_days", 0),
-            ("ttl_days", 91),
-            ("starts_per_hour", 0),
-            ("unclaimed_cap", 1_000_001),
-        ] {
-            let (status, body) = call(
-                reqwest::Method::PUT,
-                Some(&owner_token),
-                Some(serde_json::json!({ "provisional": { field: value } })),
-            )
-            .await;
-            assert_eq!(status, 400, "{field}={value}: {body}");
-            assert_eq!(body["error"], "invalid_settings");
-        }
-        let (status, _) = call(
-            reqwest::Method::PUT,
-            Some(&owner_token),
-            Some(serde_json::json!({ "provisional": {} })),
-        )
-        .await;
-        assert_eq!(status, 400);
-        let (status, body) = call(reqwest::Method::GET, Some(&operator_token), None).await;
-        assert_eq!(status, 200, "{body}");
-        assert_eq!(
-            body["provisional"]["ttl_days"], 14,
-            "a rejected write leaves the live value"
-        );
-
-        let (status, body) = call(
-            reqwest::Method::PUT,
-            Some(&operator_token),
-            Some(serde_json::json!({
-                "provisional": { "ttl_days": 1, "starts_per_hour": 2, "unclaimed_cap": 10 }
-            })),
-        )
-        .await;
-        assert_eq!(status, 200, "{body}");
-        assert_eq!(body["provisional"]["ttl_days"], 1);
-
-        let first = authority
-            .agent_start("devagotchi-cli", "claude", "203.0.113.40")
-            .unwrap();
-        let now = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_secs();
-        let left = first.provisional_until.saturating_sub(now);
-        assert!((86_390..=86_400).contains(&left), "left={left}");
-        authority
-            .agent_start("devagotchi-cli", "claude", "203.0.113.40")
-            .unwrap();
-        assert_eq!(
-            authority
-                .agent_start("devagotchi-cli", "claude", "203.0.113.40")
-                .unwrap_err()
-                .code,
-            "rate_limited"
-        );
-        let (status, _) = call(
-            reqwest::Method::PUT,
-            Some(&operator_token),
-            Some(serde_json::json!({ "provisional": { "unclaimed_cap": 2 } })),
-        )
-        .await;
-        assert_eq!(status, 200);
-        assert_eq!(
-            authority
-                .agent_start("devagotchi-cli", "claude", "203.0.113.41")
-                .unwrap_err()
-                .code,
-            "provisional_quota"
-        );
-        let before = authority.verify_access(&first.access_token).unwrap();
-        assert!(!before.provisional_warning);
-        let (status, _) = call(
-            reqwest::Method::PUT,
-            Some(&operator_token),
-            Some(serde_json::json!({ "provisional": { "ttl_days": 90 } })),
-        )
-        .await;
-        assert_eq!(status, 200);
-        let after = authority.verify_access(&first.access_token).unwrap();
-        assert!(after.provisional_warning);
-        assert_eq!(after.provisional_until, before.provisional_until);
-
-        let rows = audit.recorded();
-        assert!(
-            rows.iter().any(|(subject, tool, outcome)| {
-                subject == &stranger && tool == "admin.settings" && outcome == "denied"
-            }),
-            "{rows:?}"
-        );
-        assert!(
-            rows.iter()
-                .any(|(_, tool, outcome)| tool == "admin.settings"
-                    && outcome.starts_with("rejected")),
-            "{rows:?}"
-        );
-        assert!(
-            rows.iter().any(|(_, tool, outcome)| {
-                tool == "admin.settings"
-                    && outcome.contains("ttl_days=1")
-                    && outcome.contains("starts_per_hour=2")
-                    && outcome.contains("unclaimed_cap=10")
-            }),
-            "{rows:?}"
-        );
-        assert!(audit.verify().unwrap().ok);
-
-        let reloaded = oauth::Authority::open(dir.path(), "http://127.0.0.1:9").unwrap();
-        assert_eq!(reloaded.operator_settings().provisional.ttl_days, 90);
-        assert_eq!(reloaded.operator_settings().provisional.starts_per_hour, 2);
-        assert_eq!(reloaded.operator_settings().provisional.unclaimed_cap, 2);
-        reloaded.apply_config_limits(&config::ProvisionalPolicy::default());
-        assert_eq!(
-            reloaded.operator_settings().provisional.ttl_days,
-            90,
-            "a saved row wins over hub.json"
-        );
-    }
-
     /// What `run` builds for an `auth` block, short of listening: the accounts and passkeys
-    /// of `auth.mode hub`, and the verifier (the authority of `auth.mode devagotchi`).
+    /// of `auth.mode hub`, and the verifier.
     async fn state_for(
         dir: &std::path::Path,
         auth: serde_json::Value,
         owner: Option<&str>,
-    ) -> AppState {
+    ) -> Option<AppState> {
         let mut value = serde_json::json!({
             "listen": "127.0.0.1:1",
             "public_url": "http://127.0.0.1:9",
@@ -2570,9 +1968,8 @@ mod tests {
         let config = Arc::new(HubConfig::parse(&value.to_string()).unwrap());
         prepare_state_dir(dir).unwrap();
         let accounts = if config.has_accounts() {
-            let url = store::sqlite_url(&dir.join("accounts.sqlite3"));
             Some(Arc::new(
-                accounts::Accounts::open(store::Store::open(&url).await.unwrap())
+                accounts::Accounts::open(store::testing::postgres().await?.store)
                     .await
                     .unwrap()
                     .with_tokens(config.token_config()),
@@ -2583,12 +1980,13 @@ mod tests {
         let passkeys = accounts
             .clone()
             .and_then(|accounts| web::HubSignIn::new(config.clone(), accounts).map(Arc::new));
-        let devices = Arc::new(devices_at(dir).unwrap());
-        let audit = Arc::new(Audit::open(&dir.join("audit.sqlite3")).unwrap());
+        let devices = machines::devices::test_registry().await?;
+        let audit = crate::audit::test_audit().await?;
         let links = Arc::new(Links::new(config.clone(), devices, audit.clone()));
-        AppState {
+        let test_store = crate::store::testing::postgres().await?;
+        Some(AppState {
             verifier: Arc::new(
-                Verifier::from_hub_config(&config, dir, accounts)
+                Verifier::from_hub_config(&config, &test_store.store, accounts)
                     .await
                     .unwrap(),
             ),
@@ -2610,13 +2008,12 @@ mod tests {
             ),
             web: None,
             passkeys,
-        }
+        })
     }
 
-    /// Both account systems mount `/claim` and `/.well-known/oauth-authorization-server`,
-    /// and axum panics on a path mounted twice when the router is built. Each mode mounts
-    /// its own: the hub's (32b, 16c) in every mode but devagotchi, the authority's
-    /// (`oauth.rs`) in devagotchi mode only, with its admin settings and `/healthz` `auth`.
+    /// Every auth mode builds the router (axum panics on a path mounted twice) and mounts
+    /// `/claim`, `/.well-known/oauth-authorization-server` and `/oauth/*` only where the
+    /// hub has its own accounts. There is one account system: no `/token`, no admin settings.
     #[tokio::test]
     async fn app_builds_in_every_auth_mode() {
         let dir = tempfile::tempdir().unwrap();
@@ -2663,21 +2060,14 @@ mod tests {
                 serde_json::json!({ "mode": "hub", "nomen": nomen }),
                 None,
             ),
-            (
-                "devagotchi",
-                serde_json::json!({ "mode": "devagotchi" }),
-                None,
-            ),
         ];
         let http = reqwest::Client::builder()
             .redirect(reqwest::redirect::Policy::none())
             .build()
             .unwrap();
         for (mode, auth, owner) in cases {
-            let state = state_for(&dir.path().join(mode), auth, owner).await;
-            let devagotchi = mode == "devagotchi";
+            let state = or_skip!(state_for(&dir.path().join(mode), auth, owner));
             let hub_mode = mode.starts_with("hub");
-            assert_eq!(state.verifier.authority().is_some(), devagotchi, "{mode}");
             assert_eq!(state.passkeys.is_some(), hub_mode, "{mode}");
             // Building the router is the check that matters: a path mounted twice panics.
             let app = app(state);
@@ -2695,7 +2085,7 @@ mod tests {
             let health = http.get(format!("{base}/healthz")).send().await.unwrap();
             assert_eq!(health.status(), StatusCode::OK, "{mode}");
             let health: serde_json::Value = health.json().await.unwrap();
-            assert_eq!(health.get("auth").is_some(), devagotchi, "{mode}: {health}");
+            assert!(health.get("auth").is_none(), "{mode}: {health}");
 
             let metadata = http
                 .get(format!("{base}/.well-known/oauth-authorization-server"))
@@ -2708,9 +2098,6 @@ mod tests {
             if hub_mode {
                 assert_eq!(status, StatusCode::OK, "{mode}: {metadata}");
                 assert_eq!(token_endpoint, "http://127.0.0.1:9/oauth/token", "{mode}");
-            } else if devagotchi {
-                assert_eq!(status, StatusCode::OK, "{mode}: {metadata}");
-                assert_eq!(token_endpoint, "http://127.0.0.1:9/token", "{mode}");
             } else {
                 assert_eq!(status, StatusCode::NOT_FOUND, "{mode}: {metadata}");
             }
@@ -2721,13 +2108,10 @@ mod tests {
             if hub_mode {
                 assert_eq!(claim_status, StatusCode::OK, "{mode}");
                 assert!(claim.contains("Claim this hub"), "{mode}: {claim}");
-            } else if devagotchi {
-                assert_eq!(claim_status, StatusCode::OK, "{mode}");
-                assert!(!claim.contains("Claim this hub"), "{mode}: {claim}");
             }
 
             // The hub's own token endpoint answers only in hub mode (elsewhere it is mounted
-            // and says not_found, as before); devagotchi mode has `/token` and no `/oauth/*`.
+            // and says not_found).
             let token = http
                 .post(format!("{base}/oauth/token"))
                 .form(&[("grant_type", "authorization_code")])
@@ -2746,23 +2130,17 @@ mod tests {
                 .send()
                 .await
                 .unwrap();
-            assert_eq!(
-                token.status() != StatusCode::NOT_FOUND,
-                devagotchi,
-                "{mode}: /token {}",
-                token.status()
-            );
+            assert_eq!(token.status(), StatusCode::NOT_FOUND, "{mode}: /token");
             let settings = http
                 .get(format!("{base}/api/v1/admin/settings"))
                 .send()
                 .await
                 .unwrap();
-            let expected = if devagotchi {
-                StatusCode::UNAUTHORIZED
-            } else {
-                StatusCode::NOT_FOUND
-            };
-            assert_eq!(settings.status(), expected, "{mode}: admin settings");
+            assert_eq!(
+                settings.status(),
+                StatusCode::NOT_FOUND,
+                "{mode}: admin settings"
+            );
         }
     }
 }

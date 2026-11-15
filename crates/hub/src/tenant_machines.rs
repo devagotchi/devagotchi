@@ -49,23 +49,24 @@ impl Hub {
     /// `subject`'s own machine that it calls `name`: its tenant's first, then one it added
     /// under the bare name before the hub was hosted. Anyone else's is not found, so names
     /// of other accounts' machines are never revealed.
-    pub(crate) fn own_machine(&self, subject: &Subject, name: &str) -> Option<Device> {
+    pub(crate) async fn own_machine(&self, subject: &Subject, name: &str) -> Option<Device> {
         let mine = |device: &Device| device.owner.as_deref() == Some(subject.id.as_str());
         let stored = self.stored_name(subject, name);
-        if let Ok(Some(device)) = self.links.device(&stored)
+        if let Ok(Some(device)) = self.links.device(&stored).await
             && mine(&device)
         {
             return Some(device);
         }
-        match self.links.device(name) {
+        match self.links.device(name).await {
             Ok(Some(device)) if stored != name && mine(&device) => Some(device),
             _ => None,
         }
     }
 
     /// The machines `subject` added, each named as it knows them.
-    pub(crate) fn own_machines(&self, subject: &Subject) -> Vec<Device> {
+    pub(crate) async fn own_machines(&self, subject: &Subject) -> Vec<Device> {
         self.owned(&subject.id)
+            .await
             .into_iter()
             .map(|device| Device {
                 name: self.shown_name(subject, &device.name),
@@ -77,7 +78,7 @@ impl Hub {
     /// A one-time code for a machine of `subject`'s called `name`: the name it is stored
     /// under, and the code. An account nobody secured adds `tenancy.unsecured.machines` at
     /// most; a tenant on a plan, the plan's `machines`; a tenant waiting to be let in, none.
-    pub(crate) fn add_own_machine(
+    pub(crate) async fn add_own_machine(
         &self,
         subject: &Subject,
         name: &str,
@@ -102,13 +103,14 @@ impl Hub {
         let code = match self
             .links
             .issue_owned_code_within(&subject.id, &stored, limit)
+            .await
         {
             // The plan's limit, when it is the one reached, says so in the site's words.
             Err(error) if error.code == "machine_limit" => match plan {
                 Some((plan, Cap::AtMost(most)))
                     if unsecured.is_none_or(|quota| most as usize <= quota) =>
                 {
-                    let held = self.links.held(&subject.id).unwrap_or(most as usize);
+                    let held = self.links.held(&subject.id).await.unwrap_or(most as usize);
                     return Err(self.plan_limit(&plan, "machines", most, held));
                 }
                 _ => return Err(error),
@@ -147,7 +149,7 @@ impl Hub {
     /// Why `subject` cannot add one more machine now, if it cannot: waiting to be let in, or
     /// a limit reached (in the site's words when it is the plan's). What a workflow's machine
     /// step says before anyone presses its button; adding one checks again.
-    pub(crate) fn machine_room(&self, subject: &Subject) -> Option<BridgeError> {
+    pub(crate) async fn machine_room(&self, subject: &Subject) -> Option<BridgeError> {
         if let Some(refused) = self.waiting_refusal(subject) {
             return Some(refused);
         }
@@ -156,7 +158,7 @@ impl Hub {
         }
         let (limit, unsecured, plan) = self.machine_limit(subject);
         let limit = limit.unwrap_or(crate::machines::devices::OWNED_LIMIT);
-        let held = self.links.held(&subject.id).unwrap_or(0);
+        let held = self.links.held(&subject.id).await.unwrap_or(0);
         if held < limit {
             return None;
         }
@@ -176,15 +178,16 @@ impl Hub {
     }
 
     /// Revoke `subject`'s own machine called `name`.
-    pub(crate) fn revoke_own_machine(
+    pub(crate) async fn revoke_own_machine(
         &self,
         subject: &Subject,
         name: &str,
     ) -> BridgeResult<(bool, usize)> {
         let stored = self
             .own_machine(subject, name)
+            .await
             .map(|device| device.name)
             .unwrap_or_else(|| self.stored_name(subject, name));
-        self.links.revoke_owned(&subject.id, &stored)
+        self.links.revoke_owned(&subject.id, &stored).await
     }
 }

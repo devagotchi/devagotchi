@@ -20,8 +20,6 @@ fn a_stores_place_never_shows_its_user_password_or_query() {
         assert_eq!(place_of(url), place, "{url}");
         assert!(!place_of(url).contains("s3cret"));
     }
-    let file = std::env::temp_dir().join("accounts.sqlite3");
-    assert_eq!(Path::new(&place_of(&sqlite_url(&file))), file);
 }
 
 /// Each domain's table prefixes (`.ai/patterns/layout.md`, "Tables carry their domain").
@@ -34,16 +32,6 @@ const DOMAIN_PREFIXES: [(&str, &[&str]); 8] = [
     ("notify", &["push_", "mail_", "signal_"]),
     ("ops", &["audit_", "analytics_"]),
     ("connectors", &["connector_"]),
-];
-
-/// Tables made before the rule, without a domain prefix. The list only shrinks: renaming one
-/// removes it here, and a table not listed must carry a prefix.
-const UNPREFIXED: [&str; 5] = [
-    "api_keys",
-    "connections",
-    "passwords",
-    "person_preferences",
-    "sign_in_settings",
 ];
 
 #[tokio::test]
@@ -68,7 +56,7 @@ async fn every_table_in_the_hub_schema_carries_its_domain_prefix() {
     };
     let mut broken = Vec::new();
     for table in &tables {
-        if !prefixed(table) && !UNPREFIXED.contains(&table.as_str()) {
+        if !prefixed(table) {
             broken.push(format!(
                 "{table}: no domain prefix; name it after its domain ({})",
                 DOMAIN_PREFIXES
@@ -79,12 +67,21 @@ async fn every_table_in_the_hub_schema_carries_its_domain_prefix() {
             ));
         }
     }
-    for listed in UNPREFIXED {
-        if !tables.iter().any(|t| t == listed) {
-            broken.push(format!(
-                "{listed}: listed as unprefixed but gone; remove it from UNPREFIXED"
-            ));
-        }
-    }
     assert!(broken.is_empty(), "table names:\n  {}", broken.join("\n  "));
+}
+
+/// sqlx checks each applied migration by checksum: a hub built from a checkout that turned
+/// LF into CRLF (Windows, `core.autocrlf`) refuses a database a Linux-built hub migrated
+/// ("migration 1 was previously applied but has been modified"). `.gitattributes` keeps them
+/// LF in every checkout; this holds it.
+#[test]
+fn every_migration_is_embedded_with_the_repositorys_line_endings() {
+    for migration in POSTGRES.iter() {
+        assert!(
+            !migration.sql.as_ref().contains('\r'),
+            "migration {} ({}) carries a CR: see .gitattributes",
+            migration.version,
+            migration.description
+        );
+    }
 }

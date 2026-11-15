@@ -209,9 +209,8 @@ jobs:
             mkdir -p "$RUNNER_TEMP/build-$build" && cp target/debug/devagotchi "$RUNNER_TEMP/build-$build/"
           done
           cargo build --locked --bin devagotchi
-      # e2e.py also runs tests/oauth_probe.py: DCR, PKCE through a fake upstream,
-      # MCP initialize and whoami for a new account, a returning subject, and a
-      # second provider with the same verified email; on Linux, machine_update from ci-a to ci-b.
+      # e2e.py runs the hub, broker, link and sign-in probes; on Linux, machine_update from
+      # ci-a to ci-b. The hub's own OAuth (DCR, PKCE) is tests/clients_oauth.py, below.
       - run: python tests/e2e.py --bin-dir target/debug
         if: runner.os == 'Windows' && matrix.os != 'windows-11-arm'
         env:

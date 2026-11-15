@@ -1,11 +1,8 @@
 use super::*;
-use crate::store::{
-    Backend,
-    testing::{self, TestStore},
-};
+use crate::store::testing::{self, TestStore};
 
-/// The accounts in every store this run has: SQLite always, Postgres when the test server is
-/// set (CI). Each test body runs on each.
+/// The accounts on a new database of the test Postgres (none without one, as when
+/// `DEVAGOTCHI_TEST_POSTGRES_URL` is unset).
 async fn stores() -> Vec<(TestStore, Accounts)> {
     let mut out = Vec::new();
     for store in testing::stores().await {
@@ -155,7 +152,7 @@ async fn one_owner_and_unique_ids() {
 
 #[tokio::test]
 async fn owner_link_is_one_time_and_stored_only_as_a_hash() {
-    for (store, accounts) in stores().await {
+    for (_, accounts) in stores().await {
         let owner = accounts.create(A, "Jesse", true).await.unwrap();
         let token = accounts
             .issue_link(LinkPurpose::Owner, &owner.id)
@@ -181,21 +178,6 @@ async fn owner_link_is_one_time_and_stored_only_as_a_hash() {
             .await
             .unwrap();
         assert_eq!(stored, vec![hash(&token)]);
-        if store.store.backend() == Backend::Sqlite {
-            // Everything SQLite wrote, the write-ahead log included.
-            sqlx::query("PRAGMA wal_checkpoint(TRUNCATE)")
-                .execute(accounts.store().admin())
-                .await
-                .unwrap();
-            let file = store.dir.path().join("accounts.sqlite3");
-            let mut raw = std::fs::read(&file).unwrap();
-            raw.extend(
-                std::fs::read(store.dir.path().join("accounts.sqlite3-wal")).unwrap_or_default(),
-            );
-            let contains = |needle: &[u8]| raw.windows(needle.len()).any(|w| w == needle);
-            assert!(contains(hash(&token).as_bytes()), "the hash is stored");
-            assert!(!contains(token.as_bytes()), "the link itself is not");
-        }
         accounts
             .add_passkey(
                 &owner.id,
@@ -397,7 +379,7 @@ async fn challenges_are_the_hubs_own_bound_to_their_purpose_and_spent_once() {
         assert_eq!(add(A, 6, &altered, 101).await, refused);
         assert_eq!(add(A, 7, &[0u8; 57], 101).await, refused);
         assert_eq!(add(A, 8, &[], 101).await, refused);
-        let other_store = testing::sqlite().await;
+        let other_store = or_skip!(testing::postgres());
         let other = Accounts::open(other_store.store.clone()).await.unwrap();
         let foreign = other.challenge_at(Ceremony::Register, Some(A), [2; 16], 100);
         assert_eq!(add(A, 9, &foreign, 101).await, refused);
@@ -671,46 +653,6 @@ async fn the_store_and_its_challenges_survive_a_reopen() {
         // A sign-in begun before a restart finishes after it.
         assert_eq!(accounts.sign_in(&pending).await.unwrap().id, A);
     }
-}
-
-#[cfg(unix)]
-#[tokio::test]
-async fn a_sqlite_store_is_the_hubs_alone_new_or_found() {
-    use std::os::unix::fs::PermissionsExt;
-    let names = [
-        "accounts.sqlite3",
-        "accounts.sqlite3-wal",
-        "accounts.sqlite3-shm",
-    ];
-    let modes = |dir: &std::path::Path| -> Vec<(String, u32)> {
-        names
-            .iter()
-            .filter_map(|name| {
-                let meta = std::fs::metadata(dir.join(name)).ok()?;
-                Some((name.to_string(), meta.permissions().mode() & 0o777))
-            })
-            .collect()
-    };
-    // Made here.
-    let store = testing::sqlite().await;
-    let accounts = Accounts::open(store.store.clone()).await.unwrap();
-    accounts.create(A, "Jesse", true).await.unwrap();
-    let made = modes(store.dir.path());
-    assert_eq!(made.len(), 3, "{made:?}");
-    assert!(made.iter().all(|(_, mode)| *mode == 0o600), "{made:?}");
-    // Found readable by others (a restored backup, a store made by hand, a write-ahead
-    // log left behind): made private.
-    for name in names {
-        let path = store.dir.path().join(name);
-        if !path.exists() {
-            std::fs::write(&path, b"").unwrap();
-        }
-        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o644)).unwrap();
-    }
-    let _accounts = reopen(&store).await;
-    let found = modes(store.dir.path());
-    assert_eq!(found.len(), 3, "{found:?}");
-    assert!(found.iter().all(|(_, mode)| *mode == 0o600), "{found:?}");
 }
 
 #[tokio::test]

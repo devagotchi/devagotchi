@@ -1,8 +1,7 @@
 //! The person's own page end to end over HTTP, the whole router as it serves (`web/app/me.rs`,
 //! `crate::preferences`, `web/approvals.rs`): the frame says who is signed in, what a person
 //! sets changes what approvals offer them, a kind set to always ask stops what they allowed
-//! and cannot be allowed again, and only their own page changes any of it. On SQLite, and on
-//! Postgres when the test server is set (CI).
+//! and cannot be allowed again, and only their own page changes any of it. On the test Postgres (`DEVAGOTCHI_TEST_POSTGRES_URL`; CI sets it).
 
 use serde_json::{Value, json};
 
@@ -72,7 +71,7 @@ const USUAL: [(&str, &str); 4] = [
 ];
 
 async fn run(store: Option<&str>) {
-    let hub = hosted_with(store, |_, _| json!({})).await;
+    let hub = or_skip!(hosted_with(store, |_, _| json!({})));
     let mut person = hub.first_connect("Claude").await;
     let bound = hub
         .call(&mut person, "board_bind", json!({ "project": "site" }))
@@ -275,7 +274,4 @@ async fn run(store: Option<&str>) {
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn what_a_person_sets_is_what_their_approvals_do() {
     run(None).await;
-    if let Some(url) = crate::store::testing::empty_postgres().await {
-        run(Some(&url)).await;
-    }
 }

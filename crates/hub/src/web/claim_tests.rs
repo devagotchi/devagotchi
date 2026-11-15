@@ -69,7 +69,7 @@ impl World {
 
 #[tokio::test]
 async fn a_new_hub_is_claimed_from_the_browser_with_the_code_from_its_log() {
-    let world = world().await;
+    let world = or_skip!(world());
     let code = world.printed().await;
 
     // The landing page of a hub nobody owns offers the claim, and nothing else.
@@ -112,9 +112,9 @@ async fn a_new_hub_is_claimed_from_the_browser_with_the_code_from_its_log() {
 
     // The right one, typed back in lower case: the owner, named, and their passkey; the
     // claim is on the audit chain.
-    let before = world.audit.verify().unwrap().entries;
+    let before = world.audit.verify().await.unwrap().entries;
     let (session, account) = world.claim(&code.to_lowercase(), Some("Jesse")).await;
-    let after = world.audit.verify().unwrap();
+    let after = world.audit.verify().await.unwrap();
     assert!(after.ok && after.entries == before + 1, "{after:?}");
     assert!(
         world.config.is_owner(&account),
@@ -156,7 +156,7 @@ async fn a_new_hub_is_claimed_from_the_browser_with_the_code_from_its_log() {
 
 #[tokio::test]
 async fn a_cancelled_passkey_prompt_is_retried_with_the_same_code() {
-    let world = world().await;
+    let world = or_skip!(world());
     let code = world.printed().await;
     // The first press claimed, and the person cancelled the browser's prompt.
     let first = world.post("/claim", None, json!({ "code": code })).await;
@@ -181,7 +181,7 @@ async fn a_cancelled_passkey_prompt_is_retried_with_the_same_code() {
 
 #[tokio::test]
 async fn the_claim_answers_only_the_hubs_own_page() {
-    let world = world().await;
+    let world = or_skip!(world());
     let code = world.printed().await;
     for (origin, site) in [
         (Some("https://evil.example"), None),
@@ -233,7 +233,7 @@ async fn the_claim_answers_only_the_hubs_own_page() {
 
 #[tokio::test]
 async fn the_docs_say_how_to_connect_to_this_hub() {
-    let world = world().await;
+    let world = or_skip!(world());
     let docs = world.text("/docs", None).await;
     assert!(
         docs.contains(&format!("<code>{}/mcp</code>", world.url)),
@@ -250,7 +250,7 @@ async fn the_docs_say_how_to_connect_to_this_hub() {
 async fn a_hub_whose_config_names_its_owner_is_never_claimed() {
     // The Texas case: the owner is decided in the config (they may already reach the hub
     // through Nomen). Their passkey is made on the host; the log's code is no way in.
-    let world = world_owned_by(Some("395290028818825218")).await;
+    let world = or_skip!(world_owned_by(Some("395290028818825218")));
     let code = world.printed().await;
     let landing = world.text("/", None).await;
     assert!(

@@ -390,7 +390,7 @@ impl Accounts {
         transaction!(&self.store, |connection| {
             self.enter(connection, Lookup::Account(account)).await?;
             let password: Option<String> =
-                sqlx::query_scalar("SELECT email FROM passwords WHERE account_id = $1")
+                sqlx::query_scalar("SELECT email FROM auth_passwords WHERE account_id = $1")
                     .bind(account)
                     .fetch_optional(&mut *connection)
                     .await?;

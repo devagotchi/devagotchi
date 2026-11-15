@@ -1,33 +1,25 @@
-//! The Devagotchi store (`devagotchi-store`), shared by the hub and AgentHub: Postgres for a hosted hub, SQLite built into the binary for a standalone
-//! one (decision of 1 Nov: one storage layer, every test on both). One code path serves
-//! both: SQL that both accept, `$1`-style parameters, times as Unix seconds and flags as 0
-//! or 1 in 64-bit integers, bytes as BLOB or BYTEA. Each backend has its own migrations in
-//! `migrations/<backend>/`, kept in step: same tables, columns and meaning.
+//! The Devagotchi store (`devagotchi-store`), shared by the hub and AgentHub: the hub's
+//! Postgres (ADR 0001). Its migrations are `migrations/postgres/`, Postgres only, every table
+//! in schema `devagotchi` named after its domain (`.ai/patterns/layout.md`, rule 8).
 //!
 //! Every write goes through [`transaction!`]: one transaction that sees nothing another
-//! writer does halfway. SQLite takes its write lock up front (`BEGIN IMMEDIATE`); Postgres
-//! runs it SERIALIZABLE and runs it again when the server says it collided with another
-//! one, so code written for one writer at a time stays right with many hub instances.
+//! writer does halfway. It runs SERIALIZABLE and runs again when the server says it collided
+//! with another one, so code written for one writer at a time stays right with many hub
+//! instances.
 //!
 //! Where the store is: `DEVAGOTCHI_HUB_STORAGE_URL` when set (how a Postgres password
-//! arrives, from the secret store, never from a file), else the config's `storage.url`, else
-//! `accounts.sqlite3` in the state directory.
+//! arrives, from the secret store, never from a file), else the config's `storage.url`.
 //!
-//! Tenants are kept apart by the database itself on Postgres (migration 0007): the tables
-//! live in the `devagotchi` schema, every table of a tenant's rows has row-level security
-//! forced, and a row is visible only to a transaction that set `devagotchi.tenant` to its
-//! tenant ([`Store::scope`]). The hub's queries run as the role `devagotchi_hub` (no
-//! superuser, no BYPASSRLS), switched to on every connection when the login role may; a
-//! key that must lead to its tenant first (a session's hash, a token's) goes through
-//! [`Store::tenant_of`], which answers the tenant and nothing else; the operator's lists of
-//! tenants by access (migration 0008) go through [`Store::tenants_in`], which answers their
-//! ids and nothing else. SQLite runs the same code: there each call is a plain query, the
-//! file being one hub's alone.
+//! Tenants are kept apart by the database itself (migration 0007): every table of a
+//! tenant's rows has row-level security forced, and a row is visible only to a transaction
+//! that set `devagotchi.tenant` to its tenant ([`Store::scope`]). The hub's queries run as
+//! the role `devagotchi_hub` (no superuser, no BYPASSRLS), switched to on every connection
+//! when the login role may; a key that must lead to its tenant first (a session's hash, a
+//! token's) goes through [`Store::tenant_of`], which answers the tenant and nothing else;
+//! the operator's lists of tenants by access (migration 0008) go through
+//! [`Store::tenants_in`], which answers their ids and nothing else.
 
-use std::{
-    path::{Path, PathBuf},
-    sync::Once,
-};
+use std::{path::Path, sync::Once};
 
 use devagotchi_contracts::{BridgeError, BridgeResult};
 use sqlx::{
@@ -41,10 +33,6 @@ use sqlx::{
 // healthy can go back to the image before it (deploy/compose/update.sh). The one exception
 // is 0007 (tenant_rls), which moves and renames the tables: going back across it restores
 // the backup update.sh takes before every deploy (deploy/compose/README.md).
-static SQLITE: Migrator = Migrator {
-    ignore_missing: true,
-    ..sqlx::migrate!("migrations/sqlite")
-};
 static POSTGRES: Migrator = Migrator {
     ignore_missing: true,
     ..sqlx::migrate!("migrations/postgres")
@@ -56,16 +44,9 @@ pub const STORAGE_URL_ENV: &str = "DEVAGOTCHI_HUB_STORAGE_URL";
 /// How many times a Postgres transaction that collided with another is run again.
 const RETRIES: u32 = 8;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Backend {
-    Sqlite,
-    Postgres,
-}
-
 #[derive(Clone)]
 pub struct Store {
     pool: AnyPool,
-    backend: Backend,
     /// Whether the hub's queries are held to row-level security (Postgres, running as a
     /// role without superuser or BYPASSRLS).
     enforced: bool,
@@ -110,7 +91,7 @@ pub const TABLES_SCHEMA: &str = "devagotchi";
 impl std::fmt::Debug for Store {
     /// Never prints the URL: it may carry a password.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Store({:?})", self.backend)
+        write!(f, "Store({})", self.place)
     }
 }
 
@@ -177,50 +158,17 @@ pub fn unsecs(time: i64) -> u64 {
     u64::try_from(time).unwrap_or(0)
 }
 
-/// The store a hub uses: the environment's URL, the config's, or the state directory's
-/// SQLite file.
-pub fn url_for(configured: Option<&str>, state_dir: &Path) -> String {
+/// The Postgres a hub uses: the environment's URL, else the config's; `None` when neither
+/// names one.
+pub fn url_for(configured: Option<&str>) -> Option<String> {
     match std::env::var(STORAGE_URL_ENV) {
-        Ok(url) if !url.trim().is_empty() => url.trim().to_string(),
-        _ => configured
-            .map(str::to_string)
-            .unwrap_or_else(|| sqlite_url(&state_dir.join("accounts.sqlite3"))),
+        Ok(url) if !url.trim().is_empty() => Some(url.trim().to_string()),
+        _ => configured.map(str::to_string),
     }
-}
-
-/// The URL of a SQLite store at `path`, in the one form sqlx reads back the same path on
-/// every OS: `sqlite:` and the path with `/` separators (`sqlite:/var/lib/…`,
-/// `sqlite:C:/ProgramData/…`), its `%`, `?`, `#` and spaces percent-encoded.
-pub fn sqlite_url(path: &Path) -> String {
-    let path = path.to_string_lossy();
-    #[cfg(windows)]
-    let path = path.replace('\\', "/");
-    let mut encoded = String::with_capacity(path.len());
-    for c in path.chars() {
-        match c {
-            '%' => encoded.push_str("%25"),
-            '?' => encoded.push_str("%3F"),
-            '#' => encoded.push_str("%23"),
-            ' ' => encoded.push_str("%20"),
-            c => encoded.push(c),
-        }
-    }
-    format!("sqlite:{encoded}?mode=rwc")
-}
-
-/// The file a SQLite URL names (`sqlite:PATH` or `sqlite://PATH`, before any `?`,
-/// percent-decoded), or `None` for any other URL.
-pub fn sqlite_path(url: &str) -> Option<PathBuf> {
-    let rest = url
-        .strip_prefix("sqlite://")
-        .or_else(|| url.strip_prefix("sqlite:"))?;
-    let path = rest.split('?').next().unwrap_or("");
-    let decoded = percent_encoding::percent_decode_str(path).decode_utf8_lossy();
-    Some(PathBuf::from(decoded.into_owned()))
 }
 
 /// Whether a URL is one the store opens, and keeps its password out of a file: `postgres://`
-/// or `postgresql://` without a password, or `sqlite:` with an absolute path.
+/// or `postgresql://` without a password.
 pub fn check_configured_url(url: &str) -> Result<(), String> {
     if let Some(rest) = url
         .strip_prefix("postgres://")
@@ -237,14 +185,7 @@ pub fn check_configured_url(url: &str) -> Result<(), String> {
         }
         return Ok(());
     }
-    if let Some(path) = sqlite_path(url) {
-        return if path.is_absolute() {
-            Ok(())
-        } else {
-            Err("storage.url sqlite: needs an absolute path".to_string())
-        };
-    }
-    Err("storage.url is postgres://… or sqlite:/absolute/path".to_string())
+    Err("storage.url is postgres://… (the hub keeps everything in Postgres)".to_string())
 }
 
 /// The environment variable that names the Postgres schema the hub's tables live in, over
@@ -272,8 +213,7 @@ pub fn schema_for(configured: Option<&str>) -> Option<String> {
 }
 
 impl Store {
-    /// Open the store at `url` and bring its schema up to date. A SQLite file is the hub's
-    /// alone (0600, with its -wal and -shm files), whether made here or found.
+    /// Open the store at `url` and bring its schema up to date.
     #[cfg_attr(not(any(test, feature = "testing")), allow(dead_code))]
     pub async fn open(url: &str) -> BridgeResult<Self> {
         Self::open_in(url, None).await
@@ -282,8 +222,7 @@ impl Store {
     /// `open`, with the hub's tables in their own Postgres `schema`, made if missing: on a
     /// database other things share (a Supabase project, whose `public` schema its REST API
     /// serves to anyone with the project's public key), the hub's tables stay out of
-    /// `public`. Every connection sets its `search_path` to it. SQLite has no schemas; it
-    /// ignores this.
+    /// `public`. Every connection sets its `search_path` to it.
     pub async fn open_in(url: &str, schema: Option<&str>) -> BridgeResult<Self> {
         if let Some(schema) = schema
             && !valid_schema(schema)
@@ -297,33 +236,14 @@ impl Store {
         }
         static DRIVERS: Once = Once::new();
         DRIVERS.call_once(install_default_drivers);
-        let (backend, file) = if url.starts_with("postgres://") || url.starts_with("postgresql://")
-        {
-            (Backend::Postgres, None)
-        } else if let Some(path) = sqlite_path(url) {
-            (Backend::Sqlite, Some(path))
-        } else {
+        if !url.starts_with("postgres://") && !url.starts_with("postgresql://") {
             return Err(BridgeError::new(
                 "account_store",
-                "the store's URL is postgres://… or sqlite:…",
+                "the store's URL is postgres://… (the hub keeps everything in Postgres)",
             ));
-        };
-        if let Some(file) = &file {
-            if !file.exists() {
-                // SQLite gives its -wal and -shm files the main file's mode: all three 0600.
-                write_private(file, &[])?;
-            }
-            make_private(file)?;
         }
-        let schema = match backend {
-            Backend::Postgres => schema.map(str::to_string),
-            Backend::Sqlite => None,
-        };
+        let schema = schema.map(str::to_string);
         let home_schema = schema.clone().unwrap_or_else(|| "public".to_string());
-        let migrator = match backend {
-            Backend::Sqlite => &SQLITE,
-            Backend::Postgres => &POSTGRES,
-        };
         // The migrations run on a connection of their own, as the login role (it may make
         // schemas and roles), with the schema the store began in first on the path: the
         // migration record stays where it always was, and 0007 moves the tables into
@@ -332,58 +252,37 @@ impl Store {
             let mut admin = sqlx::AnyConnection::connect(url)
                 .await
                 .map_err(store_error)?;
-            if backend == Backend::Sqlite {
-                admin
-                    .execute("PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 5000;")
-                    .await
-                    .map_err(store_error)?;
-            } else {
-                if let Some(schema) = &schema {
-                    admin
-                        .execute(sqlx::AssertSqlSafe(format!(
-                            "CREATE SCHEMA IF NOT EXISTS {schema}"
-                        )))
-                        .await
-                        .map_err(store_error)?;
-                }
+            if let Some(schema) = &schema {
                 admin
                     .execute(sqlx::AssertSqlSafe(format!(
-                        "CREATE SCHEMA IF NOT EXISTS {TABLES_SCHEMA}; SET search_path TO {home_schema}, {TABLES_SCHEMA}"
+                        "CREATE SCHEMA IF NOT EXISTS {schema}"
                     )))
                     .await
                     .map_err(store_error)?;
             }
-            migrator
+            admin
+                .execute(sqlx::AssertSqlSafe(format!(
+                    "CREATE SCHEMA IF NOT EXISTS {TABLES_SCHEMA}; SET search_path TO {home_schema}, {TABLES_SCHEMA}"
+                )))
+                .await
+                .map_err(store_error)?;
+            POSTGRES
                 .run(&mut admin)
                 .await
                 .map_err(|error| BridgeError::new("account_store", error.to_string()))?;
             let _ = admin.close().await;
         }
-        let set_path = (backend == Backend::Postgres)
-            .then(|| format!("SET search_path TO {TABLES_SCHEMA}, {home_schema}"));
+        let set_path = format!("SET search_path TO {TABLES_SCHEMA}, {home_schema}");
         let connect = |switch_role: bool| {
             let set_path = set_path.clone();
             AnyPoolOptions::new()
-                .max_connections(match backend {
-                    Backend::Sqlite => 4,
-                    Backend::Postgres => 16,
-                })
+                .max_connections(16)
                 .after_connect(move |connection, _| {
                     let set_path = set_path.clone();
                     Box::pin(async move {
-                        if backend == Backend::Sqlite {
-                            connection
-                                .execute(
-                                    "PRAGMA journal_mode = WAL;
-                                     PRAGMA synchronous = FULL;
-                                     PRAGMA busy_timeout = 5000;
-                                     PRAGMA foreign_keys = ON;",
-                                )
-                                .await?;
-                        }
-                        if let Some(set_path) = set_path {
-                            // Checked names (`valid_schema`): no quoting, nothing to inject.
-                            connection.execute(sqlx::AssertSqlSafe(set_path)).await?;
+                        // Checked names (`valid_schema`): no quoting, nothing to inject.
+                        connection.execute(sqlx::AssertSqlSafe(set_path)).await?;
+                        {
                             if switch_role {
                                 let may: bool = sqlx::query_scalar(
                                     "SELECT CASE WHEN EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'devagotchi_hub')
@@ -406,12 +305,8 @@ impl Store {
         let pool = connect(true).await.map_err(store_error)?;
         #[cfg(any(test, feature = "testing"))]
         let admin = connect(false).await.map_err(store_error)?;
-        if let Some(file) = &file {
-            make_private(file)?;
-        }
-        let enforced = match backend {
-            Backend::Sqlite => false,
-            Backend::Postgres => {
+        let enforced = {
+            {
                 let mut connection = pool.acquire().await.map_err(store_error)?;
                 // Held to row-level security: neither superuser nor BYPASSRLS.
                 let held: bool = sqlx::query_scalar(
@@ -440,7 +335,6 @@ impl Store {
         };
         Ok(Self {
             pool,
-            backend,
             enforced,
             place: place_of(url),
             schema,
@@ -449,8 +343,8 @@ impl Store {
         })
     }
 
-    /// Where the store is, to show a person: Postgres's host, port and database, or the
-    /// SQLite file; never a user name or password.
+    /// Where the store is, to show a person: Postgres's host, port and database; never a
+    /// user name or password.
     pub fn place(&self) -> &str {
         &self.place
     }
@@ -461,10 +355,6 @@ impl Store {
         self.schema.as_deref()
     }
 
-    pub fn backend(&self) -> Backend {
-        self.backend
-    }
-
     /// Whether the hub's queries are held to row-level security (Postgres as a role with
     /// neither superuser nor BYPASSRLS): shown in `/healthz`.
     pub fn enforced(&self) -> bool {
@@ -472,30 +362,27 @@ impl Store {
     }
 
     /// Scope the transaction on `connection` to `tenant`: from here to its end it sees and
-    /// writes that tenant's rows only (Postgres, `set_config(…, true)`). SQLite: nothing to
-    /// set.
+    /// writes that tenant's rows only (`set_config(…, true)`).
     pub async fn scope(
         &self,
         connection: &mut AnyConnection,
         tenant: &str,
     ) -> Result<(), sqlx::Error> {
-        if self.backend == Backend::Postgres {
-            sqlx::query("SELECT set_config('devagotchi.tenant', $1, true)")
-                .bind(tenant)
-                .execute(&mut *connection)
-                .await?;
-        }
+        sqlx::query("SELECT set_config('devagotchi.tenant', $1, true)")
+            .bind(tenant)
+            .execute(&mut *connection)
+            .await?;
         Ok(())
     }
 
-    /// The tenant whose row `lookup` names, if any: on Postgres through
-    /// `devagotchi.tenant_of`, which answers that and nothing else.
+    /// The tenant whose row `lookup` names, if any, through `devagotchi.tenant_of`, which
+    /// answers that and nothing else.
     pub async fn tenant_of(
         &self,
         connection: &mut AnyConnection,
         lookup: Lookup<'_>,
     ) -> Result<Option<String>, sqlx::Error> {
-        if self.backend == Backend::Postgres {
+        {
             if let Lookup::Workflow(hash) = lookup {
                 return sqlx::query_scalar("SELECT devagotchi.workflow_tenant($1)")
                     .bind(hash)
@@ -529,48 +416,6 @@ impl Store {
                 .fetch_one(&mut *connection)
                 .await;
         }
-        let query = match lookup {
-            Lookup::Account(id) => {
-                sqlx::query_scalar("SELECT tenant_id FROM auth_accounts WHERE id = $1").bind(id)
-            }
-            Lookup::Session(hash) => {
-                sqlx::query_scalar("SELECT tenant_id FROM auth_sessions WHERE hash = $1").bind(hash)
-            }
-            Lookup::Token(hash) => {
-                sqlx::query_scalar("SELECT tenant_id FROM oauth_tokens WHERE hash = $1").bind(hash)
-            }
-            Lookup::Code(hash) => {
-                sqlx::query_scalar("SELECT tenant_id FROM oauth_codes WHERE hash = $1").bind(hash)
-            }
-            Lookup::Link(hash) => {
-                sqlx::query_scalar("SELECT tenant_id FROM auth_links WHERE hash = $1").bind(hash)
-            }
-            Lookup::Passkey(id) => {
-                sqlx::query_scalar("SELECT tenant_id FROM auth_passkeys WHERE id = $1").bind(id)
-            }
-            Lookup::Identity(provider, subject) => sqlx::query_scalar(
-                "SELECT tenant_id FROM auth_identities WHERE provider = $1 AND subject = $2",
-            )
-            .bind(provider)
-            .bind(subject),
-            Lookup::Email(email) => sqlx::query_scalar(
-                "SELECT tenant_id FROM auth_identities WHERE email = $1
-                 ORDER BY created_at, provider, subject LIMIT 1",
-            )
-            .bind(email),
-            Lookup::Owner => {
-                sqlx::query_scalar("SELECT tenant_id FROM auth_accounts WHERE owner = 1")
-            }
-            Lookup::Workflow(hash) => {
-                sqlx::query_scalar("SELECT tenant_id FROM tenancy_workflows WHERE link_hash = $1")
-                    .bind(hash)
-            }
-            Lookup::Offer(hash) => {
-                sqlx::query_scalar("SELECT tenant_id FROM tenancy_offers WHERE link_hash = $1")
-                    .bind(hash)
-            }
-        };
-        query.fetch_optional(&mut *connection).await
     }
 
     /// Accounts nobody secured yet that were used after `since`, across the hub.
@@ -579,21 +424,14 @@ impl Store {
         connection: &mut AnyConnection,
         since: i64,
     ) -> Result<i64, sqlx::Error> {
-        let sql = match self.backend {
-            Backend::Postgres => "SELECT devagotchi.live_unsecured($1)",
-            Backend::Sqlite => {
-                "SELECT COUNT(*) FROM auth_accounts
-                 WHERE provisional = 1 AND disabled_at IS NULL AND last_active > $1"
-            }
-        };
-        sqlx::query_scalar(sql)
+        sqlx::query_scalar("SELECT devagotchi.live_unsecured($1)")
             .bind(since)
             .fetch_one(&mut *connection)
             .await
     }
 
     /// The tenants whose access is `state` (`admitted` or `waiting`), at most `most`: the
-    /// longest waiting first, the latest let in first. Ids only: on Postgres through
+    /// longest waiting first, the latest let in first. Ids only, through
     /// `devagotchi.tenants_in` (migration 0008), so the operator's lists name tenants and
     /// each one's details are read in a transaction scoped to it.
     pub async fn tenants_in(
@@ -602,16 +440,7 @@ impl Store {
         state: &str,
         most: i64,
     ) -> Result<Vec<String>, sqlx::Error> {
-        let sql = match self.backend {
-            Backend::Postgres => "SELECT devagotchi.tenants_in($1, $2)",
-            Backend::Sqlite => {
-                "SELECT tenant_id FROM tenancy_access WHERE state = $1
-                 ORDER BY CASE WHEN state = 'waiting' THEN coalesce(waiting_since, 0)
-                               ELSE -coalesce(admitted_at, 0) END, tenant_id
-                 LIMIT $2"
-            }
-        };
-        sqlx::query_scalar(sql)
+        sqlx::query_scalar("SELECT devagotchi.tenants_in($1, $2)")
             .bind(state)
             .bind(most)
             .fetch_all(&mut *connection)
@@ -623,14 +452,12 @@ impl Store {
         self.pool.acquire().await.map_err(store_error)
     }
 
-    /// A write transaction for [`transaction!`]: SQLite takes its write lock now; Postgres
-    /// runs it SERIALIZABLE.
+    /// A write transaction for [`transaction!`], SERIALIZABLE.
     pub async fn begin(&self) -> BridgeResult<Transaction<'static, Any>> {
-        let begin = match self.backend {
-            Backend::Sqlite => "BEGIN IMMEDIATE",
-            Backend::Postgres => "BEGIN ISOLATION LEVEL SERIALIZABLE",
-        };
-        self.pool.begin_with(begin).await.map_err(store_error)
+        (self.pool)
+            .begin_with("BEGIN ISOLATION LEVEL SERIALIZABLE")
+            .await
+            .map_err(store_error)
     }
 
     /// End a [`transaction!`]: commit what the work did, or roll back what it refused.
@@ -700,115 +527,8 @@ fn collided(error: &sqlx::Error) -> bool {
         .is_some_and(|code| code == "40001" || code == "40P01" || code == "23505")
 }
 
-/// A SQLite store and its -wal and -shm files, when present, readable by the hub alone.
-pub fn make_private(path: &Path) -> BridgeResult<()> {
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        let name = path.as_os_str().to_owned();
-        for suffix in ["", "-wal", "-shm"] {
-            let mut file = name.clone();
-            file.push(suffix);
-            match std::fs::set_permissions(&file, std::fs::Permissions::from_mode(0o600)) {
-                Ok(()) => {}
-                Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
-                Err(error) => {
-                    return Err(BridgeError::new(
-                        "account_store",
-                        format!("{}: {error}", Path::new(&file).display()),
-                    ));
-                }
-            }
-        }
-    }
-    #[cfg(not(unix))]
-    let _ = path;
-    Ok(())
-}
-
-/// Stores for a test: a SQLite file always, and a fresh Postgres database when
-/// `DEVAGOTCHI_TEST_POSTGRES_URL` names a server (CI sets it; every hub test that takes
-/// these runs on both backends there).
 #[cfg(any(test, feature = "testing"))]
-pub mod testing {
-    use super::*;
-
-    pub const POSTGRES_ENV: &str = "DEVAGOTCHI_TEST_POSTGRES_URL";
-
-    /// A store under test, with what keeps it alive and how to open it again.
-    pub struct TestStore {
-        pub store: Store,
-        pub url: String,
-        pub dir: tempfile::TempDir,
-    }
-
-    pub async fn stores() -> Vec<TestStore> {
-        let mut out = vec![sqlite().await];
-        if let Some(store) = postgres().await {
-            out.push(store);
-        }
-        out
-    }
-
-    pub async fn sqlite() -> TestStore {
-        let dir = tempfile::tempdir().unwrap();
-        let url = sqlite_url(&dir.path().join("accounts.sqlite3"));
-        TestStore {
-            store: Store::open(&url).await.unwrap(),
-            url,
-            dir,
-        }
-    }
-
-    /// The store at `url` brought to migration `version` and no further, as a hub from
-    /// before a later migration left it. `Store::open` runs the rest.
-    pub async fn migrated_to(url: &str, version: i64) {
-        static DRIVERS: Once = Once::new();
-        DRIVERS.call_once(install_default_drivers);
-        let (migrator, file) = match sqlite_path(url) {
-            Some(file) => (&SQLITE, Some(file)),
-            None => (&POSTGRES, None),
-        };
-        if let Some(file) = file {
-            write_private(&file, &[]).unwrap();
-        }
-        let mut connection = sqlx::AnyConnection::connect(url).await.unwrap();
-        migrator.run_to(version, &mut connection).await.unwrap();
-        connection.close().await.unwrap();
-    }
-
-    /// A new, empty database on the test server, or `None` without one.
-    pub async fn postgres() -> Option<TestStore> {
-        let url = empty_postgres().await?;
-        Some(TestStore {
-            store: Store::open(&url).await.unwrap(),
-            url,
-            dir: tempfile::tempdir().unwrap(),
-        })
-    }
-
-    /// The URL of a new database on the test server with nothing in it yet, or `None`
-    /// without a server.
-    pub async fn empty_postgres() -> Option<String> {
-        let server = std::env::var(POSTGRES_ENV).ok().filter(|u| !u.is_empty())?;
-        static DRIVERS: Once = Once::new();
-        DRIVERS.call_once(install_default_drivers);
-        let name = format!("dvg_test_{}", hex::encode(random::<8>()));
-        let admin = AnyPoolOptions::new()
-            .max_connections(1)
-            .connect(&server)
-            .await
-            .expect("the test Postgres server");
-        admin
-            .execute(sqlx::AssertSqlSafe(format!("CREATE DATABASE {name}")))
-            .await
-            .unwrap();
-        admin.close().await;
-        let base = server.split('?').next().unwrap();
-        let (root, _) = base.rsplit_once('/').unwrap();
-        Some(format!("{root}/{name}"))
-    }
-}
+pub mod testing;
 
 /// Write a new file only its owner may read (0600 on Unix), refusing one that exists.
 pub fn write_private(path: &Path, bytes: &[u8]) -> BridgeResult<()> {
@@ -851,11 +571,8 @@ pub fn valid_tenant_id(id: &str) -> bool {
 }
 
 /// A store's URL without what must not be shown: the user and password before `@`, and the
-/// query (which may carry a password too). A SQLite URL becomes its file's path.
+/// query (which may carry a password too).
 pub fn place_of(url: &str) -> String {
-    if let Some(path) = sqlite_path(url) {
-        return path.display().to_string();
-    }
     let rest = url.split_once("://").map_or(url, |(_, rest)| rest);
     let rest = rest.split(['?', '#']).next().unwrap_or_default();
     let (authority, path) = rest.split_once('/').unwrap_or((rest, ""));

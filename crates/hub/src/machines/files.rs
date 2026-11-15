@@ -281,7 +281,7 @@ impl Hub {
         let subject = self.subject(&context)?;
         // The audit names every path asked for, as read_file names its one.
         let asked = input.paths.join("; ");
-        let route = match self.route(&subject, &input.machine) {
+        let route = match self.route(&subject, &input.machine).await {
             Ok(route) => route,
             Err(Json(error)) => {
                 self.record(
@@ -290,7 +290,8 @@ impl Hub {
                     &input.machine,
                     &asked,
                     &error.code,
-                )?;
+                )
+                .await?;
                 return Err(Json(error));
             }
         };
@@ -317,7 +318,8 @@ impl Hub {
             &input.machine,
             &asked,
             code,
-        )?;
+        )
+        .await?;
         files.map(Json).map_err(Json)
     }
 
@@ -420,7 +422,7 @@ impl Hub {
         context: RequestContext<RoleServer>,
     ) -> Result<CallToolResult, Json<BridgeError>> {
         let subject = self.subject(&context)?;
-        let route = match self.route(&subject, &input.machine) {
+        let route = match self.route(&subject, &input.machine).await {
             Ok(route) => route,
             Err(Json(error)) => {
                 self.record(
@@ -429,7 +431,8 @@ impl Hub {
                     &input.machine,
                     &input.path,
                     &error.code,
-                )?;
+                )
+                .await?;
                 return Err(Json(error));
             }
         };
@@ -446,7 +449,8 @@ impl Hub {
             Ok(_) => "ok",
             Err(error) => error.code.as_str(),
         };
-        self.record(&subject, "read_image", &input.machine, &input.path, code)?;
+        self.record(&subject, "read_image", &input.machine, &input.path, code)
+            .await?;
         image.map(|image| image.into_result()).map_err(Json)
     }
 }

@@ -2,8 +2,7 @@
 //! (`analytics.rs`): a visit to a public page is counted by the server with exactly what
 //! it keeps; opted-out, robot, asset, health, API and the operator's own requests are not;
 //! each tenant's milestones are written once, where each happens; a hub that does not
-//! count keeps nothing and its privacy page says so. On SQLite, and on Postgres when the
-//! test server is set (CI).
+//! count keeps nothing and its privacy page says so. On the test Postgres (`DEVAGOTCHI_TEST_POSTGRES_URL`; CI sets it).
 
 use serde_json::{Value, json};
 use sqlx::Row;
@@ -18,15 +17,16 @@ const PHONE: &str = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) Appl
 const DESKTOP: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36";
 
 async fn stores() -> Vec<Option<String>> {
-    let mut out = vec![None];
-    if let Some(url) = store::testing::empty_postgres().await {
-        out.push(Some(url));
-    }
+    let out: Vec<Option<String>> = crate::store::testing::empty_postgres()
+        .await
+        .into_iter()
+        .map(Some)
+        .collect();
     out
 }
 
 /// A hosted hub run by `github:42`, with `more` merged into its config.
-async fn hub_on(store: Option<&str>, more: Value) -> Hosted {
+async fn hub_on(store: Option<&str>, more: Value) -> Option<Hosted> {
     hosted_with(store, move |_, _| {
         let mut config = json!({ "operators": ["github:42"] });
         for (key, value) in more.as_object().unwrap() {
@@ -98,7 +98,7 @@ async fn operator_cookie(hub: &Hosted) -> String {
 #[tokio::test]
 async fn a_public_page_visit_is_counted_by_the_server_with_exactly_what_it_keeps() {
     for store in stores().await {
-        counted(hub_on(store.as_deref(), json!({})).await).await;
+        counted(or_skip!(hub_on(store.as_deref(), json!({})))).await;
     }
 }
 
@@ -219,9 +219,9 @@ async fn counted(hub: Hosted) {
     assert!(!privacy.contains("no analytics"), "{privacy}");
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_hub_that_does_not_count_keeps_nothing_and_says_so() {
-    let hub = hub_on(None, json!({ "analytics": { "enabled": false } })).await;
+    let hub = or_skip!(hub_on(None, json!({ "analytics": { "enabled": false } })));
     assert!(hub.hub.analytics.is_none());
     assert_eq!(visit(&hub, "/docs", &[("user-agent", DESKTOP)]).await, 200);
     let mut person = hub.first_connect("Claude").await;
@@ -243,7 +243,10 @@ async fn a_hub_that_does_not_count_keeps_nothing_and_says_so() {
     assert!(privacy.contains("no analytics"), "{privacy}");
     assert!(!privacy.contains("Global Privacy Control"), "{privacy}");
     // And a longer retention is what the page says, where the hub counts.
-    let kept = hub_on(None, json!({ "analytics": { "retention_days": 30 } })).await;
+    let kept = or_skip!(hub_on(
+        None,
+        json!({ "analytics": { "retention_days": 30 } })
+    ));
     let (_, privacy) = Hosted::text(kept.get("/privacy", None).await).await;
     assert!(privacy.contains("30 days"), "{privacy}");
 }
@@ -251,7 +254,7 @@ async fn a_hub_that_does_not_count_keeps_nothing_and_says_so() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn each_milestone_is_written_once_where_it_happens() {
     for store in stores().await {
-        let hub = hosted_with(store.as_deref(), |dir, _| {
+        let hub = or_skip!(hosted_with(store.as_deref(), |dir, _| {
             let mut site: Value =
                 serde_json::from_str(include_str!("../site/default/site.json")).unwrap();
             site["early_access"] = json!({ "mode": "early_access" });
@@ -259,8 +262,7 @@ async fn each_milestone_is_written_once_where_it_happens() {
             std::fs::create_dir_all(&path).unwrap();
             std::fs::write(path.join("site.json"), site.to_string()).unwrap();
             json!({ "site": { "dir": path.to_string_lossy() }, "operators": ["github:42"] })
-        })
-        .await;
+        }));
         milestones_once(hub).await;
     }
 }
@@ -308,6 +310,7 @@ async fn milestones_once(hub: Hosted) {
         let code = hub
             .devices
             .issue_owned_code(&subject, &stored, [n as u8 + 1; 16], 16)
+            .await
             .unwrap();
         let enrolled = hub
             .http
@@ -333,6 +336,7 @@ async fn milestones_once(hub: Hosted) {
     assert!(
         hub.hub
             .record(&caller, "operation_start", "laptop", "", "broker_offline")
+            .await
             .is_ok()
     );
     assert!(
@@ -345,6 +349,7 @@ async fn milestones_once(hub: Hosted) {
         assert!(
             hub.hub
                 .record(&caller, tool, "laptop", "op-1", outcome)
+                .await
                 .is_ok()
         );
     }
@@ -393,6 +398,7 @@ async fn milestones_once(hub: Hosted) {
     assert!(
         hub.hub
             .record(&owner, "run", "laptop", "op-2", "ok")
+            .await
             .is_ok()
     );
     assert!(milestones(&hub, &home).await.is_empty());

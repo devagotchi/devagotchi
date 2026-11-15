@@ -29,13 +29,13 @@ pub(crate) struct Person {
     pub(crate) session: Option<String>,
 }
 
-async fn hosted() -> Hosted {
+async fn hosted() -> Option<Hosted> {
     hosted_on(None).await
 }
 
-/// A hosted hub whose store is `url` (a Postgres database under test), or SQLite in its
-/// state directory.
-async fn hosted_on(store: Option<&str>) -> Hosted {
+/// A hosted hub whose store is `url` (a Postgres database under test), or a new database on
+/// the test Postgres; `None` without a test Postgres.
+async fn hosted_on(store: Option<&str>) -> Option<Hosted> {
     hosted_with(store, |_, _| json!({})).await
 }
 
@@ -43,7 +43,7 @@ async fn hosted_on(store: Option<&str>) -> Hosted {
 pub(crate) async fn hosted_with(
     store: Option<&str>,
     extra: impl FnOnce(&std::path::Path, &str) -> Value,
-) -> Hosted {
+) -> Option<Hosted> {
     hosted_with_ingress(
         store,
         extra,
@@ -56,7 +56,7 @@ pub(crate) async fn hosted_with_ingress(
     store: Option<&str>,
     extra: impl FnOnce(&std::path::Path, &str) -> Value,
     ingress: crate::agenthub::issue_lifecycle::IssueLifecycleStore,
-) -> Hosted {
+) -> Option<Hosted> {
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let url = format!("http://{}", listener.local_addr().unwrap());
     let dir = tempfile::tempdir().unwrap();
@@ -81,9 +81,10 @@ pub(crate) async fn hosted_with_ingress(
         }
     }
     let config = Arc::new(HubConfig::parse(&value.to_string()).unwrap());
-    let store_url = store
-        .map(str::to_string)
-        .unwrap_or_else(|| store::sqlite_url(&dir.path().join("accounts.sqlite3")));
+    let store_url = match store {
+        Some(url) => url.to_string(),
+        None => store::testing::empty_postgres().await?,
+    };
     let accounts = Arc::new(
         accounts::Accounts::open(store::Store::open(&store_url).await.unwrap())
             .await
@@ -97,8 +98,8 @@ pub(crate) async fn hosted_with_ingress(
     let analytics = config
         .counts_visits()
         .then(|| analytics::Analytics::start(accounts.store().clone(), config.analytics, &url));
-    let devices = Arc::new(devices_at(dir.path()).unwrap());
-    let audit = Arc::new(Audit::open(&dir.path().join("audit.sqlite3")).unwrap());
+    let devices = crate::machines::devices::test_registry().await?;
+    let audit = crate::audit::test_audit().await?;
     let changes = Arc::new(tokio::sync::Notify::new());
     let links = Arc::new(
         Links::new(config.clone(), devices.clone(), audit.clone())
@@ -114,27 +115,19 @@ pub(crate) async fn hosted_with_ingress(
     let downloads = config.downloads.as_ref().map(|dir| {
         Arc::new(crate::machines::downloads::Downloads::open(std::path::Path::new(dir)).unwrap())
     });
-    let mut boards = agenthub::mcp::Boards::from_config(&config, dir.path());
-    if accounts.store().backend() == store::Backend::Postgres {
-        boards = boards.using_postgres(accounts.store().clone()).unwrap();
-    } else if tokio::runtime::Handle::current().runtime_flavor()
-        == tokio::runtime::RuntimeFlavor::MultiThread
-    {
-        // Organisations in the SQLite store beside the board files, as `run` keeps them in
-        // Postgres; their synchronous lookups need a multi-thread runtime, as `run` has.
-        boards = boards.with_orgs(accounts.store().clone());
-    }
-    let boards = Arc::new(boards);
-    if accounts.store().backend() == store::Backend::Postgres {
-        let listener = agenthub::mcp::Boards::postgres_listener(&store_url)
-            .await
-            .unwrap();
-        tokio::spawn(boards.clone().listen_postgres(listener));
-        tokio::spawn(boards.clone().reap_on_time());
-    }
+    let boards = Arc::new(
+        agenthub::mcp::Boards::from_config(&config, dir.path())
+            .using_postgres(accounts.store().clone())
+            .unwrap(),
+    );
+    let board_changes = agenthub::mcp::Boards::postgres_listener(&store_url)
+        .await
+        .unwrap();
+    tokio::spawn(boards.clone().listen_postgres(board_changes));
+    tokio::spawn(boards.clone().reap_on_time());
     let state = AppState {
         verifier: Arc::new(
-            Verifier::from_hub_config(&config, dir.path(), Some(accounts.clone()))
+            Verifier::from_hub_config(&config, accounts.store(), Some(accounts.clone()))
                 .await
                 .unwrap(),
         ),
@@ -179,7 +172,7 @@ pub(crate) async fn hosted_with_ingress(
         .await
         .unwrap()
     });
-    Hosted {
+    Some(Hosted {
         url,
         http: reqwest::Client::builder()
             .redirect(reqwest::redirect::Policy::none())
@@ -190,7 +183,7 @@ pub(crate) async fn hosted_with_ingress(
         config,
         hub,
         dir,
-    }
+    })
 }
 
 pub(crate) fn set_cookie(response: &reqwest::Response, name: &str) -> Option<String> {
@@ -463,11 +456,7 @@ pub(crate) fn fill(schema: &Value, root: &Value, ids: &Value) -> Value {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn tenant_a_reaches_nothing_of_tenant_bs_through_any_tool_or_page() {
-    // On SQLite, and on Postgres when the test server is set (CI).
-    isolation(hosted().await).await;
-    if let Some(postgres) = store::testing::empty_postgres().await {
-        isolation(hosted_on(Some(&postgres)).await).await;
-    }
+    isolation(or_skip!(hosted())).await;
 }
 
 async fn isolation(hub: Hosted) {
@@ -747,7 +736,7 @@ async fn isolation(hub: Hosted) {
     leaks("/api/v1/me", &me.to_string());
 
     // B's things are as they were.
-    let device = hub.devices.get(&stored).unwrap().unwrap();
+    let device = hub.devices.get(&stored).await.unwrap().unwrap();
     assert!(device.revoked_at.is_none(), "B's machine is not revoked");
     assert_eq!(device.owner.as_deref(), who_b["subject"].as_str());
     assert_eq!(
@@ -787,9 +776,9 @@ async fn isolation(hub: Hosted) {
     }
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_hosted_hub_offers_no_claim_and_says_so_everywhere() {
-    let hub = hosted().await;
+    let hub = or_skip!(hosted());
     let (status, page) = Hosted::text(hub.get("/", None).await).await;
     assert_eq!(status, 200);
     assert!(
@@ -834,9 +823,9 @@ async fn a_hosted_hub_offers_no_claim_and_says_so_everywhere() {
     );
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_terminal_signs_in_to_a_new_account_with_one_approve() {
-    let hub = hosted().await;
+    let hub = or_skip!(hosted());
     let started: Value = hub
         .http
         .post(format!("{}/oauth/device", hub.url))
@@ -896,7 +885,7 @@ async fn a_terminal_signs_in_to_a_new_account_with_one_approve() {
 
 #[tokio::test]
 async fn an_unsecured_account_adds_machines_only_up_to_its_quota() {
-    let hub = hosted().await;
+    let hub = or_skip!(hosted());
     let mut person = hub.first_connect("Claude").await;
     for name in ["one", "two"] {
         let added = hub

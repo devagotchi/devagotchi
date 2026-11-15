@@ -372,11 +372,7 @@ pub async fn test(State(state): State<AppState>, headers: HeaderMap) -> Response
             Some(("/account", "Your account")),
         );
     };
-    let phones = push
-        .devices()
-        .push_for(&subject.id)
-        .map(|p| p.len())
-        .unwrap_or(0);
+    let phones = push.phones_for(std::slice::from_ref(&subject.id)).await;
     if phones == 0 {
         return see_other("/approvals?test=no-phone", &[]);
     }
@@ -394,7 +390,8 @@ pub async fn test(State(state): State<AppState>, headers: HeaderMap) -> Response
         Ok(Ok(approval)) => {
             state
                 .hub
-                .announce_approval_to(vec![subject.id.clone()], &project, &approval);
+                .announce_approval_to(vec![subject.id.clone()], &project, &approval)
+                .await;
             see_other("/approvals?test=sent", &[])
         }
         _ => pages::message(

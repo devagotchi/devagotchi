@@ -2,4 +2,46 @@
 //! share, its migrations and its tenant isolation. Re-exported here so the hub's code names it
 //! `crate::store` as it always has.
 
+use std::path::Path;
+
+use devagotchi_contracts::{BridgeError, BridgeResult};
 pub use devagotchi_store::*;
+
+/// The hub's Postgres: the environment's URL (`DEVAGOTCHI_HUB_STORAGE_URL`), else the one its
+/// config names.
+pub(crate) fn postgres_url(configured: Option<&str>) -> BridgeResult<String> {
+    url_for(configured).ok_or_else(|| {
+        BridgeError::new(
+            "invalid_config",
+            "the hub keeps everything in Postgres: set storage.url in its config or DEVAGOTCHI_HUB_STORAGE_URL",
+        )
+    })
+}
+
+/// The hub's Postgres for an operator command run on its host (`hub enroll`, `owner`,
+/// `connect-nomen` …): the storage `config` names, or `DEVAGOTCHI_HUB_STORAGE_URL`. The hub
+/// keeps nothing in files but its keys, so there is no other place to look.
+pub(crate) async fn for_command(state_dir: &Path, config: Option<&Path>) -> BridgeResult<Store> {
+    crate::prepare_state_dir(state_dir)?;
+    let storage = match config {
+        Some(path) => crate::read_config(path)?.storage,
+        None => None,
+    };
+    let url = postgres_url(storage.as_ref().and_then(|s| s.url.as_deref())).map_err(|_| {
+        BridgeError::new(
+            "invalid_config",
+            "the hub keeps its machines and its audit record in Postgres: pass --config with the hub's config, or set DEVAGOTCHI_HUB_STORAGE_URL",
+        )
+    })?;
+    let schema = schema_for(storage.as_ref().and_then(|s| s.schema.as_deref()));
+    Store::open_in(&url, schema.as_deref()).await
+}
+
+/// Run `work` to the end on a runtime of its own: what an operator command does.
+pub(crate) fn block_on<T>(work: impl Future<Output = BridgeResult<T>>) -> BridgeResult<T> {
+    tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .map_err(|error| BridgeError::new("runtime", error.to_string()))?
+        .block_on(work)
+}

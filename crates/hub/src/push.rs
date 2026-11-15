@@ -168,11 +168,12 @@ impl Push {
     }
 
     /// How many phones a push to `subjects` would reach right now.
-    pub fn phones_for(&self, subjects: &[String]) -> usize {
-        subjects
-            .iter()
-            .map(|s| self.devices.push_for(s).map(|p| p.len()).unwrap_or(0))
-            .sum()
+    pub async fn phones_for(&self, subjects: &[String]) -> usize {
+        let mut phones = 0;
+        for subject in subjects {
+            phones += self.devices.push_for(subject).await.map_or(0, |p| p.len());
+        }
+        phones
     }
 
     /// Send `payload` to every subscription of `subjects`. A push service that is busy or
@@ -182,10 +183,11 @@ impl Push {
     pub async fn notify(&self, subjects: &[String], payload: &serde_json::Value) {
         let body = payload.to_string();
         let tag = payload["tag"].as_str().unwrap_or("-").to_string();
-        for subscription in subjects
-            .iter()
-            .flat_map(|s| self.devices.push_for(s).unwrap_or_default())
-        {
+        let mut subscriptions = Vec::new();
+        for subject in subjects {
+            subscriptions.extend(self.devices.push_for(subject).await.unwrap_or_default());
+        }
+        for subscription in subscriptions {
             let host = reqwest::Url::parse(&subscription.endpoint)
                 .ok()
                 .and_then(|u| u.host_str().map(str::to_string))
@@ -260,7 +262,7 @@ impl Push {
         Ok(match code {
             200..=299 => Sent::Delivered(code),
             404 | 410 => {
-                let _ = self.devices.drop_push(&to.endpoint);
+                let _ = self.devices.drop_push(&to.endpoint).await;
                 Sent::Gone(code)
             }
             429 | 500..=599 => Sent::Retry(format!("push service answered {code}")),
@@ -355,11 +357,11 @@ mod tests {
         );
     }
 
-    #[test]
-    fn the_vapid_key_is_made_once_and_its_token_verifies() {
+    #[tokio::test]
+    async fn the_vapid_key_is_made_once_and_its_token_verifies() {
         use aws_lc_rs::signature::{ECDSA_P256_SHA256_FIXED, UnparsedPublicKey as Verify};
         let dir = tempfile::tempdir().unwrap();
-        let devices = Arc::new(Devices::open(&dir.path().join("d.sqlite3")).unwrap());
+        let devices = or_skip!(crate::machines::devices::test_registry());
         let push = Push::open(dir.path(), "https://hub.example", devices.clone()).unwrap();
         let again = Push::open(dir.path(), "https://hub.example", devices).unwrap();
         assert_eq!(
@@ -427,7 +429,7 @@ mod tests {
         tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
 
         let dir = tempfile::tempdir().unwrap();
-        let devices = Arc::new(Devices::open(&dir.path().join("devices.sqlite3")).unwrap());
+        let devices = or_skip!(crate::machines::devices::test_registry());
         let push = Push::open(dir.path(), "https://hub.example", devices.clone()).unwrap();
         let phone = PrivateKey::generate(&ECDH_P256).unwrap();
         let p256dh = URL_SAFE_NO_PAD.encode(phone.compute_public_key().unwrap().as_ref());
@@ -435,10 +437,12 @@ mod tests {
         for id in ["phone-busy", "phone-gone", "phone-bad"] {
             devices
                 .add_push("me", &format!("{base}/push/{id}"), &p256dh, &auth)
+                .await
                 .unwrap();
         }
         assert_eq!(
-            push.phones_for(&["me".to_string(), "nobody".to_string()]),
+            push.phones_for(&["me".to_string(), "nobody".to_string()])
+                .await,
             3
         );
 
@@ -456,6 +460,7 @@ mod tests {
         );
         let left: Vec<String> = devices
             .push_for("me")
+            .await
             .unwrap()
             .into_iter()
             .map(|s| s.endpoint.rsplit('/').next().unwrap().to_string())

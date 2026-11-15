@@ -116,14 +116,19 @@ pub async fn act(
         Ok(_) => "ok".to_string(),
         Err(error) => error.code.clone(),
     };
-    if let Err(error) = state.hub.audit.record(&AuditEntry {
-        subject: &subject.id,
-        via: subject.via,
-        tool,
-        broker: &project,
-        operation_id: &id,
-        outcome: &outcome,
-    }) {
+    if let Err(error) = state
+        .hub
+        .audit
+        .record(&AuditEntry {
+            subject: &subject.id,
+            via: subject.via,
+            tool,
+            broker: &project,
+            operation_id: &id,
+            outcome: &outcome,
+        })
+        .await
+    {
         return see_other(
             &format!("{here}?done=no&why={}", encode(&error.message)),
             &[],

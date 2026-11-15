@@ -1,10 +1,7 @@
 use super::*;
 use crate::{
     config::TokenConfig,
-    store::{
-        Backend,
-        testing::{self, TestStore},
-    },
+    store::testing::{self, TestStore},
 };
 
 const A: &str = "acct_aaaaaaaaaaaaaaaaaaaaaaaaaa";
@@ -13,7 +10,7 @@ const REDIRECT: &str = "https://ai.example.net/oauth/callback";
 /// RFC 7636 appendix B's verifier.
 const VERIFIER: &str = "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk";
 
-/// The owner account in every store this run has, with the default token lifetimes.
+/// The owner account on the test Postgres, with the default token lifetimes.
 async fn stores() -> Vec<(TestStore, Accounts)> {
     let mut out = Vec::new();
     for store in testing::stores().await {
@@ -464,7 +461,7 @@ async fn access_tokens_expire_die_with_their_account_and_can_be_revoked() {
 
 #[tokio::test]
 async fn tokens_and_codes_are_stored_only_as_hashes() {
-    for (store, accounts) in stores().await {
+    for (_, accounts) in stores().await {
         let client = client(&accounts).await;
         let pending = code(&accounts, &client).await;
         let tokens = connect(&accounts, &client).await;
@@ -477,19 +474,6 @@ async fn tokens_and_codes_are_stored_only_as_hashes() {
         for secret in [&tokens.access, &tokens.refresh, &pending] {
             assert!(hashes.contains(&hash(secret)));
             assert!(!hashes.contains(secret));
-        }
-        if store.store.backend() == Backend::Sqlite {
-            sqlx::query("PRAGMA wal_checkpoint(TRUNCATE)")
-                .execute(accounts.store().admin())
-                .await
-                .unwrap();
-            let mut raw = std::fs::read(store.dir.path().join("accounts.sqlite3")).unwrap();
-            raw.extend(
-                std::fs::read(store.dir.path().join("accounts.sqlite3-wal")).unwrap_or_default(),
-            );
-            for secret in [&tokens.access, &tokens.refresh, &pending] {
-                assert!(!raw.windows(secret.len()).any(|w| w == secret.as_bytes()));
-            }
         }
     }
 }

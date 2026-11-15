@@ -148,9 +148,7 @@ fn env(name: &str) -> Option<String> {
 /// back by the first.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_sink_gets_every_signal_once_it_answers_and_never_more_than_it_takes() {
-    let Some(test) = testing::postgres().await else {
-        return;
-    };
+    let test = or_skip!(testing::postgres());
     let orgs = Orgs::new(test.store.clone());
     let org = orgs.create("alice", "acme", "Acme").await.unwrap();
     orgs.set_member(&org, "alice", "bob", Role::Member)
@@ -176,7 +174,7 @@ async fn a_sink_gets_every_signal_once_it_answers_and_never_more_than_it_takes()
             .await
             .unwrap();
     }
-    let audit = Arc::new(Audit::open(&test.dir.path().join("audit.sqlite3")).unwrap());
+    let audit = Arc::new(Audit::new(test.store.clone()));
     for (tool, outcome) in [
         ("board_create", "ok"),
         ("board_create", "read_only"),
@@ -191,6 +189,7 @@ async fn a_sink_gets_every_signal_once_it_answers_and_never_more_than_it_takes()
                 operation_id: "op-1",
                 outcome,
             })
+            .await
             .unwrap();
     }
 

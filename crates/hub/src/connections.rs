@@ -339,7 +339,8 @@ impl Hub {
             .map(|_| "ok")
             .unwrap_or_else(|e| e.code.as_str())
             .to_string();
-        self.record(&subject, "connections", "", "", &outcome)?;
+        self.record(&subject, "connections", "", "", &outcome)
+            .await?;
         result.map(Json).map_err(Json)
     }
 
@@ -376,7 +377,8 @@ impl Hub {
             &input.connection,
             &what,
             &outcome,
-        )?;
+        )
+        .await?;
         result.map(Json).map_err(Json)
     }
 }

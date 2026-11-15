@@ -2,7 +2,7 @@
 //! one on `/app/connections` (checked first, sealed, never shown again), an agent lists it and
 //! calls it with `connection_call`, the key reaches the service and never comes back, a call
 //! cannot leave the service, another account cannot see or use it, and removing it ends it.
-//! On SQLite, and on Postgres when the test server is set (CI).
+//! On the test Postgres (`DEVAGOTCHI_TEST_POSTGRES_URL`; CI sets it).
 
 use std::sync::{Arc, Mutex};
 
@@ -63,7 +63,7 @@ async fn stand_in() -> (String, Seen) {
 }
 
 async fn run(store: Option<&str>) {
-    let hub = hosted_with(store, |_, _| json!({})).await;
+    let hub = or_skip!(hosted_with(store, |_, _| json!({})));
     let (url, seen) = stand_in().await;
     hub.hub
         .connections
@@ -285,7 +285,4 @@ async fn tenant(hub: &Hosted, person: &mut crate::tenant_tests::Person) -> Strin
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_connection_is_called_through_the_hub_and_its_key_never_leaves_it() {
     run(None).await;
-    if let Some(url) = crate::store::testing::empty_postgres().await {
-        run(Some(&url)).await;
-    }
 }

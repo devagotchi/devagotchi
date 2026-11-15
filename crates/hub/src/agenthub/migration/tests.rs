@@ -203,45 +203,43 @@ async fn postgres_enforces_tenant_scope_and_history_is_append_only() {
             assert!(error.message.contains("append-only"), "{}", error.message);
         }
 
-        if store.backend() == Backend::Postgres {
-            assert!(store.enforced());
-            transaction!(store, |connection| {
-                store.scope(connection, OTHER).await?;
-                for table in [
-                    "board_projects",
-                    "board_metadata",
-                    "board_settings",
-                    "board_fence",
-                    "board_tickets",
-                    "board_deps",
-                    "board_notes",
-                    "board_events",
-                    "board_imports",
-                    "board_outbox",
-                ] {
-                    let count: i64 = sqlx::query_scalar(sqlx::AssertSqlSafe(format!(
-                        "SELECT count(*) FROM {table}"
-                    )))
-                    .fetch_one(&mut *connection)
-                    .await?;
-                    assert_eq!(count, 0, "RLS on {table}");
-                }
-                Ok(())
-            })
-            .unwrap();
-            let denied = transaction!(store, |connection| {
-                store.scope(connection, OTHER).await?;
-                sqlx::query(
-                    "INSERT INTO board_projects (tenant_id, id, source_hash, imported_at)
-                    VALUES ($1, 'forged', 'bad', 1)",
-                )
-                .bind(TENANT)
-                .execute(&mut *connection)
+        assert!(store.enforced());
+        transaction!(store, |connection| {
+            store.scope(connection, OTHER).await?;
+            for table in [
+                "board_projects",
+                "board_metadata",
+                "board_settings",
+                "board_fence",
+                "board_tickets",
+                "board_deps",
+                "board_notes",
+                "board_events",
+                "board_imports",
+                "board_outbox",
+            ] {
+                let count: i64 = sqlx::query_scalar(sqlx::AssertSqlSafe(format!(
+                    "SELECT count(*) FROM {table}"
+                )))
+                .fetch_one(&mut *connection)
                 .await?;
-                Ok(())
-            });
-            assert!(denied.is_err());
-        }
+                assert_eq!(count, 0, "RLS on {table}");
+            }
+            Ok(())
+        })
+        .unwrap();
+        let denied = transaction!(store, |connection| {
+            store.scope(connection, OTHER).await?;
+            sqlx::query(
+                "INSERT INTO board_projects (tenant_id, id, source_hash, imported_at)
+                VALUES ($1, 'forged', 'bad', 1)",
+            )
+            .bind(TENANT)
+            .execute(&mut *connection)
+            .await?;
+            Ok(())
+        });
+        assert!(denied.is_err());
     }
 }
 
@@ -258,19 +256,7 @@ async fn verification_preserves_binary_key_order_on_locale_aware_postgres() {
     let snapshot = Snapshot::read(&path).unwrap();
     for test in testing::stores().await {
         seed_tenant(&test.store, TENANT, 1).await;
-        if test.store.backend() == Backend::Postgres {
-            snapshot.import_postgres(&test.store, TENANT).await.unwrap();
-        } else {
-            snapshot.import(&test.store, TENANT).await.unwrap();
-            assert_eq!(
-                snapshot
-                    .import_postgres(&test.store, TENANT)
-                    .await
-                    .unwrap_err()
-                    .code,
-                "invalid_config"
-            );
-        }
+        snapshot.import_postgres(&test.store, TENANT).await.unwrap();
     }
 }
 

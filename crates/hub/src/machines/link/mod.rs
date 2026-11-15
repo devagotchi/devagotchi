@@ -1,0 +1,1142 @@
+//! The hub's end of the machine link (plan N20). A broker on another machine is reached
+//! through one WebSocket its `devagotchi link` dials out to `/link`. The device proves
+//! its enrolled Ed25519 key by signing a fresh challenge; after that the hub sends one
+//! `call` frame per routed request and waits for the matching `result`.
+//!
+//! `/link` is reachable without a bearer token, so everything before a valid hello is
+//! bounded: concurrent handshakes, the hello's size, and how often refusals are audited.
+//! A peer learns only that it was refused; the reason goes to the operator's audit.
+
+use std::{
+    collections::{HashMap, VecDeque},
+    net::SocketAddr,
+    sync::{
+        Arc, Mutex, OnceLock,
+        atomic::{AtomicU64, Ordering},
+    },
+    time::Duration,
+};
+
+use axum::extract::ws::{Message, Utf8Bytes, WebSocket};
+use devagotchi_contracts::{
+    API_VERSION, BridgeError, BridgeResult, HubFrame, LINK_PROTOCOL_VERSION, LinkFrame,
+    RequestBody, ResponseBody, WireRequest, WireResponse, link_signing_message,
+};
+use ed25519_dalek::{Signature, VerifyingKey};
+use futures_util::{SinkExt, StreamExt};
+use sha2::{Digest, Sha256};
+use tokio::sync::{OwnedSemaphorePermit, Semaphore, mpsc, oneshot};
+
+use crate::{
+    audit::{Audit, AuditEntry},
+    config::HubConfig,
+    machines::{devices::Devices, now_secs, update::Update},
+};
+
+const HELLO_TIMEOUT: Duration = Duration::from_secs(10);
+/// A hello is a few hundred bytes; anything larger is refused before parsing.
+const MAX_HELLO_BYTES: usize = 4096;
+/// Handshakes in flight at once; more are refused with 503 before the upgrade.
+const MAX_HANDSHAKES: usize = 32;
+/// Calls queued for one device beyond those in flight; more answer `link_busy`.
+const CALL_QUEUE: usize = 64;
+/// A link that sends nothing for this long is considered gone; devices beat every 20 s.
+const IDLE_TIMEOUT: Duration = Duration::from_secs(60);
+const CALL_TIMEOUT: Duration = Duration::from_secs(30);
+/// No single write to a device may hold the session loop longer than this.
+const SEND_TIMEOUT: Duration = Duration::from_secs(10);
+const REVOCATION_CHECK: Duration = Duration::from_secs(2);
+
+type Pending = Arc<Mutex<HashMap<u64, oneshot::Sender<WireResponse>>>>;
+
+#[derive(Clone)]
+struct Session {
+    id: u64,
+    calls: mpsc::Sender<(u64, WireRequest)>,
+    pending: Pending,
+    /// The build the device's hello said it runs; None from a link too old to say.
+    build: Option<String>,
+    /// Frames the hub sends on its own: `update` (`machine_update.rs`).
+    control: mpsc::Sender<HubFrame>,
+}
+
+/// Removes a call's waiter if the caller stops waiting for any reason (cancelled, timed
+/// out, link gone), so abandoned calls never accumulate.
+struct Waiter {
+    pending: Pending,
+    id: u64,
+}
+
+impl Drop for Waiter {
+    fn drop(&mut self) {
+        self.pending.lock().expect("pending").remove(&self.id);
+    }
+}
+
+/// Refusals are audited at most once a second; the rest are counted into the next row.
+#[derive(Default)]
+struct RefusalLog {
+    last_second: u64,
+    suppressed: u64,
+}
+
+pub struct Links {
+    config: Arc<HubConfig>,
+    devices: Arc<Devices>,
+    audit: Arc<Audit>,
+    sessions: Mutex<HashMap<String, Session>>,
+    handshakes: Arc<Semaphore>,
+    refusals: Mutex<RefusalLog>,
+    next: AtomicU64,
+    /// Tells an account's phones when a machine it added joins (increment 29a).
+    push: Option<Arc<crate::push::Push>>,
+    /// Whether the account that issued a code may enroll a machine with it now.
+    gate: Option<EnrollGate>,
+    /// Where an account's first machine is counted (`analytics::funnel`), on a hub that counts.
+    analytics: Option<Arc<crate::analytics::Analytics>>,
+    /// Woken when a machine connects or drops: what a workflow waits on (`workflows.rs`).
+    changes: Option<Arc<tokio::sync::Notify>>,
+    /// The build this hub hands out (`downloads.rs`), which machines update to.
+    offered: Option<String>,
+    /// `machines.auto_update` in the config: machines on another build update themselves.
+    auto_update: bool,
+    /// Each machine's latest update, and who waits on one (`machine_update`).
+    updates: Mutex<HashMap<String, Update>>,
+    update_changed: tokio::sync::Notify,
+    /// Each machine's last [`RECENT_JOBS`] operations routed through its link, newest first,
+    /// in memory only (the phone app's machine page, `web/app/machine.rs`).
+    jobs: Mutex<HashMap<String, VecDeque<Job>>>,
+    /// When each machine's link last went away, since this hub started, and which time
+    /// that was (a number no other drop has).
+    seen: Mutex<HashMap<String, (u64, u64)>>,
+    /// How long a machine stays offline before its account's phones hear it (P1d).
+    offline_after: Duration,
+    /// Who turned pushes about their machines off (set once, at start).
+    preferences: OnceLock<crate::preferences::PreferenceStore>,
+    /// The pushes about machines this hub made, for the tests to read.
+    #[cfg(test)]
+    pushed: Mutex<Vec<(Vec<String>, serde_json::Value)>>,
+}
+
+/// A machine offline this long is pushed to its account's phones, once per time it went.
+const OFFLINE_PUSH_AFTER: Duration = Duration::from_secs(600);
+
+/// How many routed operations the hub keeps per machine.
+pub const RECENT_JOBS: usize = 20;
+
+/// One operation the hub routed to a machine, as its page lists it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Job {
+    pub operation_id: String,
+    /// When it started, in Unix seconds.
+    pub at: u64,
+    /// The command line's first 80 characters (or the executable and its arguments).
+    pub command: String,
+    /// The operation's state as the broker last answered it (`running`, `succeeded`, …).
+    pub state: String,
+    pub exit_code: Option<i32>,
+}
+
+/// What a routed start ran, as the machine page shows it: at most 80 characters.
+fn command_of(body: &RequestBody) -> Option<String> {
+    let RequestBody::OperationStart(input) = body else {
+        return None;
+    };
+    let line = match &input.command {
+        Some(command) => command.clone(),
+        None => std::iter::once(input.executable.as_str())
+            .chain(input.args.iter().map(String::as_str))
+            .collect::<Vec<_>>()
+            .join(" "),
+    };
+    Some(line.chars().take(80).collect())
+}
+
+/// What asking a machine to update came to.
+#[derive(Debug, PartialEq, Eq)]
+pub enum UpdateAsked {
+    /// The machine already runs the build this hub hands out.
+    AlreadyOn(String),
+    /// `update` went to the machine.
+    Sent,
+}
+
+/// Whether an account may enroll a machine now: false while its tenant waits to be let in
+/// (`tenant_access.rs`), or when that cannot be told.
+pub type EnrollGate =
+    Arc<dyn Fn(String) -> futures_util::future::BoxFuture<'static, bool> + Send + Sync>;
+
+/// A device the hello proved, and the account it just joined for, if it enrolled now
+/// with an account's code.
+#[derive(Debug)]
+struct Admitted {
+    device: String,
+    key: String,
+    joined_for: Option<String>,
+    build: Option<String>,
+}
+
+fn offline(device: &str) -> BridgeError {
+    BridgeError::new(
+        "broker_offline",
+        format!(
+            "{device} is enrolled but its link is not connected; the machine is off, asleep or its `devagotchi link` is not running"
+        ),
+    )
+}
+
+/// A short, stable fingerprint of a device key for the audit log.
+fn fingerprint(public_key: &str) -> String {
+    hex::encode(&Sha256::digest(public_key.as_bytes())[..8])
+}
+
+/// What a refused peer is told. Details stay in the audit so the wire does not reveal
+/// which device names exist or what state they are in.
+fn wire_refusal(error: &BridgeError) -> HubFrame {
+    let (code, message) = match error.code.as_str() {
+        "protocol_version" => ("protocol_version", error.message.as_str()),
+        "device_store" | "audit_write" => (
+            "unavailable",
+            "the hub could not check this device right now; retry",
+        ),
+        _ => (
+            "refused",
+            "this hub refused the link; its operator can see why in the hub's audit log",
+        ),
+    };
+    HubFrame::Refused {
+        code: code.into(),
+        message: message.into(),
+    }
+}
+
+impl Links {
+    pub fn new(config: Arc<HubConfig>, devices: Arc<Devices>, audit: Arc<Audit>) -> Self {
+        Self {
+            auto_update: config.machines.auto_update,
+            config,
+            devices,
+            audit,
+            sessions: Mutex::new(HashMap::new()),
+            handshakes: Arc::new(Semaphore::new(MAX_HANDSHAKES)),
+            refusals: Mutex::new(RefusalLog::default()),
+            next: AtomicU64::new(1),
+            push: None,
+            gate: None,
+            analytics: None,
+            changes: None,
+            offered: None,
+            updates: Mutex::new(HashMap::new()),
+            update_changed: tokio::sync::Notify::new(),
+            jobs: Mutex::new(HashMap::new()),
+            seen: Mutex::new(HashMap::new()),
+            offline_after: OFFLINE_PUSH_AFTER,
+            preferences: OnceLock::new(),
+            #[cfg(test)]
+            pushed: Mutex::new(Vec::new()),
+        }
+    }
+
+    /// Ask `preferences` before a machine pushes to a person.
+    pub fn set_preferences(&self, preferences: crate::preferences::PreferenceStore) {
+        let _ = self.preferences.set(preferences);
+    }
+
+    /// `device`'s recent routed operations, newest first.
+    pub fn recent_jobs(&self, device: &str) -> Vec<Job> {
+        let jobs = self.jobs.lock().expect("jobs");
+        jobs.get(device)
+            .map(|kept| kept.iter().cloned().collect())
+            .unwrap_or_default()
+    }
+
+    /// When `device`'s link last went away since this hub started (it is online when
+    /// `connected`).
+    pub fn last_seen(&self, device: &str) -> Option<u64> {
+        self.seen
+            .lock()
+            .expect("seen")
+            .get(device)
+            .map(|(at, _)| *at)
+    }
+
+    /// The accounts a machine's pushes go to: the account that added it; for a machine the
+    /// config names, the hub's owner and every account granted it.
+    async fn machine_people(&self, device: &str) -> Vec<String> {
+        if let Ok(Some(record)) = self.devices.get(device).await
+            && let Some(owner) = record.owner
+        {
+            return vec![owner];
+        }
+        let mut people: Vec<String> = self.config.owner.iter().cloned().collect();
+        for grant in &self.config.grants {
+            if grant.brokers.iter().any(|b| b == device) && !people.contains(&grant.subject) {
+                people.push(grant.subject.clone());
+            }
+        }
+        people
+    }
+
+    /// The name a machine's person knows it by: on a hosted hub, without its tenant's tag
+    /// (`tenant_machines.rs`).
+    fn shown(&self, device: &str) -> String {
+        if self.config.multi_tenant()
+            && let Some((tag, name)) = device.split_once('-')
+            && tag.len() == 13
+            && tag.starts_with('t')
+            && tag[1..].chars().all(|c| c.is_ascii_hexdigit())
+            && !name.is_empty()
+        {
+            return name.to_string();
+        }
+        device.to_string()
+    }
+
+    /// Tell the phones of `device`'s account that it is `offline` or its `update_failed`;
+    /// tapping it opens the machine's page in the phone app.
+    async fn push_machine(&self, device: &str, what: &str) {
+        let site = self.config.site();
+        let copy = &site.messages.app;
+        let shown = self.shown(device);
+        let (title, body) = match what {
+            "offline" => (&copy.push_offline_title, &copy.push_offline_body),
+            _ => (
+                &copy.push_update_failed_title,
+                &copy.push_update_failed_body,
+            ),
+        };
+        let words = crate::site::Ctx::new(&site).with("machine", shown.clone());
+        let payload = serde_json::json!({
+            "title": words.plain(title),
+            "body": words.plain(body),
+            "url": format!("/app/machines/{shown}"),
+            "tag": format!("devagotchi-machine-{what}-{device}"),
+        });
+        let people = self.machine_people(device).await;
+        #[cfg(test)]
+        self.pushed
+            .lock()
+            .expect("pushed")
+            .push((people.clone(), payload.clone()));
+        if let (Some(push), false) = (self.push.clone(), people.is_empty()) {
+            let preferences = self.preferences.get().cloned();
+            tokio::spawn(async move {
+                let people =
+                    crate::preferences::wanting_machine_pushes(preferences.as_ref(), people).await;
+                if !people.is_empty() {
+                    push.notify(&people, &payload).await;
+                }
+            });
+        }
+    }
+
+    /// `device`'s link went away (the `episode`th drop): if it is still away, and not
+    /// revoked, after [`OFFLINE_PUSH_AFTER`], its account's phones hear it once.
+    fn watch_offline(self: Arc<Self>, device: String, episode: u64) {
+        tokio::spawn(async move {
+            tokio::time::sleep(self.offline_after).await;
+            let same = self
+                .seen
+                .lock()
+                .expect("seen")
+                .get(&device)
+                .is_some_and(|(_, seen)| *seen == episode);
+            if same
+                && !self.connected(&device)
+                && matches!(self.devices.is_revoked(&device).await, Ok(false))
+            {
+                self.push_machine(&device, "offline").await;
+            }
+        });
+    }
+
+    /// A broker answer through `device`'s link: a start (`started` is what it ran) adds a
+    /// job; any later answer about a kept operation moves its state and exit code.
+    pub(crate) fn jobs_saw(&self, device: &str, started: Option<String>, answer: &ResponseBody) {
+        let (view, start) = match answer {
+            ResponseBody::Start(output) => (&output.operation, started),
+            ResponseBody::Operation(view) => (view, None),
+            ResponseBody::Output(page) => (&page.operation, None),
+            _ => return,
+        };
+        let state = serde_json::to_value(&view.state)
+            .ok()
+            .and_then(|v| v.as_str().map(str::to_string))
+            .unwrap_or_default();
+        let mut jobs = self.jobs.lock().expect("jobs");
+        let kept = jobs.entry(device.to_string()).or_default();
+        if let Some(job) = kept
+            .iter_mut()
+            .find(|j| j.operation_id == view.operation_id)
+        {
+            job.state = state;
+            job.exit_code = view.exit_code;
+        } else if let Some(command) = start {
+            kept.push_front(Job {
+                operation_id: view.operation_id.clone(),
+                at: view.created_at_ms / 1000,
+                command,
+                state,
+                exit_code: view.exit_code,
+            });
+            kept.truncate(RECENT_JOBS);
+        }
+    }
+
+    /// Machines update to `version`, the build this hub hands out, when there is one.
+    pub fn offering(mut self, version: Option<String>) -> Self {
+        self.offered = version;
+        self
+    }
+
+    /// Wake `changes`' waiters whenever a machine connects or drops.
+    pub fn signalling(mut self, changes: Arc<tokio::sync::Notify>) -> Self {
+        self.changes = Some(changes);
+        self
+    }
+
+    fn changed(&self) {
+        if let Some(changes) = &self.changes {
+            changes.notify_waiters();
+        }
+    }
+
+    /// The machine a live code (unused, unexpired) is for, if any, without spending it or
+    /// auditing: a workflow's page shows its person their own line again while it works.
+    pub async fn live_code(&self, code: &str) -> BridgeResult<Option<String>> {
+        self.devices.live_code(code).await
+    }
+
+    /// Count each account's first machine in `analytics`.
+    pub fn counting(mut self, analytics: Option<Arc<crate::analytics::Analytics>>) -> Self {
+        self.analytics = analytics;
+        self
+    }
+
+    /// A machine enrolled with `owner`'s code: its tenant's machine milestone.
+    fn joined(&self, owner: Option<&str>) {
+        if let (Some(analytics), Some(owner)) = (&self.analytics, owner) {
+            analytics.account_event(owner, crate::analytics::funnel::MACHINE);
+        }
+    }
+
+    /// Ask `gate` before a machine enrolls with an account's code.
+    pub fn gated(mut self, gate: EnrollGate) -> Self {
+        self.gate = Some(gate);
+        self
+    }
+
+    /// Whether `code` may enroll a machine now: refused while the account that issued it
+    /// waits to be let in. Looking does not spend the code.
+    pub async fn may_enroll(&self, code: &str) -> BridgeResult<()> {
+        let Some(gate) = &self.gate else {
+            return Ok(());
+        };
+        let Some(owner) = self.devices.code_owner(code).await? else {
+            return Ok(());
+        };
+        if gate(owner).await {
+            Ok(())
+        } else {
+            Err(BridgeError::new(
+                "early_access",
+                "the account that issued this code is not let in yet; nothing joins for it until it is",
+            ))
+        }
+    }
+
+    /// Push "your machine joined" to the owner's phones when a machine an account added
+    /// enrolls.
+    pub fn notifying(mut self, push: Option<Arc<crate::push::Push>>) -> Self {
+        self.push = push;
+        self
+    }
+
+    /// `device` as if its link had just connected, for tests elsewhere in the hub: it shows
+    /// online, and a workflow waiting on it wakes. The receiver gets the calls routed to it.
+    #[cfg(test)]
+    pub(crate) fn connect_for_test(&self, device: &str) -> mpsc::Receiver<(u64, WireRequest)> {
+        let (calls, received) = mpsc::channel(CALL_QUEUE);
+        let id = self.next.fetch_add(1, Ordering::Relaxed);
+        self.sessions.lock().expect("links").insert(
+            device.to_string(),
+            Session {
+                id,
+                calls,
+                pending: Arc::default(),
+                build: None,
+                control: mpsc::channel(1).0,
+            },
+        );
+        self.changed();
+        received
+    }
+
+    pub fn connected(&self, device: &str) -> bool {
+        self.sessions.lock().expect("links").contains_key(device)
+    }
+
+    /// A slot for one unauthenticated handshake, or `None` when all are taken.
+    pub fn handshake_permit(&self) -> Option<OwnedSemaphorePermit> {
+        self.handshakes.clone().try_acquire_owned().ok()
+    }
+
+    /// Send one broker request over the device's link and wait for its answer.
+    pub async fn call(&self, device: &str, body: RequestBody) -> BridgeResult<ResponseBody> {
+        match self.devices.get(device).await? {
+            None => {
+                return Err(BridgeError::new(
+                    "not_enrolled",
+                    format!(
+                        "{device} has never enrolled; the hub operator issues a code with `devagotchi hub enroll`"
+                    ),
+                ));
+            }
+            Some(record) if record.revoked_at.is_some() => {
+                return Err(BridgeError::new(
+                    "device_revoked",
+                    format!("{device} is revoked"),
+                ));
+            }
+            Some(_) => {}
+        }
+        let session = self
+            .sessions
+            .lock()
+            .expect("links")
+            .get(device)
+            .cloned()
+            .ok_or_else(|| offline(device))?;
+        let id = self.next.fetch_add(1, Ordering::Relaxed);
+        let (tx, rx) = oneshot::channel();
+        session.pending.lock().expect("pending").insert(id, tx);
+        let _waiter = Waiter {
+            pending: session.pending.clone(),
+            id,
+        };
+        // A wait is answered when the operation changes or its own timeout passes.
+        let within = CALL_TIMEOUT + body.held_for();
+        let started = command_of(&body);
+        let request = WireRequest {
+            api_version: API_VERSION,
+            request: body,
+        };
+        match session.calls.try_send((id, request)) {
+            Ok(()) => {}
+            Err(mpsc::error::TrySendError::Full(_)) => {
+                return Err(BridgeError::new(
+                    "link_busy",
+                    format!("{device} already has {CALL_QUEUE} calls waiting; retry shortly"),
+                ));
+            }
+            Err(mpsc::error::TrySendError::Closed(_)) => return Err(offline(device)),
+        }
+        let response = match tokio::time::timeout(within, rx).await {
+            Ok(Ok(response)) => response,
+            Ok(Err(_)) => return Err(offline(device)),
+            Err(_) => {
+                return Err(BridgeError::new(
+                    "link_timeout",
+                    format!(
+                        "{device} did not answer within {}s; an admitted operation keeps running there",
+                        within.as_secs()
+                    ),
+                ));
+            }
+        };
+        match response {
+            WireResponse::Ok(body) => {
+                self.jobs_saw(device, started, &body);
+                Ok(body)
+            }
+            WireResponse::Error(error) => Err(error),
+        }
+    }
+
+    /// The build a connected machine's hello said it runs.
+    pub fn build(&self, device: &str) -> Option<String> {
+        let sessions = self.sessions.lock().expect("links");
+        sessions
+            .get(device)
+            .and_then(|session| session.build.clone())
+    }
+
+    /// A machine's latest update, if it had one since this hub started.
+    pub fn update_of(&self, device: &str) -> Option<Update> {
+        self.updates.lock().expect("updates").get(device).cloned()
+    }
+
+    /// Ask a connected machine to update to the build this hub hands out, now; with
+    /// `force`, without waiting for its running jobs. `subject` and `via` are who asked
+    /// (`hub`, `auto` for the hourly round), for the audit.
+    pub async fn request_update(
+        &self,
+        device: &str,
+        force: bool,
+        subject: &str,
+        via: &str,
+    ) -> BridgeResult<UpdateAsked> {
+        let asked = self.ask_update(device, force);
+        let (version, outcome) = match &asked {
+            Ok(UpdateAsked::Sent) => (self.offered.clone(), format!("sent force={force}")),
+            Ok(UpdateAsked::AlreadyOn(build)) => (Some(build.clone()), "already_on".into()),
+            Err(error) => (self.offered.clone(), error.code.clone()),
+        };
+        let version = version.unwrap_or_default();
+        self.event(subject, via, "machine.update", device, &version, &outcome)
+            .await;
+        asked
+    }
+
+    fn ask_update(&self, device: &str, force: bool) -> BridgeResult<UpdateAsked> {
+        let version = self.offered.clone().ok_or_else(|| {
+            BridgeError::new(
+                "no_build",
+                "this hub hands out no builds (no downloads), so it has none to update to",
+            )
+        })?;
+        let session = self
+            .sessions
+            .lock()
+            .expect("links")
+            .get(device)
+            .cloned()
+            .ok_or_else(|| offline(device))?;
+        let Some(build) = session.build else {
+            return Err(BridgeError::new(
+                "update_unsupported",
+                format!(
+                    "{device} runs a link from before machines could update themselves; install it once more by hand"
+                ),
+            ));
+        };
+        if build == version {
+            return Ok(UpdateAsked::AlreadyOn(build));
+        }
+        session
+            .control
+            .try_send(HubFrame::Update {
+                version: version.clone(),
+                force,
+            })
+            .map_err(|_| offline(device))?;
+        let mut updates = self.updates.lock().expect("updates");
+        let now = now_secs();
+        if !updates
+            .get(device)
+            .is_some_and(|u| u.running(now) && u.target == version)
+        {
+            updates.insert(device.to_string(), Update::new(&version, now));
+        }
+        drop(updates);
+        self.update_changed.notify_waiters();
+        Ok(UpdateAsked::Sent)
+    }
+
+    /// Wait up to `within` for `device`'s update to finish; its latest state either way.
+    pub async fn wait_update(&self, device: &str, within: Duration) -> Option<Update> {
+        let deadline = tokio::time::Instant::now() + within;
+        loop {
+            let changed = self.update_changed.notified();
+            let update = self.update_of(device);
+            if update.as_ref().is_none_or(|u| !u.running(now_secs())) {
+                return update;
+            }
+            if tokio::time::timeout_at(deadline, changed).await.is_err() {
+                return self.update_of(device);
+            }
+        }
+    }
+
+    /// The link reported a step of its update.
+    async fn update_reported(&self, device: &str, state: &str, detail: Option<String>) {
+        if !devagotchi_contracts::UPDATE_STATES.contains(&state) {
+            return;
+        }
+        let (target, newly_failed) = {
+            let mut updates = self.updates.lock().expect("updates");
+            let entry = updates
+                .entry(device.to_string())
+                .or_insert_with(|| Update::new("", now_secs()));
+            let newly_failed = state == "failed" && entry.state != "failed";
+            entry.state = state.to_string();
+            entry.detail = detail.clone().map(|d| d.chars().take(300).collect());
+            (entry.target.clone(), newly_failed)
+        };
+        // Once per failed update: its account's phones hear it.
+        if newly_failed {
+            self.push_machine(device, "update_failed").await;
+        }
+        if matches!(state, "done" | "failed") {
+            let outcome = match &detail {
+                Some(detail) => format!("{state}: {detail}"),
+                None => state.to_string(),
+            };
+            let subject = format!("device:{device}");
+            self.event(
+                &subject,
+                "link",
+                "machine.update_status",
+                device,
+                &target,
+                &outcome,
+            )
+            .await;
+        }
+        self.update_changed.notify_waiters();
+    }
+
+    /// A machine connected on `build`: an update that brought it there is done.
+    async fn connected_on(&self, device: &str, build: Option<&str>) {
+        let done = {
+            let updates = self.updates.lock().expect("updates");
+            updates
+                .get(device)
+                .is_some_and(|u| u.running(now_secs()) && Some(u.target.as_str()) == build)
+        };
+        if done {
+            self.update_reported(device, "done", None).await;
+        }
+    }
+
+    /// Ask each connected machine that is due an update for one (`super::update::select`),
+    /// when `machines.auto_update` is on and this hub hands out a build.
+    pub async fn auto_update_now(&self) {
+        let (true, Some(version)) = (self.auto_update, self.offered.as_deref()) else {
+            return;
+        };
+        let live: Vec<(String, Option<String>)> = {
+            let sessions = self.sessions.lock().expect("links");
+            sessions
+                .iter()
+                .map(|(name, s)| (name.clone(), s.build.clone()))
+                .collect()
+        };
+        let chosen = {
+            let updates = self.updates.lock().expect("updates");
+            super::update::select(&live, version, &updates, now_secs())
+        };
+        for device in chosen {
+            let _ = self.request_update(&device, false, "hub", "auto").await;
+        }
+    }
+
+    /// Once an hour, for as long as the hub runs: [`Self::auto_update_now`].
+    pub async fn auto_update_hourly(self: Arc<Self>) {
+        let mut every = tokio::time::interval(super::update::EVERY);
+        loop {
+            every.tick().await;
+            self.auto_update_now().await;
+        }
+    }
+
+    async fn event(
+        &self,
+        subject: &str,
+        via: &str,
+        tool: &str,
+        broker: &str,
+        key: &str,
+        outcome: &str,
+    ) {
+        if let Err(error) = self
+            .audit
+            .record(&AuditEntry {
+                subject,
+                via,
+                tool,
+                broker,
+                operation_id: key,
+                outcome,
+            })
+            .await
+        {
+            eprintln!("devagotchi hub: link audit failed: {error}");
+        }
+    }
+
+    /// Audit a refused handshake, at most once a second. The claimed name is recorded as
+    /// unverified; the peer address is the TCP peer (the edge, when behind Caddy).
+    async fn refused(&self, claimed: Option<&str>, peer: SocketAddr, error: &BridgeError) {
+        let now = now_secs();
+        let suppressed = {
+            let mut log = self.refusals.lock().expect("refusals");
+            if log.last_second == now {
+                log.suppressed += 1;
+                return;
+            }
+            log.last_second = now;
+            std::mem::take(&mut log.suppressed)
+        };
+        let claimed: String = claimed
+            .unwrap_or("-")
+            .chars()
+            .filter(|c| c.is_ascii_alphanumeric() || *c == '-')
+            .take(63)
+            .collect();
+        let subject = format!("unverified:{claimed}");
+        let via = format!("link {peer}");
+        let outcome = format!("{} ({} more refusals not itemized)", error.code, suppressed);
+        eprintln!(
+            "devagotchi hub: link refused from {peer} claiming {claimed:?}: {}",
+            error
+        );
+        self.event(&subject, &via, "link.refused", &claimed, "", &outcome)
+            .await;
+    }
+
+    /// Serve one device connection until it closes, idles out or is revoked.
+    pub async fn serve(
+        self: Arc<Self>,
+        socket: WebSocket,
+        peer: SocketAddr,
+        permit: OwnedSemaphorePermit,
+    ) {
+        let (mut sink, mut stream) = socket.split();
+        let nonce = hex::encode(random::<32>());
+        let challenge = HubFrame::Challenge {
+            nonce: nonce.clone(),
+            hub: self.config.public_url.clone(),
+        };
+        if send(&mut sink, &challenge).await.is_err() {
+            return;
+        }
+        let hello = match tokio::time::timeout(HELLO_TIMEOUT, stream.next()).await {
+            Ok(Some(Ok(Message::Text(text)))) if text.len() <= MAX_HELLO_BYTES => {
+                serde_json::from_str::<LinkFrame>(&text).ok()
+            }
+            _ => None,
+        };
+        let claimed = match &hello {
+            Some(LinkFrame::Hello { device, .. }) => Some(device.clone()),
+            _ => None,
+        };
+        if let Some(LinkFrame::Hello {
+            enroll_code: Some(code),
+            ..
+        }) = &hello
+            && let Err(error) = self.may_enroll(code).await
+        {
+            self.refused(claimed.as_deref(), peer, &error).await;
+            let _ = send(&mut sink, &wire_refusal(&error)).await;
+            let _ = tokio::time::timeout(SEND_TIMEOUT, sink.close()).await;
+            return;
+        }
+        let Admitted {
+            device,
+            key,
+            joined_for,
+            build,
+        } = match self.admit(hello, &nonce).await {
+            Ok(admitted) => admitted,
+            Err(error) => {
+                self.refused(claimed.as_deref(), peer, &error).await;
+                let _ = send(&mut sink, &wire_refusal(&error)).await;
+                let _ = tokio::time::timeout(SEND_TIMEOUT, sink.close()).await;
+                return;
+            }
+        };
+        drop(permit);
+
+        let (calls_tx, mut calls_rx) = mpsc::channel::<(u64, WireRequest)>(CALL_QUEUE);
+        let (control_tx, mut control_rx) = mpsc::channel::<HubFrame>(4);
+        let pending: Pending = Arc::default();
+        let session_id = self.next.fetch_add(1, Ordering::Relaxed);
+        let previous = self.sessions.lock().expect("links").insert(
+            device.clone(),
+            Session {
+                id: session_id,
+                calls: calls_tx,
+                pending: pending.clone(),
+                build: build.clone(),
+                control: control_tx,
+            },
+        );
+        drop(previous); // A reconnect replaces the old session; its sender drops and it ends.
+        self.changed();
+        let subject = format!("device:{device}");
+        let via = format!("link {peer}");
+        self.event(
+            &subject,
+            &via,
+            "link.connect",
+            &device,
+            &fingerprint(&key),
+            "ok",
+        )
+        .await;
+        if let (Some(owner), Some(push)) = (joined_for, self.push.clone()) {
+            let print = fingerprint(&key);
+            let name = device.clone();
+            let product = self.config.site().name().to_string();
+            tokio::spawn(async move {
+                push.notify(
+                    &[owner],
+                    &serde_json::json!({
+                        "title": format!("{name} joined {product}"),
+                        "body": format!("Key {print}. Not you? Open Machines and revoke it."),
+                        "url": "/account",
+                        "tag": format!("devagotchi-machine-{name}"),
+                    }),
+                )
+                .await;
+            });
+        }
+        if send(
+            &mut sink,
+            &HubFrame::Welcome {
+                device: device.clone(),
+            },
+        )
+        .await
+        .is_err()
+        {
+            let _ = self.forget(&device, session_id, &pending);
+            return;
+        }
+        // An update that brought this build is done; then any machine due one is asked.
+        self.connected_on(&device, build.as_deref()).await;
+        self.auto_update_now().await;
+
+        let mut revocation = tokio::time::interval(REVOCATION_CHECK);
+        let mut idle = Box::pin(tokio::time::sleep(IDLE_TIMEOUT));
+        let reason = loop {
+            tokio::select! {
+                outgoing = calls_rx.recv() => match outgoing {
+                    Some((id, request)) => {
+                        // Re-check at the moment of forwarding: a call queued just before a
+                        // revoke must not reach the device. Fail closed if the store errs.
+                        match self.devices.is_revoked(&device).await {
+                            Ok(false) => {
+                                if send(&mut sink, &HubFrame::Call { id, request }).await.is_err() {
+                                    break "send_failed";
+                                }
+                            }
+                            Ok(true) => {
+                                let _ = send(&mut sink, &revoked_frame(&device)).await;
+                                break "revoked";
+                            }
+                            Err(error) => {
+                                if let Some(waiter) = pending.lock().expect("pending").remove(&id) {
+                                    let _ = waiter.send(WireResponse::Error(error));
+                                }
+                            }
+                        }
+                    }
+                    None => break "replaced",
+                },
+                Some(frame) = control_rx.recv() => {
+                    if send(&mut sink, &frame).await.is_err() {
+                        break "send_failed";
+                    }
+                },
+                incoming = stream.next() => match incoming {
+                    Some(Ok(Message::Text(text))) => {
+                        idle.as_mut().reset(tokio::time::Instant::now() + IDLE_TIMEOUT);
+                        match serde_json::from_str::<LinkFrame>(&text) {
+                            Ok(LinkFrame::Result { id, response }) => {
+                                if let Some(waiter) = pending.lock().expect("pending").remove(&id) {
+                                    let _ = waiter.send(response);
+                                }
+                            }
+                            Ok(LinkFrame::Heartbeat) => {}
+                            Ok(LinkFrame::UpdateStatus { state, detail }) => {
+                                self.update_reported(&device, &state, detail).await;
+                            }
+                            Ok(LinkFrame::Hello { .. }) | Err(_) => break "protocol_error",
+                        }
+                    }
+                    Some(Ok(Message::Ping(_) | Message::Pong(_))) => {
+                        idle.as_mut().reset(tokio::time::Instant::now() + IDLE_TIMEOUT);
+                    }
+                    Some(Ok(Message::Binary(_))) => break "protocol_error",
+                    Some(Ok(Message::Close(_))) | None | Some(Err(_)) => break "closed",
+                },
+                _ = &mut idle => break "idle_timeout",
+                _ = revocation.tick() => {
+                    // Only a definite revocation ends the link; a store hiccup does not.
+                    if let Ok(true) = self.devices.is_revoked(&device).await {
+                        let _ = send(&mut sink, &revoked_frame(&device)).await;
+                        break "revoked";
+                    }
+                }
+            }
+        };
+        if let Some(episode) = self.forget(&device, session_id, &pending) {
+            self.clone().watch_offline(device.clone(), episode);
+        }
+        let _ = tokio::time::timeout(SEND_TIMEOUT, sink.close()).await;
+        self.event(
+            &subject,
+            &via,
+            "link.disconnect",
+            &device,
+            &fingerprint(&key),
+            reason,
+        )
+        .await;
+    }
+
+    /// The session is gone; which drop this was, when it was the device's live session.
+    fn forget(&self, device: &str, session_id: u64, pending: &Pending) -> Option<u64> {
+        let mut sessions = self.sessions.lock().expect("links");
+        let mut episode = None;
+        if sessions.get(device).is_some_and(|s| s.id == session_id) {
+            sessions.remove(device);
+            let this = self.next.fetch_add(1, Ordering::Relaxed);
+            self.seen
+                .lock()
+                .expect("seen")
+                .insert(device.to_string(), (now_secs(), this));
+            episode = Some(this);
+        }
+        drop(sessions);
+        self.changed();
+        // Dropping the waiters answers every in-flight call with broker_offline.
+        pending.lock().expect("pending").clear();
+        episode
+    }
+
+    /// Check the device's hello: a configured link broker or a machine an account added,
+    /// a strong key, a strict signature over this connection's challenge, and an enrolled,
+    /// unrevoked key (or a valid one-time code that binds it now). Returns the device name
+    /// and its key.
+    async fn admit(&self, hello: Option<LinkFrame>, nonce: &str) -> BridgeResult<Admitted> {
+        let refuse = |code: &str, message: String| Err(BridgeError::new(code, message));
+        let Some(LinkFrame::Hello {
+            version,
+            device,
+            public_key,
+            signature,
+            enroll_code,
+            build,
+        }) = hello
+        else {
+            return refuse("protocol_error", "expected a hello frame".into());
+        };
+        if version != LINK_PROTOCOL_VERSION {
+            return refuse(
+                "protocol_version",
+                format!("hub speaks link protocol {LINK_PROTOCOL_VERSION}, device sent {version}"),
+            );
+        }
+        // A configured broker on this host is never a link; a name the config does not
+        // know is a machine an account added (checked against its code or record below).
+        let configured = match self.config.broker(&device) {
+            Some(entry) if entry.link => true,
+            Some(_) => {
+                return refuse(
+                    "unknown_broker",
+                    format!("{device:?} is configured as a broker on this hub's host, not a link"),
+                );
+            }
+            None if crate::config::valid_name(&device) => false,
+            None => {
+                return refuse(
+                    "unknown_broker",
+                    format!("{device:?} is not a valid machine name"),
+                );
+            }
+        };
+        let key = decode::<32>(&public_key)
+            .and_then(|bytes| VerifyingKey::from_bytes(&bytes).ok())
+            .filter(|key| !key.is_weak())
+            .ok_or_else(|| BridgeError::new("bad_key", "public_key is not a strong Ed25519 key"))?;
+        let signature = decode::<64>(&signature)
+            .map(|bytes| Signature::from_bytes(&bytes))
+            .ok_or_else(|| BridgeError::new("bad_signature", "signature is not 64 hex bytes"))?;
+        let message = link_signing_message(&self.config.public_url, &device, nonce);
+        if key.verify_strict(&message, &signature).is_err() {
+            return refuse(
+                "bad_signature",
+                "signature does not match this challenge".into(),
+            );
+        }
+        if let Some(code) = enroll_code {
+            let bound = self
+                .devices
+                .enroll(&device, &code, &public_key, configured)
+                .await?;
+            self.event(
+                &format!("device:{device}"),
+                "link",
+                "link.enroll",
+                &device,
+                &fingerprint(&public_key),
+                &match &bound.owner {
+                    Some(owner) => format!("ok owner={owner}"),
+                    None => "ok".into(),
+                },
+            )
+            .await;
+            self.joined(bound.owner.as_deref());
+            return Ok(Admitted {
+                device,
+                key: public_key,
+                joined_for: bound.owner,
+                build,
+            });
+        }
+        match self.devices.get(&device).await? {
+            None => refuse("not_enrolled", format!("{device} has no enrolled key")),
+            // A machine the config stopped naming, that no account added, is no longer served.
+            Some(record) if !configured && record.owner.is_none() => refuse(
+                "unknown_broker",
+                format!("{device:?} is no longer configured on this hub"),
+            ),
+            Some(record) if record.revoked_at.is_some() => refuse(
+                "device_revoked",
+                format!("{device} was revoked on this hub"),
+            ),
+            Some(record) if record.public_key != public_key => refuse(
+                "key_mismatch",
+                format!("{device} is enrolled with a different key"),
+            ),
+            Some(_) => Ok(Admitted {
+                device,
+                key: public_key,
+                joined_for: None,
+                build,
+            }),
+        }
+    }
+}
+
+fn revoked_frame(device: &str) -> HubFrame {
+    HubFrame::Refused {
+        code: "device_revoked".into(),
+        message: format!("{device} was revoked on this hub"),
+    }
+}
+
+/// One frame to the device, bounded in time so a peer that stops reading cannot hold
+/// the session loop (and with it the revocation and idle checks).
+async fn send<S>(sink: &mut S, frame: &HubFrame) -> Result<(), ()>
+where
+    S: futures_util::Sink<Message> + Unpin,
+{
+    let text = serde_json::to_string(frame).map_err(|_| ())?;
+    match tokio::time::timeout(
+        SEND_TIMEOUT,
+        sink.send(Message::Text(Utf8Bytes::from(text))),
+    )
+    .await
+    {
+        Ok(Ok(())) => Ok(()),
+        _ => Err(()),
+    }
+}
+
+fn decode<const N: usize>(text: &str) -> Option<[u8; N]> {
+    hex::decode(text).ok()?.try_into().ok()
+}
+
+pub fn random<const N: usize>() -> [u8; N] {
+    let mut bytes = [0u8; N];
+    getrandom::fill(&mut bytes).expect("operating system random source");
+    bytes
+}
+
+mod registry;
+#[cfg(test)]
+mod tests;

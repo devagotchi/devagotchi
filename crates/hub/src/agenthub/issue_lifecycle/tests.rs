@@ -72,7 +72,7 @@ async fn hub() -> Option<(Hosted, testing::TestStore)> {
     let hub=hosted_with_ingress(Some(&test.url),|dir,_|json!({
         "boards":[{"project":"source","dir":dir.join("never-local")}],
         "github":{"repositories":[{"repository_id":123,"repository":"acme/demo","project":"source"}]}
-    }),IssueLifecycleStore::with_secret(SECRET.into()).unwrap()).await;
+    }),IssueLifecycleStore::with_secret(SECRET.into()).unwrap()).await?;
     Some((hub, test))
 }
 
@@ -93,9 +93,7 @@ async fn deliver(hub: &Hosted, event: &IssueWebhookEvent, id: &str) -> (u16, Val
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn signed_deliveries_create_one_canonical_ticket_and_preserve_workflow_across_close_reopen() {
-    let Some((hub, _test)) = hub().await else {
-        return;
-    };
+    let (hub, _test) = or_skip!(hub());
     let opened = event("opened", "open", "2026-11-09T01:00:00Z");
     let (a, b) = tokio::join!(deliver(&hub, &opened, "one"), deliver(&hub, &opened, "one"));
     assert_eq!(a.0, 200, "{a:?}");
@@ -150,9 +148,7 @@ async fn signed_deliveries_create_one_canonical_ticket_and_preserve_workflow_acr
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn issue_routes_require_board_grants_and_context_writes_are_versioned_append_only_and_repeat_safe()
  {
-    let Some((hub, _test)) = hub().await else {
-        return;
-    };
+    let (hub, _test) = or_skip!(hub());
     let mut alice = hub.first_connect("Claude").await;
     let bob = hub.first_connect("Codex").await;
     let me = hub.call(&mut alice, "whoami", json!({})).await;
@@ -275,9 +271,7 @@ async fn issue_routes_require_board_grants_and_context_writes_are_versioned_appe
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn mcp_issue_tools_share_rest_authority_receipts_and_refuse_shadow_boards() {
-    let Some((hub, _test)) = hub().await else {
-        return;
-    };
+    let (hub, _test) = or_skip!(hub());
     let mut alice = hub.first_connect("Claude").await;
     let mut bob = hub.first_connect("Codex").await;
     let me = hub.call(&mut alice, "whoami", json!({})).await;
@@ -485,9 +479,7 @@ async fn mcp_issue_tools_share_rest_authority_receipts_and_refuse_shadow_boards(
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn paged_context_retains_more_than_twenty_five_advice_records_across_checkpoints() {
-    let Some((hub, _test)) = hub().await else {
-        return;
-    };
+    let (hub, _test) = or_skip!(hub());
     let mut alice = hub.first_connect("Claude").await;
     let me = hub.call(&mut alice, "whoami", json!({})).await;
     hub.config
@@ -551,9 +543,7 @@ async fn paged_context_retains_more_than_twenty_five_advice_records_across_check
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn webhook_deadline_includes_cold_board_resolution_and_failed_delivery_can_be_retried() {
-    let Some((hub, test)) = hub().await else {
-        return;
-    };
+    let (hub, test) = or_skip!(hub());
     let mut blocker = test.store.admin().begin().await.unwrap();
     sqlx::query("LOCK TABLE devagotchi.board_projects IN ACCESS EXCLUSIVE MODE")
         .execute(&mut *blocker)
@@ -589,9 +579,7 @@ async fn webhook_deadline_includes_cold_board_resolution_and_failed_delivery_can
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn malformed_or_unauthorized_ingress_and_failed_outbox_never_leave_partial_issue_state() {
-    let Some((hub, test)) = hub().await else {
-        return;
-    };
+    let (hub, test) = or_skip!(hub());
     let good = event("opened", "open", "2026-11-09T01:00:00Z");
     let mut wrong = good.clone();
     wrong.repository.id = 999;

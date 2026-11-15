@@ -59,9 +59,9 @@ async fn status(hub: &Hosted, person: &mut Person, asked: &Value) -> Value {
     waited["structuredContent"]["status"].clone()
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_person_decides_approvals_on_their_own_board_and_nobody_else_does() {
-    let hub = hosted().await;
+    let hub = or_skip!(hosted());
     let mut alice = hub.first_connect("Claude").await;
     let bob = hub.first_connect("Claude").await;
     let asked = asked(&hub, &mut alice).await;

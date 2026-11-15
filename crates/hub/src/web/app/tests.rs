@@ -6,16 +6,14 @@ use serde_json::{Value, json};
 
 use crate::tenant_tests::{Hosted, Person, hosted_with, refused};
 
-pub(super) async fn hosted() -> Hosted {
+pub(super) async fn hosted() -> Option<Hosted> {
     hosted_with(None, |_, _| json!({})).await
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn real_postgres_mcp_and_app_share_one_board_and_surface_storage_failures() {
-    let Some(test) = crate::store::testing::postgres().await else {
-        return;
-    };
-    let hub = hosted_with(Some(&test.url), |_, _| json!({})).await;
+    let test = or_skip!(crate::store::testing::postgres());
+    let hub = or_skip!(hosted_with(Some(&test.url), |_, _| json!({})));
     let mut alice = hub.first_connect("Claude").await;
     let bob = hub.first_connect("Codex").await;
     things_of(&hub, &mut alice).await;
@@ -113,9 +111,9 @@ pub(super) async fn things_of(hub: &Hosted, person: &mut Person) -> String {
     stored
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn the_app_shows_only_the_accounts_own_machines_and_boards_in_one_frame() {
-    let hub = hosted().await;
+    let hub = or_skip!(hosted());
     let mut alice = hub.first_connect("Claude").await;
     let bob = hub.first_connect("Claude").await;
     things_of(&hub, &mut alice).await;
@@ -229,7 +227,7 @@ async fn the_app_shows_only_the_accounts_own_machines_and_boards_in_one_frame() 
 
 #[tokio::test]
 async fn signed_out_the_app_sends_you_to_sign_in_and_back() {
-    let hub = hosted().await;
+    let hub = or_skip!(hosted());
     for (path, back) in [
         ("/app", "%2Fapp"),
         ("/app/machines", "%2Fapp%2Fmachines"),
@@ -247,7 +245,7 @@ async fn signed_out_the_app_sends_you_to_sign_in_and_back() {
 
 #[tokio::test]
 async fn the_app_installs_at_app_and_opens_offline() {
-    let hub = hosted().await;
+    let hub = or_skip!(hosted());
     let manifest: Value = hub
         .get("/manifest.webmanifest", None)
         .await
@@ -306,10 +304,10 @@ fn view(id: &str, state: &str, exit_code: Option<i32>) -> devagotchi_contracts::
     .unwrap()
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_machines_page_shows_its_state_and_jobs_and_updates_from_here_only() {
     use devagotchi_contracts::{ResponseBody, StartOutput};
-    let hub = hosted().await;
+    let hub = or_skip!(hosted());
     let mut alice = hub.first_connect("Claude").await;
     let bob = hub.first_connect("Claude").await;
     let device = things_of(&hub, &mut alice).await;
@@ -409,14 +407,10 @@ async fn a_machines_page_shows_its_state_and_jobs_and_updates_from_here_only() {
         html.contains("id=\"update-result\"") && html.contains("Update: failed"),
         "{html}"
     );
-    let audit = rusqlite::Connection::open(hub.dir.path().join("audit.sqlite3")).unwrap();
-    let asked: i64 = audit
-        .query_row(
-            "SELECT count(*) FROM audit WHERE tool = 'machine.update' AND broker = ?1",
-            [&device],
-            |row| row.get(0),
-        )
-        .unwrap();
+    let audit = hub.hub.audit.after(0, 10_000).await.unwrap();
+    let asked = (audit.iter())
+        .filter(|r| r.tool == "machine.update" && r.broker == device)
+        .count();
     assert_eq!(asked, 1, "the update is in the audit");
 
     // Not B's: no page, no update, and the name says nothing about A.

@@ -1474,22 +1474,20 @@ mod bound {
         AppState,
         account::{self, Account, Stored},
         agenthub::cli::{self, EXIT_OK, EXIT_REFUSED, EXIT_UNAVAILABLE, Invocation},
-        audit::Audit,
         auth::Verifier,
         config::HubConfig,
         hub::Hub,
-        machines::devices::Devices,
         machines::link::Links,
     };
 
     const MEMBER: &str = "300000000000000002";
 
-    async fn hub(dir: &Path) -> String {
+    async fn hub(dir: &Path) -> Option<String> {
         hub_with(dir, json!({}), &[]).await
     }
 
     /// The hub, with `extra` merged into its config and more dev tokens.
-    async fn hub_with(dir: &Path, extra: Value, tokens: &[(&str, &str)]) -> String {
+    async fn hub_with(dir: &Path, extra: Value, tokens: &[(&str, &str)]) -> Option<String> {
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let url = format!("http://{}", listener.local_addr().unwrap());
         let mut value = json!({
@@ -1504,8 +1502,8 @@ mod bound {
             value[key] = more.clone();
         }
         let config = Arc::new(HubConfig::parse(&value.to_string()).unwrap());
-        let devices = Arc::new(Devices::open(&dir.join("devices.sqlite3")).unwrap());
-        let audit = Arc::new(Audit::open(&dir.join("audit.sqlite3")).unwrap());
+        let devices = crate::machines::devices::test_registry().await?;
+        let audit = crate::audit::test_audit().await?;
         let links = Arc::new(Links::new(config.clone(), devices.clone(), audit.clone()));
         let state = AppState {
             verifier: Arc::new(Verifier::Dev(
@@ -1534,7 +1532,7 @@ mod bound {
         };
         let app = crate::app(state);
         tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
-        url
+        Some(url)
     }
 
     fn signed_in(path: &Path, token: &str) {
@@ -1577,7 +1575,7 @@ mod bound {
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn two_machines_one_account_one_board() {
         let dir = tempfile::tempdir().unwrap();
-        let url = hub(dir.path()).await;
+        let url = or_skip!(hub(dir.path()));
         let machine_a = dir.path().join("a").join("demo");
         let machine_b = dir.path().join("b").join("demo");
         std::fs::create_dir_all(&machine_a).unwrap();
@@ -1737,7 +1735,7 @@ mod bound {
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn a_bound_project_carries_anchors_to_the_hub_and_back() {
         let dir = tempfile::tempdir().unwrap();
-        let url = hub(dir.path()).await;
+        let url = or_skip!(hub(dir.path()));
         let project = dir.path().join("a").join("demo");
         std::fs::create_dir_all(&project).unwrap();
         let account = dir.path().join("a").join("account.json");
@@ -1877,15 +1875,14 @@ mod bound {
             &["init", "--project", "shared"],
         );
         assert_eq!(code, EXIT_OK, "{err}");
-        let url = hub_with(
+        let url = or_skip!(hub_with(
             dir.path(),
             json!({
                 "boards": [{ "project": "shared", "dir": shared }],
                 "grants": [{ "subject": AGENT, "boards": ["shared"] }]
             }),
             &[("tok-agent", AGENT)],
-        )
-        .await;
+        ));
         let project = dir.path().join("m").join("demo");
         std::fs::create_dir_all(&project).unwrap();
         let account = dir.path().join("m").join("account.json");

@@ -37,9 +37,9 @@ it one step at a time; until a step lands, the code it covers stays where it is.
 
 Rule 8 is enforced by `every_table_in_the_hub_schema_carries_its_domain_prefix` in
 `crates/store/src/tests.rs`: it migrates a new database on the test Postgres and lists the
-schema's tables. Five tables made before the rule (`api_keys`, `connections`, `passwords`,
-`person_preferences`, `sign_in_settings`) are listed in `UNPREFIXED`; that list only shrinks,
-and a listed table that is gone fails the test too. It runs in CI's `hub-postgres` job.
+schema's tables; every one carries a prefix (the five made before the rule were renamed by
+migration 0029: `auth_passwords`, `auth_preferences`, `auth_api_keys`, `auth_sign_in_settings`,
+`connector_keys`). It runs in CI's `hub-postgres` job.
 
 ## The size ratchet
 

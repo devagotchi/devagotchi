@@ -46,7 +46,7 @@ async fn subject_of(hub: &Hosted, person: &mut Person) -> String {
 }
 
 async fn run(store: Option<&str>) {
-    let hub = hosted_with(store, |_, _| json!({})).await;
+    let hub = or_skip!(hosted_with(store, |_, _| json!({})));
     let mut alice = hub.first_connect("Claude").await;
     let mut bob = hub.first_connect("Codex").await;
     let bob_id = subject_of(&hub, &mut bob).await;
@@ -251,16 +251,13 @@ async fn run(store: Option<&str>) {
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_change_of_role_holds_from_the_ais_next_call() {
     run(None).await;
-    if let Some(url) = crate::store::testing::empty_postgres().await {
-        run(Some(&url)).await;
-    }
 }
 
 /// The organisation pages in a browser's place (`web/orgs.rs`): forms from this hub only, an
 /// invite shown once and taken on `/invite`, the organisation's board in the app, and a
 /// person made viewer refused on the ticket page's actions.
 async fn pages(store: Option<&str>) {
-    let hub = hosted_with(store, |_, _| json!({})).await;
+    let hub = or_skip!(hosted_with(store, |_, _| json!({})));
     let alice = hub.first_connect("Claude").await;
     let mut bob = hub.first_connect("Codex").await;
     let bob_id = subject_of(&hub, &mut bob).await;
@@ -435,7 +432,4 @@ async fn pages(store: Option<&str>) {
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn the_organisation_pages_do_what_the_api_does_from_this_hubs_own_forms() {
     pages(None).await;
-    if let Some(url) = crate::store::testing::empty_postgres().await {
-        pages(Some(&url)).await;
-    }
 }

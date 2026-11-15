@@ -61,7 +61,7 @@ pub async fn add(
     };
     let name = form.name.trim().to_ascii_lowercase();
     let site = pages::site();
-    match state.hub.add_own_machine(&owner, &name) {
+    match state.hub.add_own_machine(&owner, &name).await {
         Ok((stored, code)) => code_page(
             &state.hub.config.public_url,
             &name,
@@ -95,7 +95,7 @@ pub async fn revoke(
         Ok(owner) => owner,
         Err(page) => return *page,
     };
-    match state.hub.revoke_own_machine(&owner, form.name.trim()) {
+    match state.hub.revoke_own_machine(&owner, form.name.trim()).await {
         Ok(_) => see_other("/account", &[]),
         Err(error) => pages::message(
             StatusCode::CONFLICT,
@@ -194,7 +194,7 @@ pub async fn add_json(
         }
     };
     let name = form.name.trim().to_ascii_lowercase();
-    let code = match state.hub.add_own_machine(&owner, &name) {
+    let code = match state.hub.add_own_machine(&owner, &name).await {
         Ok((_, code)) => code,
         Err(error) => {
             let status = match error.code.as_str() {

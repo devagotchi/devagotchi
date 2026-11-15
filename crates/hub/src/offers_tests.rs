@@ -4,8 +4,7 @@
 //! with no click against a fake Nomen user API (the user found, made, or found unverified,
 //! and Nomen down), and the one-tap link when the hub cannot: it signs in with the network
 //! and the AI's `offers` then says linked. Off (or with no offerings), and on the neutral
-//! site, nothing of it shows: no tool, no section, no word, no page. On SQLite, and on
-//! Postgres when the test server is set (CI).
+//! site, nothing of it shows: no tool, no section, no word, no page. On the test Postgres (`DEVAGOTCHI_TEST_POSTGRES_URL`; CI sets it).
 
 use std::{
     net::SocketAddr,
@@ -17,15 +16,15 @@ use serde_json::{Value, json};
 
 use crate::{
     accounts::identities::Proven,
-    store,
     tenant_tests::{Hosted, Person, hosted_with, refused, set_cookie},
 };
 
 async fn stores() -> Vec<Option<String>> {
-    let mut out = vec![None];
-    if let Some(url) = store::testing::empty_postgres().await {
-        out.push(Some(url));
-    }
+    let out: Vec<Option<String>> = crate::store::testing::empty_postgres()
+        .await
+        .into_iter()
+        .map(Some)
+        .collect();
     out
 }
 
@@ -108,7 +107,7 @@ fn path_of(link: &str, hub: &Hosted) -> String {
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn on_by_default_offered_once_and_a_yes_is_kept_in_the_users_own_words() {
     for url in stores().await {
-        let hub = hosted_with(url.as_deref(), |_, _| json!({})).await;
+        let hub = or_skip!(hosted_with(url.as_deref(), |_, _| json!({})));
         let mut person = hub.first_connect("Claude").await;
         let (subject, tenant) = who(&hub, &mut person).await;
         // The tools are there, and the instructions say when to offer and how.
@@ -314,7 +313,7 @@ async fn verified_person(hub: &Hosted, n: u32, email: &str) -> (Person, String, 
 async fn with_provisioning_a_yes_links_the_account_on_nomen_with_no_click() {
     for url in stores().await {
         let (nomen, fake) = fake_nomen().await;
-        let hub = hosted_with(url.as_deref(), |dir, _| {
+        let hub = or_skip!(hosted_with(url.as_deref(), |dir, _| {
             json!({
                 "auth": nomen_sign_in(dir),
                 "shippin": { "provisioning": {
@@ -322,8 +321,7 @@ async fn with_provisioning_a_yes_links_the_account_on_nomen_with_no_click() {
                     "token_file": private(dir, "nomen-token", "pat-123\n"),
                 } },
             })
-        })
-        .await;
+        }));
         // Nobody on Nomen has the address: the hub makes the user, verified, in the org.
         let (mut ada, ada_id, ada_tenant) = verified_person(&hub, 1, "ada@example.org").await;
         let accepted =
@@ -486,11 +484,10 @@ async fn with_provisioning_a_yes_links_the_account_on_nomen_with_no_click() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn the_one_tap_link_signs_in_with_the_network_and_offers_then_says_linked() {
     for url in stores().await {
-        let hub = hosted_with(
+        let hub = or_skip!(hosted_with(
             url.as_deref(),
             |dir, _| json!({ "auth": nomen_sign_in(dir) }),
-        )
-        .await;
+        ));
         let mut person = hub.first_connect("Claude").await;
         let (subject, tenant) = who(&hub, &mut person).await;
         let accepted = structured(
@@ -732,10 +729,10 @@ pub(crate) fn builtin_with(
     site
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn off_or_empty_or_on_a_neutral_site_nothing_of_the_offers_shows() {
     // On, by default: the section, its rail, the tools and the sentence are there.
-    let on = hosted_with(None, |_, _| json!({})).await;
+    let on = or_skip!(hosted_with(None, |_, _| json!({})));
     let mut person = on.first_connect("Claude").await;
     let shown = surfaces(&on, &mut person).await;
     assert!(shown.0.iter().any(|n| n == "offers_accept"));
@@ -774,11 +771,10 @@ async fn off_or_empty_or_on_a_neutral_site_nothing_of_the_offers_shows() {
         ("the neutral site", Box::new(move |_| neutral.clone())),
     ];
     for (what, site) in cases {
-        let hub = hosted_with(
+        let hub = or_skip!(hosted_with(
             None,
             |dir, _| json!({ "site": { "dir": site(dir).to_string_lossy() } }),
-        )
-        .await;
+        ));
         let mut person = hub.first_connect("Claude").await;
         let seen = surfaces(&hub, &mut person).await;
         assert_nothing_of_the_offers(what, &seen);
@@ -809,7 +805,7 @@ async fn off_or_empty_or_on_a_neutral_site_nothing_of_the_offers_shows() {
 #[tokio::test]
 async fn a_blank_offering_is_left_out_and_offers_matches_its_output_schema() {
     // One offering with an address, one left blank (no text, no address).
-    let hub = hosted_with(None, |dir, _| {
+    let hub = or_skip!(hosted_with(None, |dir, _| {
         let site = builtin_with(dir, |v| {
             v["offers"]["items"] = json!([
                 { "name": "Vaultix", "text": "Shippin secrets you own.", "href": "https://vaultix.cloud" },
@@ -817,8 +813,7 @@ async fn a_blank_offering_is_left_out_and_offers_matches_its_output_schema() {
             ])
         });
         json!({ "site": { "dir": site.to_string_lossy() } })
-    })
-    .await;
+    }));
     let mut person = hub.first_connect("Claude").await;
     let answer = hub
         .mcp(

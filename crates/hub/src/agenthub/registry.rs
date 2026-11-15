@@ -1,5 +1,5 @@
 use crate::agenthub::{Board, fail, hosted::*};
-use crate::store::{Backend, Lookup, Store, transaction};
+use crate::store::{Lookup, Store, transaction};
 use devagotchi_contracts::BridgeResult;
 use std::sync::Arc;
 
@@ -10,9 +10,6 @@ pub(crate) struct Registry {
 
 impl Registry {
     pub(crate) fn new(store: Store) -> BridgeResult<Self> {
-        if store.backend() != Backend::Postgres {
-            return Err(fail("invalid_config", "hub boards require Postgres"));
-        }
         Ok(Self {
             store,
             runtime: tokio::runtime::Handle::try_current()

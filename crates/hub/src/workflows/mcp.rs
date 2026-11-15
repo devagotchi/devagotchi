@@ -151,19 +151,19 @@ impl Hub {
     }
 
     /// Audit one workflow tool call like every other.
-    fn record_workflow<T>(
+    async fn record_workflow<T>(
         &self,
         subject: &Subject,
         tool: &str,
         id: &str,
         result: Result<T, Json<BridgeError>>,
-    ) -> Result<T, Json<BridgeError>> {
+    ) -> Result<Json<T>, Json<BridgeError>> {
         let outcome = match &result {
             Ok(_) => "ok".to_string(),
             Err(Json(error)) => error.code.clone(),
         };
-        self.record(subject, tool, "", id, &outcome)?;
-        result
+        self.record(subject, tool, "", id, &outcome).await?;
+        result.map(Json)
     }
 }
 
@@ -216,7 +216,7 @@ impl Hub {
             }
         });
         self.record_workflow(&subject, "workflow_list", "", result)
-            .map(Json)
+            .await
     }
 
     #[tool(
@@ -242,7 +242,7 @@ impl Hub {
             .map(|started| started.id.clone())
             .unwrap_or_default();
         self.record_workflow(&subject, "workflow_start", &id, result)
-            .map(Json)
+            .await
     }
 
     #[tool(
@@ -269,7 +269,7 @@ impl Hub {
             Err(error) => Err(error),
         };
         self.record_workflow(&subject, "workflow_status", &input.id, result)
-            .map(Json)
+            .await
     }
 
     #[tool(
@@ -290,7 +290,7 @@ impl Hub {
         let subject = self.subject(&context)?;
         let result = self.wait_workflow(&subject, &input, &context).await;
         self.record_workflow(&subject, "workflow_wait", &input.id, result)
-            .map(Json)
+            .await
     }
 
     #[tool(
@@ -325,7 +325,7 @@ impl Hub {
             Err(error) => Err(error),
         };
         self.record_workflow(&subject, "workflow_cancel", &input.id, result)
-            .map(Json)
+            .await
     }
 }
 
@@ -364,7 +364,7 @@ impl Hub {
             .steps
             .iter()
             .any(|step| step.kind == crate::site::workflows::MACHINE)
-            && let Some(refusal) = self.machine_room(subject)
+            && let Some(refusal) = self.machine_room(subject).await
         {
             return Err(Json(refusal));
         }

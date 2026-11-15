@@ -1,5 +1,4 @@
-//! What the operator page reads, on every store this run has (SQLite always, Postgres when
-//! the test server is set, as in CI).
+//! What the operator page reads, on the test Postgres (`DEVAGOTCHI_TEST_POSTGRES_URL`; CI sets it).
 
 use std::{net::IpAddr, sync::Arc};
 
