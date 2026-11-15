@@ -2,17 +2,16 @@
 # Promote one hub build: staging, smoke, production, rollback.
 # Refuses to run without --confirm. See docs/deploy.md.
 #
-# Production is the hub on Texas (tx-infra-prod, public 23.156.136.173),
-# Proxmox CT 110, https://app.devagotchi.com behind Cloudflare.
-# Staging is a second container on that same host. Set the variables.
-# This script has no host, key, or container id of its own.
+# Production and staging are whatever this environment names. This script has no
+# host, address, key, or container id of its own. The examples are placeholders
+# (203.0.113.0/24 is the documentation range; it is not a host).
 #
-#   DEVAGOTCHI_STAGING_HOST   user@23.156.136.173   (Proxmox SSH)
-#   DEVAGOTCHI_STAGING_LXC    staging container id  (not 110)
-#   DEVAGOTCHI_STAGING_URL    https://staging.app.devagotchi.com
-#   DEVAGOTCHI_PROD_HOST      user@23.156.136.173
-#   DEVAGOTCHI_PROD_LXC       110
-#   DEVAGOTCHI_PROD_URL       https://app.devagotchi.com
+#   DEVAGOTCHI_STAGING_HOST   user@203.0.113.10     (Proxmox SSH)
+#   DEVAGOTCHI_STAGING_LXC    <staging-ct-id>
+#   DEVAGOTCHI_STAGING_URL    https://staging.hub.example.com
+#   DEVAGOTCHI_PROD_HOST      user@203.0.113.10
+#   DEVAGOTCHI_PROD_LXC       <prod-ct-id>
+#   DEVAGOTCHI_PROD_URL       https://hub.example.com
 #
 # Live (one hub, no staging container) takes the build from --artifact,
 # a local directory or tarball, or an https URL of that tarball. The

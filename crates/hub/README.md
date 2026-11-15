@@ -21,7 +21,7 @@ Self-hosting with Docker (the hub, its own Postgres and Caddy, one command):
 ```bash
 devagotchi-hub --state-dir ~/.local/state/devagotchi-hub --config ~/.config/devagotchi-hub/hub.json
 # devagotchi hub owner: 300000000000000001 reaches every broker
-# devagotchi hub ready: http://127.0.0.1:8787/mcp (2 brokers, auth nomen https://id.shippin.cloud)
+# devagotchi hub ready: http://127.0.0.1:8787/mcp (2 brokers, auth nomen https://id.example.com)
 ```
 
 ```json
@@ -31,7 +31,7 @@ devagotchi-hub --state-dir ~/.local/state/devagotchi-hub --config ~/.config/deva
   "storage": { "url": "postgres://hub@db.internal/devagotchi" },
   "auth": {
     "mode": "nomen",
-    "issuer": "https://id.shippin.cloud",
+    "issuer": "https://id.example.com",
     "audiences": ["<Nomen project id the hub's API application belongs to>"],
     "clients": ["<mcp.shippin.cloud's Nomen client id>", "<shippin-bridge's client id>"],
     "key_file": "/etc/devagotchi-hub/nomen-key.json"
@@ -464,7 +464,7 @@ built-in site belongs to the Shippin Network and has it on. `"enabled": false`, 
 ```json
 "shippin": {
   "provider": "nomen",
-  "provisioning": { "api": "https://id.shippin.cloud", "organization_id": "<org id>",
+  "provisioning": { "api": "https://id.example.com", "organization_id": "<org id>",
                     "token_env": "DEVAGOTCHI_SHIPPIN_TOKEN" }
 }
 ```
@@ -724,7 +724,7 @@ which secures it. A sign-in already linked elsewhere is refused, never moved.
       "client_secret_env": "DEVAGOTCHI_GOOGLE_CLIENT_SECRET" },
     { "kind": "github", "client_id_env": "DEVAGOTCHI_GITHUB_CLIENT_ID",
       "client_secret_env": "DEVAGOTCHI_GITHUB_CLIENT_SECRET" },
-    { "kind": "oidc", "name": "nomen", "label": "Shippin", "issuer": "https://id.shippin.cloud",
+    { "kind": "oidc", "name": "nomen", "label": "Example ID", "issuer": "https://id.example.com",
       "client_id_env": "DEVAGOTCHI_NOMEN_CLIENT_ID", "client_secret_env": "DEVAGOTCHI_NOMEN_CLIENT_SECRET" }
   ],
   "email": { "smtp_url_env": "DEVAGOTCHI_SMTP_URL", "password_env": "DEVAGOTCHI_SMTP_PASSWORD",
@@ -870,8 +870,9 @@ With `auth.nomen` as well, any token that is not the hub's own goes to Nomen.
 
 ### A terminal signs in (`devagotchi login`)
 
-`devagotchi login --hub <public_url>` (app.devagotchi.com when no `--hub` is given) is device
-authorization (RFC 8628) at the endpoints the metadata names:
+`devagotchi login --hub <public_url>` is device
+authorization (RFC 8628) at the endpoints the metadata names. Nothing fills in a hub:
+`--hub`, or `DEVAGOTCHI_HUB`, or the hub the last login on this machine saved.
 
 1. The CLI posts to `/oauth/device` as `devagotchi-cli`, a client built into the hub (any
    client registered at `/oauth/register` may ask too) and prints
@@ -924,7 +925,7 @@ Set up once in Nomen (a Gold change, through gold-policy):
    by grant.
 5. For sign-in from a terminal (`devagotchi login`, D22), add a **Native** application to the
    same project with **Device Authorization** and **Refresh Token** grants, client id
-   `devagotchi-cli@shippin` (or pass `--client-id`), and list it in `auth.clients`: the token
+   `devagotchi` (or pass `--client-id`), and list it in `auth.clients`: the token
    `login` lands is then one this hub accepts, and `devagotchi mcp --hub` relays an agent's
    stdio MCP session here as that account.
 

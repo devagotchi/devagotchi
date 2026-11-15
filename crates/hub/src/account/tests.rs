@@ -229,7 +229,7 @@ async fn an_unreachable_issuer_is_unavailable_not_refused() {
         Issuer::new("http://nomen.example", DEFAULT_CLIENT_ID).is_err(),
         "https only"
     );
-    assert!(Issuer::new(DEFAULT_ISSUER, " ").is_err());
+    assert!(Issuer::new("https://id.example.com", " ").is_err());
 }
 
 #[tokio::test]
@@ -247,6 +247,7 @@ async fn current_refreshes_when_due_and_keeps_the_file_otherwise() {
         subject: SUBJECT.into(),
         username: Some("hades".into()),
         email: None,
+        hub: None,
         access_token: "at-1".into(),
         refresh_token: Some("rt-1".into()),
         expires_at: now + 60, // within REFRESH_AHEAD
@@ -382,6 +383,7 @@ mod front {
                 subject: "395290028818825218".into(),
                 username: Some("hades".into()),
                 email: None,
+                hub: None,
                 access_token: token.into(),
                 refresh_token: None,
                 expires_at: now + 3600,

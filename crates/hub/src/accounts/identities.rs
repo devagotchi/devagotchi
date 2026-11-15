@@ -196,7 +196,7 @@ impl Accounts {
         now: u64,
     ) -> BridgeResult<Account> {
         proven.check()?;
-        transaction!(&self.store, |connection| {
+        let account = transaction!(&self.store, |connection| {
             self.sign_in_identity_in(
                 connection,
                 proven,
@@ -206,7 +206,11 @@ impl Accounts {
                 now,
             )
             .await
-        })
+        })?;
+        if account.tenant == tenants::new_tenant_id(tenant_random) {
+            self.extensions.tenant_created(&account.tenant, "sign-in");
+        }
+        Ok(account)
     }
 
     /// `sign_in_identity_at` inside a transaction the caller holds (`proven` checked):

@@ -13,8 +13,7 @@
   "links": {
     "source": "https://github.com/devagotchi/devagotchi",
     "issues": "https://github.com/devagotchi/devagotchi/issues",
-    "security": "https://github.com/devagotchi/devagotchi/security/advisories/new",
-    "hosted_hub": "https://app.devagotchi.com"
+    "security": "https://github.com/devagotchi/devagotchi/security/advisories/new"
   },
   "sign_in": {
     "order": [],

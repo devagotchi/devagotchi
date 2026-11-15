@@ -20,13 +20,25 @@ use serde_json::Value;
 use super::{Standing, Stored, current, unix_now};
 use crate::agenthub::mcp::SEAT_HEADER;
 
-/// The hosted hub (D22): the built-in site's `links.hosted_hub`, the app and its /mcp, not
-/// the marketing site, which redirects there; the relay never follows redirects.
-pub fn default_hub() -> String {
-    crate::site::builtin()
-        .hosted_hub()
-        .unwrap_or_default()
-        .to_string()
+/// The hub `DEVAGOTCHI_HUB` names, when that variable is a hub URL. There is no built-in hub.
+pub fn configured_hub() -> Option<String> {
+    let raw = std::env::var("DEVAGOTCHI_HUB").ok()?;
+    let hub = raw.trim().trim_end_matches('/').to_string();
+    let allowed = hub.starts_with("https://")
+        || hub.starts_with("http://127.0.0.1")
+        || hub.starts_with("http://localhost")
+        || hub.starts_with("http://[::1]");
+    allowed
+        .then_some(hub)
+        .filter(|hub| hub.len() > "https://".len())
+}
+
+/// The hub the account on file signed in to, when that login recorded one.
+pub fn saved_hub(path: &std::path::Path) -> Option<String> {
+    match super::read(path).ok()? {
+        Some(super::Stored::Account(account)) => account.hub.filter(|hub| !hub.is_empty()),
+        _ => None,
+    }
 }
 const MAX_ANSWER_BYTES: usize = 16 * 1024 * 1024;
 const PROTOCOL_VERSION: &str = "2025-06-18";
