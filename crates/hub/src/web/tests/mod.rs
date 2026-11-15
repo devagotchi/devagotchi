@@ -196,7 +196,7 @@ async fn world_with(
         devices.enroll(name, &code, "test-key", true).await.unwrap();
     }
     devices.revoke("old").await.unwrap();
-    let audit = crate::audit::test_audit().await?;
+    let audit = crate::ops::audit::test_audit().await?;
     let links = Arc::new(Links::new(config.clone(), devices.clone(), audit.clone()));
     // The token check itself (Nomen introspection) has its own tests; here tokens map to
     // subjects directly so the flow around them is what is tested.

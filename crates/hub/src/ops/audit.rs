@@ -203,7 +203,7 @@ impl crate::hub::Hub {
                 ("operation_start", "ok") | ("run", "ok") | ("run", "running")
             )
         {
-            analytics.tenant_event(tenant, crate::analytics::funnel::OPERATION);
+            analytics.tenant_event(tenant, crate::ops::analytics::funnel::OPERATION);
         }
         self.audit
             .record(&AuditEntry {

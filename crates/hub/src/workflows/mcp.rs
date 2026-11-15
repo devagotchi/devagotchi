@@ -408,7 +408,7 @@ impl Hub {
             .await
             .map_err(Json)?;
         if let Some(analytics) = &self.analytics {
-            analytics.tenant_event(&tenant, crate::analytics::funnel::WORKFLOW);
+            analytics.tenant_event(&tenant, crate::ops::analytics::funnel::WORKFLOW);
         }
         workflows.changed();
         let link = self.workflow_link(&token);

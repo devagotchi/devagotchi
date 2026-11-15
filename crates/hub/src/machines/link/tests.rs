@@ -31,7 +31,11 @@ async fn test_links(_dir: &std::path::Path) -> Option<Links> {
     )
     .unwrap();
     let devices = crate::machines::devices::test_registry().await?;
-    let links = Links::new(Arc::new(config), devices, crate::audit::test_audit().await?);
+    let links = Links::new(
+        Arc::new(config),
+        devices,
+        crate::ops::audit::test_audit().await?,
+    );
     Some(links)
 }
 

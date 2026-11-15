@@ -76,7 +76,7 @@ verified by a receipt; **planned** = the increment that brings it.
 
 | Rule | Mechanism | Where | Status |
 |---|---|---|---|
-| Every routed call is one append-only, hash-chained row: when, who, how authenticated, what, where, outcome | SQLite chain; a call that cannot be recorded is refused; `/healthz` verifies | `crates/hub/src/audit.rs` | built (H1) |
+| Every routed call is one append-only, hash-chained row: when, who, how authenticated, what, where, outcome | Postgres chain (`audit_entries`); a call that cannot be recorded is refused; `/healthz` verifies | `crates/hub/src/ops/audit.rs` | built (H1) |
 | Every admitted job is journaled before effects and recoverable without replay | broker journal, idempotent admission, `unknown` after restart without a kernel object | `crates/core/src/journal.rs` | enforced (foundation tests) |
 | The control plane's own audit is chained and operator-visible | Shippin `audit_log` trigger chain, Access & audit page | Gold | built (Shippin N2) |
 

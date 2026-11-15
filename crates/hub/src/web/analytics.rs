@@ -26,12 +26,12 @@ use super::{
 };
 use crate::{
     AppState,
-    analytics::{
+    machines::now_secs,
+    ops::analytics::{
         funnel::FAMILIES,
         report::{self, Counted, Funnel, RANGES, Report, iso_day},
         visit::DEVICES,
     },
-    machines::now_secs,
     site::{Ctx, Site},
 };
 

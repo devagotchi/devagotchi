@@ -28,9 +28,9 @@ use sha2::{Digest, Sha256};
 use tokio::sync::{OwnedSemaphorePermit, Semaphore, mpsc, oneshot};
 
 use crate::{
-    audit::{Audit, AuditEntry},
     config::HubConfig,
     machines::{devices::Devices, now_secs, update::Update},
+    ops::audit::{Audit, AuditEntry},
 };
 
 const HELLO_TIMEOUT: Duration = Duration::from_secs(10);
@@ -93,7 +93,7 @@ pub struct Links {
     /// Whether the account that issued a code may enroll a machine with it now.
     gate: Option<EnrollGate>,
     /// Where an account's first machine is counted (`analytics::funnel`), on a hub that counts.
-    analytics: Option<Arc<crate::analytics::Analytics>>,
+    analytics: Option<Arc<crate::ops::analytics::Analytics>>,
     /// Woken when a machine connects or drops: what a workflow waits on (`workflows.rs`).
     changes: Option<Arc<tokio::sync::Notify>>,
     /// The build this hub hands out (`downloads.rs`), which machines update to.
@@ -408,7 +408,7 @@ impl Links {
     }
 
     /// Count each account's first machine in `analytics`.
-    pub fn counting(mut self, analytics: Option<Arc<crate::analytics::Analytics>>) -> Self {
+    pub fn counting(mut self, analytics: Option<Arc<crate::ops::analytics::Analytics>>) -> Self {
         self.analytics = analytics;
         self
     }
@@ -416,7 +416,7 @@ impl Links {
     /// A machine enrolled with `owner`'s code: its tenant's machine milestone.
     fn joined(&self, owner: Option<&str>) {
         if let (Some(analytics), Some(owner)) = (&self.analytics, owner) {
-            analytics.account_event(owner, crate::analytics::funnel::MACHINE);
+            analytics.account_event(owner, crate::ops::analytics::funnel::MACHINE);
         }
     }
 

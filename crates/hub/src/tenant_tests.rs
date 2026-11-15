@@ -94,11 +94,11 @@ pub(crate) async fn hosted_with_ingress(
             .with_analytics(config.counts_visits()),
     );
     // As `run` wires it: a hosted hub counts unless its config says not to.
-    let analytics = config
-        .counts_visits()
-        .then(|| analytics::Analytics::start(accounts.store().clone(), config.analytics, &url));
+    let analytics = config.counts_visits().then(|| {
+        ops::analytics::Analytics::start(accounts.store().clone(), config.analytics, &url)
+    });
     let devices = crate::machines::devices::test_registry().await?;
-    let audit = crate::audit::test_audit().await?;
+    let audit = crate::ops::audit::test_audit().await?;
     let changes = Arc::new(tokio::sync::Notify::new());
     let links = Arc::new(
         Links::new(config.clone(), devices.clone(), audit.clone())

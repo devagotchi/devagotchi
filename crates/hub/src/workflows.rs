@@ -30,6 +30,7 @@ use devagotchi_contracts::{BridgeError, BridgeResult};
 use schemars::JsonSchema;
 use serde::Serialize;
 
+use crate::ops::analytics::funnel;
 use crate::{
     accounts::{
         Accounts,
@@ -68,7 +69,7 @@ impl Workflows {
     /// its family (Claude, ChatGPT or Codex, Grok, Cursor) is kept for the tenant, and a
     /// workflow waiting on it wakes the first time. Another kind of client is not kept.
     pub async fn client_called(&self, tenant: &str, client: &str) {
-        let family = crate::analytics::funnel::client_family(client);
+        let family = funnel::client_family(client);
         if family == "other" {
             return;
         }
@@ -506,8 +507,7 @@ impl Hub {
                 if noted.completed {
                     row.state = "completed".into();
                     if let Some(analytics) = &self.analytics {
-                        analytics
-                            .tenant_event(&row.tenant, crate::analytics::funnel::WORKFLOW_DONE);
+                        analytics.tenant_event(&row.tenant, funnel::WORKFLOW_DONE);
                     }
                 }
                 workflows.changed();
