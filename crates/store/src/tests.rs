@@ -88,3 +88,19 @@ async fn every_table_in_the_hub_schema_carries_its_domain_prefix() {
     }
     assert!(broken.is_empty(), "table names:\n  {}", broken.join("\n  "));
 }
+
+/// sqlx checks each applied migration by checksum: a hub built from a checkout that turned
+/// LF into CRLF (Windows, `core.autocrlf`) refuses a database a Linux-built hub migrated
+/// ("migration 1 was previously applied but has been modified"). `.gitattributes` keeps them
+/// LF in every checkout; this holds it.
+#[test]
+fn every_migration_is_embedded_with_the_repositorys_line_endings() {
+    for migration in POSTGRES.iter() {
+        assert!(
+            !migration.sql.as_ref().contains('\r'),
+            "migration {} ({}) carries a CR: see .gitattributes",
+            migration.version,
+            migration.description
+        );
+    }
+}

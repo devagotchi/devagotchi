@@ -34,7 +34,7 @@ A second service inside the production container is not what the promote script 
 
 1. Resolve the versioned archive for `DEVAGOTCHI_SHA` (the attested dist artifact for that commit, the same class of artifact `scripts/lay-down-dist.sh` already checks for machine builds).
 2. Install that version on the staging container with `install-devagotchi.sh --role hub --version <version>`, beside the version already there. The installer keeps `/opt/devagotchi/versions/<version>` and points `current` at one.
-3. Smoke staging. `GET /healthz` must be HTTP 200 with `auth.ready` true when the hub is in `devagotchi` mode. `GET /.well-known/oauth-protected-resource/mcp` must set `resource` to `{public_url}/mcp` and `authorization_servers` to the hub itself. The full connector path (dynamic registration, PKCE, upstream login, MCP `initialize`, `whoami`) is `tests/oauth_probe.py`, which CI runs against a fake provider. Do not run that probe against production or staging: it would create accounts.
+3. Smoke staging. `GET /healthz` must be HTTP 200. `GET /.well-known/oauth-protected-resource/mcp` must set `resource` to `{public_url}/mcp` and `authorization_servers` to the hub itself. The full connector path (dynamic registration, PKCE, sign-in, MCP `initialize`, `whoami`) is `tests/clients_oauth.py` and `tests/first_connect_browser.py`, which CI runs against a local hub. Do not run them against production or staging: they create accounts.
 4. If smoke fails, run the installer again with the previous version. That is the rollback (`deploy/linux/README.md`).
 5. If smoke passes, install the same version on production and smoke it the same way. If production smoke fails, install the previous version again.
 

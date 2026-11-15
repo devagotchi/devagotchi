@@ -1,0 +1,6 @@
+# Files whose exact bytes matter keep LF in every checkout, whatever the OS converts:
+# - the hub embeds its migrations and checks each by checksum (sqlx), so a hub built from a
+#   Windows checkout must hold the bytes a hub built on Linux applied;
+# - shell scripts run in Linux containers and on Linux hosts, where a CR breaks them.
+*.sql text eol=lf
+*.sh  text eol=lf
