@@ -22,6 +22,24 @@ it one step at a time; until a step lands, the code it covers stays where it is.
    no top-level barrel that re-exports several domains: a path says where the code lives.
 6. **A new file holds at most 500 lines.** Past that, split by what the code is about, not
    by line count. Tests count: a long `tests.rs` becomes `tests/` with a file per subject.
+7. **The front door describes the domain.** A domain's `mod.rs` module docs carry the same
+   sections, in this order, so one file tells a person or an agent what the domain is:
+   *Owns* (its tables, by prefix), *Serves* (its routes, MCP tools and pages), *Settings*
+   (each with the page it is set on, or "deploy-time" for the few the hub needs to start),
+   *Depends on* (the other domains and crates it uses). (Free edition plan, R0.)
+8. **Tables carry their domain.** Every table in the hub's Postgres schema `devagotchi` starts
+   with its domain's prefix: identity `auth_` `oauth_`; tenancy `tenancy_` `org_` `project_`;
+   AgentHub `board_`; hub settings and secrets `hub_`; machines `machine_`; notify `push_`
+   `mail_` `signal_`; ops `audit_` `analytics_`; connectors `connector_`. Postgres only: no
+   SQLite twin (ADR 0001). A new domain adds its prefix here and in the test.
+
+## The table prefixes
+
+Rule 8 is enforced by `every_table_in_the_hub_schema_carries_its_domain_prefix` in
+`crates/store/src/tests.rs`: it migrates a new database on the test Postgres and lists the
+schema's tables. Five tables made before the rule (`api_keys`, `connections`, `passwords`,
+`person_preferences`, `sign_in_settings`) are listed in `UNPREFIXED`; that list only shrinks,
+and a listed table that is gone fails the test too. It runs in CI's `hub-postgres` job.
 
 ## The size ratchet
 
@@ -46,5 +64,5 @@ The list only gets shorter and its numbers only get smaller:
   number or adding a line to the list is a change to this pattern, agreed with the operator
   first, never a way to make the test pass.
 
-What the test does not check: rules 1 to 5 are held by review until the plan's later steps
-give them tests of their own.
+What the tests do not check: rules 1 to 5 and 7 are held by review until the plan's later
+steps give them tests of their own.
