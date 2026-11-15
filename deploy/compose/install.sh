@@ -36,7 +36,12 @@ install.sh --domain NAME [options]
   --dir DIR            where the stack lives (default /opt/devagotchi-hub)
   --source DIR|URL     where compose.yaml and update.sh come from (default: beside this
                        script, else https://raw.githubusercontent.com/<repo>/<ref>/deploy/compose)
-  --repo OWNER/NAME    (default devagotchi/devagotchi)   --ref REF  (default main)
+  --repo OWNER/NAME    (default devagotchi/devagotchi)
+  --ref REF            the git ref those files come from (default: the one the image comes
+                       from: the newest release's tag for --channel release, the tag for
+                       --tag, main for --channel main; for --track, vX.Y.Z for :X.Y.Z, else
+                       main), so compose.yaml always matches the image
+  --print-ref          print that ref and exit, installing nothing
   --no-timer           do not install the update and backup timers
 The hub's site: its name, copy, colours and pictures (crates/hub/README.md, "The site"):
   --site DIR           check the site directory DIR with the hub image and put it in place
@@ -71,7 +76,7 @@ EOF
 
 domain="" public_url="" rp_id="" edge=caddy hub_bind=127.0.0.1 hub_port=8787
 track="" channel="" tag="" dir=/opt/devagotchi-hub source=""
-repo=devagotchi/devagotchi ref=main timer=true site="" site_only=false no_site=false
+repo=devagotchi/devagotchi ref="" print_ref=false timer=true site="" site_only=false no_site=false
 tenancy="" operators="" proxies="" google=false github=false nomen="" email_from="" env_file=""
 analytics="" analytics_days=""
 while [[ $# -gt 0 ]]; do
@@ -89,6 +94,7 @@ while [[ $# -gt 0 ]]; do
     --source) source="$2"; shift 2 ;;
     --repo) repo="$2"; shift 2 ;;
     --ref) ref="$2"; shift 2 ;;
+    --print-ref) print_ref=true; shift ;;
     --no-timer) timer=false; shift ;;
     --site) site="$2"; shift 2 ;;
     --site-only) site_only=true; shift ;;
@@ -136,6 +142,32 @@ if [[ -z "$track" ]]; then
 else
   [[ -z "$channel" && -z "$tag" ]] || die "--track replaces --channel and --tag"
   channel=track
+fi
+# The git ref whose deploy files go with that image (--ref wins): the newest release's tag for
+# the release channel, the tag itself for --tag, main for the main channel; for --track,
+# vX.Y.Z when its tag is X.Y.Z (a release), main otherwise. DEVAGOTCHI_GITHUB_API points the
+# release lookup elsewhere (the deploy-script tests serve it locally).
+deploy_ref() {
+  [[ -n "$ref" ]] && { printf '%s' "$ref"; return; }
+  local image_tag found
+  case "$channel" in
+    tag) printf '%s' "$tag" ;;
+    main) printf main ;;
+    release)
+      found=$(curl -fsSL -m 30 "${DEVAGOTCHI_GITHUB_API:-https://api.github.com}/repos/$repo/releases/latest" \
+        | sed -n 's/^ *"tag_name": *"\([^"]*\)".*/\1/p' | head -1)
+      [[ -n "$found" ]] || die "could not find the newest release of $repo: pass --ref, --tag or --channel main"
+      printf '%s' "$found" ;;
+    track)
+      image_tag="${track##*/}"
+      [[ "$image_tag" == *:* ]] && image_tag="${image_tag##*:}" || image_tag=latest
+      if [[ "$image_tag" =~ ^[0-9]+\.[0-9]+\.[0-9]+ ]]; then printf 'v%s' "$image_tag"; else printf main; fi ;;
+  esac
+}
+if $print_ref; then
+  deploy_ref
+  echo
+  exit 0
 fi
 if $site_only; then
   [[ -n "$site" ]] || die "--site-only needs --site DIR"
@@ -219,7 +251,7 @@ command -v curl >/dev/null || { apt-get update -q && apt-get install -yq curl; }
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 if [[ -z "$source" ]]; then
   if [[ -f "$here/compose.yaml" && -f "$here/update.sh" ]]; then source="$here"
-  else source="https://raw.githubusercontent.com/$repo/$ref/deploy/compose"; fi
+  else source="https://raw.githubusercontent.com/$repo/$(deploy_ref)/deploy/compose"; fi
 fi
 install -d -m 0755 "$dir"
 for file in compose.yaml update.sh backup.sh; do

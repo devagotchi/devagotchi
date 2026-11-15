@@ -20,6 +20,9 @@ create that tag, and a prerelease tag does not move the `:latest` image.
 - `install.sh` follows the release channel (`ghcr.io/devagotchi/devagotchi:latest`) unless
   `--channel main`, `--tag vX.Y.Z`, or `--track IMAGE` says otherwise. `:latest` moves only
   for a stable tag. Until one exists, pin `--tag v0.1.0-alpha.1` or use `--channel main`.
+- A new install's deploy files (`compose.yaml`, `update.sh`, `backup.sh`) come from the release its
+  image comes from, not from `main`: the newest release's tag, the `--tag`, or `main` for
+  `--channel main`. `install.sh --print-ref` shows it; `hub-up.sh` pushes the same files.
 - A hosted edition starts the same hub through `serve_with` and replaces plan limits, tenant
   lifecycle, in-process events, and extra routes. The defaults are what a self-hosted hub
   already does. No billing or hosted deployment is in this repository.

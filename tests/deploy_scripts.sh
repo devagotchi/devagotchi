@@ -25,16 +25,33 @@ docker image inspect "$image" >/dev/null 2>&1 || { echo "no image $image on this
 work=$(mktemp -d)
 dir="$work/hub" port=18790
 export DEVAGOTCHI_UPDATE_STATE="$work/update-state" DEVAGOTCHI_DIR="$dir"
-registry=dvg-test-registry-$$ files_pid=""
+registry=dvg-test-registry-$$ files_pid="" api_pid=""
 cleanup() {
   (cd "$dir" 2>/dev/null && docker compose down -v >/dev/null 2>&1) || true
   docker rm -f "$registry" >/dev/null 2>&1 || true
   [[ -n "$files_pid" ]] && kill "$files_pid" 2>/dev/null || true
+  [[ -n "$api_pid" ]] && kill "$api_pid" 2>/dev/null || true
   rm -rf "$work"
 }
 trap cleanup EXIT
 fail() { printf 'FAIL %s\n' "$1" >&2; (cd "$dir" && docker compose logs --tail 40) >&2 || true; exit 1; }
 env_get() { sed -n "s/^$1=//p" "$dir/.env" | tail -1; }
+
+# The deploy files a new install fetches come from the release its image comes from, so
+# compose.yaml always matches the image. A stand-in for GitHub's releases API names v9.8.7.
+mkdir -p "$work/api/repos/devagotchi/devagotchi/releases"
+printf '{\n  "tag_name": "v9.8.7",\n  "name": "9.8.7"\n}\n' > "$work/api/repos/devagotchi/devagotchi/releases/latest"
+python3 -m http.server 5056 --bind 127.0.0.1 --directory "$work/api" >/dev/null 2>&1 &
+api_pid=$!
+for _ in $(seq 1 30); do curl -fsS -o /dev/null http://127.0.0.1:5056/repos/devagotchi/devagotchi/releases/latest 2>/dev/null && break; sleep 0.2; done
+print_ref() { DEVAGOTCHI_GITHUB_API=http://127.0.0.1:5056 "$root/deploy/compose/install.sh" "$@" --print-ref; }
+[[ "$(print_ref)" == v9.8.7 ]] || fail "the release channel fetches the newest release's files"
+[[ "$(print_ref --channel main)" == main ]] || fail "the main channel fetches main's files"
+[[ "$(print_ref --tag v0.1.0-alpha.1)" == v0.1.0-alpha.1 ]] || fail "--tag fetches that tag's files"
+[[ "$(print_ref --track ghcr.io/x/devagotchi:1.2.3)" == v1.2.3 ]] || fail "--track :1.2.3 fetches v1.2.3's files"
+[[ "$(print_ref --track ghcr.io/x/devagotchi:main)" == main ]] || fail "--track :main fetches main's files"
+[[ "$(print_ref --tag v0.1.0 --ref other)" == other ]] || fail "--ref wins"
+echo "PASS install.sh: the deploy files come from the image's own release"
 
 # The registry that stands in for GHCR, with this commit's image as the track to follow.
 docker run -d --name "$registry" -p 127.0.0.1:5055:5000 \

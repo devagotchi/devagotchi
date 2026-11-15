@@ -71,7 +71,7 @@ EOF
 }
 
 ct="" domain="" rp_id="" port=8787 track="" channel="" tag=""
-repo=devagotchi/devagotchi ref=main snapshot=true
+repo=devagotchi/devagotchi ref="" snapshot=true
 hosted=() env_file="" tenancy="" site="" site_only=false
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -121,15 +121,37 @@ rp_id="${rp_id:-$domain}"
 in_ct() { pct exec "$ct" -- "$@"; }
 config=$(pct config "$ct" 2>/dev/null) || die "there is no container $ct on this host"
 
+# The git ref whose deploy files go with the image the hub will run (--ref wins), as
+# install.sh's --print-ref names it: the tag for --tag; for --track, vX.Y.Z when its tag is
+# X.Y.Z, else main; main for --channel main; otherwise (the release channel) the newest
+# release's tag.
+deploy_ref() {
+  [[ -n "$ref" ]] && { printf '%s' "$ref"; return; }
+  [[ -n "$tag" ]] && { printf '%s' "$tag"; return; }
+  if [[ -n "$track" ]]; then
+    local image_tag="${track##*/}"
+    [[ "$image_tag" == *:* ]] && image_tag="${image_tag##*:}" || image_tag=latest
+    if [[ "$image_tag" =~ ^[0-9]+\.[0-9]+\.[0-9]+ ]]; then printf 'v%s' "$image_tag"; else printf main; fi
+    return
+  fi
+  [[ "$channel" == main ]] && { printf main; return; }
+  local found
+  found=$(curl -fsSL "https://api.github.com/repos/$repo/releases/latest" \
+    | sed -n 's/^ *"tag_name": *"\([^"]*\)".*/\1/p' | head -1)
+  [[ -n "$found" ]] || die "could not find the newest release of $repo: pass --ref, --tag or --channel main"
+  printf '%s' "$found"
+}
+
 # The deploy files of one commit, and the site, pushed into the container for install.sh.
 src=/root/devagotchi-hub-src
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 push_files() {
-  local sha
-  sha=$(curl -fsSL "https://api.github.com/repos/$repo/commits/$ref" | sed -n 's/^  "sha": "\([0-9a-f]\{40\}\)".*/\1/p' | head -1)
-  [[ -n "$sha" ]] || die "could not resolve $repo@$ref"
-  say "the deploy files from $repo@${sha:0:12}"
+  local sha files_ref
+  files_ref=$(deploy_ref)
+  sha=$(curl -fsSL "https://api.github.com/repos/$repo/commits/$files_ref" | sed -n 's/^  "sha": "\([0-9a-f]\{40\}\)".*/\1/p' | head -1)
+  [[ -n "$sha" ]] || die "could not resolve $repo@$files_ref"
+  say "the deploy files from $repo@$files_ref (${sha:0:12})"
   for file in install.sh compose.yaml update.sh backup.sh; do
     curl -fsSL "https://raw.githubusercontent.com/$repo/$sha/deploy/compose/$file" -o "$work/$file"
   done
