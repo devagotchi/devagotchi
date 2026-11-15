@@ -63,7 +63,9 @@ async fn stand_in() -> (String, Seen) {
 }
 
 async fn run(store: Option<&str>) {
-    let hub = hosted_with(store, |_, _| json!({})).await;
+    let Some(hub) = hosted_with(store, |_, _| json!({})).await else {
+        return;
+    };
     let (url, seen) = stand_in().await;
     hub.hub
         .connections

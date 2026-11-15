@@ -98,7 +98,7 @@ impl Hub {
             "timeout_seconds",
         )
         .map_err(Json)?;
-        let route = match self.route(&subject, &input.machine) {
+        let route = match self.route(&subject, &input.machine).await {
             Ok(route) => route,
             Err(Json(error)) => {
                 self.record(&subject, "run", &input.machine, "", &error.code)?;

@@ -92,7 +92,7 @@ pub async fn subscribe(
     if !state.hub.may_approve(&subject) {
         return plain(StatusCode::FORBIDDEN, "not_a_person");
     }
-    match save(&state, &subject.id, &sub) {
+    match save(&state, &subject.id, &sub).await {
         Ok(()) => (StatusCode::NO_CONTENT, ()).into_response(),
         Err(response) => response,
     }
@@ -101,7 +101,11 @@ pub async fn subscribe(
 /// Check a phone's subscription and keep it for `account`: what `/push/subscribe` does for a
 /// signed-in person, and a workflow's link (`workflow.rs`) for the account its AI started it
 /// for. A workflow's phone step waiting on it wakes.
-pub(super) fn save(state: &AppState, account: &str, sub: &Subscription) -> Result<(), Response> {
+pub(super) async fn save(
+    state: &AppState,
+    account: &str,
+    sub: &Subscription,
+) -> Result<(), Response> {
     let Some(push) = state.hub.push.clone() else {
         return Err(plain(StatusCode::NOT_FOUND, "push_not_set_up"));
     };
@@ -116,12 +120,16 @@ pub(super) fn save(state: &AppState, account: &str, sub: &Subscription) -> Resul
     if !key_ok || !auth_ok || !endpoint_ok {
         return Err(plain(StatusCode::BAD_REQUEST, "bad_subscription"));
     }
-    match push.devices().add_push(
-        account,
-        &sub.endpoint,
-        sub.keys.p256dh.trim_end_matches('='),
-        sub.keys.auth.trim_end_matches('='),
-    ) {
+    match push
+        .devices()
+        .add_push(
+            account,
+            &sub.endpoint,
+            sub.keys.p256dh.trim_end_matches('='),
+            sub.keys.auth.trim_end_matches('='),
+        )
+        .await
+    {
         Ok(()) => {
             if let Some(workflows) = &state.hub.workflows {
                 workflows.changed();

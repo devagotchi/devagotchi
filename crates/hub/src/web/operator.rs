@@ -121,7 +121,7 @@ pub async fn page(
     .unwrap_or_default();
     let mut usage = Vec::with_capacity(admitted.len());
     for view in &admitted {
-        match usage_of(&state, &site, view) {
+        match usage_of(&state, &site, view).await {
             Ok(value) => usage.push(value),
             Err(error) => {
                 eprintln!("devagotchi hub: project usage: {error}");
@@ -240,7 +240,7 @@ fn waiting_list(site: &Site, waiting: &[TenantView]) -> String {
 }
 
 /// A tenant's use of each limit against its plan, in the site's words.
-fn usage_of(
+async fn usage_of(
     state: &AppState,
     site: &Site,
     view: &TenantView,
@@ -248,18 +248,16 @@ fn usage_of(
     let copy = &site.messages.operator;
     let plan = access::plan_for(site, &view.tenant, &view.access);
     let mut projects = 0;
+    let mut machines = 0;
     for account in &view.accounts {
         projects += state.hub.boards.account_boards(account)?.len();
+        machines += state.hub.links.held(account).await.unwrap_or(0);
     }
     let items: String = LIMIT_KEYS
         .iter()
         .map(|key| {
             let count = match *key {
-                "machines" => view
-                    .accounts
-                    .iter()
-                    .map(|account| state.hub.links.held(account).unwrap_or(0))
-                    .sum(),
+                "machines" => machines,
                 "projects" => projects,
                 _ => view.clients,
             };

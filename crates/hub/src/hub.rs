@@ -276,6 +276,7 @@ impl Hub {
         let configured = self.config.brokers_for(&subject.id);
         let owned: Vec<Machine> = self
             .owned(&subject.id)
+            .await
             .into_iter()
             .filter(|device| configured.iter().all(|b| b.name != device.name))
             .map(|device| Machine {
@@ -310,7 +311,7 @@ impl Hub {
                     update: None,
                 },
                 None => {
-                    let (status, enrolled_at) = match self.links.device(&broker.name) {
+                    let (status, enrolled_at) = match self.links.device(&broker.name).await {
                         Ok(Some(device)) if device.revoked_at.is_some() => {
                             ("revoked", Some(device.enrolled_at))
                         }
@@ -345,7 +346,7 @@ impl Hub {
         subject: &Subject,
         input: MachineUpdate,
     ) -> Result<MachineUpdated, Json<BridgeError>> {
-        let device = match self.route(subject, &input.machine)? {
+        let device = match self.route(subject, &input.machine).await? {
             Route::Link(device) => device,
             Route::Local(_) => {
                 return Err(Json(BridgeError::new(
@@ -384,8 +385,8 @@ impl Hub {
 
     /// The link device behind `machine`, a name as `subject` knows it; None for a broker
     /// on the hub's own host or a machine that is not theirs.
-    pub fn link_device(&self, subject: &Subject, machine: &str) -> Option<String> {
-        match self.route(subject, machine) {
+    pub async fn link_device(&self, subject: &Subject, machine: &str) -> Option<String> {
+        match self.route(subject, machine).await {
             Ok(Route::Link(device)) => Some(device),
             _ => None,
         }
@@ -401,8 +402,8 @@ impl Hub {
 
     /// The machines `subject` added with codes of its own (increment 29a). A store that
     /// cannot be read lists none rather than failing the caller's whole request.
-    pub(crate) fn owned(&self, subject: &str) -> Vec<crate::machines::devices::Device> {
-        self.links.owned_by(subject).unwrap_or_default()
+    pub(crate) async fn owned(&self, subject: &str) -> Vec<crate::machines::devices::Device> {
+        self.links.owned_by(subject).await.unwrap_or_default()
     }
 
     pub(crate) fn subject(
@@ -430,17 +431,17 @@ impl Hub {
         }
     }
 
-    pub(crate) fn route(
+    pub(crate) async fn route(
         &self,
         subject: &Subject,
         broker: &str,
     ) -> Result<Route, Json<BridgeError>> {
-        let route = self.resolve(subject, broker)?;
+        let route = self.resolve(subject, broker).await?;
         self.routed.lock().expect("routed lock").add(broker);
         Ok(route)
     }
 
-    fn resolve(&self, subject: &Subject, broker: &str) -> Result<Route, Json<BridgeError>> {
+    async fn resolve(&self, subject: &Subject, broker: &str) -> Result<Route, Json<BridgeError>> {
         let allowed = self.config.brokers_for(&subject.id);
         let unknown = || {
             Err(Json(BridgeError::new(
@@ -455,11 +456,12 @@ impl Hub {
             }),
             // A machine the caller added is the caller's alone; anyone else is told it
             // does not exist, so names of other accounts' machines are not revealed.
-            None if self.config.broker(broker).is_none() => match self.own_machine(subject, broker)
-            {
-                Some(device) => Ok(Route::Link(device.name)),
-                None => unknown(),
-            },
+            None if self.config.broker(broker).is_none() => {
+                match self.own_machine(subject, broker).await {
+                    Some(device) => Ok(Route::Link(device.name)),
+                    None => unknown(),
+                }
+            }
             None => Err(Json(BridgeError::new(
                 "not_granted",
                 format!("{} holds no grant for broker {broker:?}", subject.id),
@@ -536,7 +538,7 @@ impl Hub {
             RequestBody::FileMove(input) => format!("{} -> {}", input.source, input.destination),
             _ => String::new(),
         };
-        let result = match self.route(&subject, broker) {
+        let result = match self.route(&subject, broker).await {
             Ok(route) => {
                 tokio::select! {
                     biased;
@@ -600,7 +602,7 @@ impl Hub {
                     .into_iter()
                     .map(|b| b.name.clone())
                     .collect();
-                for device in self.own_machines(&subject) {
+                for device in self.own_machines(&subject).await {
                     if !brokers.contains(&device.name) {
                         brokers.push(device.name);
                     }
@@ -682,7 +684,7 @@ impl Hub {
     ) -> Result<Json<MachineAdded>, Json<BridgeError>> {
         let subject = self.subject(&context)?;
         let name = input.name.trim().to_ascii_lowercase();
-        let (device, code) = self.add_own_machine(&subject, &name).map_err(Json)?;
+        let (device, code) = self.add_own_machine(&subject, &name).await.map_err(Json)?;
         let hub = self.config.public_url.trim_end_matches('/');
         Ok(Json(MachineAdded {
             name,

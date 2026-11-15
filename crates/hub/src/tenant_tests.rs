@@ -12,6 +12,8 @@ use super::*;
 use crate::accounts::oauth::s256;
 
 pub(crate) struct Hosted {
+    /// The machine registry's test database, kept for the hub's life.
+    pub(crate) _db: crate::store::testing::TestStore,
     pub(crate) url: String,
     pub(crate) http: reqwest::Client,
     pub(crate) accounts: Arc<accounts::Accounts>,
@@ -29,13 +31,13 @@ pub(crate) struct Person {
     pub(crate) session: Option<String>,
 }
 
-async fn hosted() -> Hosted {
+async fn hosted() -> Option<Hosted> {
     hosted_on(None).await
 }
 
 /// A hosted hub whose store is `url` (a Postgres database under test), or SQLite in its
 /// state directory.
-async fn hosted_on(store: Option<&str>) -> Hosted {
+async fn hosted_on(store: Option<&str>) -> Option<Hosted> {
     hosted_with(store, |_, _| json!({})).await
 }
 
@@ -43,7 +45,7 @@ async fn hosted_on(store: Option<&str>) -> Hosted {
 pub(crate) async fn hosted_with(
     store: Option<&str>,
     extra: impl FnOnce(&std::path::Path, &str) -> Value,
-) -> Hosted {
+) -> Option<Hosted> {
     hosted_with_ingress(
         store,
         extra,
@@ -56,7 +58,7 @@ pub(crate) async fn hosted_with_ingress(
     store: Option<&str>,
     extra: impl FnOnce(&std::path::Path, &str) -> Value,
     ingress: crate::agenthub::issue_lifecycle::IssueLifecycleStore,
-) -> Hosted {
+) -> Option<Hosted> {
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let url = format!("http://{}", listener.local_addr().unwrap());
     let dir = tempfile::tempdir().unwrap();
@@ -97,7 +99,8 @@ pub(crate) async fn hosted_with_ingress(
     let analytics = config
         .counts_visits()
         .then(|| analytics::Analytics::start(accounts.store().clone(), config.analytics, &url));
-    let devices = Arc::new(devices_at(dir.path()).unwrap());
+    let (db, devices) = crate::machines::devices::test_devices().await?;
+    let devices = Arc::new(devices);
     let audit = Arc::new(Audit::open(&dir.path().join("audit.sqlite3")).unwrap());
     let changes = Arc::new(tokio::sync::Notify::new());
     let links = Arc::new(
@@ -179,7 +182,8 @@ pub(crate) async fn hosted_with_ingress(
         .await
         .unwrap()
     });
-    Hosted {
+    Some(Hosted {
+        _db: db,
         url,
         http: reqwest::Client::builder()
             .redirect(reqwest::redirect::Policy::none())
@@ -190,7 +194,7 @@ pub(crate) async fn hosted_with_ingress(
         config,
         hub,
         dir,
-    }
+    })
 }
 
 pub(crate) fn set_cookie(response: &reqwest::Response, name: &str) -> Option<String> {
@@ -464,9 +468,13 @@ pub(crate) fn fill(schema: &Value, root: &Value, ids: &Value) -> Value {
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn tenant_a_reaches_nothing_of_tenant_bs_through_any_tool_or_page() {
     // On SQLite, and on Postgres when the test server is set (CI).
-    isolation(hosted().await).await;
+    if let Some(hub) = hosted().await {
+        isolation(hub).await;
+    }
     if let Some(postgres) = store::testing::empty_postgres().await {
-        isolation(hosted_on(Some(&postgres)).await).await;
+        if let Some(hub) = hosted_on(Some(&postgres)).await {
+            isolation(hub).await;
+        }
     }
 }
 
@@ -747,7 +755,7 @@ async fn isolation(hub: Hosted) {
     leaks("/api/v1/me", &me.to_string());
 
     // B's things are as they were.
-    let device = hub.devices.get(&stored).unwrap().unwrap();
+    let device = hub.devices.get(&stored).await.unwrap().unwrap();
     assert!(device.revoked_at.is_none(), "B's machine is not revoked");
     assert_eq!(device.owner.as_deref(), who_b["subject"].as_str());
     assert_eq!(
@@ -789,7 +797,9 @@ async fn isolation(hub: Hosted) {
 
 #[tokio::test]
 async fn a_hosted_hub_offers_no_claim_and_says_so_everywhere() {
-    let hub = hosted().await;
+    let Some(hub) = hosted().await else {
+        return;
+    };
     let (status, page) = Hosted::text(hub.get("/", None).await).await;
     assert_eq!(status, 200);
     assert!(
@@ -836,7 +846,9 @@ async fn a_hosted_hub_offers_no_claim_and_says_so_everywhere() {
 
 #[tokio::test]
 async fn a_terminal_signs_in_to_a_new_account_with_one_approve() {
-    let hub = hosted().await;
+    let Some(hub) = hosted().await else {
+        return;
+    };
     let started: Value = hub
         .http
         .post(format!("{}/oauth/device", hub.url))
@@ -896,7 +908,9 @@ async fn a_terminal_signs_in_to_a_new_account_with_one_approve() {
 
 #[tokio::test]
 async fn an_unsecured_account_adds_machines_only_up_to_its_quota() {
-    let hub = hosted().await;
+    let Some(hub) = hosted().await else {
+        return;
+    };
     let mut person = hub.first_connect("Claude").await;
     for name in ["one", "two"] {
         let added = hub

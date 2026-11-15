@@ -1286,13 +1286,14 @@ impl Hub {
     /// Returns how many phones the push goes to. The board tools say whom per board kind
     /// (`approvers`); this is the configured board's list.
     #[cfg(test)]
-    pub fn announce_approval(&self, project: &str, approval: &ApprovalStatus) -> usize {
+    pub async fn announce_approval(&self, project: &str, approval: &ApprovalStatus) -> usize {
         self.announce_approval_to(self.config.people_for_board(project), project, approval)
+            .await
     }
 
     /// Push "approval needed" to these people's phones only (a test goes to the person
     /// who asked for it). Returns how many phones the push goes to.
-    pub fn announce_approval_to(
+    pub async fn announce_approval_to(
         &self,
         people: Vec<String>,
         project: &str,
@@ -1301,7 +1302,7 @@ impl Hub {
         let Some(push) = self.push.clone() else {
             return 0;
         };
-        let phones = push.phones_for(&people);
+        let phones = push.phones_for(&people).await;
         let payload = serde_json::json!({
             "title": "Approval needed",
             "body": approval.title,
@@ -2865,7 +2866,7 @@ impl Hub {
             Ok((_, kind, _)) => self.approvers(&subject, &project, kind),
             Err(_) => Vec::new(),
         };
-        let phones = self.announce_approval_to(people, &project, &approval);
+        let phones = self.announce_approval_to(people, &project, &approval).await;
         let mut out = self.approval_out(&project, approval);
         out.phones = Some(phones);
         Ok(Json(out))
@@ -3518,7 +3519,9 @@ mod tests {
 
         use crate::tenant_tests::{hosted_with, refused};
 
-        let hub = hosted_with(None, |_, _| json!({})).await;
+        let Some(hub) = hosted_with(None, |_, _| json!({})).await else {
+            return;
+        };
         let mut person = hub.first_connect("Claude").await;
         // Two machines that joined (enrolled; neither is online).
         for name in ["dabo", "wisconsin"] {
@@ -3633,7 +3636,9 @@ mod tests {
 
         use crate::tenant_tests::{hosted_with, refused};
 
-        let hub = hosted_with(None, |_, _| json!({})).await;
+        let Some(hub) = hosted_with(None, |_, _| json!({})).await else {
+            return;
+        };
         let mut person = hub.first_connect("Claude").await;
         let bound = hub
             .call(&mut person, "board_bind", json!({ "project": "anchors" }))

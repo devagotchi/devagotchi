@@ -55,7 +55,7 @@ pub async fn page(
             Tab::Machines,
         );
     };
-    let device = state.hub.link_device(&subject, &machine.name);
+    let device = state.hub.link_device(&subject, &machine.name).await;
     let seen = if machine.status == "online" {
         escape(&copy.seen_now)
     } else {

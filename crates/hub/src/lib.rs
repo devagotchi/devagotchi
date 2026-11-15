@@ -97,7 +97,7 @@ use crate::{
     machines::link::Links,
 };
 
-pub const USAGE: &str = "Usage:\n  devagotchi hub serve --state-dir ABS_PATH --config ABS_JSON\n  devagotchi hub enroll --state-dir ABS_PATH --device NAME\n  devagotchi hub revoke --state-dir ABS_PATH --device NAME\n  devagotchi hub devices --state-dir ABS_PATH\n  devagotchi hub owner --state-dir ABS_PATH --config ABS_JSON [--name NAME] [--replace]\n  devagotchi hub setup-code --state-dir ABS_PATH --config ABS_JSON\n  devagotchi hub connect-nomen --state-dir ABS_PATH --config ABS_JSON --issuer URL --client-id ID --project ID\n  devagotchi hub check-site ABS_DIR\n  devagotchi hub check-mail --config ABS_JSON [--to ADDRESS]\n  devagotchi hub analytics-resend --config ABS_JSON\n  devagotchi board <command> …            the agents' board in this project (board --help)\n\nserve starts the bastion: an authenticated Streamable HTTP MCP endpoint at /mcp that routes\nrun and operation_start/get/read/cancel to brokers by name, with whoami, /healthz and RFC 9728\nprotected-resource metadata, and /link where machines' `devagotchi link` connects out.\nWith a `web` section, people sign in with Shippin at /account to see their machines;\n/api/v1/me returns the same view for a session or a bearer token. Put it behind the edge for TLS.\n\nenroll prints a one-time code (15 minutes) that binds one machine's key to NAME;\nrevoke cuts that machine off within seconds; devices lists enrolled machines.\n\nowner (auth.mode hub) prints a one-time link (15 minutes) that makes the owner's passkey:\nthe first time it makes the owner's account, with the config's owner id if it names one;\nagain, it adds a passkey to the owner and ends the owner's other sessions; with --replace the\nlink also removes every other passkey of the owner (to take the account back).\n\nsetup-code (auth.mode devagotchi) prints a one-time code (15 minutes) that makes the account\nclaimed with it the hub's owner at /claim, or the owner already on file.\n\nconnect-nomen joins this hub to a Nomen with its owner's approval: it shows a code to confirm\non any device through the devagotchi-cli app (--client-id) of the hub's Nomen project (--project),\nthen adds the hub's own apps to that project (the key Nomen makes is written to the state\ndirectory, owner-only, and nowhere else), sets auth, owner and web in the config, and keeps a\ncopy of the old one. --issuer is that Nomen's https URL; there is no built-in one.\n\ncheck-site reads and checks a site directory (crates/hub/README.md, \"The site\") as serve would, and\nsays what is wrong and where; serve follows its site.dir and serves a change once it checks out.\n\ncheck-mail (auth.mode hub) connects to auth.email's mail server as serve would, negotiates TLS and\nsigns in as its user, sending nothing; with --to it also sends one email that says this hub's mail\nworks, to read in that mailbox. It prints the server's refusal and never the password; the running\nhub reports the same in /healthz under mail.\n\nanalytics-resend marks every board event in the hub's Postgres to be sent to ClickHouse again,\nas after a ClickHouse that lost its data: the running hub sends them, and ClickHouse keeps one\nrow per event. /healthz reports the export under analytics.";
+pub const USAGE: &str = "Usage:\n  devagotchi hub serve --state-dir ABS_PATH --config ABS_JSON\n  devagotchi hub enroll --state-dir ABS_PATH [--config ABS_JSON] --device NAME\n  devagotchi hub revoke --state-dir ABS_PATH [--config ABS_JSON] --device NAME\n  devagotchi hub devices --state-dir ABS_PATH [--config ABS_JSON]\n  devagotchi hub owner --state-dir ABS_PATH --config ABS_JSON [--name NAME] [--replace]\n  devagotchi hub setup-code --state-dir ABS_PATH --config ABS_JSON\n  devagotchi hub connect-nomen --state-dir ABS_PATH --config ABS_JSON --issuer URL --client-id ID --project ID\n  devagotchi hub check-site ABS_DIR\n  devagotchi hub check-mail --config ABS_JSON [--to ADDRESS]\n  devagotchi hub analytics-resend --config ABS_JSON\n  devagotchi board <command> …            the agents' board in this project (board --help)\n\nserve starts the bastion: an authenticated Streamable HTTP MCP endpoint at /mcp that routes\nrun and operation_start/get/read/cancel to brokers by name, with whoami, /healthz and RFC 9728\nprotected-resource metadata, and /link where machines' `devagotchi link` connects out.\nWith a `web` section, people sign in with Shippin at /account to see their machines;\n/api/v1/me returns the same view for a session or a bearer token. Put it behind the edge for TLS.\n\nenroll prints a one-time code (15 minutes) that binds one machine's key to NAME;\nrevoke cuts that machine off within seconds; devices lists enrolled machines. All three\nuse the hub's Postgres: the storage --config names, or DEVAGOTCHI_HUB_STORAGE_URL.\n\nowner (auth.mode hub) prints a one-time link (15 minutes) that makes the owner's passkey:\nthe first time it makes the owner's account, with the config's owner id if it names one;\nagain, it adds a passkey to the owner and ends the owner's other sessions; with --replace the\nlink also removes every other passkey of the owner (to take the account back).\n\nsetup-code (auth.mode devagotchi) prints a one-time code (15 minutes) that makes the account\nclaimed with it the hub's owner at /claim, or the owner already on file.\n\nconnect-nomen joins this hub to a Nomen with its owner's approval: it shows a code to confirm\non any device through the devagotchi-cli app (--client-id) of the hub's Nomen project (--project),\nthen adds the hub's own apps to that project (the key Nomen makes is written to the state\ndirectory, owner-only, and nowhere else), sets auth, owner and web in the config, and keeps a\ncopy of the old one. --issuer is that Nomen's https URL; there is no built-in one.\n\ncheck-site reads and checks a site directory (crates/hub/README.md, \"The site\") as serve would, and\nsays what is wrong and where; serve follows its site.dir and serves a change once it checks out.\n\ncheck-mail (auth.mode hub) connects to auth.email's mail server as serve would, negotiates TLS and\nsigns in as its user, sending nothing; with --to it also sends one email that says this hub's mail\nworks, to read in that mailbox. It prints the server's refusal and never the password; the running\nhub reports the same in /healthz under mail.\n\nanalytics-resend marks every board event in the hub's Postgres to be sent to ClickHouse again,\nas after a ClickHouse that lost its data: the running hub sends them, and ClickHouse keeps one\nrow per event. /healthz reports the export under analytics.";
 
 #[derive(Debug, PartialEq, Eq)]
 enum Command {
@@ -108,14 +108,17 @@ enum Command {
     },
     Enroll {
         state: PathBuf,
+        config: Option<PathBuf>,
         device: String,
     },
     Revoke {
         state: PathBuf,
+        config: Option<PathBuf>,
         device: String,
     },
     Devices {
         state: PathBuf,
+        config: Option<PathBuf>,
     },
     Owner {
         state: PathBuf,
@@ -229,9 +232,7 @@ fn parse_args(args: impl IntoIterator<Item = OsString>) -> BridgeResult<Command>
             .ok_or_else(|| BridgeError::new("invalid_cli", "flag without a value"))?;
         match flag.to_str() {
             Some("--state-dir") if state.is_none() => state = Some(PathBuf::from(value)),
-            Some("--config") if config.is_none() && verb.is_none() => {
-                config = Some(PathBuf::from(value))
-            }
+            Some("--config") if config.is_none() => config = Some(PathBuf::from(value)),
             Some("--device") if device.is_none() && verb.is_some() => {
                 device = Some(value.to_string_lossy().into_owned())
             }
@@ -243,9 +244,21 @@ fn parse_args(args: impl IntoIterator<Item = OsString>) -> BridgeResult<Command>
         .ok_or_else(|| BridgeError::new("invalid_cli", "--state-dir ABS_PATH is required"))?;
     match (verb.as_deref(), config, device) {
         (None, Some(config), None) if config.is_absolute() => Ok(Command::Serve { state, config }),
-        (Some("enroll"), None, Some(device)) => Ok(Command::Enroll { state, device }),
-        (Some("revoke"), None, Some(device)) => Ok(Command::Revoke { state, device }),
-        (Some("devices"), None, None) => Ok(Command::Devices { state }),
+        (Some(_), Some(config), _) if !config.is_absolute() => Err(BridgeError::new(
+            "invalid_cli",
+            "--config must be an absolute path",
+        )),
+        (Some("enroll"), config, Some(device)) => Ok(Command::Enroll {
+            state,
+            config,
+            device,
+        }),
+        (Some("revoke"), config, Some(device)) => Ok(Command::Revoke {
+            state,
+            config,
+            device,
+        }),
+        (Some("devices"), config, None) => Ok(Command::Devices { state, config }),
         _ => Err(BridgeError::new(
             "invalid_cli",
             "see --help for the accepted forms",
@@ -520,9 +533,34 @@ fn prepare_state_dir(state_dir: &std::path::Path) -> BridgeResult<()> {
     Ok(())
 }
 
-fn devices_at(state_dir: &std::path::Path) -> BridgeResult<Devices> {
+/// The machine registry in the hub's Postgres for `enroll`, `revoke` and `devices`: the
+/// storage `config` names, or `DEVAGOTCHI_HUB_STORAGE_URL`. Run `work` on it to the end.
+fn with_registry<T>(
+    state_dir: &std::path::Path,
+    config: Option<&std::path::Path>,
+    work: impl AsyncFnOnce(&Devices) -> BridgeResult<T>,
+) -> BridgeResult<T> {
     prepare_state_dir(state_dir)?;
-    Devices::open(&state_dir.join("devices.sqlite3"))
+    let storage = match config {
+        Some(path) => read_config(path)?.storage,
+        None => None,
+    };
+    let url = store::url_for(storage.as_ref().and_then(|s| s.url.as_deref()), state_dir);
+    if !url.starts_with("postgres://") && !url.starts_with("postgresql://") {
+        return Err(BridgeError::new(
+            "invalid_config",
+            "machines are kept in the hub's Postgres: pass --config with the hub's config, or set DEVAGOTCHI_HUB_STORAGE_URL",
+        ));
+    }
+    let schema = store::schema_for(storage.as_ref().and_then(|s| s.schema.as_deref()));
+    tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .map_err(|error| BridgeError::new("runtime", error.to_string()))?
+        .block_on(async {
+            let store = store::Store::open_in(&url, schema.as_deref()).await?;
+            work(&Devices::new(store)).await
+        })
 }
 
 /// Record an operator command on the hub's audit chain: who ran it and what it did.
@@ -603,14 +641,20 @@ fn manage(command: Command) -> BridgeResult<()> {
                 }
             );
         }
-        Command::Enroll { state, device } => {
+        Command::Enroll {
+            state,
+            config,
+            device,
+        } => {
             if !config::valid_name(&device) {
                 return Err(BridgeError::new(
                     "invalid_cli",
                     "device must be [a-z0-9][a-z0-9-]{0,62}, the broker name in the hub config",
                 ));
             }
-            let code = devices_at(&state)?.issue_code(&device, machines::random::<16>())?;
+            let code = with_registry(&state, config.as_deref(), async |devices| {
+                devices.issue_code(&device, machines::random::<16>()).await
+            })?;
             // The code itself is never audited or logged; only that one was issued.
             operator_event(&state, "link.code_issued", &device, "ok")?;
             // The code is the one secret this prints; it goes to stdout only, once.
@@ -620,8 +664,14 @@ fn manage(command: Command) -> BridgeResult<()> {
                 machines::devices::CODE_TTL_SECS / 60
             );
         }
-        Command::Revoke { state, device } => {
-            let (revoked, cancelled) = devices_at(&state)?.revoke(&device)?;
+        Command::Revoke {
+            state,
+            config,
+            device,
+        } => {
+            let (revoked, cancelled) = with_registry(&state, config.as_deref(), async |devices| {
+                devices.revoke(&device).await
+            })?;
             operator_event(
                 &state,
                 "link.revoke",
@@ -641,8 +691,10 @@ fn manage(command: Command) -> BridgeResult<()> {
                 (false, _) => eprintln!("{cancelled} pending codes for {device} cancelled"),
             }
         }
-        Command::Devices { state } => {
-            let list = devices_at(&state)?.list()?;
+        Command::Devices { state, config } => {
+            let list = with_registry(&state, config.as_deref(), async |devices| {
+                devices.list().await
+            })?;
             println!(
                 "{}",
                 serde_json::to_string_pretty(&list).unwrap_or_default()
@@ -896,7 +948,7 @@ async fn run(
     if let Some(dir) = &config.site.dir {
         site::watch(config.site_cell(), PathBuf::from(dir), site::WATCH_EVERY);
     }
-    let devices = Arc::new(devices_at(&state_dir)?);
+    let devices = Arc::new(Devices::new(board_store.clone()));
     if let Some(pairs) = &rekey {
         let boards = config
             .account_boards
@@ -904,7 +956,7 @@ async fn run(
             .and_then(|accounts| accounts.dir.as_deref().map(std::path::PathBuf::from))
             .unwrap_or_else(|| state_dir.join("account-boards"));
         for (from, to) in pairs {
-            devices.reassign_owner(from, to)?;
+            devices.reassign_owner(from, to).await?;
             identity::rename_account_dir(&boards, from, to)?;
         }
     }
@@ -1477,7 +1529,7 @@ async fn require_bearer(
     // `auth.mode devagotchi`: accounts merged since the last call take their machines along.
     if let Some(authority) = state.verifier.authority() {
         for (from, into) in authority.drain_merges() {
-            let _ = state.hub.links.reassign_owner(&from, &into);
+            let _ = state.hub.links.reassign_owner(&from, &into).await;
         }
     }
     let origin = state.hub.config.public_url.trim_end_matches('/');
@@ -1745,6 +1797,7 @@ async fn enroll_with_code(
         .hub
         .links
         .enroll_owned(&body.name, &body.code, &body.public_key)
+        .await
     {
         Ok(device) => (
             StatusCode::CREATED,
@@ -2073,7 +2126,7 @@ mod tests {
     }
 
     #[test]
-    fn device_commands_take_a_state_dir_and_a_device() {
+    fn device_commands_take_a_state_dir_a_device_and_maybe_the_hubs_config() {
         let enroll =
             parse_args(["enroll", "--state-dir", STATE, "--device", "gus"].map(OsString::from))
                 .unwrap();
@@ -2081,6 +2134,28 @@ mod tests {
             enroll,
             Command::Enroll {
                 state: PathBuf::from(STATE),
+                config: None,
+                device: "gus".into()
+            }
+        );
+        // The hub's config names the Postgres the machines are kept in.
+        assert_eq!(
+            parse_args(
+                [
+                    "revoke",
+                    "--state-dir",
+                    STATE,
+                    "--config",
+                    CONFIG,
+                    "--device",
+                    "gus"
+                ]
+                .map(OsString::from)
+            )
+            .unwrap(),
+            Command::Revoke {
+                state: PathBuf::from(STATE),
+                config: Some(PathBuf::from(CONFIG)),
                 device: "gus".into()
             }
         );
@@ -2347,9 +2422,10 @@ mod tests {
             )
             .unwrap(),
         );
-        let devices = Arc::new(
-            machines::devices::Devices::open(&dir.path().join("devices.sqlite3")).unwrap(),
-        );
+        let Some((_db, devices)) = machines::devices::test_devices().await else {
+            return;
+        };
+        let devices = Arc::new(devices);
         let audit = Arc::new(Audit::open(&dir.path().join("audit.sqlite3")).unwrap());
         let links = Arc::new(machines::link::Links::new(
             config.clone(),
@@ -2556,7 +2632,7 @@ mod tests {
         dir: &std::path::Path,
         auth: serde_json::Value,
         owner: Option<&str>,
-    ) -> AppState {
+    ) -> Option<AppState> {
         let mut value = serde_json::json!({
             "listen": "127.0.0.1:1",
             "public_url": "http://127.0.0.1:9",
@@ -2583,10 +2659,11 @@ mod tests {
         let passkeys = accounts
             .clone()
             .and_then(|accounts| web::HubSignIn::new(config.clone(), accounts).map(Arc::new));
-        let devices = Arc::new(devices_at(dir).unwrap());
+        let (_db, devices) = machines::devices::test_devices().await?;
+        let devices = Arc::new(devices);
         let audit = Arc::new(Audit::open(&dir.join("audit.sqlite3")).unwrap());
         let links = Arc::new(Links::new(config.clone(), devices, audit.clone()));
-        AppState {
+        Some(AppState {
             verifier: Arc::new(
                 Verifier::from_hub_config(&config, dir, accounts)
                     .await
@@ -2610,7 +2687,7 @@ mod tests {
             ),
             web: None,
             passkeys,
-        }
+        })
     }
 
     /// Both account systems mount `/claim` and `/.well-known/oauth-authorization-server`,
@@ -2674,7 +2751,9 @@ mod tests {
             .build()
             .unwrap();
         for (mode, auth, owner) in cases {
-            let state = state_for(&dir.path().join(mode), auth, owner).await;
+            let Some(state) = state_for(&dir.path().join(mode), auth, owner).await else {
+                return;
+            };
             let devagotchi = mode == "devagotchi";
             let hub_mode = mode.starts_with("hub");
             assert_eq!(state.verifier.authority().is_some(), devagotchi, "{mode}");

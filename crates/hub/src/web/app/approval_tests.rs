@@ -61,7 +61,9 @@ async fn status(hub: &Hosted, person: &mut Person, asked: &Value) -> Value {
 
 #[tokio::test]
 async fn a_person_decides_approvals_on_their_own_board_and_nobody_else_does() {
-    let hub = hosted().await;
+    let Some(hub) = hosted().await else {
+        return;
+    };
     let mut alice = hub.first_connect("Claude").await;
     let bob = hub.first_connect("Claude").await;
     let asked = asked(&hub, &mut alice).await;

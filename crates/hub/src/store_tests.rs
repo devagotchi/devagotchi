@@ -140,8 +140,9 @@ async fn a_refusal_rolls_back_what_the_transaction_did() {
 
 #[tokio::test]
 async fn both_backends_have_the_same_tables_and_columns() {
-    // The two migration directories are kept in step by hand; this holds them to it. Runs
-    // where the test Postgres server is set (CI).
+    // The two migration directories are kept in step by hand for the tables made before
+    // the hub went Postgres only (POSTGRES_ONLY below); this holds them to it. Runs where the
+    // test Postgres server is set (CI).
     let Some(postgres) = postgres().await else {
         return;
     };
@@ -173,10 +174,19 @@ async fn both_backends_have_the_same_tables_and_columns() {
     let pg: BTreeSet<(String, String)> = rows
         .iter()
         .map(|row| (row.get::<String, _>(0), row.get::<String, _>(1)))
+        .filter(|(table, _)| !POSTGRES_ONLY.contains(&table.as_str()))
         .collect();
     assert!(!lite.is_empty());
     assert_eq!(lite, pg);
 }
+
+/// Tables made since the hub keeps nothing in SQLite (free-edition R3): no SQLite twin. The
+/// twin directory goes with M6; until then the tables before them stay in step.
+const POSTGRES_ONLY: [&str; 3] = [
+    "machine_devices",
+    "machine_enroll_codes",
+    "push_subscriptions",
+];
 
 #[test]
 fn sqlx_reads_a_windows_path_back_from_its_url() {

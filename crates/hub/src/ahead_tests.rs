@@ -43,7 +43,9 @@ async fn labelled_restart(hub: &Hosted, ai: &mut Person, what: &str) -> Value {
 }
 
 async fn run(store: Option<&str>) {
-    let hub = hosted_with(store, |_, _| json!({})).await;
+    let Some(hub) = hosted_with(store, |_, _| json!({})).await else {
+        return;
+    };
     let mut alice = hub.first_connect("Claude").await;
     let bound = hub
         .call(&mut alice, "board_bind", json!({ "project": "site" }))

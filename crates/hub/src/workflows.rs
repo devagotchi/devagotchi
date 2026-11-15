@@ -293,7 +293,7 @@ impl Hub {
 
     /// The machine a step handed out a line for: enrolled for the account since then, and
     /// online.
-    pub(crate) fn machine_seen(
+    pub(crate) async fn machine_seen(
         &self,
         account: &str,
         progress: Option<&StepProgress>,
@@ -304,7 +304,7 @@ impl Hub {
         ) else {
             return MachineSeen::None;
         };
-        match self.links.device(stored) {
+        match self.links.device(stored).await {
             Ok(Some(device))
                 if device.owner.as_deref() == Some(account)
                     && device.revoked_at.is_none()
@@ -322,7 +322,7 @@ impl Hub {
 
     /// The name a machine step's machine gets: the one already handed out, the AI's, or the
     /// site's for the OS, made free among the account's machines (`server`, `server-2`, …).
-    pub(crate) fn machine_name_for(
+    pub(crate) async fn machine_name_for(
         &self,
         subject: &Subject,
         row: &WorkflowRow,
@@ -345,6 +345,7 @@ impl Hub {
             .unwrap_or_else(|| "machine".into());
         let held: Vec<String> = self
             .own_machines(subject)
+            .await
             .into_iter()
             .filter(|device| device.revoked_at.is_none())
             .map(|device| device.name)
@@ -376,13 +377,19 @@ impl Hub {
         let copy = &site.messages.workflow;
         let facts = &copy.facts;
         let ctx = || Ctx::new(&site);
-        let phones = self.push.as_ref().map(|push| {
-            push.devices()
-                .push_for(&subject.id)
-                .map(|p| p.len())
-                .unwrap_or(0)
-        });
-        let room = self.machine_room(subject).map(|refused| refused.message);
+        let phones = match self.push.as_ref() {
+            Some(push) => Some(
+                push.devices()
+                    .push_for(&subject.id)
+                    .await
+                    .map_or(0, |p| p.len()),
+            ),
+            None => None,
+        };
+        let room = self
+            .machine_room(subject)
+            .await
+            .map(|refused| refused.message);
         let steps = row.definition.steps.clone();
         // The AI clients the tenant has working, when a step waits on one.
         let families = if steps.iter().any(|step| step.kind == AI_CLIENT) {
@@ -416,8 +423,8 @@ impl Hub {
                 }
                 MACHINE => {
                     let os = one.os.clone().unwrap_or_else(|| "linux".into());
-                    let name = self.machine_name_for(subject, &row, index, &os);
-                    let state = self.machine_seen(&subject.id, progress);
+                    let name = self.machine_name_for(subject, &row, index, &os).await;
+                    let state = self.machine_seen(&subject.id, progress).await;
                     one.done |= matches!(state, MachineSeen::Online);
                     let fact = match (one.done, state) {
                         (true, _) | (_, MachineSeen::Online) => &facts.machine_online,

@@ -28,7 +28,9 @@ async fn list(hub: &Hosted, ai: &mut Person) -> Value {
 }
 
 async fn run(store: Option<&str>) {
-    let hub = hosted_with(store, |_, _| json!({})).await;
+    let Some(hub) = hosted_with(store, |_, _| json!({})).await else {
+        return;
+    };
     let mut claude = hub.first_connect("Claude").await;
     let bound = hub
         .call(&mut claude, "board_bind", json!({ "project": "site" }))
@@ -144,7 +146,9 @@ async fn a_note_left_for_an_ai_reaches_it_on_its_next_call_once() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_tenant_cannot_point_a_webhook_at_the_hubs_network() {
-    let hub = hosted_with(None, |_, _| json!({})).await;
+    let Some(hub) = hosted_with(None, |_, _| json!({})).await else {
+        return;
+    };
     let mut claude = hub.first_connect("Claude").await;
     hub.call(&mut claude, "board_bind", json!({ "project": "site" }))
         .await;

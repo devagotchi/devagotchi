@@ -26,7 +26,7 @@ async fn stores() -> Vec<Option<String>> {
 }
 
 /// A hosted hub run by `github:42`, with `more` merged into its config.
-async fn hub_on(store: Option<&str>, more: Value) -> Hosted {
+async fn hub_on(store: Option<&str>, more: Value) -> Option<Hosted> {
     hosted_with(store, move |_, _| {
         let mut config = json!({ "operators": ["github:42"] });
         for (key, value) in more.as_object().unwrap() {
@@ -98,7 +98,9 @@ async fn operator_cookie(hub: &Hosted) -> String {
 #[tokio::test]
 async fn a_public_page_visit_is_counted_by_the_server_with_exactly_what_it_keeps() {
     for store in stores().await {
-        counted(hub_on(store.as_deref(), json!({})).await).await;
+        if let Some(hub) = hub_on(store.as_deref(), json!({})).await {
+            counted(hub).await;
+        }
     }
 }
 
@@ -221,7 +223,9 @@ async fn counted(hub: Hosted) {
 
 #[tokio::test]
 async fn a_hub_that_does_not_count_keeps_nothing_and_says_so() {
-    let hub = hub_on(None, json!({ "analytics": { "enabled": false } })).await;
+    let Some(hub) = hub_on(None, json!({ "analytics": { "enabled": false } })).await else {
+        return;
+    };
     assert!(hub.hub.analytics.is_none());
     assert_eq!(visit(&hub, "/docs", &[("user-agent", DESKTOP)]).await, 200);
     let mut person = hub.first_connect("Claude").await;
@@ -243,7 +247,9 @@ async fn a_hub_that_does_not_count_keeps_nothing_and_says_so() {
     assert!(privacy.contains("no analytics"), "{privacy}");
     assert!(!privacy.contains("Global Privacy Control"), "{privacy}");
     // And a longer retention is what the page says, where the hub counts.
-    let kept = hub_on(None, json!({ "analytics": { "retention_days": 30 } })).await;
+    let Some(kept) = hub_on(None, json!({ "analytics": { "retention_days": 30 } })).await else {
+        return;
+    };
     let (_, privacy) = Hosted::text(kept.get("/privacy", None).await).await;
     assert!(privacy.contains("30 days"), "{privacy}");
 }
@@ -251,7 +257,7 @@ async fn a_hub_that_does_not_count_keeps_nothing_and_says_so() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn each_milestone_is_written_once_where_it_happens() {
     for store in stores().await {
-        let hub = hosted_with(store.as_deref(), |dir, _| {
+        let Some(hub) = hosted_with(store.as_deref(), |dir, _| {
             let mut site: Value =
                 serde_json::from_str(include_str!("../site/default/site.json")).unwrap();
             site["early_access"] = json!({ "mode": "early_access" });
@@ -260,7 +266,10 @@ async fn each_milestone_is_written_once_where_it_happens() {
             std::fs::write(path.join("site.json"), site.to_string()).unwrap();
             json!({ "site": { "dir": path.to_string_lossy() }, "operators": ["github:42"] })
         })
-        .await;
+        .await
+        else {
+            return;
+        };
         milestones_once(hub).await;
     }
 }
@@ -308,6 +317,7 @@ async fn milestones_once(hub: Hosted) {
         let code = hub
             .devices
             .issue_owned_code(&subject, &stored, [n as u8 + 1; 16], 16)
+            .await
             .unwrap();
         let enrolled = hub
             .http

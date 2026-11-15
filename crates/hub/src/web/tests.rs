@@ -129,6 +129,9 @@ async fn token(
 }
 
 struct World {
+    /// The registry's test database, kept for the world's life, and the registry.
+    _db: crate::store::testing::TestStore,
+    devices: Arc<Devices>,
     fake: Arc<FakeNomen>,
     url: String,
     http: reqwest::Client,
@@ -138,12 +141,14 @@ struct World {
     dir: tempfile::TempDir,
 }
 
-async fn world() -> World {
+async fn world() -> Option<World> {
     world_with(None).await
 }
 
 /// The world, handing out `downloads` to joining machines (`/join`, `/dist`).
-async fn world_with(downloads: Option<Arc<crate::machines::downloads::Downloads>>) -> World {
+async fn world_with(
+    downloads: Option<Arc<crate::machines::downloads::Downloads>>,
+) -> Option<World> {
     let nomen = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let fake = Arc::new(FakeNomen {
         issuer: format!("http://{}", nomen.local_addr().unwrap()),
@@ -192,14 +197,17 @@ async fn world_with(downloads: Option<Arc<crate::machines::downloads::Downloads>
         )
         .unwrap(),
     );
-    let devices = Arc::new(Devices::open(&dir.path().join("devices.sqlite3")).unwrap());
+    let (db, devices) = crate::machines::devices::test_devices().await?;
+    let devices = Arc::new(devices);
+    let registry = devices.clone();
     for name in ["gus", "old"] {
         let code = devices
             .issue_code(name, crate::machines::random::<16>())
+            .await
             .unwrap();
-        devices.enroll(name, &code, "test-key", true).unwrap();
+        devices.enroll(name, &code, "test-key", true).await.unwrap();
     }
-    devices.revoke("old").unwrap();
+    devices.revoke("old").await.unwrap();
     let audit = Arc::new(Audit::open(&dir.path().join("audit.sqlite3")).unwrap());
     let links = Arc::new(Links::new(config.clone(), devices.clone(), audit.clone()));
     // The token check itself (Nomen introspection) has its own tests; here tokens map to
@@ -249,14 +257,16 @@ async fn world_with(downloads: Option<Arc<crate::machines::downloads::Downloads>
         .redirect(reqwest::redirect::Policy::none())
         .build()
         .unwrap();
-    World {
+    Some(World {
+        _db: db,
+        devices: registry,
         fake,
         url,
         http,
         board_dir,
         hub,
         dir,
-    }
+    })
 }
 
 fn location(response: &reqwest::Response) -> String {
@@ -377,7 +387,9 @@ impl World {
 
 #[tokio::test]
 async fn signing_in_shows_the_account_and_machines_and_signing_out_ends_it() {
-    let w = world().await;
+    let Some(w) = world().await else {
+        return;
+    };
     let first = w.get("/account", None).await;
     assert_eq!(first.status(), StatusCode::SEE_OTHER);
     assert_eq!(location(&first), "/auth/login?return_to=/account");
@@ -497,7 +509,9 @@ async fn signing_in_shows_the_account_and_machines_and_signing_out_ends_it() {
 
 #[tokio::test]
 async fn a_person_sees_only_their_granted_machines_by_session_or_bearer() {
-    let w = world().await;
+    let Some(w) = world().await else {
+        return;
+    };
     let session = w.sign_in("tok-other").await;
     let me: Value = w
         .get("/api/v1/me", Some(&session))
@@ -550,7 +564,9 @@ async fn a_person_sees_only_their_granted_machines_by_session_or_bearer() {
 
 #[tokio::test]
 async fn the_callback_needs_this_browsers_state_once_and_the_right_verifier() {
-    let w = world().await;
+    let Some(w) = world().await else {
+        return;
+    };
     let (login, state, code) = w.authorize("/account", "tok-owner", 3600).await;
     // No login cookie, or another browser's: refused, and the sign-in stays usable.
     let bare = w
@@ -604,7 +620,9 @@ async fn the_callback_needs_this_browsers_state_once_and_the_right_verifier() {
 
 #[tokio::test]
 async fn refusals_outages_and_cancelled_sign_ins_never_open_a_session() {
-    let w = world().await;
+    let Some(w) = world().await else {
+        return;
+    };
     // Nomen issued a token the hub does not accept (another client, another project...).
     let (login, state, code) = w.authorize("/account", "tok-unknown", 3600).await;
     let refused = w
@@ -647,7 +665,9 @@ async fn refusals_outages_and_cancelled_sign_ins_never_open_a_session() {
 
 #[tokio::test]
 async fn sessions_end_with_the_token_and_return_paths_stay_on_the_hub() {
-    let w = world().await;
+    let Some(w) = world().await else {
+        return;
+    };
     let (login, state, code) = w.authorize("//evil.example/steal", "tok-owner", 1).await;
     let back = w
         .get(
@@ -741,7 +761,9 @@ async fn names_from_nomen_are_escaped_on_the_page() {
 
 #[tokio::test]
 async fn the_public_pages_need_no_sign_in_and_name_the_operator() {
-    let w = world().await;
+    let Some(w) = world().await else {
+        return;
+    };
     for (path, heading) in [
         ("/docs", "<h1>Devagotchi</h1>"),
         ("/privacy", "<h1>Privacy policy</h1>"),
@@ -782,7 +804,9 @@ async fn the_public_pages_need_no_sign_in_and_name_the_operator() {
 #[tokio::test]
 async fn a_person_approves_on_the_phone_page_and_the_agent_sees_it() {
     use crate::agenthub::{Actor, open_project};
-    let w = world().await;
+    let Some(w) = world().await else {
+        return;
+    };
     let (_, board) = open_project(&w.board_dir).unwrap();
     let asked = board
         .request_approval(
@@ -867,7 +891,9 @@ async fn configured_boards_decide_for_the_owner_and_human_grants_only() {
         agenthub::{Actor, open_project},
         auth::Subject,
     };
-    let w = world().await;
+    let Some(w) = world().await else {
+        return;
+    };
     let (_, board) = open_project(&w.board_dir).unwrap();
     let asked = board
         .request_approval(&Actor::agent("claude"), "Deploy", "deploy", "", "")
@@ -998,7 +1024,9 @@ async fn notify_this_phone_then_an_approval_buzzes_it_encrypted() {
         .with_state(seen.clone());
     tokio::spawn(async move { axum::serve(service, app).await.unwrap() });
 
-    let w = world().await;
+    let Some(w) = world().await else {
+        return;
+    };
     let page = {
         let owner = w.sign_in("tok-owner").await;
         let body = w.get("/approvals", Some(&owner)).await;
@@ -1082,7 +1110,7 @@ async fn notify_this_phone_then_an_approval_buzzes_it_encrypted() {
         )
         .unwrap();
     assert_eq!(
-        w.hub.announce_approval("estate", &asked),
+        w.hub.announce_approval("estate", &asked).await,
         2,
         "the owner's two phones are sent the push"
     );
@@ -1117,6 +1145,7 @@ async fn notify_this_phone_then_an_approval_buzzes_it_encrypted() {
         .unwrap()
         .devices()
         .push_for(OWNER)
+        .await
         .unwrap();
     assert_eq!(
         left.len(),
@@ -1128,7 +1157,9 @@ async fn notify_this_phone_then_an_approval_buzzes_it_encrypted() {
 
 #[tokio::test]
 async fn the_phone_stays_signed_in_across_a_restart_and_through_refreshes() {
-    let w = world().await;
+    let Some(w) = world().await else {
+        return;
+    };
     w.fake.refresh_on_code.store(true, SeqCst);
     let (login, state, code) = w.authorize("/approvals", "tok-owner", 1).await;
     let back = w
@@ -1226,7 +1257,9 @@ async fn the_phone_stays_signed_in_across_a_restart_and_through_refreshes() {
 
 #[tokio::test]
 async fn every_page_says_whether_you_are_signed_in_with_one_tap_in_or_out() {
-    let w = world().await;
+    let Some(w) = world().await else {
+        return;
+    };
     // Signed out: `/` explains and offers one way in; every page offers Sign in back to it.
     let home = w.get("/", None).await;
     assert_eq!(
@@ -1306,7 +1339,9 @@ async fn a_new_board_says_how_to_start_and_one_tap_tests_the_phone() {
         .with_state(seen.clone());
     tokio::spawn(async move { axum::serve(service, app).await.unwrap() });
 
-    let w = world().await;
+    let Some(w) = world().await else {
+        return;
+    };
     let owner = w.sign_in("tok-owner").await;
     let html = w
         .get("/approvals", Some(&owner))
@@ -1421,7 +1456,9 @@ async fn a_new_board_says_how_to_start_and_one_tap_tests_the_phone() {
 
 #[tokio::test]
 async fn a_person_adds_a_machine_of_their_own_and_revokes_it() {
-    let w = world().await;
+    let Some(w) = world().await else {
+        return;
+    };
     let other = w.sign_in("tok-other").await;
     let owner = w.sign_in("tok-owner").await;
     let post = |path: &'static str, cookie: &str, site: &'static str, name: &'static str| {
@@ -1464,9 +1501,10 @@ async fn a_person_adds_a_machine_of_their_own_and_revokes_it() {
     }
 
     // The machine enrolls with the code (the link's own tests cover the handshake).
-    let devices = Devices::open(&w.dir.path().join("devices.sqlite3")).unwrap();
+    let devices = w.devices.clone();
     devices
         .enroll("platinum", &code, "platinum-key", false)
+        .await
         .unwrap();
     let mine: Value = w
         .get("/api/v1/me", Some(&other))
@@ -1504,12 +1542,13 @@ async fn a_person_adds_a_machine_of_their_own_and_revokes_it() {
         access: None,
     };
     assert!(matches!(
-        w.hub.route(&subject(OTHER), "platinum"),
+        w.hub.route(&subject(OTHER), "platinum").await,
         Ok(crate::hub::Route::Link(name)) if name == "platinum"
     ));
     assert_eq!(
         w.hub
             .route(&subject(OWNER), "platinum")
+            .await
             .err()
             .unwrap()
             .0
@@ -1533,11 +1572,16 @@ async fn a_person_adds_a_machine_of_their_own_and_revokes_it() {
         .await
         .unwrap();
     assert_eq!(revoked.status(), StatusCode::SEE_OTHER);
-    assert!(devices.is_revoked("platinum").unwrap());
+    assert!(devices.is_revoked("platinum").await.unwrap());
     let html = w.get("/account", Some(&other)).await.text().await.unwrap();
     assert!(
         html.contains("<tr id=\"platinum\">") && html.contains("Revoked"),
         "{html}"
+    );
+    // Machines, codes and phones are kept in the hub's Postgres (free-edition R3), never a file.
+    assert!(
+        !w.dir.path().join("devices.sqlite3").exists(),
+        "the machine registry wrote a SQLite file"
     );
 }
 
@@ -1561,7 +1605,9 @@ async fn the_one_line_joins_once_and_downloads_only_what_the_hub_vouches_for() {
     std::fs::write(dist.path().join("VERSION"), "main-test123\n").unwrap();
     std::fs::write(dist.path().join("not-listed.txt"), "secret").unwrap();
     let downloads = Arc::new(crate::machines::downloads::Downloads::open(dist.path()).unwrap());
-    let w = world_with(Some(downloads.clone())).await;
+    let Some(w) = world_with(Some(downloads.clone())).await else {
+        return;
+    };
     let other = w.sign_in("tok-other").await;
     let page = w
         .http
@@ -1634,9 +1680,10 @@ async fn the_one_line_joins_once_and_downloads_only_what_the_hub_vouches_for() {
     }
 
     // Enrolling spends it; the same line then only says so.
-    let devices = Devices::open(&w.dir.path().join("devices.sqlite3")).unwrap();
+    let devices = w.devices.clone();
     devices
         .enroll("platinum", &code, "platinum-key", false)
+        .await
         .unwrap();
     let spent = w
         .get(&format!("/join/{code}"), None)
@@ -1675,7 +1722,9 @@ async fn api_add_machine_is_bearer_only_and_the_code_joins_for_that_account() {
     std::fs::write(dist.path().join("SHA256SUMS"), sums).unwrap();
     std::fs::write(dist.path().join("VERSION"), "main-test123\n").unwrap();
     let downloads = Arc::new(crate::machines::downloads::Downloads::open(dist.path()).unwrap());
-    let w = world_with(Some(downloads)).await;
+    let Some(w) = world_with(Some(downloads)).await else {
+        return;
+    };
 
     let cookie = w.sign_in("tok-other").await;
     let by_cookie = w
@@ -1723,12 +1772,16 @@ async fn api_add_machine_is_bearer_only_and_the_code_joins_for_that_account() {
         format!("irm {}/join/{code}.ps1 | iex", w.url.trim_end_matches('/'))
     );
 
-    let devices = Devices::open(&w.dir.path().join("devices.sqlite3")).unwrap();
+    let devices = w.devices.clone();
     devices
         .enroll("laptop", &code, "laptop-key", false)
+        .await
         .unwrap();
     assert!(
-        devices.enroll("laptop", &code, "again-key", false).is_err(),
+        devices
+            .enroll("laptop", &code, "again-key", false)
+            .await
+            .is_err(),
         "a code works once"
     );
     let mine: Value = w
@@ -1773,7 +1826,7 @@ mod first_connect {
 
     /// A hosted hub as the spec runs it: no `anonymous_connect`, Google configured (never
     /// reached: only its button is drawn).
-    async fn hub() -> Hosted {
+    async fn hub() -> Option<Hosted> {
         hosted_with(None, |dir, _| {
             let secret = dir.join("google-secret");
             std::fs::write(&secret, "s3cret\n").unwrap();
@@ -1822,7 +1875,9 @@ mod first_connect {
 
     #[tokio::test]
     async fn sign_up_on_the_one_page_then_straight_back_to_the_app() {
-        let hub = hub().await;
+        let Some(hub) = hub().await else {
+            return;
+        };
         let (client, authorize) = app(&hub, "Claude").await;
         // No session: to the sign-in page, carrying this very request.
         let first = hub.get(&authorize, None).await;
@@ -1934,7 +1989,9 @@ mod first_connect {
 
     #[tokio::test]
     async fn a_wrong_password_says_so_on_the_same_page() {
-        let hub = hub().await;
+        let Some(hub) = hub().await else {
+            return;
+        };
         hub.accounts
             .sign_up_password("kim@example.com", "kims password")
             .await

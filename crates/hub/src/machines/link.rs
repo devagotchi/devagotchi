@@ -267,8 +267,8 @@ impl Links {
 
     /// The accounts a machine's pushes go to: the account that added it; for a machine the
     /// config names, the hub's owner and every account granted it.
-    fn machine_people(&self, device: &str) -> Vec<String> {
-        if let Ok(Some(record)) = self.devices.get(device)
+    async fn machine_people(&self, device: &str) -> Vec<String> {
+        if let Ok(Some(record)) = self.devices.get(device).await
             && let Some(owner) = record.owner
         {
             return vec![owner];
@@ -299,7 +299,7 @@ impl Links {
 
     /// Tell the phones of `device`'s account that it is `offline` or its `update_failed`;
     /// tapping it opens the machine's page in the phone app.
-    fn push_machine(&self, device: &str, what: &str) {
+    async fn push_machine(&self, device: &str, what: &str) {
         let site = self.config.site();
         let copy = &site.messages.app;
         let shown = self.shown(device);
@@ -317,7 +317,7 @@ impl Links {
             "url": format!("/app/machines/{shown}"),
             "tag": format!("devagotchi-machine-{what}-{device}"),
         });
-        let people = self.machine_people(device);
+        let people = self.machine_people(device).await;
         #[cfg(test)]
         self.pushed
             .lock()
@@ -348,9 +348,9 @@ impl Links {
                 .is_some_and(|(_, seen)| *seen == episode);
             if same
                 && !self.connected(&device)
-                && matches!(self.devices.is_revoked(&device), Ok(false))
+                && matches!(self.devices.is_revoked(&device).await, Ok(false))
             {
-                self.push_machine(&device, "offline");
+                self.push_machine(&device, "offline").await;
             }
         });
     }
@@ -408,8 +408,8 @@ impl Links {
 
     /// The machine a live code (unused, unexpired) is for, if any, without spending it or
     /// auditing: a workflow's page shows its person their own line again while it works.
-    pub fn live_code(&self, code: &str) -> BridgeResult<Option<String>> {
-        self.devices.live_code(code)
+    pub async fn live_code(&self, code: &str) -> BridgeResult<Option<String>> {
+        self.devices.live_code(code).await
     }
 
     /// Count each account's first machine in `analytics`.
@@ -437,7 +437,7 @@ impl Links {
         let Some(gate) = &self.gate else {
             return Ok(());
         };
-        let Some(owner) = self.devices.code_owner(code)? else {
+        let Some(owner) = self.devices.code_owner(code).await? else {
             return Ok(());
         };
         if gate(owner).await {
@@ -458,31 +458,36 @@ impl Links {
     }
 
     /// The enrolled record for `device`, if any (revoked ones included).
-    pub fn device(&self, device: &str) -> BridgeResult<Option<Device>> {
-        self.devices.get(device)
+    pub async fn device(&self, device: &str) -> BridgeResult<Option<Device>> {
+        self.devices.get(device).await
     }
 
     /// The machines `owner` added, revoked ones included.
-    pub fn owned_by(&self, owner: &str) -> BridgeResult<Vec<Device>> {
-        self.devices.owned_by(owner)
+    pub async fn owned_by(&self, owner: &str) -> BridgeResult<Vec<Device>> {
+        self.devices.owned_by(owner).await
     }
 
     /// How many machines `owner` holds against its quota: enrolled and not revoked, or
     /// with a live code.
-    pub fn held(&self, owner: &str) -> BridgeResult<usize> {
-        self.devices.held(owner)
+    pub async fn held(&self, owner: &str) -> BridgeResult<usize> {
+        self.devices.held(owner).await
     }
 
     /// Move machines, codes, and push subscriptions from one account id to another
     /// after a provisional account is merged.
-    pub fn reassign_owner(&self, from: &str, to: &str) -> BridgeResult<usize> {
-        self.devices.reassign_owner(from, to)
+    pub async fn reassign_owner(&self, from: &str, to: &str) -> BridgeResult<usize> {
+        self.devices.reassign_owner(from, to).await
     }
 
     /// Spend an account's one-time code and bind `public_key` to `name`. The code is
     /// the secret; this is the same check the link handshake uses.
-    pub fn enroll_owned(&self, name: &str, code: &str, public_key: &str) -> BridgeResult<Device> {
-        let device = self.devices.enroll(name, code, public_key, false)?;
+    pub async fn enroll_owned(
+        &self,
+        name: &str,
+        code: &str,
+        public_key: &str,
+    ) -> BridgeResult<Device> {
+        let device = self.devices.enroll(name, code, public_key, false).await?;
         self.event(
             device.owner.as_deref().unwrap_or(""),
             "join",
@@ -497,13 +502,13 @@ impl Links {
 
     /// A one-time code for `owner` to add a machine named `device` ("Add a machine"). The
     /// names in the hub config are the operator's. Audited without the code.
-    pub fn issue_owned_code(&self, owner: &str, device: &str) -> BridgeResult<String> {
-        self.issue_owned_code_within(owner, device, None)
+    pub async fn issue_owned_code(&self, owner: &str, device: &str) -> BridgeResult<String> {
+        self.issue_owned_code_within(owner, device, None).await
     }
 
     /// `issue_owned_code`, holding the owner to `limit` machines instead of the usual
     /// quota when one is given (an account nobody secured, `tenant_machines.rs`).
-    pub fn issue_owned_code_within(
+    pub async fn issue_owned_code_within(
         &self,
         owner: &str,
         device: &str,
@@ -528,7 +533,8 @@ impl Links {
         };
         let issued = self
             .devices
-            .issue_owned_code(owner, device, random::<16>(), limit);
+            .issue_owned_code(owner, device, random::<16>(), limit)
+            .await;
         let outcome = match &issued {
             Ok(_) => "ok".to_string(),
             Err(error) => error.code.clone(),
@@ -539,8 +545,8 @@ impl Links {
 
     /// The machine a live code is for, so `/join` can write its script; audited with
     /// the machine's name, never the code. Looking does not spend the code.
-    pub fn join_script(&self, code: &str, shell: Shell) -> BridgeResult<Option<String>> {
-        let device = self.devices.live_code(code)?;
+    pub async fn join_script(&self, code: &str, shell: Shell) -> BridgeResult<Option<String>> {
+        let device = self.devices.live_code(code).await?;
         if let Some(device) = &device {
             let shell = match shell {
                 Shell::Sh => "sh",
@@ -559,8 +565,8 @@ impl Links {
     }
 
     /// Revoke one of `owner`'s machines; its open link closes within seconds.
-    pub fn revoke_owned(&self, owner: &str, device: &str) -> BridgeResult<(bool, usize)> {
-        let result = self.devices.revoke_owned(owner, device);
+    pub async fn revoke_owned(&self, owner: &str, device: &str) -> BridgeResult<(bool, usize)> {
+        let result = self.devices.revoke_owned(owner, device).await;
         let outcome = match &result {
             Ok((revoked, cancelled)) => format!("revoked={revoked} codes_cancelled={cancelled}"),
             Err(error) => error.code.clone(),
@@ -600,7 +606,7 @@ impl Links {
 
     /// Send one broker request over the device's link and wait for its answer.
     pub async fn call(&self, device: &str, body: RequestBody) -> BridgeResult<ResponseBody> {
-        match self.devices.get(device)? {
+        match self.devices.get(device).await? {
             None => {
                 return Err(BridgeError::new(
                     "not_enrolled",
@@ -765,7 +771,7 @@ impl Links {
     }
 
     /// The link reported a step of its update.
-    fn update_reported(&self, device: &str, state: &str, detail: Option<String>) {
+    async fn update_reported(&self, device: &str, state: &str, detail: Option<String>) {
         if !devagotchi_contracts::UPDATE_STATES.contains(&state) {
             return;
         }
@@ -781,7 +787,7 @@ impl Links {
         };
         // Once per failed update: its account's phones hear it.
         if newly_failed {
-            self.push_machine(device, "update_failed");
+            self.push_machine(device, "update_failed").await;
         }
         if matches!(state, "done" | "failed") {
             let outcome = match &detail {
@@ -802,7 +808,7 @@ impl Links {
     }
 
     /// A machine connected on `build`: an update that brought it there is done.
-    fn connected_on(&self, device: &str, build: Option<&str>) {
+    async fn connected_on(&self, device: &str, build: Option<&str>) {
         let done = {
             let updates = self.updates.lock().expect("updates");
             updates
@@ -810,7 +816,7 @@ impl Links {
                 .is_some_and(|u| u.running(now_secs()) && Some(u.target.as_str()) == build)
         };
         if done {
-            self.update_reported(device, "done", None);
+            self.update_reported(device, "done", None).await;
         }
     }
 
@@ -929,7 +935,7 @@ impl Links {
             key,
             joined_for,
             build,
-        } = match self.admit(hello, &nonce) {
+        } = match self.admit(hello, &nonce).await {
             Ok(admitted) => admitted,
             Err(error) => {
                 self.refused(claimed.as_deref(), peer, &error);
@@ -996,7 +1002,7 @@ impl Links {
             return;
         }
         // An update that brought this build is done; then any machine due one is asked.
-        self.connected_on(&device, build.as_deref());
+        self.connected_on(&device, build.as_deref()).await;
         self.auto_update_now();
 
         let mut revocation = tokio::time::interval(REVOCATION_CHECK);
@@ -1007,7 +1013,7 @@ impl Links {
                     Some((id, request)) => {
                         // Re-check at the moment of forwarding: a call queued just before a
                         // revoke must not reach the device. Fail closed if the store errs.
-                        match self.devices.is_revoked(&device) {
+                        match self.devices.is_revoked(&device).await {
                             Ok(false) => {
                                 if send(&mut sink, &HubFrame::Call { id, request }).await.is_err() {
                                     break "send_failed";
@@ -1042,7 +1048,7 @@ impl Links {
                             }
                             Ok(LinkFrame::Heartbeat) => {}
                             Ok(LinkFrame::UpdateStatus { state, detail }) => {
-                                self.update_reported(&device, &state, detail);
+                                self.update_reported(&device, &state, detail).await;
                             }
                             Ok(LinkFrame::Hello { .. }) | Err(_) => break "protocol_error",
                         }
@@ -1056,7 +1062,7 @@ impl Links {
                 _ = &mut idle => break "idle_timeout",
                 _ = revocation.tick() => {
                     // Only a definite revocation ends the link; a store hiccup does not.
-                    if let Ok(true) = self.devices.is_revoked(&device) {
+                    if let Ok(true) = self.devices.is_revoked(&device).await {
                         let _ = send(&mut sink, &revoked_frame(&device)).await;
                         break "revoked";
                     }
@@ -1101,7 +1107,7 @@ impl Links {
     /// a strong key, a strict signature over this connection's challenge, and an enrolled,
     /// unrevoked key (or a valid one-time code that binds it now). Returns the device name
     /// and its key.
-    fn admit(&self, hello: Option<LinkFrame>, nonce: &str) -> BridgeResult<Admitted> {
+    async fn admit(&self, hello: Option<LinkFrame>, nonce: &str) -> BridgeResult<Admitted> {
         let refuse = |code: &str, message: String| Err(BridgeError::new(code, message));
         let Some(LinkFrame::Hello {
             version,
@@ -1155,7 +1161,8 @@ impl Links {
         if let Some(code) = enroll_code {
             let bound = self
                 .devices
-                .enroll(&device, &code, &public_key, configured)?;
+                .enroll(&device, &code, &public_key, configured)
+                .await?;
             self.event(
                 &format!("device:{device}"),
                 "link",
@@ -1175,7 +1182,7 @@ impl Links {
                 build,
             });
         }
-        match self.devices.get(&device)? {
+        match self.devices.get(&device).await? {
             None => refuse("not_enrolled", format!("{device} has no enrolled key")),
             // A machine the config stopped naming, that no account added, is no longer served.
             Some(record) if !configured && record.owner.is_none() => refuse(
@@ -1246,7 +1253,19 @@ mod tests {
     const TOKENS: &str = r"C:\tmp\tokens.json";
     const HUB: &str = "http://127.0.0.1:8787";
 
-    fn links(dir: &std::path::Path) -> Links {
+    /// Links over a registry on a new database of the test Postgres, or a skip without one.
+    macro_rules! links {
+        ($dir:expr) => {
+            match test_links($dir).await {
+                Some(found) => found,
+                None => return,
+            }
+        };
+    }
+
+    async fn test_links(
+        dir: &std::path::Path,
+    ) -> Option<(crate::store::testing::TestStore, Links)> {
         let config = HubConfig::parse(
             &serde_json::json!({
                 "listen": "127.0.0.1:8787",
@@ -1258,11 +1277,13 @@ mod tests {
             .to_string(),
         )
         .unwrap();
-        Links::new(
+        let (db, devices) = crate::machines::devices::test_devices().await?;
+        let links = Links::new(
             Arc::new(config),
-            Arc::new(Devices::open(&dir.join("devices.sqlite3")).unwrap()),
+            Arc::new(devices),
             Arc::new(Audit::open(&dir.join("audit.sqlite3")).unwrap()),
-        )
+        );
+        Some((db, links))
     }
 
     fn hello(
@@ -1304,7 +1325,7 @@ mod tests {
     #[tokio::test]
     async fn a_machine_offline_ten_minutes_or_failing_an_update_reaches_its_peoples_phones_once() {
         let dir = tempfile::tempdir().unwrap();
-        let mut links = links(dir.path());
+        let (_db, mut links) = links!(dir.path());
         links.offline_after = Duration::from_millis(40);
         let links = Arc::new(links);
         let wait = || tokio::time::sleep(Duration::from_millis(200));
@@ -1312,8 +1333,12 @@ mod tests {
 
         // A configured machine goes to the accounts granted it; it stays away: one push,
         // whose tap opens its page in the app.
-        let code = links.devices.issue_code("gus", [6; 16]).unwrap();
-        links.devices.enroll("gus", &code, "gus-key", true).unwrap();
+        let code = links.devices.issue_code("gus", [6; 16]).await.unwrap();
+        links
+            .devices
+            .enroll("gus", &code, "gus-key", true)
+            .await
+            .unwrap();
         connect(&links, "gus");
         let episode = links
             .forget("gus", 99, &Pending::default())
@@ -1344,8 +1369,12 @@ mod tests {
 
         // A failed update: one push however often the link says so; the next update's
         // failure is another.
-        links.update_reported("gus", "failed", Some("no space".into()));
-        links.update_reported("gus", "failed", Some("no space".into()));
+        links
+            .update_reported("gus", "failed", Some("no space".into()))
+            .await;
+        links
+            .update_reported("gus", "failed", Some("no space".into()))
+            .await;
         let sent = pushed(&links);
         assert_eq!(sent.len(), 3, "{sent:?}");
         assert_eq!(sent[2].1["title"], "gus update failed");
@@ -1355,20 +1384,21 @@ mod tests {
             .lock()
             .unwrap()
             .insert("gus".into(), Update::new("v2", now_secs()));
-        links.update_reported("gus", "failed", None);
+        links.update_reported("gus", "failed", None).await;
         assert_eq!(pushed(&links).len(), 4);
 
         // A machine an account added goes to that account only; a revoked one is not pushed.
-        let code = links.issue_owned_code("alice", "lab").unwrap();
+        let code = links.issue_owned_code("alice", "lab").await.unwrap();
         links
             .devices
             .enroll("lab", &code, "lab-key", false)
+            .await
             .unwrap();
-        links.update_reported("lab", "failed", None);
+        links.update_reported("lab", "failed", None).await;
         assert_eq!(pushed(&links).last().unwrap().0, vec!["alice".to_string()]);
         connect(&links, "lab");
         let episode = links.forget("lab", 99, &Pending::default()).unwrap();
-        links.devices.revoke("lab").unwrap();
+        links.devices.revoke("lab").await.unwrap();
         links.clone().watch_offline("lab".into(), episode);
         wait().await;
         assert_eq!(
@@ -1378,14 +1408,15 @@ mod tests {
         );
     }
 
-    #[test]
-    fn enrollment_then_signed_reconnects_are_admitted() {
+    #[tokio::test]
+    async fn enrollment_then_signed_reconnects_are_admitted() {
         let dir = tempfile::tempdir().unwrap();
-        let links = links(dir.path());
+        let (_db, links) = links!(dir.path());
         let key = SigningKey::from_bytes(&[9; 32]);
-        let code = links.devices.issue_code("gus", [4; 16]).unwrap();
+        let code = links.devices.issue_code("gus", [4; 16]).await.unwrap();
         let admitted = links
             .admit(hello(&key, HUB, "gus", "n1", Some(&code)), "n1")
+            .await
             .unwrap();
         assert_eq!(
             (admitted.device.as_str(), admitted.joined_for),
@@ -1394,58 +1425,61 @@ mod tests {
         assert!(
             links
                 .admit(hello(&key, HUB, "gus", "n2", None), "n2")
+                .await
                 .is_ok()
         );
     }
 
-    #[test]
-    fn replays_other_hubs_other_keys_and_revoked_devices_are_refused() {
+    #[tokio::test]
+    async fn replays_other_hubs_other_keys_and_revoked_devices_are_refused() {
         let dir = tempfile::tempdir().unwrap();
-        let links = links(dir.path());
+        let (_db, links) = links!(dir.path());
         let key = SigningKey::from_bytes(&[9; 32]);
         let other = SigningKey::from_bytes(&[8; 32]);
-        let code = links.devices.issue_code("gus", [5; 16]).unwrap();
+        let code = links.devices.issue_code("gus", [5; 16]).await.unwrap();
         links
             .admit(hello(&key, HUB, "gus", "n1", Some(&code)), "n1")
+            .await
             .unwrap();
-        let refused = |frame, nonce: &str| links.admit(frame, nonce).unwrap_err().code;
+        let refused = async |frame, nonce: &str| links.admit(frame, nonce).await.unwrap_err().code;
         // A signature over an old challenge does not open a new connection.
         assert_eq!(
-            refused(hello(&key, HUB, "gus", "n1", None), "n2"),
+            refused(hello(&key, HUB, "gus", "n1", None), "n2").await,
             "bad_signature"
         );
         // Signed for another hub.
         assert_eq!(
-            refused(hello(&key, "https://evil.example", "gus", "n3", None), "n3"),
+            refused(hello(&key, "https://evil.example", "gus", "n3", None), "n3").await,
             "bad_signature"
         );
         // A different key claiming the enrolled name.
         assert_eq!(
-            refused(hello(&other, HUB, "gus", "n4", None), "n4"),
+            refused(hello(&other, HUB, "gus", "n4", None), "n4").await,
             "key_mismatch"
         );
         // A name nobody configured or added.
         assert_eq!(
-            refused(hello(&key, HUB, "dabo", "n5", None), "n5"),
+            refused(hello(&key, HUB, "dabo", "n5", None), "n5").await,
             "not_enrolled"
         );
-        links.devices.revoke("gus").unwrap();
+        links.devices.revoke("gus").await.unwrap();
         assert_eq!(
-            refused(hello(&key, HUB, "gus", "n6", None), "n6"),
+            refused(hello(&key, HUB, "gus", "n6", None), "n6").await,
             "device_revoked"
         );
     }
 
-    #[test]
-    fn a_machine_an_account_added_joins_for_that_account_without_config() {
+    #[tokio::test]
+    async fn a_machine_an_account_added_joins_for_that_account_without_config() {
         let dir = tempfile::tempdir().unwrap();
-        let links = links(dir.path());
+        let (_db, links) = links!(dir.path());
         let key = SigningKey::from_bytes(&[11; 32]);
         // An operator's code cannot add a name the config does not have.
-        let operator = links.devices.issue_code("unnamed", [1; 16]).unwrap();
+        let operator = links.devices.issue_code("unnamed", [1; 16]).await.unwrap();
         assert_eq!(
             links
                 .admit(hello(&key, HUB, "unnamed", "n1", Some(&operator)), "n1")
+                .await
                 .unwrap_err()
                 .code,
             "enroll_refused"
@@ -1453,35 +1487,39 @@ mod tests {
         let code = links
             .devices
             .issue_owned_code("acct-a", "platinum", [2; 16], OWNED_LIMIT)
+            .await
             .unwrap();
         let joined = links
             .admit(hello(&key, HUB, "platinum", "n2", Some(&code)), "n2")
+            .await
             .unwrap();
         assert_eq!(joined.joined_for.as_deref(), Some("acct-a"));
         // Reconnecting later is an ordinary signed hello, and nobody is told it joined again.
         let again = links
             .admit(hello(&key, HUB, "platinum", "n3", None), "n3")
+            .await
             .unwrap();
         assert_eq!(
             (again.device.as_str(), again.joined_for),
             ("platinum", None)
         );
-        assert_eq!(links.owned_by("acct-a").unwrap().len(), 1);
+        assert_eq!(links.owned_by("acct-a").await.unwrap().len(), 1);
         // A name that could never be a broker stops at the door.
         assert_eq!(
             links
                 .admit(hello(&key, HUB, "Bad Name", "n4", None), "n4")
+                .await
                 .unwrap_err()
                 .code,
             "unknown_broker"
         );
     }
 
-    #[test]
-    fn weak_keys_are_refused_even_with_a_valid_code() {
+    #[tokio::test]
+    async fn weak_keys_are_refused_even_with_a_valid_code() {
         let dir = tempfile::tempdir().unwrap();
-        let links = links(dir.path());
-        let code = links.devices.issue_code("gus", [7; 16]).unwrap();
+        let (_db, links) = links!(dir.path());
+        let code = links.devices.issue_code("gus", [7; 16]).await.unwrap();
         // The identity point: a small-order key whose "signatures" anyone can forge.
         let mut identity = [0u8; 32];
         identity[0] = 1;
@@ -1493,8 +1531,8 @@ mod tests {
             enroll_code: Some(code),
             build: None,
         });
-        assert_eq!(links.admit(frame, "n").unwrap_err().code, "bad_key");
-        assert!(links.devices.get("gus").unwrap().is_none());
+        assert_eq!(links.admit(frame, "n").await.unwrap_err().code, "bad_key");
+        assert!(links.devices.get("gus").await.unwrap().is_none());
     }
 
     #[test]
@@ -1522,10 +1560,10 @@ mod tests {
         assert_eq!(code, "unavailable");
     }
 
-    #[test]
-    fn handshakes_are_bounded() {
+    #[tokio::test]
+    async fn handshakes_are_bounded() {
         let dir = tempfile::tempdir().unwrap();
-        let links = links(dir.path());
+        let (_db, links) = links!(dir.path());
         let held: Vec<_> = (0..MAX_HANDSHAKES)
             .map(|_| links.handshake_permit().unwrap())
             .collect();
@@ -1537,7 +1575,7 @@ mod tests {
     #[tokio::test]
     async fn calls_to_a_device_without_a_link_say_why() {
         let dir = tempfile::tempdir().unwrap();
-        let links = links(dir.path());
+        let (_db, links) = links!(dir.path());
         let list = || {
             RequestBody::OperationList(devagotchi_contracts::ListInput {
                 offset: 0,
@@ -1549,15 +1587,16 @@ mod tests {
             "not_enrolled"
         );
         let key = SigningKey::from_bytes(&[9; 32]);
-        let code = links.devices.issue_code("gus", [6; 16]).unwrap();
+        let code = links.devices.issue_code("gus", [6; 16]).await.unwrap();
         links
             .admit(hello(&key, HUB, "gus", "n", Some(&code)), "n")
+            .await
             .unwrap();
         assert_eq!(
             links.call("gus", list()).await.unwrap_err().code,
             "broker_offline"
         );
-        links.devices.revoke("gus").unwrap();
+        links.devices.revoke("gus").await.unwrap();
         assert_eq!(
             links.call("gus", list()).await.unwrap_err().code,
             "device_revoked"
@@ -1567,11 +1606,12 @@ mod tests {
     #[tokio::test]
     async fn a_full_queue_answers_busy_and_leaves_no_waiters() {
         let dir = tempfile::tempdir().unwrap();
-        let links = links(dir.path());
+        let (_db, links) = links!(dir.path());
         let key = SigningKey::from_bytes(&[9; 32]);
-        let code = links.devices.issue_code("gus", [3; 16]).unwrap();
+        let code = links.devices.issue_code("gus", [3; 16]).await.unwrap();
         links
             .admit(hello(&key, HUB, "gus", "n", Some(&code)), "n")
+            .await
             .unwrap();
         // A session whose loop never drains: the device stopped reading.
         let (calls, _keep) = mpsc::channel(CALL_QUEUE);

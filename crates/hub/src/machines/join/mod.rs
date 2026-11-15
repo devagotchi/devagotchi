@@ -176,7 +176,7 @@ pub async fn join(State(state): State<AppState>, Path(asked): Path<String>) -> R
     if !valid_code(code) {
         return text(StatusCode::OK, refusal(shell, hub));
     }
-    match state.hub.links.join_script(code, shell) {
+    match state.hub.links.join_script(code, shell).await {
         Ok(Some(device)) => match script(
             shell,
             hub,
@@ -206,6 +206,7 @@ async fn shown_name(state: &AppState, device: &str) -> String {
         .hub
         .links
         .device(device)
+        .await
         .ok()
         .flatten()
         .and_then(|found| found.owner);

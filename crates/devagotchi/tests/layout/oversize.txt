@@ -38,7 +38,6 @@
 567	crates/hub/src/hub_settings_tests.rs
 2093	crates/hub/src/identity.rs
 2768	crates/hub/src/lib.rs
-827	crates/hub/src/machines/devices.rs
 1609	crates/hub/src/machines/link.rs
 539	crates/hub/src/mail.rs
 702	crates/hub/src/nomen.rs

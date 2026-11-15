@@ -72,7 +72,7 @@ async fn hub() -> Option<(Hosted, testing::TestStore)> {
     let hub=hosted_with_ingress(Some(&test.url),|dir,_|json!({
         "boards":[{"project":"source","dir":dir.join("never-local")}],
         "github":{"repositories":[{"repository_id":123,"repository":"acme/demo","project":"source"}]}
-    }),IssueLifecycleStore::with_secret(SECRET.into()).unwrap()).await;
+    }),IssueLifecycleStore::with_secret(SECRET.into()).unwrap()).await?;
     Some((hub, test))
 }
 

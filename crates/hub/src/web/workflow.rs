@@ -253,7 +253,7 @@ pub async fn page(
             None => None,
         },
     };
-    let (body, passkey, push) = view.body(shown.as_deref());
+    let (body, passkey, push) = view.body(shown.as_deref()).await;
     // A machine's workflow opened on a phone: the link is for a computer, so that comes
     // first, to copy or scan.
     let machine = row.definition.steps.iter().any(|step| step.kind == MACHINE);
@@ -320,7 +320,7 @@ impl View<'_> {
     /// The steps, each with what it needs while the link is live, and keeping the account
     /// where this browser may. Returns the body and whether the passkey and phone scripts
     /// run here.
-    fn body(&self, shown: Option<&str>) -> (String, bool, bool) {
+    async fn body(&self, shown: Option<&str>) -> (String, bool, bool) {
         let (site, copy, ctx) = (self.site, &self.site.messages.workflow, Ctx::new(self.site));
         let (mut passkey, mut push) = (false, false);
         let keep = self.keep_section(&mut passkey);
@@ -342,7 +342,9 @@ impl View<'_> {
             let mut body = format!("<p>{}</p>", self.words().inline(&step.text));
             if seen.state != "done" && seen.why.is_none() {
                 match step.kind.as_str() {
-                    MACHINE if self.live => body.push_str(&self.machine_step(index, seen, shown)),
+                    MACHINE if self.live => {
+                        body.push_str(&self.machine_step(index, seen, shown).await)
+                    }
                     PHONE if self.live => {
                         if let Some(key) =
                             self.state.hub.push.as_ref().map(|p| p.public_key.clone())
@@ -598,7 +600,7 @@ data-return-to=\"{}\" disabled>{}</button></p><p class=\"meta\" id=\"passkey-sta
     /// A machine step that is not done: the line, while this browser holds a live code for
     /// the step's machine; else the form that gets it (the OS to pick, unless the step
     /// names one, and the name).
-    fn machine_step(
+    async fn machine_step(
         &self,
         index: usize,
         seen: &crate::workflows::StepStatus,
@@ -612,8 +614,12 @@ data-return-to=\"{}\" disabled>{}</button></p><p class=\"meta\" id=\"passkey-sta
             let (id, at, code) = (parts.next()?, parts.next()?, parts.next()?);
             (id == self.row.id && at == index.to_string() && valid_code(code)).then_some(code)
         });
+        let live_device = match live {
+            Some(code) => self.state.hub.links.live_code(code).await.ok().flatten(),
+            None => None,
+        };
         if let (Some(code), Some(stored)) = (live, stored)
-            && matches!(self.state.hub.links.live_code(code), Ok(Some(device)) if device == stored)
+            && live_device.as_deref() == Some(stored)
         {
             let os = progress.and_then(|p| p.os.as_deref()).unwrap_or("linux");
             let line = crate::hub::join_line(&self.state.hub.config.public_url, os, code);
@@ -628,21 +634,24 @@ data-return-to=\"{}\" disabled>{}</button></p><p class=\"meta\" id=\"passkey-sta
                 escape(&line),
                 escape(&ctx.plain(&copy.copy)),
                 ctx.inline(&copy.command_note),
-                self.command_form(index, seen, true),
+                self.command_form(index, seen, true).await,
                 n = index + 1,
             );
         }
         // A machine that joined and is not online yet needs no new line.
         if matches!(
-            self.state.hub.machine_seen(&self.subject.id, progress),
+            self.state
+                .hub
+                .machine_seen(&self.subject.id, progress)
+                .await,
             crate::workflows::MachineSeen::Offline
         ) {
             return String::new();
         }
-        self.command_form(index, seen, false)
+        self.command_form(index, seen, false).await
     }
 
-    fn command_form(
+    async fn command_form(
         &self,
         index: usize,
         seen: &crate::workflows::StepStatus,
@@ -683,7 +692,8 @@ data-return-to=\"{}\" disabled>{}</button></p><p class=\"meta\" id=\"passkey-sta
         let name = self
             .state
             .hub
-            .machine_name_for(self.subject, self.row, index, &os);
+            .machine_name_for(self.subject, self.row, index, &os)
+            .await;
         format!(
             "<form method=\"post\" action=\"{path}/command\" class=\"get-command\">\
 <input type=\"hidden\" name=\"step\" value=\"{index}\">{choice}\
@@ -827,7 +837,7 @@ pub async fn command(
         return refusal(&site, StatusCode::NOT_FOUND, &title, &why, &path);
     }
     let name = form.name.trim().to_ascii_lowercase();
-    let (stored, code) = match state.hub.add_own_machine(&subject, &name) {
+    let (stored, code) = match state.hub.add_own_machine(&subject, &name).await {
         Ok(issued) => issued,
         Err(error) => {
             let status = match error.code.as_str() {
@@ -894,7 +904,7 @@ pub async fn phone(
     if !row.definition.steps.iter().any(|step| step.kind == PHONE) {
         return super::notify::plain(StatusCode::NOT_FOUND, "no_phone_step");
     }
-    if let Err(response) = super::notify::save(&state, &subject.id, &sub) {
+    if let Err(response) = super::notify::save(&state, &subject.id, &sub).await {
         return response;
     }
     let (secret, keep_browser) = browser_secret(&state, &headers);

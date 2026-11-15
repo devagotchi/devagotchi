@@ -375,6 +375,7 @@ pub async fn test(State(state): State<AppState>, headers: HeaderMap) -> Response
     let phones = push
         .devices()
         .push_for(&subject.id)
+        .await
         .map(|p| p.len())
         .unwrap_or(0);
     if phones == 0 {
@@ -394,7 +395,8 @@ pub async fn test(State(state): State<AppState>, headers: HeaderMap) -> Response
         Ok(Ok(approval)) => {
             state
                 .hub
-                .announce_approval_to(vec![subject.id.clone()], &project, &approval);
+                .announce_approval_to(vec![subject.id.clone()], &project, &approval)
+                .await;
             see_other("/approvals?test=sent", &[])
         }
         _ => pages::message(

@@ -281,7 +281,7 @@ impl Hub {
         let subject = self.subject(&context)?;
         // The audit names every path asked for, as read_file names its one.
         let asked = input.paths.join("; ");
-        let route = match self.route(&subject, &input.machine) {
+        let route = match self.route(&subject, &input.machine).await {
             Ok(route) => route,
             Err(Json(error)) => {
                 self.record(
@@ -420,7 +420,7 @@ impl Hub {
         context: RequestContext<RoleServer>,
     ) -> Result<CallToolResult, Json<BridgeError>> {
         let subject = self.subject(&context)?;
-        let route = match self.route(&subject, &input.machine) {
+        let route = match self.route(&subject, &input.machine).await {
             Ok(route) => route,
             Err(Json(error)) => {
                 self.record(

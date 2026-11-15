@@ -364,7 +364,7 @@ impl Hub {
             .steps
             .iter()
             .any(|step| step.kind == crate::site::workflows::MACHINE)
-            && let Some(refusal) = self.machine_room(subject)
+            && let Some(refusal) = self.machine_room(subject).await
         {
             return Err(Json(refusal));
         }
