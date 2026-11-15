@@ -18,8 +18,8 @@ use crate::{
     agenthub::{Actor, NewTicket, hosted::HostedBoard},
     config::SinkConfig,
     ops::audit::AuditEntry,
-    orgs::{Orgs, Role},
     store::testing,
+    tenancy::orgs::{Orgs, Role},
 };
 
 /// The schema `docs/signals/v1.schema.json` publishes is the one the type makes. To change the
@@ -157,7 +157,7 @@ async fn a_sink_gets_every_signal_once_it_answers_and_never_more_than_it_takes()
     let board = HostedBoard::for_owner(
         test.store.clone(),
         &org.id,
-        &crate::orgs::owner_of(&org.id),
+        &crate::tenancy::orgs::owner_of(&org.id),
         "site",
     )
     .unwrap();
@@ -260,7 +260,7 @@ async fn a_sink_gets_every_signal_once_it_answers_and_never_more_than_it_takes()
         .find(|l| l["kind"] == "ticket.created")
         .unwrap();
     assert_eq!(created["project"], "site");
-    assert_eq!(created["owner"], crate::orgs::owner_of(&org.id));
+    assert_eq!(created["owner"], crate::tenancy::orgs::owner_of(&org.id));
     assert_eq!(created["tenant"], org.id);
     for line in &lines {
         assert_eq!(line["schema"], SCHEMA);

@@ -14,7 +14,7 @@ use axum::{
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use serde_json::{Value, json};
 
-use crate::tenant_tests::{Hosted, hosted_with, query_param, set_cookie};
+use crate::tenancy::tests::tenants::{Hosted, hosted_with, query_param, set_cookie};
 
 /// Who the stub says is signing in, and what it should get wrong on purpose.
 #[derive(Clone, Default)]

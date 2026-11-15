@@ -25,8 +25,8 @@ use super::{
 use crate::{
     AppState,
     auth::Subject,
-    orgs::{Org, Orgs, Principal, ProjectRef, Role, Visibility, owner_of},
     site::{Ctx, Site, model::OrgsCopy},
+    tenancy::orgs::{Org, Orgs, Principal, ProjectRef, Role, Visibility, owner_of},
 };
 
 pub fn routes() -> Router<AppState> {

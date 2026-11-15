@@ -8,7 +8,7 @@
 //!
 //! Adding a machine checks the account's quota here too: an account nobody secured yet adds
 //! `tenancy.unsecured.machines` at most, a tenant on a plan the plan's `machines`
-//! (`tenant_access.rs`), and a tenant waiting to be let in adds none.
+//! (`tenancy/gate.rs`), and a tenant waiting to be let in adds none.
 
 use devagotchi_contracts::{BridgeError, BridgeResult};
 

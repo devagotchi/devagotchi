@@ -2,7 +2,7 @@ use super::*;
 use crate::{
     agenthub::{Actor, Filter},
     store::testing,
-    tenant_tests::{Hosted, hosted_with_ingress, refused},
+    tenancy::tests::tenants::{Hosted, hosted_with_ingress, refused},
 };
 use serde_json::{Value, json};
 

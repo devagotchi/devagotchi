@@ -1,4 +1,4 @@
-//! Early access and plans where a caller acts (`accounts/access.rs` keeps them): a tenant
+//! Early access and plans where a caller acts (`tenancy/access/` keeps them): a tenant
 //! waiting to be let in is answered, not served, and a tenant's plan caps what it holds.
 //!
 //! - Waiting: every MCP tool but `whoami` answers with the site's one message (when it
@@ -16,10 +16,10 @@ use devagotchi_contracts::BridgeError;
 use rmcp::model::{CallToolResult, ContentBlock};
 
 use crate::{
-    accounts::access,
     auth::Subject,
     hub::Hub,
     site::{Cap, Plan},
+    tenancy::access,
 };
 
 impl Hub {

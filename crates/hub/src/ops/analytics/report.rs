@@ -186,7 +186,7 @@ pub async fn report(store: &Store, days: i64, now: u64) -> BridgeResult<Report> 
         }
         // Who waits now, as the operator page finds them: ids only, across tenants.
         let waiting = store
-            .tenants_in(connection, crate::accounts::access::WAITING, 1_000_000)
+            .tenants_in(connection, crate::tenancy::access::WAITING, 1_000_000)
             .await?
             .len();
         Ok::<_, Failed>((rows, (counts, details), waiting))

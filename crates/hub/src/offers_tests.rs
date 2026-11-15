@@ -16,7 +16,7 @@ use serde_json::{Value, json};
 
 use crate::{
     accounts::identities::Proven,
-    tenant_tests::{Hosted, Person, hosted_with, refused, set_cookie},
+    tenancy::tests::tenants::{Hosted, Person, hosted_with, refused, set_cookie},
 };
 
 async fn stores() -> Vec<Option<String>> {

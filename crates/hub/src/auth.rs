@@ -45,9 +45,9 @@ pub struct Subject {
     /// True when the time left on a provisional account is under one seventh of the
     /// live ttl (at least an hour). Recomputed on each request from the current setting.
     pub provisional_warning: bool,
-    /// Its tenant's place on a hub with its own accounts (`accounts/access.rs`): let in or
+    /// Its tenant's place on a hub with its own accounts (`tenancy/access/`): let in or
     /// waiting, and its plan. `None` where the hub keeps no tenants for it.
-    pub access: Option<crate::accounts::access::Access>,
+    pub access: Option<crate::tenancy::access::Access>,
     /// The name the AI client gave itself when it registered with this hub (`Connect Claude?`),
     /// for a call made with one of the hub's own tokens: what says which family of AI client
     /// (Claude, ChatGPT or Codex, Grok, Cursor) is connected (`analytics::funnel::client_family`).

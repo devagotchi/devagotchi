@@ -7,7 +7,7 @@
 
 use serde_json::{Value, json};
 
-use crate::tenant_tests::{Hosted, Person, hosted_with, refused};
+use super::tenants::{Hosted, Person, hosted_with, refused};
 
 async fn api(
     hub: &Hosted,

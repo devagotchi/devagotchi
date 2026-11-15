@@ -986,10 +986,8 @@ mod first_connect {
     use reqwest::header;
     use serde_json::{Value, json};
 
-    use crate::{
-        accounts::oauth::s256,
-        tenant_tests::{Hosted, Person, hosted_with, query_param, set_cookie, web_encode},
-    };
+    use crate::accounts::oauth::s256;
+    use crate::tenancy::tests::tenants::*;
 
     const REDIRECT: &str = "http://127.0.0.1:9/callback";
 

@@ -15,7 +15,7 @@ use serde_json::{Value, json};
 
 use crate::{
     site::{self, Ctx, Front, discovery},
-    tenant_tests::{Hosted, hosted_with},
+    tenancy::tests::tenants::{Hosted, hosted_with},
 };
 
 async fn hosted() -> Option<Hosted> {

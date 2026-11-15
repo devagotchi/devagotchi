@@ -52,7 +52,7 @@ fn safe_url(url: &str) -> bool {
 }
 
 /// The script for one live code: `device` is the stored name the machine joins as, `shown`
-/// the name `machines` shows its person (`tenant_machines.rs`), the one the script tells
+/// the name `machines` shows its person (`tenancy/machines.rs`), the one the script tells
 /// them to use. `None` when a value could not be written safely.
 pub fn script(
     shell: Shell,

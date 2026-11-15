@@ -1,4 +1,4 @@
-//! Approvals on an account's own board, on a hosted hub over HTTP (`tenant_tests.rs`'s
+//! Approvals on an account's own board, on a hosted hub over HTTP (`tenancy/tests/tenants.rs`'s
 //! world): the person signed in decides them on `/approvals` and sees them under Needs you;
 //! another account neither sees nor decides them; the account's AI, with its bearer token,
 //! decides nothing.
@@ -6,7 +6,7 @@
 use serde_json::{Value, json};
 
 use super::tests::{hosted, page};
-use crate::tenant_tests::{Hosted, Person, refused};
+use crate::tenancy::tests::tenants::{Hosted, Person, refused};
 
 /// A's board `alpha` with one approval A's AI asked for; the approval as the tool gave it.
 async fn asked(hub: &Hosted, person: &mut Person) -> Value {

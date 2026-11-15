@@ -376,7 +376,7 @@ impl Hub {
             Some(name) if name.is_empty() => None,
             Some(name) => {
                 let longest = if self.config.multi_tenant() {
-                    crate::tenant_machines::HOSTED_NAME_MAX
+                    crate::tenancy::machines::HOSTED_NAME_MAX
                 } else {
                     63
                 };

@@ -359,11 +359,11 @@ impl Site {
         }
         for (os, name) in &copy.default_names {
             if !crate::config::valid_name(name)
-                || name.len() > crate::tenant_machines::HOSTED_NAME_MAX
+                || name.len() > crate::tenancy::machines::HOSTED_NAME_MAX
             {
                 return Err(format!(
                     "content/messages.json workflow.default_names.{os}: {name:?} is not a machine name (lowercase letters, digits and dashes, at most {})",
-                    crate::tenant_machines::HOSTED_NAME_MAX
+                    crate::tenancy::machines::HOSTED_NAME_MAX
                 ));
             }
         }

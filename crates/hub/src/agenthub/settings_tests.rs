@@ -1,10 +1,10 @@
-//! `board_settings` on a hosted hub over MCP (`tenant_tests.rs`'s world): the account sets
+//! `board_settings` on a hosted hub over MCP (`tenancy/tests/tenants.rs`'s world): the account sets
 //! its board's repo and environments and reads them back, new tickets carry the repo, bad
 //! input is refused with what to fix in `next`, and another account cannot reach them.
 
 use serde_json::{Value, json};
 
-use crate::tenant_tests::{Hosted, Person, hosted_with, refused};
+use crate::tenancy::tests::tenants::{Hosted, Person, hosted_with, refused};
 
 async fn settings(hub: &Hosted, person: &mut Person, arguments: Value) -> Value {
     hub.call(person, "board_settings", arguments).await

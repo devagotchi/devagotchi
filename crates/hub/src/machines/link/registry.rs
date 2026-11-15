@@ -63,7 +63,7 @@ impl Links {
     }
 
     /// `issue_owned_code`, holding the owner to `limit` machines instead of the usual
-    /// quota when one is given (an account nobody secured, `tenant_machines.rs`).
+    /// quota when one is given (an account nobody secured, `tenancy/machines.rs`).
     pub async fn issue_owned_code_within(
         &self,
         owner: &str,

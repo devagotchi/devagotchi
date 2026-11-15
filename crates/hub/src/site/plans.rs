@@ -1,4 +1,4 @@
-//! The site's plans and early access as the hub enforces them (`accounts/access.rs`), and
+//! The site's plans and early access as the hub enforces them (`tenancy/access/`), and
 //! the words it says about them (`content/messages.json` `access`).
 
 use super::{

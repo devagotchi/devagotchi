@@ -10,14 +10,12 @@
 //! The hub's pages use it in `web/passkeys.rs`; `devagotchi hub owner` makes the owner and
 //! the one-time link.
 
-pub mod access;
 pub mod api_keys;
 pub mod claim;
 pub mod clients;
 pub mod email;
 pub mod identities;
 pub mod oauth;
-pub mod operator;
 pub mod passkey;
 mod passwords;
 pub mod sessions;
@@ -147,7 +145,7 @@ pub struct Account {
     /// When it was last used, kept for an account not secured yet.
     pub last_active: Option<u64>,
     /// Its tenant's place on the hub (`access.rs`), where a request read it.
-    pub access: Option<access::Access>,
+    pub access: Option<crate::tenancy::access::Access>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -165,20 +163,20 @@ pub struct Accounts {
     /// Read by the domains that keep rows through the account store (`<domain>/stored.rs`).
     pub(crate) store: Store,
     /// How long the hub's own AI tokens live (`auth.tokens`).
-    tokens: crate::config::TokenConfig,
+    pub(crate) tokens: crate::config::TokenConfig,
     /// One owner's hub or a hosted one, and what an account not secured yet may hold.
-    tenancy: crate::config::TenancyConfig,
+    pub(crate) tenancy: crate::config::TenancyConfig,
     /// The identities whose sign-in is the hub's operator (`operators`).
-    operators: Vec<String>,
+    pub(crate) operators: Vec<String>,
     /// The site early access and plans are read from (`access.rs`), as the hub serves it.
-    site: std::sync::Arc<crate::site::SiteCell>,
+    pub(crate) site: std::sync::Arc<crate::site::SiteCell>,
     /// This hub's address, for the links its messages give.
-    public_url: String,
+    pub(crate) public_url: String,
     /// Who hears that tenants were let in (`access::Accounts::on_admitted`).
-    announce: std::sync::OnceLock<access::Announce>,
+    pub(crate) announce: std::sync::OnceLock<crate::tenancy::access::Announce>,
     /// Whether each tenant's milestones are recorded (`analytics::funnel`), in the
     /// transaction that does each: on a hosted hub that counts.
-    counting: bool,
+    pub(crate) counting: bool,
     /// Signs the passkey challenges this process makes: the store's key as last read. The
     /// store's copy is the one that counts: every ceremony checks against it, read in its
     /// own transaction, and refreshes this one. It changes only when a clock is found set

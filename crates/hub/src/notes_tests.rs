@@ -5,7 +5,7 @@
 
 use serde_json::{Value, json};
 
-use crate::tenant_tests::{Hosted, Person, hosted_with};
+use crate::tenancy::tests::tenants::{Hosted, Person, hosted_with};
 
 fn extra_text(answer: &Value) -> String {
     answer["result"]["content"]
@@ -152,5 +152,5 @@ async fn a_tenant_cannot_point_a_webhook_at_the_hubs_network() {
             json!({ "project": "site", "recipient": "hermes", "url": "https://127.0.0.1/x" }),
         )
         .await;
-    assert!(crate::tenant_tests::refused(&answer), "{answer}");
+    assert!(crate::tenancy::tests::tenants::refused(&answer), "{answer}");
 }

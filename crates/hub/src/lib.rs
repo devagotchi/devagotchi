@@ -38,9 +38,6 @@ mod offers;
 #[cfg(test)]
 mod offers_tests;
 mod ops;
-mod orgs;
-#[cfg(test)]
-mod orgs_tests;
 #[cfg(test)]
 mod output_schema;
 #[cfg(test)]
@@ -53,10 +50,7 @@ mod site;
 mod store;
 #[cfg(test)]
 mod store_tests;
-mod tenant_access;
-mod tenant_machines;
-#[cfg(test)]
-mod tenant_tests;
+mod tenancy;
 #[cfg(test)]
 mod test_keys;
 mod web;
@@ -1038,16 +1032,16 @@ fn app(state: AppState) -> Router {
         .merge(
             ops::warehouse::routes().layer(middleware::from_fn_with_state(
                 state.clone(),
-                orgs::api::bearer_or_session,
+                tenancy::orgs::api::bearer_or_session,
             )),
         )
         // Organisations, members, teams, project roles and invites (`orgs::api`).
         .merge(
-            orgs::api::routes()
+            tenancy::orgs::api::routes()
                 .layer(axum::extract::DefaultBodyLimit::max(16 * 1024))
                 .layer(middleware::from_fn_with_state(
                     state.clone(),
-                    orgs::api::bearer_or_session,
+                    tenancy::orgs::api::bearer_or_session,
                 )),
         )
         .merge(machines::join::routes())
@@ -1328,7 +1322,7 @@ async fn enroll_with_code(
     State(state): State<AppState>,
     axum::Json(body): axum::Json<EnrollBody>,
 ) -> Response {
-    // An account waiting to be let in enrolls nothing (`tenant_access.rs`).
+    // An account waiting to be let in enrolls nothing (`tenancy/gate.rs`).
     if let Err(error) = state.hub.links.may_enroll(&body.code).await {
         return (
             StatusCode::FORBIDDEN,

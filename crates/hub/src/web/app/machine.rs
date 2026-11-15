@@ -166,7 +166,7 @@ pub async fn update(
         Ok(subject) => subject,
         Err(response) => return response,
     };
-    // A tenant waiting to be let in changes nothing (`tenant_access.rs`).
+    // A tenant waiting to be let in changes nothing (`tenancy/gate.rs`).
     if let Some(refused) = state.hub.waiting_refusal(&subject) {
         return pages::message(
             StatusCode::FORBIDDEN,

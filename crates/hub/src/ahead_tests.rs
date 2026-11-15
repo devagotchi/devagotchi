@@ -8,7 +8,7 @@
 
 use serde_json::{Value, json};
 
-use crate::tenant_tests::{Hosted, Person, hosted_with};
+use crate::tenancy::tests::tenants::{Hosted, Person, hosted_with};
 
 fn form(
     hub: &Hosted,
