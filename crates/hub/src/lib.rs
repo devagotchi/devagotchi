@@ -798,6 +798,8 @@ async fn run(
     if let Some(dir) = &config.site.dir {
         site::watch(config.site_cell(), PathBuf::from(dir), site::WATCH_EVERY);
     }
+    // The state directory holds the hub's keys (VAPID, session, settings) and nothing else.
+    prepare_state_dir(&state_dir)?;
     let devices = Arc::new(Devices::new(board_store.clone()));
     let audit = Arc::new(Audit::new(board_store.clone()));
     // A hub with its own accounts knows its owner from them, and refuses to start when its
