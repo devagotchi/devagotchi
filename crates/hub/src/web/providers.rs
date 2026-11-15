@@ -1,7 +1,7 @@
 //! Sign in with Google, GitHub or an OpenID Connect provider (Nomen is one), on a hub with
 //! its own accounts: the OAuth 2.0 authorization code flow with PKCE
 //! (RFC 7636), the hub a confidential client of the provider. What the provider proves
-//! becomes a linked sign-in of an account (`accounts/identities.rs`), so every way in
+//! becomes a linked sign-in of an account (`identity/accounts/identities.rs`), so every way in
 //! reaches the same account.
 //!
 //! - `GET /auth/provider/<name>` sends the browser to the provider. What the callback must
@@ -32,8 +32,8 @@ use sha2::{Digest, Sha256};
 use super::{HubSignIn, cookie_value_up_to, encode, pages, routes::see_other, safe_return_to};
 use crate::{
     AppState,
-    accounts::identities::Proven,
     config::{HubConfig, ProviderConfig, ProviderKind},
+    identity::{accounts::identities::Proven, auth::read_private},
     machines::now_secs,
 };
 
@@ -72,7 +72,7 @@ pub struct Providers {
     from_config: Vec<Arc<Provider>>,
     pub email: Option<super::email::Mailer>,
     http: reqwest::Client,
-    sealer: crate::sealed::Sealer,
+    sealer: crate::identity::Sealer,
 }
 
 impl std::fmt::Debug for Provider {
@@ -93,7 +93,7 @@ impl Providers {
                 .redirect(reqwest::redirect::Policy::none())
                 .build()
                 .unwrap_or_default(),
-            sealer: crate::sealed::Sealer::ephemeral(),
+            sealer: crate::identity::Sealer::ephemeral(),
         }
     }
 
@@ -117,7 +117,7 @@ impl Providers {
                         .map_err(|_| format!("{what}: {variable} is not set"))?,
                 ),
                 (None, Some(path)) => Some(
-                    crate::auth::read_private(path, &format!("{what} client_secret_file"))
+                    read_private(path, &format!("{what} client_secret_file"))
                         .map_err(|error| error.message)?
                         .trim()
                         .to_string(),
@@ -144,17 +144,17 @@ impl Providers {
             from_config: list,
             email,
             http,
-            sealer: crate::sealed::Sealer::ephemeral(),
+            sealer: crate::identity::Sealer::ephemeral(),
         })
     }
 
     /// Keep sealed settings under the key in `state_dir`.
     pub fn sealing_in(mut self, state_dir: &std::path::Path) -> Result<Self, String> {
-        self.sealer = crate::sealed::Sealer::open(state_dir)?;
+        self.sealer = crate::identity::Sealer::open(state_dir)?;
         Ok(self)
     }
 
-    pub fn sealer(&self) -> &crate::sealed::Sealer {
+    pub fn sealer(&self) -> &crate::identity::Sealer {
         &self.sealer
     }
 
@@ -169,7 +169,7 @@ impl Providers {
 
     /// Offer the config file's providers with `stored` over them: one saved on the settings
     /// page replaces the file's of that name, and one turned off there takes it away.
-    pub fn apply(&self, stored: &[crate::accounts::sign_in_settings::StoredSignIn]) {
+    pub fn apply(&self, stored: &[crate::identity::accounts::sign_in_settings::StoredSignIn]) {
         let mut list: Vec<Arc<Provider>> = self
             .from_config
             .iter()

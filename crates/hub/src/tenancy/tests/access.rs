@@ -8,13 +8,14 @@ use std::path::Path;
 
 use serde_json::{Value, json};
 
-use super::*;
 use crate::tenancy::tests::tenants::{Hosted, Person, fill, hosted_with, refused};
+use crate::*;
 
 /// A site directory under `dir`: the built-in site with `edit` applied to its site.json
 /// (every other file the built-in one's).
 fn site_dir(dir: &Path, name: &str, edit: impl FnOnce(&mut Value)) -> std::path::PathBuf {
-    let mut value: Value = serde_json::from_str(include_str!("../site/default/site.json")).unwrap();
+    let mut value: Value =
+        serde_json::from_str(include_str!("../../../site/default/site.json")).unwrap();
     edit(&mut value);
     let site = dir.join(name);
     std::fs::create_dir_all(&site).unwrap();
@@ -134,7 +135,10 @@ async fn waiting(hub: Hosted) {
     assert_eq!(status, 403);
     assert!(page.contains("on the early-access list"), "{page}");
     // A code for it, however it came to be, enrolls nothing while it waits.
-    let stored = format!("{}-laptop", crate::accounts::tenants::tag(&tenant));
+    let stored = format!(
+        "{}-laptop",
+        crate::identity::accounts::tenants::tag(&tenant)
+    );
     let code = hub
         .devices
         .issue_owned_code(&subject, &stored, [7; 16], 16)
@@ -374,7 +378,7 @@ async fn a_tenant_let_in_hears_so_by_email_when_it_has_a_verified_address() {
     hub.accounts
         .link_identity(
             who["subject"].as_str().unwrap(),
-            &crate::accounts::identities::Proven {
+            &crate::identity::accounts::identities::Proven {
                 provider: "github".into(),
                 subject: "77".into(),
                 verified_email: Some("sam@example.org".into()),

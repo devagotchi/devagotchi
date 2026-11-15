@@ -1,6 +1,6 @@
 //! `/claim`: a new hub claimed from a browser (16c). Whoever has the claim code the hub
 //! printed to its log names the owner and establishes a durable sign-in on one page; the code
-//! and why it is a code are in `accounts/claim.rs`.
+//! and why it is a code are in `identity/accounts/claim.rs`.
 //!
 //! - The page takes the code from `/claim#<code>` (the link the log prints), which a browser
 //!   never sends, so it stays out of every request line and log; or it is typed in.

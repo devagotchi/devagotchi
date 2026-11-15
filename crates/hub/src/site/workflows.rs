@@ -27,7 +27,7 @@ pub const MACHINE: &str = "machine";
 /// Done when the account has a phone (a push subscription).
 pub const PHONE: &str = "phone";
 /// Done when an AI client of `client`'s family (one of [`AI_CLIENTS`]) made a successful MCP
-/// call for the tenant (`accounts/clients.rs`). The page shows that client's own steps.
+/// call for the tenant (`identity/accounts/clients.rs`). The page shows that client's own steps.
 pub const AI_CLIENT: &str = "ai_client";
 /// The AI clients an `ai_client` step connects, by family (`analytics::funnel::FAMILIES`):
 /// Claude (claude.ai, the desktop app, Claude Code), ChatGPT and Codex, Grok, Cursor.

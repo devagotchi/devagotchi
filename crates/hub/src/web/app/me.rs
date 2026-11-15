@@ -18,10 +18,10 @@ use serde::Deserialize;
 use super::{person, words};
 use crate::{
     AppState,
-    accounts::identities::UNNAMED,
     agenthub::Actor,
-    auth::Subject,
-    preferences::{ALLOW_CHOICES, Preferences, Theme, parse_kinds},
+    identity::Subject,
+    identity::accounts::identities::UNNAMED,
+    identity::preferences::{ALLOW_CHOICES, Preferences, Theme, parse_kinds},
     web::{
         approvals,
         pages::{self, Me, Tab, escape},

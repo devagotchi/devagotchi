@@ -50,7 +50,7 @@ impl Nomen {
             (Some(variable), _) => std::env::var(variable)
                 .map_err(|_| format!("shippin.provisioning: {variable} is not set"))?,
             (None, Some(path)) => {
-                crate::auth::read_private(path, "shippin.provisioning.token_file")
+                crate::identity::auth::read_private(path, "shippin.provisioning.token_file")
                     .map_err(|error| error.message)?
             }
             (None, None) => return Err("shippin.provisioning has no token".into()),

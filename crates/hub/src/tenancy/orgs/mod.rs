@@ -28,8 +28,8 @@ use sha2::{Digest, Sha256};
 use sqlx::{AnyConnection, Row};
 
 use crate::{
-    accounts::tenants::{new_tenant_id, record_in, valid_tenant_id},
     config::{valid_name, valid_subject},
+    identity::accounts::tenants::{new_tenant_id, record_in, valid_tenant_id},
     store::{Failed, Store, transaction},
 };
 

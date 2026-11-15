@@ -24,7 +24,9 @@ use super::{
     pages::{self, escape},
     routes::{see_other, unavailable},
 };
-use crate::{AppState, accounts::sessions::SESSION_MAX_SECS, machines::now_secs, site::Ctx};
+use crate::{
+    AppState, identity::accounts::sessions::SESSION_MAX_SECS, machines::now_secs, site::Ctx,
+};
 
 fn path(token: &str) -> String {
     format!("/offers/{token}")

@@ -12,7 +12,9 @@
 
 use devagotchi_contracts::{BridgeError, BridgeResult};
 
-use crate::{accounts::tenants, auth::Subject, hub::Hub, machines::devices::Device, site::Cap};
+use crate::{
+    hub::Hub, identity::Subject, identity::accounts::tenants, machines::devices::Device, site::Cap,
+};
 
 /// The longest name a person can give a machine on a hosted hub: the stored name, with the
 /// tenant's 13-character tag and a dash before it, is 63 characters at most.

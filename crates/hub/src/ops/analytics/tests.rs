@@ -329,7 +329,7 @@ async fn finished_days_roll_into_daily_totals_and_raw_visits_go_after_the_retent
             insert(store, view(day, path, device, visitor)).await;
         }
         // A tenant's milestones, yesterday: made by Claude, secured with GitHub.
-        let tenant = crate::accounts::tenants::new_tenant_id([5; 16]);
+        let tenant = crate::identity::accounts::tenants::new_tenant_id([5; 16]);
         sqlx::query("INSERT INTO tenancy_tenants (id, created_at) VALUES ($1, $2)")
             .bind(&tenant)
             .bind(today - DAY)
@@ -430,7 +430,7 @@ async fn a_visit_written_after_its_day_was_rolled_up_is_counted_the_next_pass() 
             "https://hub.example.org",
         );
         // Yesterday has a milestone, so it is rolled up, before its visit is written.
-        let tenant = crate::accounts::tenants::new_tenant_id([6; 16]);
+        let tenant = crate::identity::accounts::tenants::new_tenant_id([6; 16]);
         sqlx::query("INSERT INTO tenancy_tenants (id, created_at) VALUES ($1, 1)")
             .bind(&tenant)
             .execute(store.admin())
@@ -477,11 +477,11 @@ async fn the_tables_are_the_hubs_own_on_both_engines_and_a_milestone_is_kept_onc
     // them, and they hold no tenant's rows of the kind a tenant policy guards.
     for test in testing::stores().await {
         let store = &test.store;
-        let accounts = crate::accounts::Accounts::open(store.clone())
+        let accounts = crate::identity::accounts::Accounts::open(store.clone())
             .await
             .unwrap();
         let home = accounts.home_tenant().await.unwrap();
-        let tenant = crate::accounts::tenants::new_tenant_id([9; 16]);
+        let tenant = crate::identity::accounts::tenants::new_tenant_id([9; 16]);
         sqlx::query("INSERT INTO tenancy_tenants (id, created_at) VALUES ($1, 1)")
             .bind(&tenant)
             .execute(store.admin())

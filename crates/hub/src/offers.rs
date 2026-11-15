@@ -11,7 +11,7 @@
 //! - **Then the account is linked, with no click where the hub can.** With
 //!   `shippin.provisioning` (`config/shippin.rs`) and an account whose email the hub has
 //!   verified, the hub finds that person on Nomen, or makes them, and links the account to
-//!   them at once (`nomen.rs`). Otherwise the AI hands over one link, `/offers/<token>`
+//!   them at once (`identity/nomen/`). Otherwise the AI hands over one link, `/offers/<token>`
 //!   (`web/offers.rs`): one tap signs in with the network's sign-in (`shippin.provider`)
 //!   and links it the way the account page does; `offers` then says it is linked.
 //! - **Off is gone.** With the site's offers off (or none listed), or on a hub with no
@@ -26,7 +26,7 @@ use std::sync::Arc;
 
 use devagotchi_contracts::{BridgeError, BridgeResult};
 
-use crate::{accounts::Accounts, config::HubConfig, hub::Hub, offers::stored::OfferRow};
+use crate::{config::HubConfig, hub::Hub, identity::accounts::Accounts, offers::stored::OfferRow};
 
 /// The tools that exist only while the site's offers show.
 pub const TOOLS: [&str; 2] = ["offers", "offers_accept"];

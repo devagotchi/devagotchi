@@ -4,8 +4,8 @@ use std::{net::IpAddr, sync::Arc};
 
 use super::*;
 use crate::{
-    accounts::identities::Proven,
     config::{TenancyConfig, TenancyMode},
+    identity::accounts::identities::Proven,
     site::{SiteCell, tests::neutral},
     store::testing,
     tenancy::access::{ADMITTED, WAITING},

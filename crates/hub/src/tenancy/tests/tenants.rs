@@ -8,13 +8,13 @@ use std::{net::SocketAddr, sync::Arc};
 use axum::http::header;
 use serde_json::{Value, json};
 
-use crate::accounts::oauth::s256;
+use crate::identity::accounts::oauth::s256;
 use crate::*;
 
 pub(crate) struct Hosted {
     pub(crate) url: String,
     pub(crate) http: reqwest::Client,
-    pub(crate) accounts: Arc<accounts::Accounts>,
+    pub(crate) accounts: Arc<identity::accounts::Accounts>,
     pub(crate) devices: Arc<machines::devices::Devices>,
     pub(crate) config: Arc<HubConfig>,
     /// The hub as the router serves it, for what a test drives under HTTP.
@@ -85,7 +85,7 @@ pub(crate) async fn hosted_with_ingress(
         None => store::testing::empty_postgres().await?,
     };
     let accounts = Arc::new(
-        accounts::Accounts::open(store::open(&store_url).await.unwrap())
+        identity::accounts::Accounts::open(store::open(&store_url).await.unwrap())
             .await
             .unwrap()
             .with_tokens(config.token_config())
@@ -145,7 +145,7 @@ pub(crate) async fn hosted_with_ingress(
             connections: Some(Arc::new(
                 crate::connections::Connections::new(
                     accounts.clone(),
-                    crate::sealed::Sealer::ephemeral(),
+                    crate::identity::Sealer::ephemeral(),
                 )
                 .unwrap(),
             )),

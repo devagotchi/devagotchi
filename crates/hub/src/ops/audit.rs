@@ -191,7 +191,7 @@ impl crate::hub::Hub {
     /// (`analytics::funnel`): the first, and the latest a day at a time.
     pub(crate) async fn record(
         &self,
-        subject: &crate::auth::Subject,
+        subject: &crate::identity::Subject,
         tool: &str,
         broker: &str,
         operation_id: &str,

@@ -75,7 +75,7 @@ pub fn valid_account_id(id: &str) -> bool {
                 .bytes()
                 .all(|b| b.is_ascii_lowercase() || (b'2'..=b'7').contains(&b));
     }
-    crate::auth::valid_org(id)
+    crate::identity::auth::valid_org(id)
 }
 
 /// What a one-time link is for. The owner's link is the only one so far; invites and

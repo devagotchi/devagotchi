@@ -1,6 +1,6 @@
 //! `auth.providers` and `auth.email` in hub mode: the ways besides a passkey that people
 //! sign in to the hub's own accounts, and secure one made on first connect. Each links to
-//! the same account (`accounts/identities.rs`).
+//! the same account (`identity/accounts/identities.rs`).
 //!
 //! ```jsonc
 //! "auth": { "mode": "hub",

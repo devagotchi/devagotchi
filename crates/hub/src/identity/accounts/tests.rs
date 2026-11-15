@@ -803,7 +803,7 @@ async fn password_sign_up_then_sign_in_and_the_same_refusal_for_wrong_or_unknown
             .unwrap();
         // Its own tenant, secured from the start: nothing to "secure" afterwards.
         assert!(
-            crate::accounts::tenants::valid_tenant_id(&made.tenant),
+            crate::identity::accounts::tenants::valid_tenant_id(&made.tenant),
             "{}",
             made.tenant
         );

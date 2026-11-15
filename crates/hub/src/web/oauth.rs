@@ -1,6 +1,6 @@
 //! The hub's own OAuth 2.1 authorization server for AI clients (32b): what Claude,
 //! ChatGPT, Codex or any MCP client needs to connect to `<public_url>/mcp` with nothing
-//! else deployed. The store side is `accounts/oauth.rs`.
+//! else deployed. The store side is `identity/accounts/oauth.rs`.
 //!
 //! - `/.well-known/oauth-authorization-server` (RFC 8414) names the endpoints below; the
 //!   protected-resource metadata (RFC 9728, `lib.rs`) names the hub as its server.
@@ -28,7 +28,7 @@ use serde_json::json;
 use super::{encode, pages, routes::see_other};
 use crate::{
     AppState,
-    accounts::oauth::{Client, DevicePoll, Tokens, valid_redirect_uri},
+    identity::accounts::oauth::{Client, DevicePoll, Tokens, valid_redirect_uri},
 };
 
 /// RFC 8628's grant type: a terminal polling for the person's approval (`device.rs`).
@@ -568,7 +568,7 @@ pub async fn decide(
 async fn approve(
     state: &AppState,
     hub: &super::HubSignIn,
-    person: &crate::auth::Subject,
+    person: &crate::identity::Subject,
     checked: &Checked,
     cookies: Vec<String>,
 ) -> Response {

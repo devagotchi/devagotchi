@@ -18,9 +18,9 @@ use serde_json::{Map, Value};
 use sqlx::Row;
 
 use crate::{
-    accounts::tenants::record_in,
     agenthub::approval::MAX_STANDING_DAYS,
     config::valid_name,
+    identity::accounts::tenants::record_in,
     store::{Store, store_error, transaction},
 };
 

@@ -284,7 +284,7 @@ fn a_checked_sign_in_carries_what_was_verified_and_needs_the_user_handle() {
         credential.challenge, challenge,
         "registered against this challenge"
     );
-    let row = crate::accounts::Passkey {
+    let row = crate::identity::accounts::Passkey {
         id: credential.id.clone(),
         account: "acct_aaaaaaaaaaaaaaaaaaaaaaaaaa".into(),
         label: "phone".into(),
@@ -471,7 +471,7 @@ fn a_checked_sign_in_leaves_the_counter_to_the_store() {
     let challenge = [9u8; 32];
     let credential =
         verify_registration(RP, &challenge, phone.register(&challenge).registration()).unwrap();
-    let row = crate::accounts::Passkey {
+    let row = crate::identity::accounts::Passkey {
         id: credential.id.clone(),
         account: "acct_aaaaaaaaaaaaaaaaaaaaaaaaaa".into(),
         label: "key".into(),

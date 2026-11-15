@@ -38,9 +38,9 @@ use super::{
     face::ME,
 };
 use crate::{
-    auth::Subject,
     config::{DEFAULT_FREE_LIMIT, HubConfig, valid_name},
     hub::Hub,
+    identity::Subject,
     ops::audit::AuditEntry,
     site::Cap,
     tenancy::orgs::{self, Role},
@@ -62,7 +62,7 @@ pub struct Boards {
     /// hub's store, beside the hosted boards.
     orgs: Option<orgs::Orgs>,
     /// What people told the hub they want, kept beside the organisations.
-    preferences: Option<crate::preferences::PreferenceStore>,
+    preferences: Option<crate::identity::PreferenceStore>,
     /// The export of these boards' events to ClickHouse (`crate::warehouse`), when the hub
     /// has one: from the config at start, or from the settings page at any time.
     warehouse: std::sync::RwLock<Option<Arc<crate::ops::warehouse::Warehouse>>>,
@@ -146,7 +146,7 @@ impl Boards {
         Ok(Self {
             hosted: super::registry::Registry::new(store.clone())?,
             orgs: Some(orgs::Orgs::new(store.clone())),
-            preferences: Some(crate::preferences::PreferenceStore::new(store)),
+            preferences: Some(crate::identity::PreferenceStore::new(store)),
             warehouse: std::sync::RwLock::new(None),
             sinks: std::sync::OnceLock::new(),
             configured: config.boards.iter().map(|b| b.project.clone()).collect(),
@@ -171,7 +171,7 @@ impl Boards {
     }
 
     /// What people told this hub they want, when it keeps it (always under `hub serve`).
-    pub(crate) fn preferences(&self) -> Option<&crate::preferences::PreferenceStore> {
+    pub(crate) fn preferences(&self) -> Option<&crate::identity::PreferenceStore> {
         self.preferences.as_ref()
     }
 
@@ -2544,7 +2544,7 @@ mod tests {
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn org_boards_belong_to_the_org_and_every_member_works_them() {
-        use crate::auth::Subject;
+        use crate::identity::Subject;
         let member = |id: &str, org: Option<&str>| Subject {
             id: id.into(),
             via: "nomen",

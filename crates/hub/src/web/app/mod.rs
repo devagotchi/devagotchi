@@ -25,7 +25,7 @@ use super::{
     pages::{self, escape},
     routes::{Who, not_set_up, see_other, unavailable, who},
 };
-use crate::{AppState, agenthub::Board, auth::Subject, site::Site};
+use crate::{AppState, agenthub::Board, identity::Subject, site::Site};
 
 pub fn routes() -> Router<AppState> {
     Router::new()

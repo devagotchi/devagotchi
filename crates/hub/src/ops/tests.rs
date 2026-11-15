@@ -10,7 +10,7 @@ use sqlx::Row;
 use super::analytics;
 use crate::*;
 use crate::{
-    accounts::identities::Proven,
+    identity::accounts::identities::Proven,
     tenancy::tests::tenants::{Hosted, hosted_with, refused},
 };
 
@@ -307,7 +307,7 @@ async fn milestones_once(hub: Hosted) {
 
     // Its first machine, by a code of its own; a second one adds nothing.
     for (n, name) in ["laptop", "desk"].into_iter().enumerate() {
-        let stored = format!("{}-{name}", accounts::tenants::tag(&tenant));
+        let stored = format!("{}-{name}", identity::accounts::tenants::tag(&tenant));
         let code = hub
             .devices
             .issue_owned_code(&subject, &stored, [n as u8 + 1; 16], 16)

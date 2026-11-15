@@ -45,7 +45,7 @@ fn steps(ctx: &Ctx, steps: &[crate::site::Item]) -> String {
     format!("<ol class=\"modal-steps\">{items}</ol>")
 }
 
-/// How a hub with no owner is claimed (`accounts/claim.rs`, `web/claim.rs`), in plain words.
+/// How a hub with no owner is claimed (`identity/accounts/claim.rs`, `web/claim.rs`), in plain words.
 fn claim(ctx: &Ctx) -> String {
     let copy = &ctx.site.landing.popups.claim;
     let paragraphs: String = copy

@@ -2,7 +2,7 @@
 //! link can make a passkey, and `/auth/login` offers it as a fallback. Nothing here talks
 //! to another service.
 //!
-//! - Challenges are the hub's own, signed and stateless until used (`accounts.rs`): asking
+//! - Challenges are the hub's own, signed and stateless until used (`identity/accounts/`): asking
 //!   for one stores nothing, so a flood of unanswered sign-ins blocks nobody.
 //! - Each challenge also rides in a short-lived `__Host-` cookie that only this site can
 //!   set, and the answer is checked against the cookie, so another site cannot sign a
@@ -32,13 +32,13 @@ use serde_json::json;
 use super::{cookie_value, pages, safe_return_to};
 use crate::{
     AppState,
-    accounts::{
+    config::HubConfig,
+    identity::Subject,
+    identity::accounts::{
         Accounts, Ceremony, LinkPurpose,
         passkey::{self, Assertion, Registration, Relying},
         sessions::SESSION_MAX_SECS,
     },
-    auth::Subject,
-    config::HubConfig,
 };
 
 /// The hub's own sign-in: its accounts, and who its passkeys belong to.
@@ -104,7 +104,7 @@ impl HubSignIn {
 
     /// This sign-in with the config's providers and email link (`Providers::from_config`).
     /// What seals the secrets set on the settings page (`crate::sealed`).
-    pub fn sealer(&self) -> &crate::sealed::Sealer {
+    pub fn sealer(&self) -> &crate::identity::Sealer {
         self.providers.sealer()
     }
 
@@ -177,7 +177,7 @@ impl HubSignIn {
         &self.accounts
     }
 
-    /// Whether this hub can be claimed from the browser (`accounts/claim.rs`): a one-owner
+    /// Whether this hub can be claimed from the browser (`identity/accounts/claim.rs`): a one-owner
     /// hub whose config names no owner and no operators, and no owner can sign in yet. A
     /// config that names its owner has decided who that is: their passkey or password is
     /// set with the one-time link from
@@ -320,7 +320,7 @@ impl HubSignIn {
         let cookie = self.cookie(
             self.challenge_cookie(),
             &URL_SAFE_NO_PAD.encode(challenge),
-            crate::accounts::CHALLENGE_TTL_SECS,
+            crate::identity::accounts::CHALLENGE_TTL_SECS,
         );
         let headers = response.headers_mut();
         if let Ok(value) = HeaderValue::from_str(&cookie) {
@@ -626,7 +626,7 @@ pub async fn register_options(
 async fn unsecured_session(
     hub: &Arc<HubSignIn>,
     headers: &HeaderMap,
-) -> Result<(crate::auth::Subject, String), Response> {
+) -> Result<(crate::identity::Subject, String), Response> {
     let refused = || {
         refuse(
             StatusCode::FORBIDDEN,
@@ -670,7 +670,7 @@ async fn securing(hub: Arc<HubSignIn>, headers: &HeaderMap) -> Response {
                 { "type": "public-key", "alg": -7 },
                 { "type": "public-key", "alg": -257 },
             ],
-            "timeout": crate::accounts::CHALLENGE_TTL_SECS * 1000,
+            "timeout": crate::identity::accounts::CHALLENGE_TTL_SECS * 1000,
             "attestation": "none",
             "authenticatorSelection": {
                 "residentKey": "required",
@@ -731,7 +731,7 @@ pub(super) async fn registration(hub: Arc<HubSignIn>, link: String, hand_back: b
             { "type": "public-key", "alg": -7 },
             { "type": "public-key", "alg": -257 },
         ],
-        "timeout": crate::accounts::CHALLENGE_TTL_SECS * 1000,
+        "timeout": crate::identity::accounts::CHALLENGE_TTL_SECS * 1000,
         "attestation": "none",
         "authenticatorSelection": {
             "residentKey": "required",
@@ -960,7 +960,7 @@ pub async fn sign_in_options(State(state): State<AppState>, headers: HeaderMap) 
         json!({
             "challenge": URL_SAFE_NO_PAD.encode(&challenge),
             "rpId": hub.rp_id,
-            "timeout": crate::accounts::CHALLENGE_TTL_SECS * 1000,
+            "timeout": crate::identity::accounts::CHALLENGE_TTL_SECS * 1000,
             "userVerification": "required",
             "allowCredentials": [],
         }),

@@ -1,6 +1,6 @@
 use super::*;
 use crate::{
-    accounts::{Alg, Ceremony, NewCredential},
+    identity::accounts::{Alg, Ceremony, NewCredential},
     store::testing,
 };
 

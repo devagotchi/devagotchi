@@ -672,7 +672,7 @@ before tenants moves its accounts into it when the hub opens it (an add-only mig
 The hub always supports local email/password credentials; the email is a login name and does
 not require an email provider. A hub with its own accounts can also sign people in with
 optional passkeys, providers, or email links. Each is a
-linked sign-in of the same account (`src/accounts/identities.rs`): signing in reaches the
+linked sign-in of the same account (`identity/accounts/identities.rs`): signing in reaches the
 account it is linked to; else, for an `operators` identity, the owner; else the account a
 verified email already reaches; else one made on a hosted hub. From the account page, or
 from a browser signed in to an account nobody secured yet, it is linked to that account,
@@ -719,7 +719,7 @@ which secures it. A sign-in already linked elsewhere is refused, never moved.
   `/healthz` under `mail` (`configured`, `tls`, `per_address_per_hour`, `last_send` with
   `ok`, `at` and on failure the reply code or the step, never an address or a body);
   reported, not counted, so a mail server that is down never marks the hub unhealthy.
-- `src/provider_tests.rs` runs all of it against a stub OpenID Connect provider, a stub
+- `identity/tests/providers.rs` runs all of it against a stub OpenID Connect provider, a stub
   GitHub and a stub mail server.
 
 ### Claiming a new hub (16c)
@@ -1055,7 +1055,7 @@ sessions of one AI share one inbox, so whichever calls first receives the note.
 
 `/admin` is the hub's owner's own page; anyone else gets a 404. Google, GitHub, Sign in with
 Shippin (Nomen, its issuer filled in) and any other OpenID Connect provider (Okta, Entra ID,
-Auth0, Keycloak, Authentik) are set there, each with its redirect address shown, in Postgres (`sign_in_settings`), with the client secret sealed by `sealed.rs` under
+Auth0, Keycloak, Authentik) are set there, each with its redirect address shown, in Postgres (`sign_in_settings`), with the client secret sealed by `identity/sealed.rs` under
 `settings.key` in the state directory. Back up the state volume with the database, or those secrets
 must be entered again. ClickHouse holds statistics only, never settings. Email, ClickHouse and
 signal sinks are still set at install and are shown there read-only.
@@ -1084,7 +1084,7 @@ approval leads with its kind, what, why and how to undo it, and buttons big enou
 the notification controls sit under it.
 
 `/app/me` is who is signed in, their organisations, this phone's notifications, what they want,
-and Sign out. `src/preferences.rs` keeps one row per person under their tenant's row-level
+and Sign out. `identity/preferences/` keeps one row per person under their tenant's row-level
 security (migration 0020), as versioned JSON:
 
 | Preference | Default | What it does |

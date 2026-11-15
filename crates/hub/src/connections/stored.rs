@@ -6,7 +6,7 @@
 use devagotchi_contracts::BridgeResult;
 use sqlx::Row;
 
-use crate::accounts::{Accounts, tenants};
+use crate::identity::accounts::{Accounts, tenants};
 use crate::machines::now_secs;
 use crate::store::secs;
 use crate::store::transaction;

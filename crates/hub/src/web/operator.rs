@@ -33,7 +33,7 @@ use super::{
 };
 use crate::{
     AppState,
-    auth::Subject,
+    identity::Subject,
     site::{Cap, Ctx, Plan, SignUp, Site, model::LIMIT_KEYS},
     tenancy::{
         access::{self, ADMITTED, WAITING},

@@ -15,7 +15,7 @@ use devagotchi_contracts::{BridgeError, BridgeResult};
 use jsonwebtoken::{Algorithm, DecodingKey, Validation, decode, decode_header, jwk::JwkSet};
 use serde::Deserialize;
 
-use crate::{config::AuthConfig, nomen::NomenVerifier};
+use crate::{config::AuthConfig, identity::nomen::NomenVerifier};
 
 /// An authenticated caller. `id` is what grants are written against.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -28,7 +28,7 @@ pub struct Subject {
     /// accounts apart. Never used for grants: two accounts can share a name.
     pub name: Option<String>,
     /// The tenant the account belongs to on a hub with its own accounts (`t-<uuid>`,
-    /// `accounts/tenants.rs`): what keeps one tenant's machines from another's.
+    /// `identity/accounts/tenants.rs`): what keeps one tenant's machines from another's.
     pub tenant: Option<String>,
     /// The organization (tenant) the account belongs to, as the identity provider proved
     /// it (Nomen's `urn:nomen:iam:user:resourceowner:id`). Project boards belong to it:
@@ -98,7 +98,7 @@ pub enum Verifier {
     /// clients itself (32b) are checked against its store; with `auth.nomen`, any other
     /// token goes to Nomen.
     Hub {
-        accounts: std::sync::Arc<crate::accounts::Accounts>,
+        accounts: std::sync::Arc<crate::identity::accounts::Accounts>,
         /// The hub as an authorization server: its own public URL.
         issuer: String,
         nomen: Option<Box<Verifier>>,
@@ -130,7 +130,7 @@ impl Verifier {
     pub async fn from_hub_config(
         config: &crate::config::HubConfig,
         store: &crate::store::Store,
-        accounts: Option<std::sync::Arc<crate::accounts::Accounts>>,
+        accounts: Option<std::sync::Arc<crate::identity::accounts::Accounts>>,
     ) -> BridgeResult<Self> {
         let mut primary = Self::primary(&config.auth, store).await?;
         if let (true, Some(accounts)) = (config.has_accounts(), accounts) {
@@ -229,7 +229,7 @@ impl Verifier {
             } => {
                 if bearer.starts_with("dgh_") {
                     return match accounts.verify_access(bearer).await {
-                        Ok(Some(grant)) => Ok(crate::auth::Subject {
+                        Ok(Some(grant)) => Ok(crate::identity::auth::Subject {
                             client: grant.client_name,
                             ..accounts.subject(&grant.account, "hub")
                         }),
@@ -255,7 +255,7 @@ impl Verifier {
 
     /// Whether the identity provider is answering (Nomen only; the others have no outage
     /// state to report).
-    pub fn issuer_health(&self) -> Option<crate::nomen::IssuerHealth> {
+    pub fn issuer_health(&self) -> Option<crate::identity::nomen::IssuerHealth> {
         match self {
             Verifier::Nomen(nomen) => Some(nomen.health()),
             Verifier::Federated { primary, .. } => primary.issuer_health(),

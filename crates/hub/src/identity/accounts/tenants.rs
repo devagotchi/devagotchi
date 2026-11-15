@@ -263,10 +263,10 @@ impl Accounts {
     /// Who `account` is on a request, signed in `via` a passkey session or a hub token:
     /// its tenant, and while nobody has secured it, when it lapses and whether that is
     /// near (under a seventh of the idle time, an hour at least).
-    pub fn subject(&self, account: &Account, via: &'static str) -> crate::auth::Subject {
+    pub fn subject(&self, account: &Account, via: &'static str) -> crate::identity::auth::Subject {
         let lapses = self.lapses_at(account);
         let idle = self.tenancy.unsecured.idle_secs();
-        crate::auth::Subject {
+        crate::identity::auth::Subject {
             id: account.id.clone(),
             via,
             tenant: Some(account.tenant.clone()).filter(|tenant| !tenant.is_empty()),

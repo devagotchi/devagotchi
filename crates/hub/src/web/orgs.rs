@@ -24,7 +24,7 @@ use super::{
 };
 use crate::{
     AppState,
-    auth::Subject,
+    identity::Subject,
     site::{Ctx, Site, model::OrgsCopy},
     tenancy::orgs::{Org, Orgs, Principal, ProjectRef, Role, Visibility, owner_of},
 };

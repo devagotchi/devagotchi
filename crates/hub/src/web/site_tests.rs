@@ -9,7 +9,7 @@ use serde_json::{Value, json};
 
 use super::passkey_tests::{World, world_with_site};
 use crate::{
-    accounts::LinkPurpose,
+    identity::accounts::LinkPurpose,
     site::tests::{assert_no_brand, neutral_dir},
 };
 

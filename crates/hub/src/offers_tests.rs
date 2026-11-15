@@ -15,7 +15,7 @@ use axum::{Json, extract::State, http::header, routing::post};
 use serde_json::{Value, json};
 
 use crate::{
-    accounts::identities::Proven,
+    identity::accounts::identities::Proven,
     tenancy::tests::tenants::{Hosted, Person, hosted_with, refused, set_cookie},
 };
 

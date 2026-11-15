@@ -743,7 +743,7 @@ impl HubConfig {
                     ));
                 }
                 if let Some(owner) = &self.owner
-                    && !crate::accounts::valid_account_id(owner)
+                    && !crate::identity::accounts::valid_account_id(owner)
                 {
                     return Err(invalid(format!(
                         "owner {owner:?} is not an account id: acct_ and 26 characters, or the subject an earlier identity provider issued (letters, digits, - and _)"

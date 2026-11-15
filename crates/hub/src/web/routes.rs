@@ -22,7 +22,7 @@ use super::{
 };
 use crate::{
     AppState,
-    auth::{AuthError, Subject},
+    identity::auth::{AuthError, Subject},
 };
 
 /// Every browser route. `hub_authorization` mounts the routes of the hub's own

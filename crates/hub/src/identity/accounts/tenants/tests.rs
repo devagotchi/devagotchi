@@ -4,8 +4,8 @@ use std::net::IpAddr;
 
 use super::*;
 use crate::{
-    accounts::identities::Proven,
     config::{TenancyConfig, TenancyMode, tenancy::UnsecuredLimits},
+    identity::accounts::identities::Proven,
     store::testing::{self, TestStore},
 };
 
@@ -320,7 +320,7 @@ async fn an_unsecured_account_connects_only_so_many_ai_apps() {
             .await
             .unwrap();
         let verifier = "v".repeat(43);
-        let challenge = crate::accounts::oauth::s256(&verifier);
+        let challenge = crate::identity::accounts::oauth::s256(&verifier);
         let code = accounts
             .issue_code(
                 &client.id,
@@ -516,10 +516,10 @@ async fn on_postgres_the_hubs_role_reads_and_writes_one_tenants_rows_only() {
         accounts
             .store_passkey(
                 &account.id,
-                &crate::accounts::NewCredential {
+                &crate::identity::accounts::NewCredential {
                     id: vec![n; 16],
                     public_key: vec![0x30, n],
-                    alg: crate::accounts::Alg::Es256,
+                    alg: crate::identity::accounts::Alg::Es256,
                     sign_count: 0,
                     backup_eligible: true,
                     challenge: accounts.challenge(Ceremony::Register, Some(&account.id)),
@@ -542,7 +542,7 @@ async fn on_postgres_the_hubs_role_reads_and_writes_one_tenants_rows_only() {
         .await
         .unwrap();
         let verifier = "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk";
-        let challenge = crate::accounts::oauth::s256(verifier);
+        let challenge = crate::identity::accounts::oauth::s256(verifier);
         let resource = "https://hub.example.com/mcp";
         let code = accounts
             .issue_code(

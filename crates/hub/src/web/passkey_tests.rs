@@ -1,6 +1,6 @@
 //! A hub with its own accounts end to end over HTTP: the owner's link makes a passkey,
 //! the passkey signs in, and the pages, the session and `/api/v1/me` follow. The browser
-//! is played by the test with the software authenticator (`accounts/passkey/soft.rs`).
+//! is played by the test with the software authenticator (`identity/accounts/passkey/soft.rs`).
 
 use std::sync::Arc;
 
@@ -11,13 +11,13 @@ use serde_json::{Value, json};
 use super::*;
 use crate::{
     AppState,
-    accounts::{
+    config::HubConfig,
+    hub::Hub,
+    identity::accounts::{
         Accounts, LinkPurpose,
         passkey::{Alg, soft::Authenticator},
     },
-    auth::Verifier,
-    config::HubConfig,
-    hub::Hub,
+    identity::{accounts::oauth::s256, auth::Verifier},
     machines::link::Links,
     ops::audit::Audit,
 };
@@ -1029,7 +1029,7 @@ async fn an_ai_client_registers_the_owner_approves_it_and_the_hub_checks_its_tok
     let authorize = format!(
         "/oauth/authorize?response_type=code&client_id={client_id}&redirect_uri={}&code_challenge={}&code_challenge_method=S256&state=st+1%2F2&scope=mcp+offline_access&resource={}",
         super::encode(redirect),
-        crate::accounts::oauth::s256(verifier),
+        s256(verifier),
         super::encode(&format!("{}/mcp", world.url)),
     );
     let signed_out = world.get(&authorize, None).await;
@@ -1079,7 +1079,7 @@ async fn an_ai_client_registers_the_owner_approves_it_and_the_hub_checks_its_tok
             .form(&[
                 ("client_id", client_id.as_str()),
                 ("redirect_uri", redirect),
-                ("code_challenge", &crate::accounts::oauth::s256(verifier)),
+                ("code_challenge", &s256(verifier)),
                 ("resource", &format!("{}/mcp", world.url)),
                 ("scope", "mcp offline_access"),
                 ("state", "st 1/2"),
@@ -1235,7 +1235,7 @@ async fn an_authorization_request_for_an_unknown_client_or_redirect_goes_nowhere
         .register_client("Test AI", &["https://ai.example.net/cb".to_string()])
         .await
         .unwrap();
-    let challenge = crate::accounts::oauth::s256(&"v".repeat(43));
+    let challenge = s256(&"v".repeat(43));
     for (client_id, redirect) in [
         ("dgc_nobody", "https://ai.example.net/cb"),
         (client.id.as_str(), "https://evil.example/cb"),

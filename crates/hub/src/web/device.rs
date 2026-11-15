@@ -1,5 +1,5 @@
 //! Device authorization (RFC 8628) on a hub with its own accounts: `devagotchi login`
-//! signing a terminal in. The store side is `accounts/oauth/device.rs`.
+//! signing a terminal in. The store side is `identity/accounts/oauth/device.rs`.
 //!
 //! - `POST /oauth/device` (the metadata's `device_authorization_endpoint`): a client asks
 //!   for a device code and a user code. The CLI's built-in client is `devagotchi-cli`; any
@@ -25,7 +25,7 @@ use super::{
     pages,
     routes::see_other,
 };
-use crate::{AppState, accounts::oauth::normalize_user_code};
+use crate::{AppState, identity::accounts::oauth::normalize_user_code};
 
 /// The CLI's own client id: `devagotchi login` needs no registration.
 pub const CLI_CLIENT: &str = "devagotchi-cli";

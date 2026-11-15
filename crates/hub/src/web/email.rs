@@ -1,7 +1,7 @@
 //! Sign in with a link sent by email (`auth.email`), on a hub with its own accounts. The link
 //! proves the mailbox because it arrives out of band: no answer of the hub's contains it,
 //! and every answer is the same whether or not the address has an account here. The store
-//! side is `accounts/email.rs`.
+//! side is `identity/accounts/email.rs`.
 //!
 //! - `POST /auth/email` (`email`, and `link=1` from the account page to add the address to
 //!   the signed-in account) mails `<public_url>/auth/email#<token>`. The token is after `#`,
@@ -25,8 +25,8 @@ use serde::Deserialize;
 use super::{HubSignIn, pages, passkeys, safe_return_to};
 use crate::{
     AppState,
-    accounts::{email::normalize_email, identities::Proven},
     config::EmailConfig,
+    identity::accounts::{email::normalize_email, identities::Proven},
     notify::mail,
 };
 
@@ -97,7 +97,7 @@ impl Mailer {
                     .map_err(|_| format!("auth.email: {variable} is not set"))?,
             ),
             (None, Some(path)) => Some(
-                crate::auth::read_private(path, "auth.email password_file")
+                crate::identity::auth::read_private(path, "auth.email password_file")
                     .map_err(|error| error.message)?
                     .trim_end_matches(['\r', '\n'])
                     .to_string(),
