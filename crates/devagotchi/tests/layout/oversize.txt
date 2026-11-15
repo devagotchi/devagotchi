@@ -75,4 +75,4 @@
 516	crates/ipc/src/windows/security.rs
 582	crates/mcp/src/adapter.rs
 802	crates/mcp/src/connect.rs
-900	crates/store/src/lib.rs
+874	crates/store/src/lib.rs

@@ -39,52 +39,49 @@
 | Desktop Commander tools we do not have: search sessions (`start_search`, `get_more_search_results`, `stop_search`, `list_searches`), interactive processes (`interact_with_process`, `list_sessions`, `read_process_output` by offset), `list_processes`, `kill_process`, `edit_block` by range and fuzzy, `write_pdf`, `read_file` of PDF/Excel/DOCX/URL, `get_config`/`set_config_value`, `get_recent_tool_calls` | teardown §1.3; the Devagotchi tools this session sees from app.devagotchi.com |
 | Passkeys come before a first connection: landing copy (21 mentions in `landing.json`) and the self-hosted claim ("make my passkey") | `crates/hub/site/default/content/`; `deploy/compose/README.md` |
 
-## The shape: modules that describe themselves
+## The shape: the approved layout pattern, applied
 
-No crate or folder called `core`, `common`, `utils` or `shared`. Every module is a folder with
-the same parts, so a person or an agent reads one `README.md` and knows what it owns:
+The shape is [.ai/patterns/layout.md](../../patterns/layout.md) (operator, 2026-11-13, merged
+in #185) and its steps in [structure-cleanup](structure-cleanup.md): a crate per boundary;
+inside a crate a folder per domain, `src/<domain>/mod.rs` its front door; tests at
+`<domain>/tests.rs`; the crate's top level wiring only; 500 lines a new file, held by the size
+ratchet. No crate or folder called `core`, `common`, `utils` or `shared`. This plan adds two
+things to that pattern (R0) and names where each piece of the free edition lives in it:
 
-```
-modules/<name>/
-  README.md        what it is; the tables it owns (prefix); the routes, MCP tools and pages it
-                   serves; what it depends on; its settings and where in the UI they are
-  Cargo.toml       one crate, named devagotchi-<name>
-  migrations/      Postgres only, every table named <prefix>_*, in schema devagotchi
-  src/             lib.rs re-exports its surface; one file per concern, none over ~800 lines
-  ui/              its pages and copy, when it has any
-  tests/
-```
+- **The front door describes the domain.** Every domain's `mod.rs` module docs carry the same
+  sections: *Owns* (its tables, by prefix), *Serves* (routes, MCP tools, pages), *Settings*
+  (each with its page), *Depends on*. A person or an agent reads one file and knows the domain.
+- **Each domain's tables carry its prefix**, in schema `devagotchi`, Postgres only; a test
+  fails on a table without one.
 
-| Module | Owns | Table prefix | From today |
+| Where | Owns | Table prefix | From today |
 |---|---|---|---|
-| `machine-engine` | running programs and sessions, files, search, the job journal (on the machine; SQLite there is the machine's own, ADR 0002) | none (machine-local) | `crates/core`, `crates/broker` |
-| `machine-link` | the machine's outbound link and local IPC | none | `crates/link`, `crates/ipc` |
-| `machines` | the registry, joining (device grant), updates, provenance later | `machine_` | `devices.rs`, `join*`, `link.rs` hub side, `machine_update.rs`, `tenant_machines.rs` |
-| `identity` | accounts, email + password, Google/GitHub/OIDC/Nomen sign-in, browser sessions, passkeys (offered after the first machine), the OAuth server AI apps sign in with, the device page | `auth_`, `oauth_` | `accounts/`, `account/`, `oauth.rs`, `web/sign_in.rs`, `web/passkeys.rs`, `web/sessions.rs`, `nomen*` |
-| `audit` | the hash-chained record of every call | `audit_` | `audit.rs` |
-| `push` | Web Push to phones and browsers | `push_` | `push.rs`, `web/notify.rs` |
-| `mail` | sending mail: SMTP or a connection (Resend) | `mail_` | `mail.rs`, `web/email.rs` |
-| `connections` | outside services through the hub | `connection_` | `connections.rs`, `accounts/connections.rs` |
-| `analytics` | the ClickHouse export | `analytics_` | `analytics*`, `warehouse*`, `signals*` |
-| `site` | public pages, copy, assets, docs, `llms.txt` | none | `site/`, `web/landing*`, `web/public.rs`, `web/discovery.rs` |
-| `mcp-surface` | the MCP tools, grouped by domain (Machines, Files, Processes, Search, AgentHub, Connections, Setup) | none | `hub.rs`, `output_schema.rs`, tool routers |
-| `tenancy` | many accounts and tenants on one hub, `/operator`, limits; **not in the default build**, wired only when a hub enables it | `tenancy_` | `tenant_*.rs`, `web/operator.rs`, `web/hosted.rs`, RLS policies |
-| `hub-server` | starts the hub: config, HTTP, wiring the modules; nothing else | none | `lib.rs`, `config*`, `web/routes.rs` |
-| `agenthub` (git submodule `devagotchi/agenthub`) | boards, tickets, notes, approvals, workflows, wake; usable alone on any Postgres (and ClickHouse) | `board_` | `crates/agenthub`, `crates/hub/src/agenthub/`, migrations 0014/0016 |
+| crate `machine-engine` | running programs and sessions, files, search, the job journal (on the machine; SQLite there is the machine's own, ADR 0002) | none (machine-local) | `crates/core`, `crates/broker` |
+| crates `link`, `ipc` | the machine's outbound link and local IPC (already crates) | none | as today |
+| crate `agenthub` (git submodule of `devagotchi/agenthub`) | boards, tickets, notes, approvals, workflows, wake; usable alone on any Postgres (and ClickHouse) | `board_` | `crates/agenthub`, `crates/hub/src/agenthub/`, migrations 0014/0016 |
+| crate `tenancy` | many accounts and tenants on one hub, `/operator`, limits; **not in the default build** | `tenancy_` | `tenant_*.rs`, `orgs*`, `web/operator.rs`, `web/hosted.rs`, the RLS policies |
+| hub `src/identity/` | accounts, email + password, Google/GitHub/OIDC/Shippin sign-in, browser sessions, passkeys (offered after the first machine), the OAuth server AI apps sign in with, the device page | `auth_`, `oauth_` | structure-cleanup S4 `identity/` plus `accounts/`, `web/sign_in.rs`, `web/passkeys.rs`, `web/sessions.rs` |
+| hub `src/machines/` | the registry, joining (device grant), updates, provenance later | `machine_` | structure-cleanup S4 `machines/` |
+| hub `src/notify/` | Web Push and mail (SMTP or a Resend connector) | `push_`, `mail_` | structure-cleanup S4 `notify/` |
+| hub `src/ops/` | audit chain, the ClickHouse export | `audit_`, `analytics_` | structure-cleanup S4 `ops/` |
+| hub `src/connectors/` | outside services through the hub (structure-cleanup ruling 1 names them **connectors**; #188 named them "connections", which the rename plan undoes) | `connector_` | `connections.rs`, `accounts/connections.rs` |
+| hub `src/site/` | public pages, copy, assets, docs, `llms.txt` | none | `site/`, `web/landing*`, `web/public.rs`, `web/discovery.rs` |
+| hub `src/mcp/` | the MCP tools, grouped by domain (Machines, Files, Processes, Search, AgentHub, Connectors, Setup) | none | `hub.rs`, `output_schema.rs`, the tool routers |
+| hub top level | `lib.rs`, `config.rs`, `store.rs`, `web.rs`: wiring only | none | structure-cleanup S4 end state |
 
-## The UI: every module is run from its own pages
+## The UI: every domain is run from its own pages
 
 Operator, 2026-11-14: "IT NEEDS TO HAVE UI TO SUPPORT IT". Standing rule: every setting is set
-in the UI, guided, grouped and next to what it affects. So each module's README names its
-pages, and its `ui/` holds them:
+in the UI, guided, grouped and next to what it affects. So each domain's front door names its
+pages:
 
-| Module | What the person does there |
+| Domain | What the person does there |
 |---|---|
 | `identity` | `/admin` → Sign-in: Sign in with Shippin (on by default, one switch to turn off), Google with your own client, GitHub, any OpenID Connect, email + password; `/account` → Sign-in and security: change password, linked sign-ins, passkey (offered after the first machine) |
 | `machines` | Machines: add (the one line per OS), approve a machine's code, rename, revoke, update, where it runs |
 | `mail` | `/admin` → Mail: SMTP or a Resend connection, send a test |
 | `push` | You → Notifications: this phone on or off, send a test, the phones that get them |
-| `connections` | You → Connections (exists) |
+| `connectors` | You → Connections today (exists); named Connectors by the rename plan |
 | `analytics` | `/admin` → Statistics: ClickHouse (exists) |
 | `audit` | `/admin` → Activity: the record, filter by machine, agent, person |
 | `agenthub` | Boards and tickets (exist), board settings |
@@ -92,8 +89,8 @@ pages, and its `ui/` holds them:
 | `hub-server` | `/admin` → Hub: address, updates (track, version running), backups |
 
 Deploy-time values that cannot be set from a page because the hub needs them to start (its
-address, its Postgres URL) are listed as such in `hub-server`'s README and nowhere else. A CI
-check compares every config key with the module pages and that list.
+address, its Postgres URL) are listed as such in the hub's `config.rs` front door and nowhere else. A CI
+check compares every config key with the domain pages and that list.
 
 ## Sign in with Shippin, on from the first start
 
@@ -113,20 +110,20 @@ redirect matches, and treats it as a public client with PKCE. Nothing is registe
 secret exists. This is a change in Nomen (`D:\localdev\nomen-react-go`), made and tested there
 first (S0).
 
-Each module runs its own migrations against the hub's one Postgres; how sqlx 0.9 keeps their
-version histories apart (a migration table per module, or a schema per module) is settled in
-R0 with a test, not assumed.
+AgentHub runs its own migrations against the hub's one Postgres; how sqlx 0.9 keeps its
+version history apart from the hub's (a migration table of its own, or a schema of its own) is
+settled in R1 with a test, not assumed.
 
 ## Milestones
 
 | # | Task | Acceptance evidence | State |
 |---|---|---|---|
-| R0 | The module contract: `modules/README.md` (the shape above), a `README.md` template, and a check in CI that every module has its README sections and that every table in its migrations carries its prefix; the migration mechanism per module decided and tested | the check fails on a module without a README or with an unprefixed table | not started |
-| R1 | AgentHub as `devagotchi/agenthub` (new public repo), pulled in as a submodule at `modules/agenthub`, owning its `board_*` migrations; the hub's `agenthub/` folder becomes its MCP and page wiring only | AgentHub's own CI runs its tests on Postgres; this repo builds with the submodule | not started |
-| R2 | Split `crates/hub` into the modules above, moving files with no behaviour change; `crates/core` becomes `machine-engine` | full CI green; no file in `hub-server` beyond wiring | not started |
-| R3 | Postgres only: machines, push, audit, browser sessions, Nomen sign-ins move into their modules' tables; `auth.mode devagotchi`, the store's SQLite backend and twin migrations, and the hub's SQLite board fallback are deleted | a hub test runs `hub serve` with every feature exercised and finds no `*.sqlite3` in the state directory; `grep -rln rusqlite modules/{identity,machines,audit,push,hub-server}` empty | not started |
-| R4 | `tenancy` as its own module, out of the default build; a one-owner hub has no tenant code in its binary | the default binary's symbols carry no `tenancy`; a hub built with it passes the tenant tests | not started |
-| U0 | The UI contract: each module's pages listed in its README; `/admin` grouped by module; the CI check that every config key has a page or is a listed deploy-time value | the check fails on a config key with neither | not started |
+| R0 | Extend `.ai/patterns/layout.md`: the front-door sections (*Owns*, *Serves*, *Settings*, *Depends on*) and table prefixes; a test that every migration's tables carry a domain prefix | the test fails on an unprefixed table; the pattern doc diff | done in increment 145 (receipt below) |
+| R1 | AgentHub as `devagotchi/agenthub` (new public repo), pulled in as a submodule at `crates/agenthub`, owning its `board_*` migrations; the hub's `agenthub/` folder becomes its MCP and page wiring only | AgentHub's own CI runs its tests on Postgres; this repo builds with the submodule | not started |
+| R2 | [structure-cleanup](structure-cleanup.md) S1 to S4, reconciled with #184 first (its open item); `crates/core` becomes `machine-engine` | each step's own evidence there | not started |
+| R3 | Postgres only: machines, push, audit, browser sessions, Nomen sign-ins move into their domains' tables; `auth.mode devagotchi`, the store's SQLite backend and twin migrations, and the hub's SQLite board fallback are deleted | a hub test runs `hub serve` with every feature exercised and finds no `*.sqlite3` in the state directory; `grep -rln rusqlite crates/hub crates/store` empty | not started |
+| R4 | `tenancy` as its own crate, out of the default build; a one-owner hub has no tenant code in its binary | the default binary's symbols carry no `tenancy`; a hub built with it passes the tenant tests | not started |
+| U0 | The UI contract: each domain's pages listed in its front door; `/admin` grouped by domain; the CI check that every config key has a page or is a listed deploy-time value | the check fails on a config key with neither | not started |
 | S0 | Nomen accepts Client ID Metadata Documents (public client, PKCE, redirect checked against the hub's document); in `nomen-react-go`, with its tests | Nomen's tests; a hub on a fresh domain signs in through id.shippin.cloud with nothing registered | not started |
 | D1 | Sign-in as Desktop Commander's: **Continue with Shippin** on by default (Google and email through Shippin; off with one switch on `/admin` → Sign-in), Continue with Google when the owner adds their own client, email + password (Sign in / Sign up), Forgot password by email; nothing else before the AI app gets its connection | `tests/first_connect_browser.py` on a fresh hub with no settings: the Shippin button is there, turning it off removes it; live check on app.devagotchi.com | not started |
 | D2 | Machine connect as Desktop Commander's: one line per OS, no sudo, installs for the user and starts with the computer; the machine shows a code, the person approves it in the browser they are signed in with (device grant), and the AI says the machine is online | e2e on Linux and Windows CI: line → code → approve → `machines` online → `run echo ok` | not started |
@@ -156,7 +153,12 @@ R0 with a test, not assumed.
 
 ## Verification receipts
 
-None yet.
+R0 (increment 145, Windows 11, rustc 1.99.1, Postgres 18 in Docker, 2026-11-14):
+`cargo test -p devagotchi-store --features testing` with `DEVAGOTCHI_TEST_POSTGRES_URL` set: 2
+passed, including `every_table_in_the_hub_schema_carries_its_domain_prefix`. With
+`connections` taken off `UNPREFIXED` it fails naming `connections`; restored, it passes.
+`cargo test -p devagotchi --test layout`: 7 passed (`crates/store/src/lib.rs` 900 to 874,
+its tests moved to `src/tests.rs`).
 
 ## Delivery
 
