@@ -199,7 +199,7 @@ try:
         "auth": {"mode": "dev", "tokens_file": str(tokens)},
         "brokers": [{"name": "local", "socket": endpoint}, {"name": "remote", "link": True},
                     {"name": "account", "socket": account_endpoint}],
-        "boards": [{"project": "e2e-board", "dir": str(project_dir)}],
+        "boards": [{"project": "e2e-board"}],
         "account_boards": {"unlimited": ["e2e-operator"]},
         "signals": {"sinks": [{"name": "e2e", "url": f"http://127.0.0.1:{sink_port}/signals",
                                "token_env": "E2E_SIGNAL_TOKEN", "secret_env": "E2E_SIGNAL_SECRET",

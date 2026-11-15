@@ -91,7 +91,7 @@ async fn accounts_from_before_tenants_join_the_home_tenant_once() {
     for (url, _dir) in stores_from_before_tenants().await {
         // Migrations 5 to 7 run: the account, its passkey and its session join the home
         // tenant the migration makes, and the tables move and take their prefixed names.
-        let accounts = Accounts::open(crate::store::Store::open(&url).await.unwrap())
+        let accounts = Accounts::open(crate::store::open(&url).await.unwrap())
             .await
             .unwrap();
         let home = accounts.home_tenant().await.unwrap();
@@ -122,7 +122,7 @@ async fn accounts_from_before_tenants_join_the_home_tenant_once() {
             1
         );
         // Opened again: one home tenant, kept; nothing moves and nothing is recorded.
-        let again = Accounts::open(crate::store::Store::open(&url).await.unwrap())
+        let again = Accounts::open(crate::store::open(&url).await.unwrap())
             .await
             .unwrap();
         assert_eq!(

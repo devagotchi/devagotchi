@@ -135,8 +135,6 @@ struct World {
     fake: Arc<FakeNomen>,
     url: String,
     http: reqwest::Client,
-    /// The `estate` board's project directory (an initialised board the owner reaches).
-    board_dir: std::path::PathBuf,
     hub: Hub,
     dir: tempfile::TempDir,
 }
@@ -170,15 +168,6 @@ async fn world_with(
     let url = format!("http://{}", listener.local_addr().unwrap());
     *fake.redirect_uri.lock().unwrap() = format!("{url}/auth/callback");
     let dir = tempfile::tempdir().unwrap();
-    let board_dir = dir.path().join("estate");
-    let store = board_dir.join(crate::agenthub::BOARD_DIR);
-    std::fs::create_dir_all(&store).unwrap();
-    crate::agenthub::Board::open(&store.join(crate::agenthub::BOARD_FILE), "estate").unwrap();
-    std::fs::write(
-        store.join("config.json"),
-        json!({"project": "estate", "prefix": "esta", "created_at": 0}).to_string(),
-    )
-    .unwrap();
     let config = Arc::new(
         HubConfig::parse(
             &json!({
@@ -191,7 +180,7 @@ async fn world_with(
                 "brokers": [{"name": "gold-ws", "socket": SOCKET}, {"name": "gus", "link": true},
                             {"name": "lab", "link": true}, {"name": "old", "link": true}],
                 "grants": [{"subject": OTHER, "brokers": ["gus"]}],
-                "boards": [{"project": "estate", "dir": board_dir.to_str().unwrap()}]
+                "boards": [{"project": "estate"}]
             })
             .to_string(),
         )
@@ -236,10 +225,7 @@ async fn world_with(
             connections: None,
             routed: Default::default(),
             push: Some(push),
-            boards: Arc::new(crate::agenthub::mcp::Boards::from_config(
-                &config,
-                dir.path(),
-            )),
+            boards: Arc::new(crate::agenthub::mcp::Boards::new(&config, sessions.clone()).unwrap()),
             config,
             audit,
             links,
@@ -264,7 +250,6 @@ async fn world_with(
         fake,
         url,
         http,
-        board_dir,
         hub,
         dir,
     })
@@ -386,7 +371,7 @@ impl World {
     }
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn names_from_nomen_are_escaped_on_the_page() {
     let response = pages::account(
         &pages::Viewer {
@@ -415,7 +400,7 @@ async fn names_from_nomen_are_escaped_on_the_page() {
     assert!(html.contains("No machines yet"));
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn the_public_pages_need_no_sign_in_and_name_the_operator() {
     let w = or_skip!(world());
     for (path, heading) in [
@@ -455,11 +440,11 @@ async fn the_public_pages_need_no_sign_in_and_name_the_operator() {
     assert!(docs.contains("sign in with your Shippin account"), "{docs}");
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_person_approves_on_the_phone_page_and_the_agent_sees_it() {
-    use crate::agenthub::{Actor, open_project};
+    use crate::agenthub::Actor;
     let w = or_skip!(world());
-    let (_, board) = open_project(&w.board_dir).unwrap();
+    let board = w.hub.boards.open("estate").unwrap();
     let asked = board
         .request_approval(
             &Actor::agent("claude"),
@@ -537,14 +522,11 @@ async fn a_person_approves_on_the_phone_page_and_the_agent_sees_it() {
 
 /// Configured boards decide as they always have: the owner and a grant marked human that
 /// names the board; a grant that is not a person, and an account without one, never.
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn configured_boards_decide_for_the_owner_and_human_grants_only() {
-    use crate::{
-        agenthub::{Actor, open_project},
-        auth::Subject,
-    };
+    use crate::{agenthub::Actor, auth::Subject};
     let w = or_skip!(world());
-    let (_, board) = open_project(&w.board_dir).unwrap();
+    let board = w.hub.boards.open("estate").unwrap();
     let asked = board
         .request_approval(&Actor::agent("claude"), "Deploy", "deploy", "", "")
         .unwrap();
@@ -581,17 +563,14 @@ async fn configured_boards_decide_for_the_owner_and_human_grants_only() {
                     {"subject": "300000000000000003", "boards": ["estate"], "human": true},
                     {"subject": "300000000000000004", "boards": ["estate"]}
                 ],
-                "boards": [{"project": "estate", "dir": w.board_dir.to_str().unwrap()}]
+                "boards": [{"project": "estate"}]
             })
             .to_string(),
         )
         .unwrap(),
     );
     let hub = Hub {
-        boards: Arc::new(crate::agenthub::mcp::Boards::from_config(
-            &config,
-            w.dir.path(),
-        )),
+        boards: Arc::new(crate::agenthub::mcp::Boards::new(&config, w.sessions.clone()).unwrap()),
         config,
         ..w.hub.clone()
     };
@@ -643,9 +622,9 @@ async fn configured_boards_decide_for_the_owner_and_human_grants_only() {
     assert_eq!(unknown.code, "not_granted");
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn notify_this_phone_then_an_approval_buzzes_it_encrypted() {
-    use crate::agenthub::{Actor, open_project};
+    use crate::agenthub::Actor;
     use aws_lc_rs::{
         agreement::{ECDH_P256, PrivateKey},
         rand::{SecureRandom, SystemRandom},
@@ -747,7 +726,7 @@ async fn notify_this_phone_then_an_approval_buzzes_it_encrypted() {
         assert_eq!(ok.status(), StatusCode::NO_CONTENT);
     }
 
-    let (_, board) = open_project(&w.board_dir).unwrap();
+    let board = w.hub.boards.open("estate").unwrap();
     let asked = board
         .request_approval(
             &Actor::agent("claude"),
@@ -803,7 +782,7 @@ async fn notify_this_phone_then_an_approval_buzzes_it_encrypted() {
     assert!(left[0].endpoint.ends_with("/push/phone"));
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn every_page_says_whether_you_are_signed_in_with_one_tap_in_or_out() {
     let w = or_skip!(world());
     // Signed out: `/` explains and offers one way in; every page offers Sign in back to it.
@@ -864,9 +843,9 @@ async fn every_page_says_whether_you_are_signed_in_with_one_tap_in_or_out() {
     );
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_new_board_says_how_to_start_and_one_tap_tests_the_phone() {
-    use crate::agenthub::{Actor, Filter, open_project};
+    use crate::agenthub::{Actor, Filter};
     use aws_lc_rs::{
         agreement::{ECDH_P256, PrivateKey},
         rand::{SecureRandom, SystemRandom},
@@ -898,7 +877,7 @@ async fn a_new_board_says_how_to_start_and_one_tap_tests_the_phone() {
         "{html}"
     );
     // Opening the never-used board put the getting-started steps on it.
-    let (_, board) = open_project(&w.board_dir).unwrap();
+    let board = w.hub.boards.open("estate").unwrap();
     let tickets = board.list(&Filter::default()).unwrap();
     assert_eq!(tickets.len(), 1);
     assert_eq!(tickets[0].title, crate::site::builtin().welcome("").0);
@@ -1063,7 +1042,7 @@ mod first_connect {
             .to_string()
     }
 
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn sign_up_on_the_one_page_then_straight_back_to_the_app() {
         let hub = or_skip!(hub());
         let (client, authorize) = app(&hub, "Claude").await;
@@ -1175,7 +1154,7 @@ mod first_connect {
         assert!(page.contains("<h1>Connect Codex?</h1>"), "{page}");
     }
 
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn a_wrong_password_says_so_on_the_same_page() {
         let hub = or_skip!(hub());
         hub.accounts

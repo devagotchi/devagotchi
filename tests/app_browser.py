@@ -123,7 +123,7 @@ def main() -> int:
         "public_url": url,
         "auth": {"mode": "hub"},
         "tenancy": {"mode": "multi", "starts_per_hour": 100},
-        "account_boards": {"dir": str(work / "boards"), "free_limit": 5},
+        "account_boards": {"free_limit": 5},
         "downloads": str(dist),
         "machines": {"auto_update": False},
         "brokers": [],

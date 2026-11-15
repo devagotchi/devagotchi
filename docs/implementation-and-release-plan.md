@@ -36,7 +36,7 @@ The Postgres migration foundation and native live-board cutover are implemented:
 
 - Paired `0014_boards.sql` migrations add normalized tenant-scoped board storage,
   append-only history/receipts, forced Postgres RLS and a durable analytics outbox.
-- `devagotchi hub import-board` previews an existing board read-only by default;
+- *(Deleted in increment 148, pre-release: nothing is imported.)* `devagotchi hub import-board` previewed an existing board read-only by default;
   explicit `--apply` imports into an existing tenant on Postgres. Rows, identifiers,
   leases, fences, workflow/settings and event hashes are preserved. Every copied value
   is verified inside the import transaction, including locale-independent text ordering.

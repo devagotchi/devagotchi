@@ -14,7 +14,7 @@ async fn stores() -> Vec<(TestStore, Accounts)> {
 
 /// The same store opened again, as another hub instance or after a restart would.
 async fn reopen(store: &TestStore) -> Accounts {
-    Accounts::open(Store::open(&store.url).await.unwrap())
+    Accounts::open(crate::store::open(&store.url).await.unwrap())
         .await
         .unwrap()
 }
@@ -664,7 +664,7 @@ async fn a_challenge_key_that_is_not_32_bytes_stops_the_store() {
             .await
             .unwrap();
         drop(accounts);
-        let opened = Accounts::open(Store::open(&store.url).await.unwrap()).await;
+        let opened = Accounts::open(crate::store::open(&store.url).await.unwrap()).await;
         assert_eq!(
             opened.err().map(|e| e.code),
             Some("account_store".to_string())

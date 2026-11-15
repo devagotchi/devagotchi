@@ -134,7 +134,9 @@ async fn on_postgres_the_hubs_tables_live_in_their_own_schema() {
     // `devagotchi` schema under their prefixed names, its migration record in the schema
     // configured (made if missing); `public` stays as it was.
     let url = or_skip!(empty_postgres());
-    let store = Store::open_in(&url, Some("devagotchi_hub")).await.unwrap();
+    let store = crate::store::open_in(&url, Some("devagotchi_hub"))
+        .await
+        .unwrap();
     let mut placed = std::collections::BTreeMap::<String, Vec<String>>::new();
     let rows = sqlx::query(
         "SELECT table_schema::text, table_name::text FROM information_schema.tables
@@ -150,7 +152,12 @@ async fn on_postgres_the_hubs_tables_live_in_their_own_schema() {
             .push(row.get::<String, _>(1));
     }
     assert!(!placed.contains_key("public"), "{placed:?}");
-    assert_eq!(placed["devagotchi_hub"], ["_sqlx_migrations"], "{placed:?}");
+    // The two version histories: the hub's and AgentHub's.
+    assert_eq!(
+        placed["devagotchi_hub"],
+        ["_agenthub_migrations", "_sqlx_migrations"],
+        "{placed:?}"
+    );
     let hub = &placed["devagotchi"];
     for table in [
         "auth_accounts",
@@ -165,7 +172,9 @@ async fn on_postgres_the_hubs_tables_live_in_their_own_schema() {
         assert!(hub.iter().any(|t| t == table), "{table} in {hub:?}");
     }
     // Opened again, as a second hub instance would: the schema and its tables are found.
-    let again = Store::open_in(&url, Some("devagotchi_hub")).await.unwrap();
+    let again = crate::store::open_in(&url, Some("devagotchi_hub"))
+        .await
+        .unwrap();
     let accounts = crate::accounts::Accounts::open(again).await.unwrap();
     accounts
         .create("acct_aaaaaaaaaaaaaaaaaaaaaaaaaa", "Jesse", true)
@@ -174,7 +183,7 @@ async fn on_postgres_the_hubs_tables_live_in_their_own_schema() {
     assert!(accounts.owner().await.unwrap().is_some());
     // A name that is not a plain schema name is refused before anything runs.
     assert_eq!(
-        Store::open_in(&url, Some("hub; drop schema public"))
+        crate::store::open_in(&url, Some("hub; drop schema public"))
             .await
             .unwrap_err()
             .code,
@@ -199,8 +208,60 @@ async fn a_store_a_newer_hub_migrated_still_opens() {
         .execute(store.store.admin())
         .await
         .unwrap();
-        Store::open(&store.url)
+        crate::store::open(&store.url)
             .await
             .expect("an older hub opens a newer store");
     }
+}
+
+/// Each domain's table prefixes (`.ai/patterns/layout.md`, "Tables carry their domain").
+const DOMAIN_PREFIXES: [(&str, &[&str]); 8] = [
+    ("identity", &["auth_", "oauth_"]),
+    ("tenancy", &["tenancy_", "org_", "project_"]),
+    ("agenthub", &["board_"]),
+    ("hub settings and secrets", &["hub_"]),
+    ("machines", &["machine_"]),
+    ("notify", &["push_", "mail_", "signal_"]),
+    ("ops", &["audit_", "analytics_"]),
+    ("connectors", &["connector_"]),
+];
+
+#[tokio::test]
+async fn every_table_in_the_hub_schema_carries_its_domain_prefix() {
+    // The hub's tables and AgentHub's, as a hub's database holds them.
+    let test = or_skip!(postgres());
+    let mut connection = test.store.read().await.unwrap();
+    let tables: Vec<String> = sqlx::query_scalar(
+        "SELECT table_name::text FROM information_schema.tables
+         WHERE table_schema = 'devagotchi' AND table_name NOT LIKE '\\_sqlx%'
+         ORDER BY 1",
+    )
+    .fetch_all(&mut *connection)
+    .await
+    .unwrap();
+    assert!(!tables.is_empty(), "the migrated store has no tables");
+    let prefixed = |name: &str| {
+        DOMAIN_PREFIXES
+            .iter()
+            .any(|(_, prefixes)| prefixes.iter().any(|p| name.starts_with(p)))
+    };
+    let mut broken = Vec::new();
+    for table in &tables {
+        if !prefixed(table) {
+            broken.push(format!(
+                "{table}: no domain prefix; name it after its domain ({})",
+                DOMAIN_PREFIXES
+                    .iter()
+                    .map(|(domain, p)| format!("{domain}: {}", p.join(" ")))
+                    .collect::<Vec<_>>()
+                    .join("; ")
+            ));
+        }
+    }
+    assert!(broken.is_empty(), "table names:\n  {}", broken.join("\n  "));
+}
+
+#[test]
+fn every_hub_migration_is_embedded_with_the_repositorys_line_endings() {
+    devagotchi_store::testing::assert_line_endings(&MIGRATIONS);
 }

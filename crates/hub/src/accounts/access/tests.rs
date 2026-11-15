@@ -215,7 +215,7 @@ async fn tenants_from_before_early_access_are_in() {
     <sqlx::AnyConnection as sqlx::Connection>::close(old)
         .await
         .unwrap();
-    let accounts = Accounts::open(crate::store::Store::open(&url).await.unwrap())
+    let accounts = Accounts::open(crate::store::open(&url).await.unwrap())
         .await
         .unwrap()
         .with_tenancy(hosted(), Vec::new())

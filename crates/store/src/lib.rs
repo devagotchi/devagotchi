@@ -1,6 +1,8 @@
-//! The Devagotchi store (`devagotchi-store`), shared by the hub and AgentHub: the hub's
-//! Postgres (ADR 0001). Its migrations are `migrations/postgres/`, Postgres only, every table
-//! in schema `devagotchi` named after its domain (`.ai/patterns/layout.md`, rule 8).
+//! The Devagotchi store (`devagotchi-store`): the Postgres engine the hub and AgentHub share
+//! (ADR 0001). It owns no tables: each crate that keeps tables brings its migrations, with a
+//! version history of its own, and [`Store::open_in`] runs them in the order given (the hub's
+//! in `crates/hub/migrations`, AgentHub's in its own repository). Every table is in schema
+//! `devagotchi`, named after its domain (`.ai/patterns/layout.md`, rule 8).
 //!
 //! Every write goes through [`transaction!`]: one transaction that sees nothing another
 //! writer does halfway. It runs SERIALIZABLE and runs again when the server says it collided
@@ -25,21 +27,13 @@ use devagotchi_contracts::{BridgeError, BridgeResult};
 use sqlx::{
     Any, AnyConnection, AnyPool, Connection, Executor, Transaction,
     any::{AnyPoolOptions, install_default_drivers},
-    migrate::Migrator,
 };
 
-// A store a newer hub migrated still opens here: migrations add (tables, columns with
-// defaults, indexes), so an older hub runs on the newer schema, and a deploy that is not
-// healthy can go back to the image before it (deploy/compose/update.sh). The one exception
-// is 0007 (tenant_rls), which moves and renames the tables: going back across it restores
-// the backup update.sh takes before every deploy (deploy/compose/README.md).
-static POSTGRES: Migrator = Migrator {
-    ignore_missing: true,
-    ..sqlx::migrate!("migrations/postgres")
-};
-
-/// The environment variable that names the store, over the config's `storage.url`.
-pub const STORAGE_URL_ENV: &str = "DEVAGOTCHI_HUB_STORAGE_URL";
+/// A crate's migrations: `sqlx::migrate!` of its directory, with its own history table
+/// (`table_name`) so two crates' versions never meet. Declared with `ignore_missing: true`, a
+/// store a newer build migrated still opens: migrations add (tables, columns with defaults,
+/// indexes), and a deploy that is not healthy can go back to the image before it.
+pub use sqlx::migrate::Migrator;
 
 /// How many times a Postgres transaction that collided with another is run again.
 const RETRIES: u32 = 8;
@@ -158,72 +152,21 @@ pub fn unsecs(time: i64) -> u64 {
     u64::try_from(time).unwrap_or(0)
 }
 
-/// The Postgres a hub uses: the environment's URL, else the config's; `None` when neither
-/// names one.
-pub fn url_for(configured: Option<&str>) -> Option<String> {
-    match std::env::var(STORAGE_URL_ENV) {
-        Ok(url) if !url.trim().is_empty() => Some(url.trim().to_string()),
-        _ => configured.map(str::to_string),
-    }
-}
-
-/// Whether a URL is one the store opens, and keeps its password out of a file: `postgres://`
-/// or `postgresql://` without a password.
-pub fn check_configured_url(url: &str) -> Result<(), String> {
-    if let Some(rest) = url
-        .strip_prefix("postgres://")
-        .or_else(|| url.strip_prefix("postgresql://"))
-    {
-        let authority = rest.split(['/', '?']).next().unwrap_or("");
-        if authority
-            .rsplit_once('@')
-            .is_some_and(|(user, _)| user.contains(':'))
-        {
-            return Err(format!(
-                "storage.url must not carry a password; set {STORAGE_URL_ENV} from the secret store instead"
-            ));
-        }
-        return Ok(());
-    }
-    Err("storage.url is postgres://… (the hub keeps everything in Postgres)".to_string())
-}
-
-/// The environment variable that names the Postgres schema the hub's tables live in, over
-/// the config's `storage.schema`.
-pub const STORAGE_SCHEMA_ENV: &str = "DEVAGOTCHI_HUB_STORAGE_SCHEMA";
-
-/// A Postgres schema name the hub accepts: 1 to 63 of `[a-z0-9_]`, not starting with a digit
-/// or `pg_`, so it needs no quoting and is never one of Postgres's own.
-pub fn valid_schema(name: &str) -> bool {
-    !name.is_empty()
-        && name.len() <= 63
-        && !name.starts_with("pg_")
-        && !name.as_bytes()[0].is_ascii_digit()
-        && name
-            .bytes()
-            .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'_')
-}
-
-/// The schema a hub's tables live in on Postgres: the environment's, else the config's.
-pub fn schema_for(configured: Option<&str>) -> Option<String> {
-    match std::env::var(STORAGE_SCHEMA_ENV) {
-        Ok(schema) if !schema.trim().is_empty() => Some(schema.trim().to_string()),
-        _ => configured.map(str::to_string),
-    }
-}
-
 impl Store {
-    /// Open the store at `url` and bring its schema up to date.
-    #[cfg_attr(not(any(test, feature = "testing")), allow(dead_code))]
-    pub async fn open(url: &str) -> BridgeResult<Self> {
-        Self::open_in(url, None).await
+    /// Open the store at `url` and bring it up to date with `migrations`, in order.
+    pub async fn open(url: &str, migrations: &[&Migrator]) -> BridgeResult<Self> {
+        Self::open_in(url, None, migrations).await
     }
 
-    /// `open`, with the hub's tables in their own Postgres `schema`, made if missing: on a
-    /// database other things share (a Supabase project, whose `public` schema its REST API
-    /// serves to anyone with the project's public key), the hub's tables stay out of
-    /// `public`. Every connection sets its `search_path` to it.
-    pub async fn open_in(url: &str, schema: Option<&str>) -> BridgeResult<Self> {
+    /// `open`, with the migration records in their own Postgres `schema`, made if missing: on
+    /// a database other things share (a Supabase project, whose `public` schema its REST API
+    /// serves to anyone with the project's public key), nothing of the hub's is in `public`.
+    /// Every connection sets its `search_path` to it.
+    pub async fn open_in(
+        url: &str,
+        schema: Option<&str>,
+        migrations: &[&Migrator],
+    ) -> BridgeResult<Self> {
         if let Some(schema) = schema
             && !valid_schema(schema)
         {
@@ -266,10 +209,12 @@ impl Store {
                 )))
                 .await
                 .map_err(store_error)?;
-            POSTGRES
-                .run(&mut admin)
-                .await
-                .map_err(|error| BridgeError::new("account_store", error.to_string()))?;
+            for migrator in migrations {
+                migrator
+                    .run(&mut admin)
+                    .await
+                    .map_err(|error| BridgeError::new("account_store", error.to_string()))?;
+            }
             let _ = admin.close().await;
         }
         let set_path = format!("SET search_path TO {TABLES_SCHEMA}, {home_schema}");
@@ -315,9 +260,10 @@ impl Store {
                 .fetch_one(&mut *connection)
                 .await
                 .map_err(store_error)?;
-                // The tenant lookup must see every tenant to find one: its owner is not held.
+                // The tenant lookup, where there is one (the hub's), must see every tenant
+                // to find one: its owner is not held.
                 let finds: bool = sqlx::query_scalar(
-                    "SELECT bool_or(r.rolsuper OR r.rolbypassrls) FROM pg_proc p
+                    "SELECT COALESCE(bool_or(r.rolsuper OR r.rolbypassrls), true) FROM pg_proc p
                      JOIN pg_roles r ON r.oid = p.proowner
                      WHERE p.proname = 'tenant_of' AND p.pronamespace = 'devagotchi'::regnamespace",
                 )
@@ -527,6 +473,9 @@ fn collided(error: &sqlx::Error) -> bool {
         .is_some_and(|code| code == "40001" || code == "40P01" || code == "23505")
 }
 
+mod settings;
+pub use settings::*;
+
 #[cfg(any(test, feature = "testing"))]
 pub mod testing;
 
@@ -568,23 +517,6 @@ pub fn valid_tenant_id(id: &str) -> bool {
             8 | 13 | 18 | 23 => b == b'-',
             _ => b.is_ascii_digit() || (b'a'..=b'f').contains(&b),
         })
-}
-
-/// A store's URL without what must not be shown: the user and password before `@`, and the
-/// query (which may carry a password too).
-pub fn place_of(url: &str) -> String {
-    let rest = url.split_once("://").map_or(url, |(_, rest)| rest);
-    let rest = rest.split(['?', '#']).next().unwrap_or_default();
-    let (authority, path) = rest.split_once('/').unwrap_or((rest, ""));
-    let host = authority
-        .rsplit_once('@')
-        .map_or(authority, |(_, host)| host);
-    let host = if host.is_empty() {
-        "local socket"
-    } else {
-        host
-    };
-    format!("{host}/{path}")
 }
 
 #[cfg(test)]

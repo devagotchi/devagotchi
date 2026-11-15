@@ -79,7 +79,6 @@ mod tests {
     fn repository_mapping_is_explicit_and_unique() {
         let boards = vec![BoardEntry {
             project: "demo".into(),
-            dir: "unused".into(),
         }];
         let config: GithubConfig = serde_json::from_value(serde_json::json!({
             "repositories": [{"repository_id": 123, "repository": "acme/demo", "project": "demo"}]

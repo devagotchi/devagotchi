@@ -145,12 +145,6 @@ enum Command {
     AnalyticsResend {
         config: PathBuf,
     },
-    ImportBoard {
-        config: PathBuf,
-        source: PathBuf,
-        tenant: String,
-        apply: bool,
-    },
 }
 
 #[derive(Clone)]
@@ -178,9 +172,6 @@ fn parse_args(args: impl IntoIterator<Item = OsString>) -> BridgeResult<Command>
     }
     if args.first().is_some_and(|a| a == "owner") {
         return parse_owner(args.split_off(1));
-    }
-    if args.first().is_some_and(|a| a == "import-board") {
-        return parse_board_import(args.split_off(1));
     }
     if args.first().is_some_and(|a| a == "analytics-resend") {
         let rest = args.split_off(1);
@@ -254,55 +245,6 @@ fn parse_args(args: impl IntoIterator<Item = OsString>) -> BridgeResult<Command>
         _ => Err(BridgeError::new(
             "invalid_cli",
             "see --help for the accepted forms",
-        )),
-    }
-}
-
-fn parse_board_import(args: Vec<OsString>) -> BridgeResult<Command> {
-    if args.len() == 1 && (args[0] == "--help" || args[0] == "-h") {
-        return Ok(Command::Help);
-    }
-    let (mut config, mut source, mut tenant) = (None, None, None);
-    let mut apply = false;
-    let mut args = args.into_iter();
-    while let Some(flag) = args.next() {
-        if flag == "--apply" && !apply {
-            apply = true;
-            continue;
-        }
-        let value = args
-            .next()
-            .ok_or_else(|| BridgeError::new("invalid_cli", "flag without a value"))?;
-        match flag.to_str() {
-            Some("--config") if config.is_none() => config = Some(PathBuf::from(value)),
-            Some("--source") if source.is_none() => source = Some(PathBuf::from(value)),
-            Some("--tenant") if tenant.is_none() => {
-                tenant = Some(value.to_string_lossy().into_owned())
-            }
-            _ => {
-                return Err(BridgeError::new(
-                    "invalid_cli",
-                    "unexpected import-board flag",
-                ));
-            }
-        }
-    }
-    match (config, source, tenant) {
-        (Some(config), Some(source), Some(tenant))
-            if config.is_absolute()
-                && source.is_absolute()
-                && accounts::tenants::valid_tenant_id(&tenant) =>
-        {
-            Ok(Command::ImportBoard {
-                config,
-                source,
-                tenant,
-                apply,
-            })
-        }
-        _ => Err(BridgeError::new(
-            "invalid_cli",
-            "import-board needs --config ABS_JSON --source ABS_SQLITE --tenant t-UUID [--apply]",
         )),
     }
 }
@@ -431,7 +373,7 @@ async fn accounts_at(
     prepare_state_dir(state_dir)?;
     let url = store::postgres_url(config.storage_url())?;
     let schema = store::schema_for(config.storage_schema());
-    let store = store::Store::open_in(&url, schema.as_deref()).await?;
+    let store = store::open_in(&url, schema.as_deref()).await?;
     configured_accounts(store, config).await
 }
 
@@ -494,47 +436,6 @@ async fn operator_event(
 
 fn manage(command: Command) -> BridgeResult<()> {
     match command {
-        Command::ImportBoard {
-            config,
-            source,
-            tenant,
-            apply,
-        } => {
-            let config = read_config(&config)?;
-            let snapshot = agenthub::migration::Snapshot::read(&source)?;
-            let receipt = if apply {
-                let runtime = tokio::runtime::Builder::new_current_thread()
-                    .enable_all()
-                    .build()
-                    .map_err(|error| BridgeError::new("runtime", error.to_string()))?;
-                runtime.block_on(async {
-                    let url = store::postgres_url(config.storage_url())?;
-                    let schema = store::schema_for(
-                        config
-                            .storage
-                            .as_ref()
-                            .and_then(|storage| storage.schema.as_deref()),
-                    );
-                    let store = store::Store::open_in(&url, schema.as_deref()).await?;
-                    snapshot.import_postgres(&store, &tenant).await
-                })?
-            } else {
-                snapshot.receipt(&tenant)
-            };
-            println!(
-                "{}",
-                serde_json::to_string_pretty(&receipt)
-                    .map_err(|error| BridgeError::new("board_import", error.to_string()))?
-            );
-            eprintln!(
-                "{}",
-                if apply {
-                    "Board rows imported into Postgres. Source retained; live board routing has NOT been switched."
-                } else {
-                    "Preview only; no destination opened or modified. Stop source writers and back up before --apply."
-                }
-            );
-        }
         Command::Enroll {
             state,
             config,
@@ -631,7 +532,7 @@ fn manage(command: Command) -> BridgeResult<()> {
                 .map_err(|error| BridgeError::new("runtime", error.to_string()))?;
             runtime.block_on(async {
                 let schema = store::schema_for(config.storage_schema());
-                let store = store::Store::open_in(&url, schema.as_deref()).await?;
+                let store = store::open_in(&url, schema.as_deref()).await?;
                 let marked = warehouse::resend(&store).await?;
                 println!(
                     "marked {marked} board events to send again; the running hub sends them to ClickHouse, which keeps one row per event"
@@ -681,7 +582,7 @@ pub fn cli(args: Vec<OsString>) -> ExitCode {
     let (state_dir, config_path) = match parse_args(args) {
         Ok(Command::Serve { state, config }) => (state, config),
         Ok(Command::Help) => {
-            println!("{USAGE}\n\n{}", agenthub::migration::USAGE);
+            println!("{USAGE}");
             return ExitCode::SUCCESS;
         }
         Ok(command) => {
@@ -738,6 +639,7 @@ pub fn board_cli(args: Vec<OsString>, account_file: Option<PathBuf>) -> ExitCode
         stdout_is_terminal: std::io::stdout().is_terminal(),
         account_file,
         plugin_host: agenthub::cli::plugin_host(|name| env::var_os(name)),
+        hub: Some(Arc::new(account::client::AccountHub)),
     };
     let (mut out, mut err) = (std::io::stdout(), std::io::stderr());
     ExitCode::from(agenthub::cli::run(invocation, &mut out, &mut err))
@@ -762,7 +664,7 @@ async fn run(
     config.extensions = extensions;
     let url = store::postgres_url(config.storage_url())?;
     let schema = store::schema_for(config.storage_schema());
-    let board_store = store::Store::open_in(&url, schema.as_deref()).await?;
+    let board_store = store::open_in(&url, schema.as_deref()).await?;
     let config = Arc::new(config);
     // The running hub follows its site directory: a change is served without a restart,
     // and one that does not check out is refused while the site it had stays.
@@ -913,9 +815,7 @@ async fn run(
         .map_err(|_| BridgeError::new("invalid_config", "listen"))?;
     let warehouse_store = board_store.clone();
     let signals_store = board_store.clone();
-    let boards = Arc::new(
-        agenthub::mcp::Boards::from_config(&config, &state_dir).using_postgres(board_store)?,
-    );
+    let boards = Arc::new(agenthub::mcp::Boards::new(&config, board_store)?);
     if let Some(preferences) = boards.preferences() {
         links.set_preferences(preferences.clone());
     }
@@ -1719,45 +1619,6 @@ mod tests {
     }
 
     #[test]
-    fn board_import_is_preview_first_and_requires_explicit_target_and_absolute_source() {
-        let tenant = "t-00000000-0000-4000-8000-000000000001";
-        let args = [
-            "import-board",
-            "--config",
-            CONFIG,
-            "--source",
-            STATE,
-            "--tenant",
-            tenant,
-        ];
-        let parsed = parse_args(args.map(OsString::from)).unwrap();
-        assert!(matches!(parsed, Command::ImportBoard { apply: false, .. }));
-        let mut apply: Vec<_> = args.into_iter().map(OsString::from).collect();
-        apply.push("--apply".into());
-        assert!(matches!(
-            parse_args(apply).unwrap(),
-            Command::ImportBoard { apply: true, .. }
-        ));
-        let mut relative = args;
-        relative[4] = "relative.sqlite3";
-        assert!(parse_args(relative.map(OsString::from)).is_err());
-        let mut missing_tenant = args.to_vec();
-        missing_tenant.truncate(5);
-        assert!(parse_args(missing_tenant.into_iter().map(OsString::from)).is_err());
-        let mut bad_tenant = args;
-        bad_tenant[6] = "account-is-not-a-tenant";
-        assert!(parse_args(bad_tenant.map(OsString::from)).is_err());
-        for extra in [
-            vec!["--apply", "--apply"],
-            vec!["--source", STATE],
-            vec!["--unknown", "value"],
-        ] {
-            let arguments = args.into_iter().chain(extra).map(OsString::from);
-            assert!(parse_args(arguments).is_err());
-        }
-    }
-
-    #[test]
     fn device_commands_take_a_state_dir_a_device_and_maybe_the_hubs_config() {
         let enroll =
             parse_args(["enroll", "--state-dir", STATE, "--device", "gus"].map(OsString::from))
@@ -1884,7 +1745,7 @@ mod tests {
         run(Some("Jesse")).unwrap();
         run(None).unwrap();
         let (owner, chain) = runtime.block_on(async {
-            let store = store::Store::open(&url).await.unwrap();
+            let store = store::open(&url).await.unwrap();
             let accounts = accounts::Accounts::open(store.clone()).await.unwrap();
             let chain = Audit::new(store).verify().await.unwrap();
             (accounts.owner().await.unwrap().unwrap(), chain)
@@ -1991,7 +1852,9 @@ mod tests {
                     .unwrap(),
             ),
             hub: Hub {
-                boards: Arc::new(agenthub::mcp::Boards::from_config(&config, dir)),
+                boards: Arc::new(
+                    agenthub::mcp::Boards::new(&config, test_store.store.clone()).unwrap(),
+                ),
                 config,
                 audit,
                 links,

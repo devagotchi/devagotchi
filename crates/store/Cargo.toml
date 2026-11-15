@@ -1,6 +1,6 @@
 [package]
 name = "devagotchi-store"
-description = "The database Devagotchi's parts share: Postgres (its own schema, tenant row-level security) or SQLite, one code path, retrying transactions and the migrations"
+description = "The Postgres engine Devagotchi's parts share: its own schema, tenant row-level security, retrying transactions; each crate brings its migrations"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -16,8 +16,8 @@ name = "devagotchi_store"
 path = "src/lib.rs"
 
 [features]
-# `testing`: stores for tests (a SQLite file, a fresh Postgres database when
-# DEVAGOTCHI_TEST_POSTGRES_URL names a server), for the crates built on this one.
+# `testing`: stores for tests (a fresh Postgres database when DEVAGOTCHI_TEST_POSTGRES_URL
+# names a server), for the crates built on this one.
 testing = ["dep:tempfile"]
 
 [dependencies]
@@ -26,8 +26,6 @@ sqlx = { workspace = true }
 tokio = { workspace = true }
 hex = { workspace = true }
 getrandom = "0.4"
-# A SQLite store's path in its URL, encoded and read back the same on every OS.
-percent-encoding = "2"
 tempfile = { workspace = true, optional = true }
 
 [dev-dependencies]

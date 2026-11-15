@@ -3,7 +3,7 @@
 
 use super::*;
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_person_adds_a_machine_of_their_own_and_revokes_it() {
     let w = or_skip!(world());
     let other = w.sign_in("tok-other").await;
@@ -132,7 +132,7 @@ async fn a_person_adds_a_machine_of_their_own_and_revokes_it() {
     );
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn the_one_line_joins_once_and_downloads_only_what_the_hub_vouches_for() {
     use sha2::{Digest, Sha256};
     let dist = tempfile::tempdir().unwrap();
@@ -252,7 +252,7 @@ async fn the_one_line_joins_once_and_downloads_only_what_the_hub_vouches_for() {
 /// The Connect page's call: a bearer gets a one-time code and the hub's own join lines;
 /// the hub's cookie alone gets nothing (no cross-site code minting); the code is spent by
 /// one enroll and the machine then shows under that account's `/api/v1/me` only.
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn api_add_machine_is_bearer_only_and_the_code_joins_for_that_account() {
     use sha2::{Digest, Sha256};
     let dist = tempfile::tempdir().unwrap();

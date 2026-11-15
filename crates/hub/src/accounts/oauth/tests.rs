@@ -361,7 +361,7 @@ async fn two_instances_refreshing_one_token_at_once_get_one_new_pair() {
     // A client retrying a refresh against two hub instances: one rotation counts, the
     // other is refused, and the family stays alive with exactly one live access token.
     for (store, one) in stores().await {
-        let two = Accounts::open(Store::open(&store.url).await.unwrap())
+        let two = Accounts::open(crate::store::open(&store.url).await.unwrap())
             .await
             .unwrap();
         let client = client(&one).await;

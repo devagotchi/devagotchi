@@ -1,6 +1,7 @@
 //! Stores for a test: a fresh database on the test Postgres that
-//! `DEVAGOTCHI_TEST_POSTGRES_URL` names (CI's hub-postgres job sets it). Without one, a test
-//! that needs a store skips (`or_skip!`, or an empty [`stores`]).
+//! `DEVAGOTCHI_TEST_POSTGRES_URL` names (CI's hub-postgres job sets it), migrated with the
+//! migrations the test's crate keeps. Without one, a test that needs a store skips
+//! (`or_skip!`).
 
 use super::*;
 
@@ -13,26 +14,12 @@ pub struct TestStore {
     pub dir: tempfile::TempDir,
 }
 
-/// The stores a test runs on: one new database on the test Postgres, or none without one.
-pub async fn stores() -> Vec<TestStore> {
-    postgres().await.into_iter().collect()
-}
-
-/// The store at `url` brought to migration `version` and no further, as a hub from
-/// before a later migration left it. `Store::open` runs the rest.
-pub async fn migrated_to(url: &str, version: i64) {
-    static DRIVERS: Once = Once::new();
-    DRIVERS.call_once(install_default_drivers);
-    let mut connection = sqlx::AnyConnection::connect(url).await.unwrap();
-    POSTGRES.run_to(version, &mut connection).await.unwrap();
-    connection.close().await.unwrap();
-}
-
-/// A new, empty database on the test server, or `None` without one.
-pub async fn postgres() -> Option<TestStore> {
+/// A new database on the test server, brought up to date with `migrations`, or `None`
+/// without a server.
+pub async fn postgres_with(migrations: &[&Migrator]) -> Option<TestStore> {
     let url = empty_postgres().await?;
     Some(TestStore {
-        store: Store::open(&url).await.unwrap(),
+        store: Store::open(&url, migrations).await.unwrap(),
         url,
         dir: tempfile::tempdir().unwrap(),
     })
@@ -58,6 +45,31 @@ pub async fn empty_postgres() -> Option<String> {
     let base = server.split('?').next().unwrap();
     let (root, _) = base.rsplit_once('/').unwrap();
     Some(format!("{root}/{name}"))
+}
+
+/// `migrations` run on the database at `url` up to `version` and no further, as a build
+/// from before a later migration left it. `Store::open` runs the rest.
+pub async fn migrated_to(url: &str, migrations: &Migrator, version: i64) {
+    static DRIVERS: Once = Once::new();
+    DRIVERS.call_once(install_default_drivers);
+    let mut connection = sqlx::AnyConnection::connect(url).await.unwrap();
+    migrations.run_to(version, &mut connection).await.unwrap();
+    connection.close().await.unwrap();
+}
+
+/// Every migration in `migrations` is LF: sqlx checks each applied migration by checksum, so a
+/// build from a checkout that turned LF into CRLF (Windows, `core.autocrlf`) refuses a database
+/// a Linux build migrated ("migration 1 was previously applied but has been modified").
+/// `.gitattributes` keeps them LF; each crate's tests call this on its own.
+pub fn assert_line_endings(migrations: &Migrator) {
+    for migration in migrations.iter() {
+        assert!(
+            !migration.sql.as_ref().contains('\r'),
+            "migration {} ({}) carries a CR: see .gitattributes",
+            migration.version,
+            migration.description
+        );
+    }
 }
 
 /// What a test fixture that needs the test Postgres gives, or the end of the test when

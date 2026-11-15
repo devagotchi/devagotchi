@@ -81,7 +81,7 @@ while [ $# -gt 0 ]; do
         --role) ROLE=${2:?--role needs machine or hub}; shift 2 ;;
         --public-url) PUBLIC_URL=${2:?--public-url needs a value}; shift 2 ;;
         --listen) LISTEN=${2:?--listen needs host:port}; shift 2 ;;
-        --board) BOARDS+=("${2:?--board needs NAME or NAME=DIR}"); shift 2 ;;
+        --board) BOARDS+=("${2:?--board needs a project NAME}"); shift 2 ;;
         --person) PEOPLE+=("${2:?--person needs a name}"); shift 2 ;;
         --agent) AGENTS+=("${2:?--agent needs a name}"); shift 2 ;;
         --caddy) CADDY=1; shift ;;
@@ -112,8 +112,8 @@ if [ "$ROLE" = hub ]; then
     [ -z "$PUBLIC_URL" ] || [[ $PUBLIC_URL =~ ^https?://[A-Za-z0-9.-]+(:[0-9]+)?$ ]] \
         || die "--public-url must be https://host or http://host:port, with no path"
     [[ $LISTEN =~ ^[]A-Za-z0-9.:[-]+:[0-9]+$ ]] || die "--listen must be host:port"
-    for spec in "${BOARDS[@]}"; do
-        [[ ${spec%%=*} =~ ^[a-z0-9][a-z0-9-]{0,62}$ ]] || die "--board ${spec%%=*}: a project name is [a-z0-9][a-z0-9-]{0,62}"
+    for name in "${BOARDS[@]}"; do
+        [[ $name =~ ^[a-z0-9][a-z0-9-]{0,62}$ ]] || die "--board $name: a project name is [a-z0-9][a-z0-9-]{0,62} (the board is in the hub's Postgres; there is no directory to give)"
     done
     for name in "${PEOPLE[@]}" "${AGENTS[@]}"; do
         [[ $name =~ ^[^[:space:][:cntrl:]\"\\]{1,256}$ ]] || die "--person/--agent $name: no spaces, quotes or control characters"
@@ -370,22 +370,14 @@ if [ "$ROLE" = hub ]; then
     TOKENS=$HOME_DIR/.config/devagotchi/hub-tokens.json
     HUB_CHANGED=$BROKER_CHANGED
 
-    # ---- boards: one per project, initialised as the account so the hub can write them
+    # ---- boards: each a board in the hub's Postgres, made on its first use, shared by grant
     board_names=() board_entries=''
     if [ ${#BOARDS[@]} -gt 0 ]; then
         step "Boards"
-        for spec in "${BOARDS[@]}"; do
-            name=${spec%%=*}; dir=${spec#*=}
-            [ "$dir" != "$spec" ] || dir=$HOME_DIR/projects/$name
-            case $dir in /*) ;; *) die "--board $name: the directory must be absolute" ;; esac
-            case $dir in "$HOME_DIR"/*) as_user sh -c 'umask 077; mkdir -p "$1"' sh "$dir" ;; esac
-            as_user test -d "$dir" -a -w "$dir" -a -x "$dir" \
-                || die "$ACCOUNT cannot write the project directory $dir (chown it, or keep boards under $HOME_DIR/projects)"
-            as_user "$dest/devagotchi" board init --dir "$dir" --project "$name" --agents-md --quiet >/dev/null \
-                || die "board init failed for $name in $dir"
+        for name in "${BOARDS[@]}"; do
             board_names+=("$name")
-            board_entries+="${board_entries:+, }{ \"project\": $(json_string "$name"), \"dir\": $(json_string "$dir") }"
-            echo "    $name: $dir/.devagotchi/board.sqlite3 (AGENTS.md block in place)"
+            board_entries+="${board_entries:+, }{ \"project\": $(json_string "$name") }"
+            echo "    $name: in the hub's Postgres, granted to every --person and --agent of this run"
         done
     fi
     board_list=''
