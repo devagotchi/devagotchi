@@ -32,7 +32,7 @@ from an unrelated passing test.
   Local journals/offline queues may use SQLite; never fall back locally for a bound board.
 - One binary; behavior goes in its libraries. No network in `core` or `mcp`.
   Public OSS code must not contain private WardenMesh deployment code or secrets.
-- Platform execution/IPC backends and unsafe code remain confined to `crates/core/src/execution/platform/*`
+- Platform execution/IPC backends and unsafe code remain confined to `crates/machine-engine/src/execution/platform/*`
   and `crates/ipc/src/{unix,windows}*`, with real-OS tests. No unsafe shortcut elsewhere.
 - Contracts belong in `crates/contracts/src/lib.rs`; regenerate artifacts, never edit
   generated schemas/desktop types. Follow existing formatting, localization and helpers.

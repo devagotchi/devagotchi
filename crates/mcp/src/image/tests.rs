@@ -29,7 +29,7 @@ fn page(
 
 /// A broker holding `bytes` at `/img` that answers reads as the real one does: a page that
 /// is readable text comes back as text, and one that starts inside a UTF-8 character
-/// starts at the next character instead (`crates/core/src/files.rs`); anything else as
+/// starts at the next character instead (`crates/machine-engine/src/files.rs`); anything else as
 /// base64. Pages are `page_bytes` long.
 fn broker(
     bytes: Vec<u8>,

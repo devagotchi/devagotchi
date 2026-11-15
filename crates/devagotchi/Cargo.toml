@@ -17,7 +17,7 @@ path = "src/main.rs"
 
 [dependencies]
 devagotchi-broker = { path = "../broker" }
-devagotchi-core = { workspace = true }
+devagotchi-machine-engine = { workspace = true }
 devagotchi-hub = { path = "../hub" }
 devagotchi-link = { path = "../link" }
 devagotchi-mcp = { path = "../mcp" }

@@ -6,7 +6,7 @@
 //! - Still one broker per user: the state directory is made by the IPC layer that checks
 //!   it, exactly as the broker makes it, and a start finds a broker that already holds it
 //!   (starting up, or running and not answering yet) and waits for that one instead.
-//! - Detached (`devagotchi_core::execution::detached`): a session of its own (Linux), or no
+//! - Detached (`devagotchi_machine_engine::execution::detached`): a session of its own (Linux), or no
 //!   console, its own process group and out of the caller's job where allowed (Windows);
 //!   it inherits nothing but the null device and its log, so an AI client's pipes are never
 //!   held open; it runs in its state directory with a pared-down environment. The process
@@ -171,8 +171,8 @@ fn spawn(
     program: &Path,
     args: &[OsString],
     state: &Path,
-) -> std::io::Result<devagotchi_core::execution::detached::Detached> {
-    use devagotchi_core::execution::detached;
+) -> std::io::Result<devagotchi_machine_engine::execution::detached::Detached> {
+    use devagotchi_machine_engine::execution::detached;
     let env = detached::environment(std::env::vars_os());
     detached::spawn(&detached::DetachedSpec {
         program,
