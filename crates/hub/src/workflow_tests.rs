@@ -1688,7 +1688,7 @@ async fn the_sites_workflows_name_only_clients_and_kinds_the_hub_runs() {
     let mut known = crate::site::workflows::AI_CLIENTS.to_vec();
     known.sort_unstable();
     assert_eq!(clients, known);
-    let mut families: Vec<&str> = crate::analytics::funnel::FAMILIES
+    let mut families: Vec<&str> = crate::ops::analytics::funnel::FAMILIES
         .iter()
         .copied()
         .filter(|f| *f != "other")
@@ -1705,7 +1705,7 @@ async fn the_sites_workflows_name_only_clients_and_kinds_the_hub_runs() {
         ("Cursor", "cursor"),
     ] {
         assert_eq!(
-            crate::analytics::funnel::client_family(name),
+            crate::ops::analytics::funnel::client_family(name),
             family,
             "{name}"
         );

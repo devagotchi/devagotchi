@@ -20,7 +20,7 @@
 
 use std::net::IpAddr;
 
-use crate::analytics::funnel;
+use crate::ops::analytics::funnel;
 
 use super::*;
 

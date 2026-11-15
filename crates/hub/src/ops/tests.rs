@@ -7,7 +7,8 @@
 use serde_json::{Value, json};
 use sqlx::Row;
 
-use super::*;
+use super::analytics;
+use crate::*;
 use crate::{
     accounts::identities::Proven,
     tenant_tests::{Hosted, hosted_with, refused},
@@ -256,7 +257,7 @@ async fn each_milestone_is_written_once_where_it_happens() {
     for store in stores().await {
         let hub = or_skip!(hosted_with(store.as_deref(), |dir, _| {
             let mut site: Value =
-                serde_json::from_str(include_str!("../site/default/site.json")).unwrap();
+                serde_json::from_str(include_str!("../../site/default/site.json")).unwrap();
             site["early_access"] = json!({ "mode": "early_access" });
             let path = dir.join("site");
             std::fs::create_dir_all(&path).unwrap();

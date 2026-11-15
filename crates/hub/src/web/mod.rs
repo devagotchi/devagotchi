@@ -140,7 +140,7 @@ pub async fn bar(
                 if state.hub.config.multi_tenant() && state.hub.config.is_owner(&subject.id) {
                     request
                         .extensions_mut()
-                        .insert(crate::analytics::OperatorVisit);
+                        .insert(crate::ops::analytics::OperatorVisit);
                 }
                 Some(subject.provisional_until.is_some())
             }

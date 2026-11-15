@@ -13,8 +13,8 @@ use axum::{
 
 use crate::{
     AppState,
-    analytics::{OperatorVisit, View, day_of, visit},
     machines::now_secs,
+    ops::analytics::{OperatorVisit, View, day_of, visit},
 };
 
 pub async fn count(State(state): State<AppState>, request: Request, next: Next) -> Response {

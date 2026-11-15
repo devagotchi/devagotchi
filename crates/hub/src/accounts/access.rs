@@ -31,7 +31,7 @@ use std::{
 
 use super::*;
 use crate::{
-    analytics::funnel,
+    ops::analytics::funnel,
     site::{Plan, SignUp, Site},
     store::Lookup,
 };

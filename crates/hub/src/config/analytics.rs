@@ -1,5 +1,5 @@
 //! `analytics` in the hub's config: whether a hosted hub counts visits to its public pages
-//! and its accounts' milestones for its operator (`src/analytics.rs`), and how long it
+//! and its accounts' milestones for its operator (`src/ops/analytics/`), and how long it
 //! keeps each visit before only the daily totals remain.
 //!
 //! ```jsonc

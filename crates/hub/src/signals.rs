@@ -27,8 +27,8 @@ use serde_json::{Value, json};
 use sha2::Sha256;
 
 use crate::{
-    audit::Audit,
     config::{SinkConfig, SinkFields},
+    ops::audit::Audit,
     store::{Store, transaction},
 };
 

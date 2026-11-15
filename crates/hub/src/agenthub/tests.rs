@@ -71,7 +71,7 @@ mod bound {
         }
         let config = Arc::new(HubConfig::parse(&value.to_string()).unwrap());
         let devices = crate::machines::devices::test_registry().await?;
-        let audit = crate::audit::test_audit().await?;
+        let audit = crate::ops::audit::test_audit().await?;
         let links = Arc::new(Links::new(config.clone(), devices.clone(), audit.clone()));
         let store = crate::store::testing::postgres().await?.store;
         let state = AppState {

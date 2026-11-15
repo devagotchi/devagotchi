@@ -482,10 +482,10 @@ async fn a_clickhouse_saved_on_the_settings_page_is_checked_sealed_and_exported_
     let sealer = crate::sealed::Sealer::ephemeral();
     let mut on = hub.accounts.clickhouse_setting().await.unwrap().unwrap();
     on.enabled = true;
-    on.sealed_password = sealer.seal(crate::warehouse::SEALED_AS, "after-restart");
+    on.sealed_password = sealer.seal(crate::ops::warehouse::SEALED_AS, "after-restart");
     hub.accounts.save_clickhouse("test", &on).await.unwrap();
     fake.keys.lock().unwrap().clear();
-    let started = crate::warehouse::start_stored(
+    let started = crate::ops::warehouse::start_stored(
         &hub.hub.boards,
         &hub.accounts,
         &sealer,

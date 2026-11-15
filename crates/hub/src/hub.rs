@@ -18,9 +18,8 @@ use rmcp::{
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    agenthub::mcp::Boards, audit::Audit, auth::Subject, config::HubConfig, machines::link::Links,
-};
+use crate::ops::{analytics::Analytics, audit::Audit};
+use crate::{agenthub::mcp::Boards, auth::Subject, config::HubConfig, machines::link::Links};
 
 #[derive(Clone)]
 pub struct Hub {
@@ -34,7 +33,7 @@ pub struct Hub {
     /// The build this hub hands to machines that join it (`/join`, `/dist`), when configured.
     pub downloads: Option<Arc<crate::machines::downloads::Downloads>>,
     /// What a hosted hub counts for its operator (`crate::analytics`), when it counts.
-    pub analytics: Option<Arc<crate::analytics::Analytics>>,
+    pub analytics: Option<Arc<Analytics>>,
     /// The workflows an AI starts for its person (`crate::workflows`), on a hub with its own
     /// accounts.
     pub workflows: Option<Arc<crate::workflows::Workflows>>,

@@ -150,7 +150,7 @@ stable id. A sink that is down falls behind alone; `/healthz` reports each one u
 
 With `clickhouse.url` in the config (or `DEVAGOTCHI_CLICKHOUSE_URL`; `_DATABASE` and
 `_USER` beside it, the password only in `DEVAGOTCHI_CLICKHOUSE_PASSWORD`) the hub exports
-every board event from its Postgres outbox to ClickHouse (`src/warehouse.rs`, ADR 0001).
+every board event from its Postgres outbox to ClickHouse (`src/ops/warehouse/`, ADR 0001).
 The outbox row commits with the board change it records; the exporter sends what waits, at
 most 500 events per tenant and 50 tenants a round, and marks them delivered once ClickHouse
 has taken them. Delivery is at least once: the table is a `ReplacingMergeTree` ordered by
@@ -611,7 +611,7 @@ gets an account and a tenant (`t-<uuid>`) of their own, made on the spot:
   against the plan's limits, and when and by whom it was let in. Plain forms, no script,
   posts only from the hub's own page; every word from `content/messages.json` `operator`.
   The owner's account page links to it.
-- **First-party analytics** (`src/analytics.rs`, migration 0009): a hosted hub counts, for
+- **First-party analytics** (`src/ops/analytics/`, migration 0009): a hosted hub counts, for
   its operator, what it serves itself: no script, no cookie, no beacon, nothing
   third-party. Each `GET` of a public page (`/`, `/docs`, `/privacy`, `/terms`,
   `/support`) answered `200` keeps the UTC day and hour, the path, the link's

@@ -15,10 +15,6 @@ mod accounts;
 pub mod agenthub;
 #[cfg(test)]
 mod ahead_tests;
-mod analytics;
-#[cfg(test)]
-mod analytics_tests;
-mod audit;
 mod auth;
 mod config;
 mod connect;
@@ -41,6 +37,7 @@ mod notes_tests;
 mod offers;
 #[cfg(test)]
 mod offers_tests;
+mod ops;
 mod orgs;
 #[cfg(test)]
 mod orgs_tests;
@@ -64,7 +61,6 @@ mod tenant_machines;
 mod tenant_tests;
 #[cfg(test)]
 mod test_keys;
-mod warehouse;
 mod web;
 #[cfg(test)]
 mod workflow_tests;
@@ -76,12 +72,12 @@ use std::{
 };
 
 use crate::{
-    audit::Audit,
     auth::{AuthError, Verifier},
     config::HubConfig,
     hub::Hub,
     machines::devices::Devices,
     machines::link::Links,
+    ops::audit::Audit,
 };
 use axum::{
     Router,
@@ -421,7 +417,7 @@ async fn operator_event(
         .unwrap_or_else(|_| "unknown".into());
     let subject = format!("operator:{user}");
     audit
-        .record(&audit::AuditEntry {
+        .record(&ops::audit::AuditEntry {
             subject: &subject,
             via: "cli",
             tool,
@@ -532,7 +528,7 @@ fn manage(command: Command) -> BridgeResult<()> {
             runtime.block_on(async {
                 let schema = store::schema_for(config.storage_schema());
                 let store = store::open_in(&url, schema.as_deref()).await?;
-                let marked = warehouse::resend(&store).await?;
+                let marked = ops::warehouse::resend(&store).await?;
                 println!(
                     "marked {marked} board events to send again; the running hub sends them to ClickHouse, which keeps one row per event"
                 );
@@ -737,7 +733,7 @@ async fn run(
     };
     // A hosted hub counts visits and its accounts' milestones for its operator, in its store.
     let analytics = match &accounts {
-        Some(accounts) if config.counts_visits() => Some(analytics::Analytics::start(
+        Some(accounts) if config.counts_visits() => Some(ops::analytics::Analytics::start(
             accounts.store().clone(),
             config.analytics,
             &config.public_url,
@@ -822,7 +818,7 @@ async fn run(
     // required for the boards themselves.
     if let Some(clickhouse) = &config.clickhouse {
         let password = std::env::var(config::CLICKHOUSE_PASSWORD_ENV).ok();
-        let warehouse = Arc::new(warehouse::Warehouse::new(
+        let warehouse = Arc::new(ops::warehouse::Warehouse::new(
             clickhouse,
             warehouse_store,
             password,
@@ -836,7 +832,8 @@ async fn run(
     } else if let Some(hub) = &passkeys {
         // Else the ClickHouse the owner set on the settings page, if any. One it cannot
         // start is said here and on the page; the boards work without it.
-        match warehouse::start_stored(&boards, hub.accounts(), hub.sealer(), warehouse_store).await
+        match ops::warehouse::start_stored(&boards, hub.accounts(), hub.sealer(), warehouse_store)
+            .await
         {
             Ok(true) => eprintln!(
                 "devagotchi hub: exporting board events to the ClickHouse set on the settings page"
@@ -912,7 +909,7 @@ async fn run(
         state
             .hub
             .audit
-            .record(&audit::AuditEntry {
+            .record(&ops::audit::AuditEntry {
                 subject: "hub",
                 via: "start",
                 tool: "account.claim_code",
@@ -1040,10 +1037,12 @@ fn app(state: AppState) -> Router {
                 )),
         )
         // Board statistics from ClickHouse (`warehouse`), for anyone who reads the board.
-        .merge(warehouse::routes().layer(middleware::from_fn_with_state(
-            state.clone(),
-            orgs::api::bearer_or_session,
-        )))
+        .merge(
+            ops::warehouse::routes().layer(middleware::from_fn_with_state(
+                state.clone(),
+                orgs::api::bearer_or_session,
+            )),
+        )
         // Organisations, members, teams, project roles and invites (`orgs::api`).
         .merge(
             orgs::api::routes()
@@ -1841,7 +1840,7 @@ mod tests {
             .clone()
             .and_then(|accounts| web::HubSignIn::new(config.clone(), accounts).map(Arc::new));
         let devices = machines::devices::test_registry().await?;
-        let audit = crate::audit::test_audit().await?;
+        let audit = crate::ops::audit::test_audit().await?;
         let links = Arc::new(Links::new(config.clone(), devices, audit.clone()));
         let test_store = crate::store::testing::postgres().await?;
         Some(AppState {

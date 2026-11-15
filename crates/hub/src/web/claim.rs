@@ -17,7 +17,7 @@ use axum::{
 use serde::Deserialize;
 
 use super::{pages, passkeys};
-use crate::{AppState, audit::AuditEntry};
+use crate::{AppState, ops::audit::AuditEntry};
 
 /// `GET /claim`: the claim form on a hub that can be claimed; a pointer to sign-in on one
 /// whose owner is decided.

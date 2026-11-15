@@ -17,7 +17,7 @@
 //! An email counts only when the provider says it verified it; only verified ones are kept.
 
 use super::*;
-use crate::{analytics::funnel, store::Lookup};
+use crate::{ops::analytics::funnel, store::Lookup};
 
 /// A sign-in a provider proved.
 #[derive(Debug, Clone, PartialEq, Eq)]

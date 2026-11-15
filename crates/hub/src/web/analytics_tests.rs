@@ -126,8 +126,9 @@ async fn dashboard(hub: Hosted) {
     assert_eq!(step(&html, "Secured"), ("0".into(), "0.0%".into()));
     assert_eq!(step(&html, "Let in"), ("0".into(), "—".into()));
     // Today's tooltip has today's numbers.
-    let today =
-        crate::analytics::report::iso_day(crate::analytics::day_of(crate::machines::now_secs()));
+    let today = crate::ops::analytics::report::iso_day(crate::ops::analytics::day_of(
+        crate::machines::now_secs(),
+    ));
     assert!(
         html.contains(&format!("<title>{today}: 3 page views, 1 visitors</title>")),
         "{html}"

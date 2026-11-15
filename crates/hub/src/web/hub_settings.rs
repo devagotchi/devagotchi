@@ -20,6 +20,7 @@ use super::{
     pages::{self, Tab, escape},
     routes::{see_other, unavailable},
 };
+use crate::ops::warehouse;
 use crate::{
     AppState,
     accounts::{
@@ -699,7 +700,7 @@ pub async fn save_analytics(
     let sealed = if password.is_empty() {
         kept
     } else {
-        sealer.seal(crate::warehouse::SEALED_AS, password)
+        sealer.seal(warehouse::SEALED_AS, password)
     };
     let setting = StoredClickHouse {
         url: url.to_string(),
@@ -711,10 +712,9 @@ pub async fn save_analytics(
         updated_by: String::new(),
     };
     if setting.enabled {
-        let password = sealer.open_value(crate::warehouse::SEALED_AS, &setting.sealed_password);
+        let password = sealer.open_value(warehouse::SEALED_AS, &setting.sealed_password);
         if let Err(error) =
-            crate::warehouse::start_checked(&state.hub.boards, store, &setting.config(), password)
-                .await
+            warehouse::start_checked(&state.hub.boards, store, &setting.config(), password).await
         {
             return refused(
                 StatusCode::BAD_REQUEST,

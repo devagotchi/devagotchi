@@ -38,10 +38,10 @@ use super::{
     face::ME,
 };
 use crate::{
-    audit::AuditEntry,
     auth::Subject,
     config::{DEFAULT_FREE_LIMIT, HubConfig, valid_name},
     hub::Hub,
+    ops::audit::AuditEntry,
     orgs::Role,
     site::Cap,
 };
@@ -65,7 +65,7 @@ pub struct Boards {
     preferences: Option<crate::preferences::PreferenceStore>,
     /// The export of these boards' events to ClickHouse (`crate::warehouse`), when the hub
     /// has one: from the config at start, or from the settings page at any time.
-    warehouse: std::sync::RwLock<Option<Arc<crate::warehouse::Warehouse>>>,
+    warehouse: std::sync::RwLock<Option<Arc<crate::ops::warehouse::Warehouse>>>,
     /// The hub's signal sinks (`crate::signals`), set once at start.
     sinks: std::sync::OnceLock<Vec<Arc<crate::signals::Sink>>>,
     /// The boards the hub's config names (`boards`), shared by grant.
@@ -177,7 +177,7 @@ impl Boards {
 
     /// Export these boards' events to ClickHouse through `warehouse`, or stop exporting
     /// (`None`). The export it replaces is stopped; its caller runs the new one.
-    pub(crate) fn set_warehouse(&self, warehouse: Option<Arc<crate::warehouse::Warehouse>>) {
+    pub(crate) fn set_warehouse(&self, warehouse: Option<Arc<crate::ops::warehouse::Warehouse>>) {
         let old = std::mem::replace(
             &mut *self.warehouse.write().expect("warehouse lock"),
             warehouse,
@@ -188,7 +188,7 @@ impl Boards {
     }
 
     /// The ClickHouse export, when the hub has one.
-    pub(crate) fn warehouse(&self) -> Option<Arc<crate::warehouse::Warehouse>> {
+    pub(crate) fn warehouse(&self) -> Option<Arc<crate::ops::warehouse::Warehouse>> {
         self.warehouse.read().expect("warehouse lock").clone()
     }
 
@@ -2451,7 +2451,7 @@ impl Hub {
             (&result, &self.analytics, &subject.tenant)
             && bound.created
         {
-            analytics.tenant_event(tenant, crate::analytics::funnel::BOARD);
+            analytics.tenant_event(tenant, crate::ops::analytics::funnel::BOARD);
         }
         if let Err(error) = self
             .audited(&subject, "board_bind", &input.project, "", &outcome)
