@@ -23,6 +23,7 @@
 //!   machine. Nobody is handed a command that cannot work.
 
 pub(crate) mod mcp;
+pub mod stored;
 
 use std::sync::Arc;
 
@@ -32,16 +33,14 @@ use serde::Serialize;
 
 use crate::ops::analytics::funnel;
 use crate::{
-    accounts::{
-        Accounts,
-        workflows::{StepProgress, WorkflowRow},
-    },
+    accounts::Accounts,
     auth::Subject,
     hub::Hub,
     site::{
         Ctx, Site,
         workflows::{AI_CLIENT, DONE, MACHINE, MACHINE_OS, PHONE, SECURE_ACCOUNT},
     },
+    workflows::stored::{StepProgress, WorkflowRow},
 };
 
 /// The workflows of a hub with its own accounts: their store, how long a link works, and

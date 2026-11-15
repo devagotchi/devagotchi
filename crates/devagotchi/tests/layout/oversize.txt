@@ -17,7 +17,7 @@
 838	crates/core/src/execution/platform/windows.rs
 1148	crates/devagotchi/tests/one_binary.rs
 1153	crates/hub/src/account.rs
-1268	crates/hub/src/accounts.rs
+1265	crates/hub/src/accounts.rs
 507	crates/hub/src/accounts/access.rs
 573	crates/hub/src/accounts/api_keys.rs
 647	crates/hub/src/accounts/oauth.rs
@@ -25,7 +25,6 @@
 545	crates/hub/src/accounts/tenants.rs
 768	crates/hub/src/accounts/tenants/tests.rs
 919	crates/hub/src/accounts/tests.rs
-681	crates/hub/src/accounts/workflows.rs
 626	crates/hub/src/agenthub/issue_lifecycle/tests.rs
 3003	crates/hub/src/agenthub/mcp/mod.rs
 592	crates/hub/src/agenthub/tests.rs
@@ -33,7 +32,7 @@
 1544	crates/hub/src/config.rs
 1097	crates/hub/src/hub.rs
 542	crates/hub/src/hub_settings_tests.rs
-2007	crates/hub/src/lib.rs
+2005	crates/hub/src/lib.rs
 1142	crates/hub/src/machines/link/mod.rs
 696	crates/hub/src/nomen.rs
 711	crates/hub/src/nomen/tests/mod.rs
@@ -53,7 +52,7 @@
 510	crates/hub/src/web/app/agenthub/ticket_tests.rs
 713	crates/hub/src/web/approvals.rs
 696	crates/hub/src/web/discovery_tests.rs
-735	crates/hub/src/web/hub_settings.rs
+733	crates/hub/src/web/hub_settings.rs
 677	crates/hub/src/web/landing.rs
 751	crates/hub/src/web/oauth.rs
 1082	crates/hub/src/web/orgs.rs
@@ -63,10 +62,11 @@
 949	crates/hub/src/web/providers.rs
 687	crates/hub/src/web/routes.rs
 1206	crates/hub/src/web/tests/mod.rs
-1088	crates/hub/src/web/workflow.rs
+1086	crates/hub/src/web/workflow.rs
 1771	crates/hub/src/workflow_tests.rs
-586	crates/hub/src/workflows.rs
+585	crates/hub/src/workflows.rs
 531	crates/hub/src/workflows/mcp.rs
+625	crates/hub/src/workflows/stored/mod.rs
 516	crates/ipc/src/windows/security.rs
 582	crates/mcp/src/adapter.rs
 802	crates/mcp/src/connect.rs

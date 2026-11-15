@@ -7,7 +7,7 @@
 //!   ask once, after the person's first machine works (`mcp.rs`).
 //! - **Yes is the person's own words, kept.** `offers_accept {consent}` takes what they
 //!   said, exactly, and keeps it with the time on the tenant's chain (`offers.accepted`)
-//!   and in its row (`accounts/offers.rs`, migration 0012), in one transaction.
+//!   and in its row (`offers/stored.rs`, migration 0012), in one transaction.
 //! - **Then the account is linked, with no click where the hub can.** With
 //!   `shippin.provisioning` (`config/shippin.rs`) and an account whose email the hub has
 //!   verified, the hub finds that person on Nomen, or makes them, and links the account to
@@ -20,12 +20,13 @@
 
 pub(crate) mod mcp;
 pub mod nomen;
+pub mod stored;
 
 use std::sync::Arc;
 
 use devagotchi_contracts::{BridgeError, BridgeResult};
 
-use crate::{accounts::Accounts, accounts::offers::OfferRow, config::HubConfig, hub::Hub};
+use crate::{accounts::Accounts, config::HubConfig, hub::Hub, offers::stored::OfferRow};
 
 /// The tools that exist only while the site's offers show.
 pub const TOOLS: [&str; 2] = ["offers", "offers_accept"];

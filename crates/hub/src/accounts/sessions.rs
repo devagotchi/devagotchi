@@ -193,7 +193,7 @@ impl Accounts {
 /// Store a new session of `account` (of `tenant`, which the caller's transaction is scoped
 /// to): expired sessions are cleared, and past the cap the account's least recently used
 /// ones make room. Returns its token.
-pub(super) async fn insert_session(
+pub(crate) async fn insert_session(
     connection: &mut AnyConnection,
     tenant: &str,
     account: &str,
