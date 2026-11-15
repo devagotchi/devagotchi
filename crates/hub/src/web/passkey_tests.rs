@@ -88,7 +88,7 @@ async fn world_configured(owner: Option<&str>, site: Option<&std::path::Path>) -
     let push = Arc::new(crate::push::Push::open(dir.path(), &url, devices).unwrap());
     let state = AppState {
         verifier: Arc::new(
-            Verifier::from_hub_config(&config, dir.path(), Some(accounts.clone()))
+            Verifier::from_hub_config(&config, accounts.store(), Some(accounts.clone()))
                 .await
                 .unwrap(),
         ),
@@ -1187,7 +1187,7 @@ async fn an_ai_client_registers_the_owner_approves_it_and_the_hub_checks_its_tok
     // `/mcp` takes it: the account, as an AI the hub connected, never as the person.
     let verifier_for_mcp = Verifier::from_hub_config(
         &world.config,
-        world._dir.path(),
+        world.accounts.store(),
         Some(world.accounts.clone()),
     )
     .await

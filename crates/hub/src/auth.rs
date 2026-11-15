@@ -3,7 +3,6 @@
 
 use std::{
     collections::HashMap,
-    path::Path,
     sync::{Arc, Mutex, RwLock},
     time::{Duration, Instant},
 };
@@ -130,10 +129,10 @@ impl Verifier {
     /// trusted issuer runs at start, like `auth.mode oidc`, so a wrong URL stops the hub.
     pub async fn from_hub_config(
         config: &crate::config::HubConfig,
-        state_dir: &Path,
+        store: &crate::store::Store,
         accounts: Option<std::sync::Arc<crate::accounts::Accounts>>,
     ) -> BridgeResult<Self> {
-        let mut primary = Self::primary(&config.auth, state_dir).await?;
+        let mut primary = Self::primary(&config.auth, store).await?;
         if let (true, Some(accounts)) = (config.has_accounts(), accounts) {
             let nomen = match primary {
                 Verifier::Closed => None,
@@ -159,8 +158,8 @@ impl Verifier {
     }
 
     /// The verifier `auth` names. A Nomen verifier keeps the sign-ins Nomen confirmed
-    /// in `state_dir`, so a restart during a Nomen outage signs nobody out.
-    async fn primary(config: &AuthConfig, state_dir: &Path) -> BridgeResult<Self> {
+    /// in the hub's store, so a restart during a Nomen outage signs nobody out.
+    async fn primary(config: &AuthConfig, store: &crate::store::Store) -> BridgeResult<Self> {
         match config {
             AuthConfig::Oidc { issuer, audiences } => Ok(Verifier::Oidc(
                 OidcVerifier::discover(issuer, audiences).await?,
@@ -174,7 +173,8 @@ impl Verifier {
                         nomen.clients,
                         nomen.key_file,
                     )?
-                    .remembering(&state_dir.join("signins.sqlite3")),
+                    .remembering(store.clone())
+                    .await,
                 )),
                 None => Ok(Verifier::Closed),
             },

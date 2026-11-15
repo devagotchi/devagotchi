@@ -932,22 +932,8 @@ async fn run(
         )),
         None => None,
     };
-    let verifier = Arc::new(Verifier::from_hub_config(&config, &state_dir, accounts).await?);
-    let web = match (&config.web, &config.auth) {
-        (
-            Some(web),
-            config::AuthConfig::Nomen {
-                issuer, audiences, ..
-            },
-        ) => Some(Arc::new(web::WebLogin::new(
-            issuer,
-            audiences,
-            &web.client_id,
-            &config.public_url,
-            &state_dir,
-        )?)),
-        _ => None,
-    };
+    let verifier = Arc::new(Verifier::from_hub_config(&config, &board_store, accounts).await?);
+    let web = web::WebLogin::for_hub(&config, &state_dir, &board_store)?.map(Arc::new);
     let listen: SocketAddr = config
         .listen
         .parse()
@@ -2029,9 +2015,10 @@ mod tests {
         let devices = machines::devices::test_registry().await?;
         let audit = crate::audit::test_audit().await?;
         let links = Arc::new(Links::new(config.clone(), devices, audit.clone()));
+        let test_store = crate::store::testing::postgres().await?;
         Some(AppState {
             verifier: Arc::new(
-                Verifier::from_hub_config(&config, dir, accounts)
+                Verifier::from_hub_config(&config, &test_store.store, accounts)
                     .await
                     .unwrap(),
             ),

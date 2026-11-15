@@ -36,11 +36,11 @@
 1572	crates/hub/src/config.rs
 1098	crates/hub/src/hub.rs
 564	crates/hub/src/hub_settings_tests.rs
-2191	crates/hub/src/lib.rs
+2178	crates/hub/src/lib.rs
 1146	crates/hub/src/machines/link/mod.rs
 539	crates/hub/src/mail.rs
-702	crates/hub/src/nomen.rs
-786	crates/hub/src/nomen/tests.rs
+696	crates/hub/src/nomen.rs
+711	crates/hub/src/nomen/tests/mod.rs
 845	crates/hub/src/offers_tests.rs
 1570	crates/hub/src/orgs.rs
 521	crates/hub/src/orgs/api/mod.rs
@@ -51,7 +51,6 @@
 843	crates/hub/src/site/tests.rs
 574	crates/hub/src/site/workflows.rs
 914	crates/hub/src/tenant_tests.rs
-599	crates/hub/src/web.rs
 607	crates/hub/src/web/analytics.rs
 543	crates/hub/src/web/app/agenthub/ticket_tests.rs
 713	crates/hub/src/web/approvals.rs
@@ -65,7 +64,7 @@
 1112	crates/hub/src/web/passkeys.rs
 949	crates/hub/src/web/providers.rs
 687	crates/hub/src/web/routes.rs
-1654	crates/hub/src/web/tests/mod.rs
+1227	crates/hub/src/web/tests/mod.rs
 1088	crates/hub/src/web/workflow.rs
 1771	crates/hub/src/workflow_tests.rs
 586	crates/hub/src/workflows.rs

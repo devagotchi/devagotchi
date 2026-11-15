@@ -180,8 +180,10 @@ async fn both_backends_have_the_same_tables_and_columns() {
 
 /// Tables made since the hub keeps nothing in SQLite (free-edition R3): no SQLite twin. The
 /// twin directory goes with M6; until then the tables before them stay in step.
-const POSTGRES_ONLY: [&str; 4] = [
+const POSTGRES_ONLY: [&str; 6] = [
     "audit_entries",
+    "auth_nomen_sign_ins",
+    "auth_web_sessions",
     "machine_devices",
     "machine_enroll_codes",
     "push_subscriptions",

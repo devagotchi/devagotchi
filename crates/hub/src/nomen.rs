@@ -33,7 +33,6 @@
 
 use std::{
     collections::HashMap,
-    path::Path,
     sync::{
         Mutex,
         atomic::{AtomicBool, Ordering},
@@ -268,23 +267,14 @@ impl NomenVerifier {
         &self.accepts.issuer
     }
 
-    /// Keep confirmed sign-ins in `path` and take back the ones a previous run kept, to
-    /// be honoured only while Nomen cannot be reached (Nomen is asked first, as for any
-    /// sign-in past its minute). A store that cannot be opened is logged and skipped.
-    pub fn remembering(mut self, path: &Path) -> Self {
-        let store = match kept::SignIns::open(path) {
-            Ok(store) => store,
-            Err(error) => {
-                eprintln!(
-                    "devagotchi hub: confirmed sign-ins will not survive a restart: {}: {error}",
-                    path.display()
-                );
-                return self;
-            }
-        };
+    /// Keep confirmed sign-ins in the hub's store and take back the ones a previous run
+    /// kept, to be honoured only while Nomen cannot be reached (Nomen is asked first, as for
+    /// any sign-in past its minute). A store that cannot be read is logged and skipped.
+    pub async fn remembering(mut self, store: crate::store::Store) -> Self {
+        let store = kept::SignIns::new(store);
         let now_unix = unix_now();
         let now = Instant::now();
-        match store.load(now_unix) {
+        match store.load(now_unix).await {
             Ok(rows) => {
                 let count = rows.len();
                 let mut cache = self.cache.lock().expect("nomen cache lock");
@@ -324,16 +314,19 @@ impl NomenVerifier {
     }
 
     /// Write a confirmation to disk, or remove a token Nomen no longer vouches for.
-    fn keep_on_disk(&self, digest: &[u8; 32], confirmed: Option<(&Subject, u64)>) {
+    async fn keep_on_disk(&self, digest: &[u8; 32], confirmed: Option<(&Subject, u64)>) {
         let Some(store) = &self.kept else { return };
         let written = match confirmed {
-            Some((subject, honour_until)) => store.keep(&kept::Kept {
-                digest: *digest,
-                subject: subject.clone(),
-                confirmed_at: unix_now(),
-                honour_until,
-            }),
-            None => store.forget(digest),
+            Some((subject, honour_until)) => {
+                let kept = kept::Kept {
+                    digest: *digest,
+                    subject: subject.clone(),
+                    confirmed_at: unix_now(),
+                    honour_until,
+                };
+                store.keep(&kept).await
+            }
+            None => store.forget(digest).await,
         };
         match written {
             Ok(()) => {
@@ -413,11 +406,12 @@ impl NomenVerifier {
             (Ok(subject), Some(exp)) => {
                 let left = Duration::from_secs(exp.saturating_sub(now));
                 let honour = HONOUR_MAX.min(left);
-                self.keep_on_disk(&digest, Some((subject, now + honour.as_secs())));
+                self.keep_on_disk(&digest, Some((subject, now + honour.as_secs())))
+                    .await;
                 (self.fresh_for.min(left), Some(asked + honour))
             }
             (Err(_), _) => {
-                self.keep_on_disk(&digest, None);
+                self.keep_on_disk(&digest, None).await;
                 (self.fresh_for, None)
             }
             _ => (self.fresh_for, None),

@@ -134,7 +134,7 @@ pub(crate) async fn hosted_with_ingress(
     }
     let state = AppState {
         verifier: Arc::new(
-            Verifier::from_hub_config(&config, dir.path(), Some(accounts.clone()))
+            Verifier::from_hub_config(&config, accounts.store(), Some(accounts.clone()))
                 .await
                 .unwrap(),
         ),

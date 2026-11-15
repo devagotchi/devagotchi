@@ -1,187 +1,8 @@
-//! People's view of the hub in a browser: sign in, and see who you are signed in as and
-//! the machines you can reach, each online or offline. A hub in `auth.mode hub` signs
-//! people in itself with passkeys (`passkeys.rs`); in `auth.mode nomen` with a `web`
-//! section, through Nomen as below.
-//!
-//! Nomen sign-in is the OAuth 2.0 authorization code flow with PKCE (RFC 7636) against Nomen, as
-//! a public client: no secret ships with the hub for it. The access token Nomen returns is
-//! checked by the same introspection as every bearer token (accepted clients, audience,
-//! exact account ID), so a browser session is never weaker than an MCP call.
-//!
-//! - The browser holds only a random session id; the hub keeps that id's SHA-256 and,
-//!   sealed on disk, Nomen's tokens (`sessions.rs`), so a restart signs nobody out.
-//! - The hub asks for `offline_access`. With a refresh token from Nomen, the session lasts
-//!   up to 90 days and ends after 30 days unused. The hub renews the access token through
-//!   Nomen as it runs out, one refresh at a time, keeping the rotated refresh token.
-//!   Nomen refusing a refresh ends the session. Without a refresh token, a session never
-//!   outlives its access token or [`NO_REFRESH_MAX`].
-//! - Every page re-checks the access token (Nomen's answer is reused for up to a minute),
-//!   so an account disabled in Nomen loses its page within a minute.
-//! - Signing out removes the session and revokes its refresh token at Nomen.
-//! - `state` is bound to the browser with a short-lived cookie (login CSRF), is single-use,
-//!   and the page to return to is kept on the hub, only ever a path on this hub.
-//! - Cookies carry the `__Host-` prefix, `Secure`, `HttpOnly` and `SameSite=Lax`
-//!   (plain names without `Secure` only when the hub runs on loopback http, for tests).
-//! - Redirects are not followed when talking to Nomen.
+//! Signing in on the hub's pages with Nomen (`auth.mode nomen` with a `web` section): the
+//! authorization-code round trip with PKCE, and the browser session it leaves, kept in the
+//! hub's Postgres (`sessions.rs`) so a phone stays signed in across restarts.
 
-mod analytics;
-#[cfg(test)]
-mod analytics_tests;
-mod app;
-mod approvals;
-mod claim;
-#[cfg(test)]
-mod claim_tests;
-mod connectors;
-pub(crate) mod counted;
-mod device;
-mod discovery;
-#[cfg(test)]
-mod discovery_tests;
-mod email;
-mod hosted;
-mod hub_settings;
-mod landing;
-#[cfg(test)]
-mod landing_tests;
-mod machines;
-mod media;
-#[cfg(test)]
-mod media_tests;
-mod notify;
-pub mod oauth;
-mod offers;
-mod operator;
-#[cfg(test)]
-pub(crate) mod operator_tests;
-#[cfg(test)]
-pub(crate) use operator_tests as operator_tests_support;
-mod orgs;
-mod pages;
-#[cfg(test)]
-mod passkey_tests;
-mod passkeys;
-mod providers;
-mod public;
-mod routes;
-mod session;
-mod sessions;
-mod sign_in;
-#[cfg(test)]
-mod site_tests;
-#[cfg(test)]
-mod tests;
-mod workflow;
-
-use std::{
-    collections::HashMap,
-    sync::Mutex,
-    time::{Duration, Instant},
-};
-
-use axum::http::{HeaderMap, header};
-use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
-use devagotchi_contracts::{BridgeError, BridgeResult};
-use serde::Deserialize;
-use sha2::{Digest, Sha256};
-
-/// Unix seconds as `YYYY-MM-DD HH:MM UTC`, as the hub's pages and log show times.
-pub(crate) fn utc(secs: u64) -> String {
-    pages::utc(secs)
-}
-
-pub use email::Mailer;
-pub(crate) use email::announce_admissions;
-pub(crate) use landing::render as landing_for;
-pub use passkeys::HubSignIn;
-pub use providers::Providers;
-pub use routes::router;
-
-/// The person signed in on this browser, for routes outside the web pages (`orgs::api`).
-pub(crate) async fn session_subject(
-    state: &crate::AppState,
-    headers: &axum::http::HeaderMap,
-) -> Option<crate::auth::Subject> {
-    match routes::who(state, headers).await {
-        routes::Who::Person(subject) => Some(subject),
-        _ => None,
-    }
-}
-
-/// Whether a request that changes something came from this hub's own pages, as every form
-/// here requires (`approvals::same_origin`).
-pub(crate) fn from_this_hub(headers: &axum::http::HeaderMap, public_url: &str) -> bool {
-    approvals::same_origin(headers, public_url)
-}
-
-/// Every web page's top bar says whether the browser is signed in: the account and a
-/// one-tap Sign out, or Sign in back to this page (`pages::Bar`). On a hub waiting to be
-/// claimed, nobody can sign in, so it offers nothing. The page is drawn with the hub's site
-/// (`pages::SITE`).
-///
-/// It also marks a request from the signed-in operator of a hosted hub (`OperatorVisit`),
-/// so the operator's own visits are not counted (`counted.rs`).
-pub async fn bar(
-    axum::extract::State(state): axum::extract::State<crate::AppState>,
-    mut request: axum::extract::Request,
-    next: axum::middleware::Next,
-) -> axum::response::Response {
-    let unclaimed = match &state.passkeys {
-        Some(hub) => matches!(hub.claimable().await, Ok(true)),
-        None => false,
-    };
-    let signed_in = match &state.passkeys {
-        // An account nobody secured gets a line under the bar on every page.
-        Some(hub) if !unclaimed => match hub.who(request.headers()).await {
-            Ok(Some(subject)) => {
-                if state.hub.config.multi_tenant() && state.hub.config.is_owner(&subject.id) {
-                    request
-                        .extensions_mut()
-                        .insert(crate::analytics::OperatorVisit);
-                }
-                Some(subject.provisional_until.is_some())
-            }
-            _ => None,
-        },
-        _ if routes::signed_in(&state, request.headers()).await => Some(false),
-        _ => None,
-    };
-    // A workflow's page (`/go/<token>`) is the link alone: no Sign in, no nudge to.
-    let workflow = request.uri().path().starts_with("/go/");
-    // The app's own pages say who is signed in. The offline page is kept on the phone, so it
-    // names nobody.
-    let path = request.uri().path();
-    let framed = path == "/approvals" || path == "/app" || path.starts_with("/app/");
-    let named = path != "/app/offline" && path != "/app/attention";
-    let me = if framed && named && signed_in.is_some() {
-        match routes::who(&state, request.headers()).await {
-            routes::Who::Person(subject) => Some(app::me::identity(&state, &subject).await),
-            _ => None,
-        }
-    } else {
-        None
-    };
-    let bar = if (state.web.is_none() && state.passkeys.is_none()) || unclaimed || workflow {
-        pages::Bar::Plain
-    } else if let Some(unsecured) = signed_in {
-        pages::Bar::SignedIn { unsecured, me }
-    } else {
-        pages::Bar::SignedOut {
-            return_to: safe_return_to(
-                request
-                    .uri()
-                    .path_and_query()
-                    .map(|p| p.as_str())
-                    .unwrap_or("/account"),
-            )
-            .to_string(),
-        }
-    };
-    let site = state.hub.config.site();
-    pages::BAR
-        .scope(bar, pages::SITE.scope(site, next.run(request)))
-        .await
-}
+use super::*;
 
 /// The longest a browser session lasts when Nomen gives no refresh token, however long
 /// its access token would.
@@ -189,7 +10,7 @@ pub const NO_REFRESH_MAX: Duration = Duration::from_secs(12 * 3600);
 /// An access token this close to running out is renewed first.
 const RENEW_BEFORE_MS: u64 = 60_000;
 /// How long a started sign-in waits for Nomen to send the person back.
-const LOGIN_TTL: Duration = Duration::from_secs(600);
+pub(super) const LOGIN_TTL: Duration = Duration::from_secs(600);
 const MAX_PENDING: usize = 10_000;
 const MAX_ANSWER_BYTES: usize = 64 * 1024;
 
@@ -244,14 +65,35 @@ pub enum SessionToken {
 }
 
 impl WebLogin {
+    /// The Nomen web login a hub's config asks for: a `web` section in `auth.mode nomen`.
+    pub fn for_hub(
+        config: &crate::config::HubConfig,
+        state_dir: &std::path::Path,
+        store: &crate::store::Store,
+    ) -> BridgeResult<Option<Self>> {
+        let (
+            Some(web),
+            crate::config::AuthConfig::Nomen {
+                issuer, audiences, ..
+            },
+        ) = (&config.web, &config.auth)
+        else {
+            return Ok(None);
+        };
+        let (client, url) = (&web.client_id, &config.public_url);
+        Self::new(issuer, audiences, client, url, state_dir, store.clone()).map(Some)
+    }
+
     /// Nomen's endpoints follow from its issuer, as introspection's does. Nomen is not
-    /// contacted until someone signs in. Sessions are kept in `state_dir`.
+    /// contacted until someone signs in. Sessions are kept in `store`, sealed under the key
+    /// in `state_dir`.
     pub fn new(
         issuer: &str,
         audiences: &[String],
         client_id: &str,
         public_url: &str,
         state_dir: &std::path::Path,
+        store: crate::store::Store,
     ) -> BridgeResult<Self> {
         let issuer = issuer.trim_end_matches('/');
         // Nomen puts a project in a token's audience, and the account's org in its
@@ -273,7 +115,7 @@ impl WebLogin {
             secure: public_url.starts_with("https://"),
             http,
             pending: Mutex::new(HashMap::new()),
-            sessions: sessions::SessionStore::open(state_dir)?,
+            sessions: sessions::SessionStore::open(state_dir, store)?,
             renewing: tokio::sync::Mutex::new(()),
         })
     }
@@ -409,7 +251,7 @@ impl WebLogin {
 
     /// Keep Nomen's tokens on the hub, sealed, and hand the browser a random id for them.
     /// Returns the id and how long the browser should keep it.
-    pub fn open_session(&self, tokens: Tokens) -> BridgeResult<(String, Duration)> {
+    pub async fn open_session(&self, tokens: Tokens) -> BridgeResult<(String, Duration)> {
         let now = sessions::now_millis();
         let access_for = tokens
             .expires_in
@@ -422,16 +264,18 @@ impl WebLogin {
             access_for
         };
         let id = random_token();
-        self.sessions.put(
-            &digest(&id),
-            &sessions::Held {
-                access: tokens.access_token,
-                refresh: tokens.refresh_token,
-            },
-            now + access_for.as_millis() as u64,
-            now + lasts.as_millis() as u64,
-            now,
-        )?;
+        self.sessions
+            .put(
+                &digest(&id),
+                &sessions::Held {
+                    access: tokens.access_token,
+                    refresh: tokens.refresh_token,
+                },
+                now + access_for.as_millis() as u64,
+                now + lasts.as_millis() as u64,
+                now,
+            )
+            .await?;
         Ok((id, lasts))
     }
 
@@ -443,7 +287,7 @@ impl WebLogin {
         };
         let key = digest(&id);
         let now = sessions::now_millis();
-        let stored = match self.sessions.get(&key, now) {
+        let stored = match self.sessions.get(&key, now).await {
             Ok(Some(stored)) => stored,
             Ok(None) => return SessionToken::None,
             Err(error) => {
@@ -453,17 +297,17 @@ impl WebLogin {
         };
         if stored.access_until > now + RENEW_BEFORE_MS || stored.held.refresh.is_none() {
             if stored.access_until <= now {
-                self.sessions.remove(&key);
+                self.sessions.remove(&key).await;
                 return SessionToken::None;
             }
             if now >= stored.last_seen + 60_000 {
-                let _ = self.sessions.touch(&key, now);
+                let _ = self.sessions.touch(&key, now).await;
             }
             return SessionToken::Token(stored.held.access);
         }
         let _one_at_a_time = self.renewing.lock().await;
         // Another request may have renewed it while this one waited.
-        let stored = match self.sessions.get(&key, now) {
+        let stored = match self.sessions.get(&key, now).await {
             Ok(Some(stored)) => stored,
             Ok(None) => return SessionToken::None,
             Err(_) => return SessionToken::Unavailable,
@@ -486,16 +330,17 @@ impl WebLogin {
                     refresh: fresh.refresh_token.or(Some(refresh)),
                 };
                 let now = sessions::now_millis();
-                if let Err(error) =
-                    self.sessions
-                        .renew(&key, &held, now + access_for.as_millis() as u64, now)
+                if let Err(error) = self
+                    .sessions
+                    .renew(&key, &held, now + access_for.as_millis() as u64, now)
+                    .await
                 {
                     eprintln!("devagotchi-hub: session store: {}", error.message);
                 }
                 SessionToken::Token(held.access)
             }
             Err(Exchange::Refused) => {
-                self.sessions.remove(&key);
+                self.sessions.remove(&key).await;
                 SessionToken::None
             }
             Err(Exchange::Unavailable(why)) => {
@@ -510,11 +355,16 @@ impl WebLogin {
     }
 
     /// End the session and revoke its refresh token at Nomen (RFC 7009), best effort.
-    pub fn end_session(&self, headers: &HeaderMap) {
+    pub async fn end_session(&self, headers: &HeaderMap) {
         let Some(id) = cookie_value(headers, self.session_cookie()) else {
             return;
         };
-        let Some(refresh) = self.sessions.remove(&digest(&id)).and_then(|h| h.refresh) else {
+        let Some(refresh) = self
+            .sessions
+            .remove(&digest(&id))
+            .await
+            .and_then(|h| h.refresh)
+        else {
             return;
         };
         let request = self.http.post(&self.revoke).form(&[
@@ -531,14 +381,15 @@ impl WebLogin {
 
     /// Whether this request's session cookie names a live session. Local only: no call to
     /// Nomen, so every page can say "signed in" or offer Sign in at no cost.
-    pub fn signed_in(&self, headers: &HeaderMap) -> bool {
-        cookie_value(headers, self.session_cookie()).is_some_and(|id| {
-            matches!(
-                self.sessions.get(&digest(&id), sessions::now_millis()),
-                Ok(Some(stored)) if stored.held.refresh.is_some()
-                    || stored.access_until > sessions::now_millis()
-            )
-        })
+    pub async fn signed_in(&self, headers: &HeaderMap) -> bool {
+        let Some(id) = cookie_value(headers, self.session_cookie()) else {
+            return false;
+        };
+        matches!(
+            self.sessions.get(&digest(&id), sessions::now_millis()).await,
+            Ok(Some(stored)) if stored.held.refresh.is_some()
+                || stored.access_until > sessions::now_millis()
+        )
     }
 
     pub fn login_state(&self, headers: &HeaderMap) -> Option<String> {
@@ -553,47 +404,4 @@ fn random_token() -> String {
 
 fn digest(id: &str) -> [u8; 32] {
     Sha256::digest(id.as_bytes()).into()
-}
-
-/// A path on this hub to return to after sign-in; anything else becomes `/account`.
-pub fn safe_return_to(path: &str) -> &str {
-    // Long enough for an OAuth authorization request coming back after sign-in.
-    let ok = path.starts_with('/')
-        && !path.starts_with("//")
-        && path.len() <= 4096
-        && path
-            .bytes()
-            .all(|b| b.is_ascii_alphanumeric() || b"/-_.~?=&%".contains(&b));
-    if ok { path } else { "/account" }
-}
-
-fn cookie_value(headers: &HeaderMap, name: &str) -> Option<String> {
-    cookie_value_up_to(headers, name, 128)
-}
-
-/// A cookie's value when it is at most `max` bytes (a sealed sign-in's state is longer
-/// than a session id).
-fn cookie_value_up_to(headers: &HeaderMap, name: &str, max: usize) -> Option<String> {
-    headers
-        .get_all(header::COOKIE)
-        .iter()
-        .filter_map(|value| value.to_str().ok())
-        .flat_map(|value| value.split(';'))
-        .filter_map(|pair| pair.trim().split_once('='))
-        .find(|(key, _)| *key == name)
-        .map(|(_, value)| value.to_string())
-        .filter(|value| !value.is_empty() && value.len() <= max)
-}
-
-/// Percent-encode a query value (RFC 3986 unreserved characters pass through).
-fn encode(value: &str) -> String {
-    let mut out = String::with_capacity(value.len());
-    for byte in value.bytes() {
-        if byte.is_ascii_alphanumeric() || b"-_.~".contains(&byte) {
-            out.push(byte as char);
-        } else {
-            out.push_str(&format!("%{byte:02X}"));
-        }
-    }
-    out
 }

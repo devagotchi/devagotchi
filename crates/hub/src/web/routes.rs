@@ -221,7 +221,7 @@ pub(super) async fn who(state: &AppState, headers: &HeaderMap) -> Who {
 pub(super) async fn signed_in(state: &AppState, headers: &HeaderMap) -> bool {
     match (&state.passkeys, &state.web) {
         (Some(hub), _) => hub.signed_in(headers).await,
-        (None, Some(web)) => web.signed_in(headers),
+        (None, Some(web)) => web.signed_in(headers).await,
         (None, None) => false,
     }
 }
@@ -236,7 +236,7 @@ async fn nomen_who(state: &AppState, web: &WebLogin, headers: &HeaderMap) -> Who
         Ok(subject) => Who::Person(subject),
         Err(AuthError::Invalid(why)) => {
             crate::log_refusal(why);
-            web.end_session(headers);
+            web.end_session(headers).await;
             Who::SignedOut
         }
         Err(AuthError::Unavailable(why)) => {
@@ -416,7 +416,7 @@ async fn callback(
             return unavailable();
         }
     }
-    let (id, lasts) = match web.open_session(tokens) {
+    let (id, lasts) = match web.open_session(tokens).await {
         Ok(opened) => opened,
         Err(error) => {
             eprintln!("devagotchi-hub: session store: {}", error.message);
@@ -512,7 +512,7 @@ async fn logout(State(state): State<AppState>, headers: HeaderMap) -> Response {
     let Some(web) = state.web.clone() else {
         return not_set_up();
     };
-    web.end_session(&headers);
+    web.end_session(&headers).await;
     see_other("/signed-out", &[web.cookie(web.session_cookie(), "", 0)])
 }
 
