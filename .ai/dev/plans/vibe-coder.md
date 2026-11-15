@@ -39,11 +39,14 @@ an existing milestone, so they cost a PR each once that milestone is built.
 
 ## Risks and approved decisions
 
-- None approved yet: the table is a proposal. The operator picks; each picked row gets its
-  milestone and evidence here, and moves into the plan it builds on.
+- **Approved by the operator, 2026-11-15:** V2 (keys never in chat), V3 (a checkpoint before every
+  AI task), V4 (phone approvals for deploys, migrations, pushes to `main` and spend over a
+  limit), V5 ("your AI is stuck", with retry, hand to another AI, or stop), V1 (bring your
+  Lovable app home). The others stay proposals. Each approved row gets its milestone and
+  evidence here as it is built, inside the plan it builds on.
 - V2's commit hook runs on the person's machine and reads only staged changes; it never sends
   their code to the hub.
 
 ## Delivery
 
-Proposal only. Implementation: not started. PR: per feature.
+V1 to V5 approved; V6 to V12 proposed. Implementation: not started. PR: per feature.
