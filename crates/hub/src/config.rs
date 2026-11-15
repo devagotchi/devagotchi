@@ -78,10 +78,8 @@ pub struct HubConfig {
     /// "Add a machine" shows the installer lines instead.
     #[serde(default)]
     pub downloads: Option<String>,
-    /// Where the hub keeps its accounts (`store.rs`): a Postgres URL for a hosted hub, or a
-    /// `sqlite:/absolute/path` (`sqlite:C:/…` on Windows), and on Postgres the schema its
-    /// tables live in. Absent: `accounts.sqlite3` in the state directory. A password never
-    /// goes here: `DEVAGOTCHI_HUB_STORAGE_URL`, set from the secret store, names the store
+    /// The hub's Postgres (`store.rs`): its URL and the schema its tables live in. A
+    /// password never goes here: `DEVAGOTCHI_HUB_STORAGE_URL`, set from the secret store, names the store
     /// instead and overrides this (`DEVAGOTCHI_HUB_STORAGE_SCHEMA` the schema).
     #[serde(default)]
     pub storage: Option<StorageConfig>,
@@ -157,7 +155,7 @@ pub struct SiteConfig {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct StorageConfig {
-    /// A Postgres URL without a password, or `sqlite:/absolute/path`.
+    /// A Postgres URL without a password.
     #[serde(default)]
     pub url: Option<String>,
     /// The Postgres schema the hub's tables live in, made if missing; `public` when absent.

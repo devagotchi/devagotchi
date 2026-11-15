@@ -253,12 +253,6 @@ async fn holds(store: crate::store::Store) {
 }
 
 #[tokio::test]
-async fn keys_hold_on_sqlite() {
-    let test = testing::sqlite().await;
-    holds(test.store.clone()).await;
-}
-
-#[tokio::test]
 async fn keys_hold_on_postgres() {
     if let Some(test) = testing::postgres().await {
         holds(test.store.clone()).await;

@@ -1,8 +1,7 @@
 //! The hub's settings page over HTTP, the whole router as it serves: only the owner sees it, a
 //! provider saved there is stored sealed, offered at once with no restart, and sends people to
 //! the provider with the id that was saved; a ClickHouse saved there is checked first, then
-//! AgentHub's events go to it at once, and again after a restart. On SQLite, and on Postgres
-//! when the test server is set (CI).
+//! AgentHub's events go to it at once, and again after a restart. On the test Postgres (`DEVAGOTCHI_TEST_POSTGRES_URL`; CI sets it).
 
 use serde_json::json;
 
@@ -253,9 +252,6 @@ async fn run(store: Option<&str>) {
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_provider_saved_on_the_settings_page_is_sealed_and_offered_at_once() {
     run(None).await;
-    if let Some(url) = crate::store::testing::empty_postgres().await {
-        run(Some(&url)).await;
-    }
 }
 
 /// A stand-in ClickHouse: answers every query while up, refuses while down, and keeps the
@@ -313,24 +309,6 @@ fn analytics(hub: &Hosted, cookie: &str, fields: &[(&str, &str)]) -> reqwest::Re
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_clickhouse_saved_on_the_settings_page_is_checked_sealed_and_exported_to_at_once() {
-    // On SQLite: the page says where the boards are and that statistics need Postgres.
-    let hub = or_skip!(hub_on(None, None));
-    let owner = operator_cookie(&hub).await;
-    let (status, page) = Hosted::text(hub.get("/admin", Some(&owner)).await).await;
-    assert_eq!(status, 200, "{page}");
-    assert!(page.contains("Where AgentHub keeps its boards"), "{page}");
-    assert!(page.contains("SQLite file"), "{page}");
-    assert!(
-        page.contains("Statistics need this hub on Postgres"),
-        "{page}"
-    );
-    let (url, _fake) = StandIn::start().await;
-    let refused = analytics(&hub, &owner, &[("url", &url), ("enabled", "on")])
-        .send()
-        .await
-        .unwrap();
-    assert_eq!(refused.status(), 409);
-
     let store = or_skip!(crate::store::testing::empty_postgres());
     let hub = or_skip!(hub_on(Some(&store), None));
     let owner = operator_cookie(&hub).await;

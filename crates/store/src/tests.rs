@@ -20,8 +20,6 @@ fn a_stores_place_never_shows_its_user_password_or_query() {
         assert_eq!(place_of(url), place, "{url}");
         assert!(!place_of(url).contains("s3cret"));
     }
-    let file = std::env::temp_dir().join("accounts.sqlite3");
-    assert_eq!(Path::new(&place_of(&sqlite_url(&file))), file);
 }
 
 /// Each domain's table prefixes (`.ai/patterns/layout.md`, "Tables carry their domain").

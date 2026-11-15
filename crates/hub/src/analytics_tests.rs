@@ -2,8 +2,7 @@
 //! (`analytics.rs`): a visit to a public page is counted by the server with exactly what
 //! it keeps; opted-out, robot, asset, health, API and the operator's own requests are not;
 //! each tenant's milestones are written once, where each happens; a hub that does not
-//! count keeps nothing and its privacy page says so. On SQLite, and on Postgres when the
-//! test server is set (CI).
+//! count keeps nothing and its privacy page says so. On the test Postgres (`DEVAGOTCHI_TEST_POSTGRES_URL`; CI sets it).
 
 use serde_json::{Value, json};
 use sqlx::Row;
@@ -18,10 +17,11 @@ const PHONE: &str = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) Appl
 const DESKTOP: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36";
 
 async fn stores() -> Vec<Option<String>> {
-    let mut out = vec![None];
-    if let Some(url) = store::testing::empty_postgres().await {
-        out.push(Some(url));
-    }
+    let out: Vec<Option<String>> = crate::store::testing::empty_postgres()
+        .await
+        .into_iter()
+        .map(Some)
+        .collect();
     out
 }
 
@@ -219,7 +219,7 @@ async fn counted(hub: Hosted) {
     assert!(!privacy.contains("no analytics"), "{privacy}");
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_hub_that_does_not_count_keeps_nothing_and_says_so() {
     let hub = or_skip!(hub_on(None, json!({ "analytics": { "enabled": false } })));
     assert!(hub.hub.analytics.is_none());

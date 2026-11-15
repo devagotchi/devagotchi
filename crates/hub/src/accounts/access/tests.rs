@@ -1,5 +1,4 @@
-//! Early access and plans in the store, on every store this run has (SQLite always,
-//! Postgres when the test server is set, as in CI).
+//! Early access and plans in the store, on the test Postgres (`DEVAGOTCHI_TEST_POSTGRES_URL`; CI sets it).
 
 use std::{net::IpAddr, sync::Mutex};
 
@@ -192,63 +191,50 @@ async fn the_operators_home_tenant_is_always_in() {
 
 #[tokio::test]
 async fn tenants_from_before_early_access_are_in() {
-    let mut urls = Vec::new();
-    let dir = tempfile::tempdir().unwrap();
-    urls.push(crate::store::sqlite_url(
-        &dir.path().join("accounts.sqlite3"),
-    ));
-    if let Some(url) = testing::empty_postgres().await {
-        urls.push(url);
+    let url = or_skip!(testing::empty_postgres());
+    // A hosted hub's store as migration 7 left it, with a person's tenant in it.
+    testing::migrated_to(&url, 7).await;
+    let mut old = <sqlx::AnyConnection as sqlx::Connection>::connect(&url)
+        .await
+        .unwrap();
+    let prefix = "devagotchi.";
+    for sql in [
+        format!(
+            "INSERT INTO {prefix}tenancy_tenants (id, home, created_at) VALUES ('t-old', 0, 5)"
+        ),
+        format!(
+            "INSERT INTO {prefix}auth_accounts (tenant_id, id, name, owner, created_at, provisional)
+             VALUES ('t-old', 'acct_old', 'Old', 0, 5, 0)"
+        ),
+    ] {
+        sqlx::query(sqlx::AssertSqlSafe(sql))
+            .execute(&mut old)
+            .await
+            .unwrap();
     }
-    for url in urls {
-        // A hosted hub's store as migration 7 left it, with a person's tenant in it.
-        testing::migrated_to(&url, 7).await;
-        let mut old = <sqlx::AnyConnection as sqlx::Connection>::connect(&url)
-            .await
-            .unwrap();
-        let prefix = if url.starts_with("postgres") {
-            "devagotchi."
-        } else {
-            ""
-        };
-        for sql in [
-            format!(
-                "INSERT INTO {prefix}tenancy_tenants (id, home, created_at) VALUES ('t-old', 0, 5)"
-            ),
-            format!(
-                "INSERT INTO {prefix}auth_accounts (tenant_id, id, name, owner, created_at, provisional)
-                 VALUES ('t-old', 'acct_old', 'Old', 0, 5, 0)"
-            ),
-        ] {
-            sqlx::query(sqlx::AssertSqlSafe(sql))
-                .execute(&mut old)
-                .await
-                .unwrap();
-        }
-        <sqlx::AnyConnection as sqlx::Connection>::close(old)
-            .await
-            .unwrap();
-        let accounts = Accounts::open(crate::store::Store::open(&url).await.unwrap())
+    <sqlx::AnyConnection as sqlx::Connection>::close(old)
+        .await
+        .unwrap();
+    let accounts = Accounts::open(crate::store::Store::open(&url).await.unwrap())
+        .await
+        .unwrap()
+        .with_tenancy(hosted(), Vec::new())
+        .with_site(Arc::new(SiteCell::new(site("early_access"))), HUB);
+    let access = accounts.access_of("t-old").await.unwrap().unwrap();
+    assert!(!access.waiting, "{access:?}");
+    assert_eq!(access.admitted_by.as_deref(), Some("before early access"));
+    assert_eq!(access.admitted_at, Some(5));
+    assert_eq!(access.plan, None, "the site's default plan");
+    let home = accounts.home_tenant().await.unwrap();
+    assert!(!accounts.access_of(&home).await.unwrap().unwrap().waiting);
+    assert_eq!(
+        accounts
+            .account_access("acct_old")
             .await
             .unwrap()
-            .with_tenancy(hosted(), Vec::new())
-            .with_site(Arc::new(SiteCell::new(site("early_access"))), HUB);
-        let access = accounts.access_of("t-old").await.unwrap().unwrap();
-        assert!(!access.waiting, "{access:?}");
-        assert_eq!(access.admitted_by.as_deref(), Some("before early access"));
-        assert_eq!(access.admitted_at, Some(5));
-        assert_eq!(access.plan, None, "the site's default plan");
-        let home = accounts.home_tenant().await.unwrap();
-        assert!(!accounts.access_of(&home).await.unwrap().unwrap().waiting);
-        assert_eq!(
-            accounts
-                .account_access("acct_old")
-                .await
-                .unwrap()
-                .map(|a| a.waiting),
-            Some(false)
-        );
-    }
+            .map(|a| a.waiting),
+        Some(false)
+    );
 }
 
 #[tokio::test]

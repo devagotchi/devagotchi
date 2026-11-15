@@ -187,15 +187,6 @@ impl Boards {
         Ok(self)
     }
 
-    /// Organisations kept in `store` while the boards stay where they are (tests: a SQLite
-    /// store with board files).
-    #[cfg(test)]
-    pub(crate) fn with_orgs(mut self, store: crate::store::Store) -> Self {
-        self.orgs = Some(crate::orgs::Orgs::new(store.clone()));
-        self.preferences = Some(crate::preferences::PreferenceStore::new(store));
-        self
-    }
-
     /// This hub's organisations, when it keeps them (always under `hub serve`).
     pub(crate) fn orgs(&self) -> Option<&crate::orgs::Orgs> {
         self.orgs.as_ref()
@@ -3139,7 +3130,7 @@ mod tests {
     /// P2c: a ticket an AI makes through the hub carries what the hub knows without the AI
     /// passing it: the one machine this session ran on, the token's seat, this MCP session,
     /// the board's repo. After runs on two machines the machine is left empty.
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn a_ticket_made_after_a_run_carries_the_machine_the_seat_and_the_repo() {
         use serde_json::json;
 
@@ -3254,7 +3245,7 @@ mod tests {
 
     /// Every board tool that answers with tickets answers within its declared output schema
     /// with the anchors present and absent (`Hosted::call` holds each result to it).
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn ticket_results_match_their_schemas_with_anchors_present_and_absent() {
         use serde_json::json;
 

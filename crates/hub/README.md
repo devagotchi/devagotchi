@@ -240,7 +240,7 @@ Stop the hub and CLI/agent writers, take a backup of the source board including 
 SQLite's backup facilities, and use the backup as `--source`. Preview first:
 
 ```text
-devagotchi hub import-board --state-dir ABS_PATH --config ABS_JSON --source ABS_SQLITE --tenant t-UUID
+devagotchi hub import-board --config ABS_JSON --source ABS_SQLITE --tenant t-UUID
 ```
 
 The tenant must already exist and is selected explicitly; it is never inferred from a

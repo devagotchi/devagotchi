@@ -251,9 +251,6 @@ async fn run(store: Option<&str>) {
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_change_of_role_holds_from_the_ais_next_call() {
     run(None).await;
-    if let Some(url) = crate::store::testing::empty_postgres().await {
-        run(Some(&url)).await;
-    }
 }
 
 /// The organisation pages in a browser's place (`web/orgs.rs`): forms from this hub only, an
@@ -435,7 +432,4 @@ async fn pages(store: Option<&str>) {
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn the_organisation_pages_do_what_the_api_does_from_this_hubs_own_forms() {
     pages(None).await;
-    if let Some(url) = crate::store::testing::empty_postgres().await {
-        pages(Some(&url)).await;
-    }
 }

@@ -30,7 +30,7 @@ use sqlx::{AnyConnection, Row};
 use crate::{
     accounts::tenants::{new_tenant_id, record_in, valid_tenant_id},
     config::{valid_name, valid_subject},
-    store::{Backend, Failed, Store, transaction},
+    store::{Failed, Store, transaction},
 };
 
 pub(crate) mod api;
@@ -413,12 +413,7 @@ impl Orgs {
     /// The organisations `subject` belongs to, with its role in each, by slug.
     pub async fn of_subject(&self, subject: &str) -> BridgeResult<Vec<(Org, Role)>> {
         let mut connection = self.store.read().await?;
-        let sql = match self.store.backend() {
-            Backend::Postgres => "SELECT tenant_id, role FROM devagotchi.orgs_of($1)",
-            Backend::Sqlite => {
-                "SELECT tenant_id, role FROM org_members WHERE subject = $1 ORDER BY tenant_id"
-            }
-        };
+        let sql = "SELECT tenant_id, role FROM devagotchi.orgs_of($1)";
         let rows: Vec<(String, String)> = sqlx::query_as(sql)
             .bind(subject)
             .fetch_all(&mut *connection)
@@ -1073,21 +1068,7 @@ impl Orgs {
     /// `(tenant, owner, project, role)`, the higher role where both give one.
     pub async fn projects_of(&self, subject: &str) -> BridgeResult<Vec<(ProjectRef, Role)>> {
         let mut connection = self.store.read().await?;
-        let sql = match self.store.backend() {
-            Backend::Postgres => {
-                "SELECT tenant_id, owner_id, project, role FROM devagotchi.projects_of($1)"
-            }
-            Backend::Sqlite => {
-                "SELECT p.tenant_id, p.owner_id, p.project, p.role FROM project_members p
-                  WHERE p.principal_kind = 'subject' AND p.principal = $1
-                 UNION ALL
-                 SELECT p.tenant_id, p.owner_id, p.project, p.role FROM project_members p
-                   JOIN org_team_members t
-                     ON t.tenant_id = p.tenant_id AND t.team = p.principal AND t.subject = $1
-                  WHERE p.principal_kind = 'team'
-                 ORDER BY 1, 2, 3"
-            }
-        };
+        let sql = "SELECT tenant_id, owner_id, project, role FROM devagotchi.projects_of($1)";
         let rows: Vec<(String, String, String, String)> = sqlx::query_as(sql)
             .bind(subject)
             .fetch_all(&mut *connection)
@@ -1298,10 +1279,7 @@ impl Orgs {
         let hash = token_hash(token.trim());
         let tenant: Option<String> = {
             let mut connection = self.store.read().await?;
-            let sql = match self.store.backend() {
-                Backend::Postgres => "SELECT devagotchi.invite_tenant($1)",
-                Backend::Sqlite => "SELECT tenant_id FROM org_invites WHERE hash = $1",
-            };
+            let sql = "SELECT devagotchi.invite_tenant($1)";
             sqlx::query_scalar::<_, Option<String>>(sql)
                 .bind(&hash)
                 .fetch_optional(&mut *connection)

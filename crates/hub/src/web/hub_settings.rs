@@ -28,7 +28,6 @@ use crate::{
     },
     auth::Subject,
     config::providers::ProviderConfig,
-    store::Backend,
 };
 
 /// What a person follows to get a provider's id and secret, and its name on the page.
@@ -282,32 +281,23 @@ fn database_card(store: &crate::store::Store) -> String {
 <li>Give it a login that may create a schema in that database. The hub then makes a role without BYPASSRLS for itself, so every tenant's rows stay apart.</li>\
 <li>Set <code>DEVAGOTCHI_HUB_STORAGE_URL=postgres://user@host:5432/database</code> (the password from your secret store, not a file) and, for a schema other than <code>devagotchi</code>, <code>DEVAGOTCHI_HUB_STORAGE_SCHEMA</code>. Restart the hub.</li>\
 <li>A new database starts empty. To keep this hub's boards and accounts, restore its backup into the new database first.</li></ol>";
-    let (status, rows) = match store.backend() {
-        Backend::Postgres => (
-            "<span class=\"tag kind\">Postgres</span>",
-            format!(
-                "<ul class=\"rows\">{}{}{}</ul>",
-                row("Database", store.place(), ""),
-                row("Schema", store.schema().unwrap_or("devagotchi"), ""),
-                row(
-                    "Tenants kept apart by the database",
-                    if store.enforced() { "Yes" } else { "No" },
-                    if store.enforced() {
-                        ""
-                    } else {
-                        "The hub's login may bypass row-level security. Run it as a role without superuser or BYPASSRLS."
-                    }
-                ),
+    let (status, rows) = (
+        "<span class=\"tag kind\">Postgres</span>",
+        format!(
+            "<ul class=\"rows\">{}{}{}</ul>",
+            row("Database", store.place(), ""),
+            row("Schema", store.schema().unwrap_or("devagotchi"), ""),
+            row(
+                "Tenants kept apart by the database",
+                if store.enforced() { "Yes" } else { "No" },
+                if store.enforced() {
+                    ""
+                } else {
+                    "The hub's login may bypass row-level security. Run it as a role without superuser or BYPASSRLS."
+                }
             ),
         ),
-        Backend::Sqlite => (
-            "<span class=\"tag\">SQLite file</span>",
-            format!(
-                "<ul class=\"rows\">{}</ul><p class=\"note help\">Boards shared through this hub and statistics need Postgres.</p>",
-                row("File", store.place(), "")
-            ),
-        ),
-    };
+    );
     format!(
         "<details class=\"connector\" id=\"database\"><summary>Where AgentHub keeps its boards {status}</summary>{rows}\
 <p class=\"meta\">To use a Postgres you already run:</p>{move_steps}</details>"
@@ -317,7 +307,6 @@ fn database_card(store: &crate::store::Store) -> String {
 /// The ClickHouse AgentHub sends its board events to, for statistics: set here, or by the
 /// hub's configuration (then shown, not changed, here).
 fn analytics_card(
-    store: &crate::store::Store,
     from_config: Option<&crate::config::ClickHouseConfig>,
     stored: Option<&StoredClickHouse>,
     health: Option<&serde_json::Value>,
@@ -361,8 +350,6 @@ fn analytics_card(
             row("ClickHouse", &config.url, ""),
             row("Database", &config.database, "")
         )
-    } else if store.backend() != Backend::Postgres {
-        "<p class=\"note help\">Statistics need this hub on Postgres: the events wait there until ClickHouse takes them.</p>".to_string()
     } else {
         let url = stored.map(|s| s.url.as_str()).unwrap_or_default();
         let database = stored.map(|s| s.database.as_str()).unwrap_or("devagotchi");
@@ -473,7 +460,6 @@ pub async fn page(
     };
     let database = database_card(store);
     let analytics = analytics_card(
-        store,
         state.hub.config.clickhouse.as_ref(),
         stored_clickhouse.as_ref(),
         health.as_ref(),
@@ -668,12 +654,6 @@ pub async fn save_analytics(
     }
     let accounts = hub.accounts();
     let store = accounts.store().clone();
-    if store.backend() != Backend::Postgres {
-        return refused(
-            StatusCode::CONFLICT,
-            "Statistics need this hub on Postgres: the events wait there until ClickHouse takes them.",
-        );
-    }
     let url = form.url.trim().trim_end_matches('/');
     let database = match form.database.trim() {
         "" => "devagotchi",

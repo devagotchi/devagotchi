@@ -1,6 +1,6 @@
 use super::{registry, *};
 use crate::agenthub::hosted::*;
-use crate::store::{Backend, Store, testing, transaction};
+use crate::store::{Store, testing, transaction};
 
 use crate::agenthub::{
     AnchorPatch, Anchors, DepKind, Filter, NextFilter, Patch, ProjectSettings, approval::Verdict,
@@ -12,9 +12,6 @@ const OTHER: &str = "t-00000000-0000-4000-8000-000000000002";
 #[tokio::test]
 async fn native_board_graph_filters_versions_handoff_and_approval_rules() {
     for test in testing::stores().await {
-        if test.store.backend() != Backend::Postgres {
-            continue;
-        }
         seed(&test.store).await;
         let board = HostedBoard::new(test.store.clone(), TENANT, "demo").unwrap();
         board.initialize().await.unwrap();
@@ -293,9 +290,6 @@ async fn native_board_graph_filters_versions_handoff_and_approval_rules() {
 #[tokio::test]
 async fn database_time_expiry_reaping_and_wip_are_enforced_across_instances() {
     for test in testing::stores().await {
-        if test.store.backend() != Backend::Postgres {
-            continue;
-        }
         seed(&test.store).await;
         let board = HostedBoard::new(test.store.clone(), TENANT, "demo").unwrap();
         board.initialize().await.unwrap();
@@ -362,9 +356,6 @@ async fn database_time_expiry_reaping_and_wip_are_enforced_across_instances() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn shared_runtime_resolver_uses_postgres_without_board_files_and_observes_other_hubs() {
     for test in testing::stores().await {
-        if test.store.backend() != Backend::Postgres {
-            continue;
-        }
         seed(&test.store).await;
         let dir = tempfile::tempdir().unwrap();
         let config = crate::config::HubConfig::parse_with(
@@ -652,10 +643,6 @@ async fn externally_authenticated_boards_provision_the_home_tenant_without_local
 #[tokio::test]
 async fn native_postgres_board_lifecycle_has_one_authority_and_atomic_history() {
     for test in testing::stores().await {
-        if test.store.backend() != Backend::Postgres {
-            assert!(HostedBoard::new(test.store.clone(), TENANT, "demo").is_err());
-            continue;
-        }
         seed(&test.store).await;
         let board = HostedBoard::new(test.store.clone(), TENANT, "demo").unwrap();
         let peer = HostedBoard::new(test.store.clone(), TENANT, "demo").unwrap();
@@ -794,9 +781,6 @@ async fn native_postgres_board_lifecycle_has_one_authority_and_atomic_history() 
 #[tokio::test]
 async fn concurrent_native_claims_have_one_winner_and_reclaim_burns_fences() {
     for test in testing::stores().await {
-        if test.store.backend() != Backend::Postgres {
-            continue;
-        }
         seed(&test.store).await;
         let board = HostedBoard::new(test.store.clone(), TENANT, "demo").unwrap();
         board.initialize().await.unwrap();

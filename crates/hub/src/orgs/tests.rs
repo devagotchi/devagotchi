@@ -1,5 +1,5 @@
-//! Organisations on both store backends (SQLite always, Postgres when
-//! `DEVAGOTCHI_TEST_POSTGRES_URL` names a server, as CI's `hub (postgres)` job does).
+//! Organisations on the test Postgres (`DEVAGOTCHI_TEST_POSTGRES_URL`, as CI's
+//! `hub (postgres)` job sets it).
 
 use std::sync::{
     Arc,

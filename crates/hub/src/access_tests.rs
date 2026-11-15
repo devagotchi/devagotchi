@@ -2,7 +2,7 @@
 //! serves (`accounts/access.rs`, `tenant_access.rs`): a person waiting to be let in is
 //! answered and not served on every write path, an operator lets them in and their next
 //! call works, sign-up opening lets everyone in on their next call, and a plan's limits
-//! hold at the boundary. On SQLite, and on Postgres when the test server is set (CI).
+//! hold at the boundary. On the test Postgres (`DEVAGOTCHI_TEST_POSTGRES_URL`; CI sets it).
 
 use std::path::Path;
 
@@ -62,10 +62,11 @@ async fn whoami(hub: &Hosted, person: &mut Person) -> Value {
 }
 
 async fn stores() -> Vec<Option<String>> {
-    let mut out = vec![None];
-    if let Some(url) = store::testing::empty_postgres().await {
-        out.push(Some(url));
-    }
+    let out: Vec<Option<String>> = crate::store::testing::empty_postgres()
+        .await
+        .into_iter()
+        .map(Some)
+        .collect();
     out
 }
 
@@ -204,7 +205,7 @@ async fn waiting(hub: Hosted) {
     );
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn opening_sign_up_lets_everyone_waiting_in_and_closing_it_puts_nobody_back() {
     let hub = or_skip!(hub_with(None, early_access));
     let mut early = hub.first_connect("Claude").await;
@@ -342,7 +343,7 @@ async fn limits(hub: Hosted) {
     limited(&refused_now, &["Free"]);
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_tenant_let_in_hears_so_by_email_when_it_has_a_verified_address() {
     let mail = crate::mail::stub::start("hub").await;
     let mail_url = mail.url.clone();

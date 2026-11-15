@@ -9,7 +9,7 @@ use super::{
     Actor, Event, GENESIS, NewTicket, Note, Settings, Ticket, Workflow, check_environment,
     clean_anchor, clean_labels, default_prefix, event_hash, fail, invalid, lease::Lease,
 };
-use devagotchi_store::{Backend, Failed, Store, transaction};
+use devagotchi_store::{Failed, Store, transaction};
 
 mod approvals;
 mod inbox;
@@ -52,9 +52,6 @@ fn decode<T: DeserializeOwned>(text: &str) -> BridgeResult<T> {
 impl HostedBoard {
     /// Tenant/project must come from the authenticated resolver, never a tool payload.
     pub fn new(store: Store, tenant: &str, project: &str) -> BridgeResult<Self> {
-        if store.backend() != Backend::Postgres {
-            return Err(fail("invalid_config", "hosted boards require Postgres"));
-        }
         let internal = project.strip_prefix("b-").is_some_and(|hash| {
             hash.len() == 64
                 && hash

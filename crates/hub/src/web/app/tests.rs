@@ -111,7 +111,7 @@ pub(super) async fn things_of(hub: &Hosted, person: &mut Person) -> String {
     stored
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn the_app_shows_only_the_accounts_own_machines_and_boards_in_one_frame() {
     let hub = or_skip!(hosted());
     let mut alice = hub.first_connect("Claude").await;
@@ -304,7 +304,7 @@ fn view(id: &str, state: &str, exit_code: Option<i32>) -> devagotchi_contracts::
     .unwrap()
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_machines_page_shows_its_state_and_jobs_and_updates_from_here_only() {
     use devagotchi_contracts::{ResponseBody, StartOutput};
     let hub = or_skip!(hosted());

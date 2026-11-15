@@ -16,7 +16,6 @@ use axum::http::header;
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 
-use super::*;
 use crate::{
     accounts::identities::Proven,
     machines::now_secs,
@@ -67,10 +66,11 @@ async fn hub_on(store: Option<&str>, extra: Value) -> Option<Hosted> {
 }
 
 async fn stores() -> Vec<Option<String>> {
-    let mut out = vec![None];
-    if let Some(url) = store::testing::empty_postgres().await {
-        out.push(Some(url));
-    }
+    let out: Vec<Option<String>> = crate::store::testing::empty_postgres()
+        .await
+        .into_iter()
+        .map(Some)
+        .collect();
     out
 }
 
@@ -244,7 +244,7 @@ async fn turn_on_phone(
     request.send().await.unwrap()
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn the_list_offers_each_workflow_and_says_plainly_what_cannot_be_done_here() {
     for store in stores().await {
         let hub = or_skip!(hub_on(store.as_deref(), json!({})));
@@ -1299,7 +1299,7 @@ async fn a_plans_machine_limit_is_said_plainly_to_the_ai_and_on_the_page() {
     }
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_waiting_tenant_gets_the_early_access_message() {
     let hub = or_skip!(hosted_with(None, |dir, _| {
         let site = site_dir(dir, |value| {
@@ -1322,7 +1322,7 @@ async fn a_waiting_tenant_gets_the_early_access_message() {
     }
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_neutral_sites_workflow_pages_name_only_that_site() {
     let neutral = crate::site::tests::neutral_dir();
     let hub = or_skip!(hosted_with(None, move |dir, _| {

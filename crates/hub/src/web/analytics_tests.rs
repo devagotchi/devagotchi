@@ -1,14 +1,13 @@
 //! The operator's analytics page (`/operator/analytics`) on a hosted hub, the whole router
 //! as it serves: only the operator sees it or its CSV (anyone else gets an unknown path's
 //! 404), the operator page links to it, and its counts and funnel move as people visit and
-//! connect. On SQLite, and on Postgres when the test server is set (CI).
+//! connect. On the test Postgres (`DEVAGOTCHI_TEST_POSTGRES_URL`; CI sets it).
 
 use serde_json::json;
 
 use super::operator_tests::{hub_on, operator_cookie};
 use crate::{
     site::tests::assert_no_brand,
-    store,
     tenant_tests::{Hosted, hosted_with},
 };
 
@@ -48,10 +47,11 @@ fn step(html: &str, step: &str) -> (String, String) {
 
 #[tokio::test]
 async fn the_operator_sees_the_counts_and_the_funnel_move_and_nobody_else_sees_anything() {
-    let mut stores = vec![None];
-    if let Some(url) = store::testing::empty_postgres().await {
-        stores.push(Some(url));
-    }
+    let stores: Vec<Option<String>> = crate::store::testing::empty_postgres()
+        .await
+        .into_iter()
+        .map(Some)
+        .collect();
     for store in stores {
         dashboard(or_skip!(hub_on(store.as_deref(), None))).await;
     }

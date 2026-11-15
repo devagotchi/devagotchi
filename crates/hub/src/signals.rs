@@ -29,7 +29,7 @@ use sha2::Sha256;
 use crate::{
     audit::Audit,
     config::{SinkConfig, SinkFields},
-    store::{Backend, Store, transaction},
+    store::{Store, transaction},
 };
 
 #[cfg(test)]
@@ -203,12 +203,6 @@ impl Sink {
         audit: Arc<Audit>,
         env: impl Fn(&str) -> Option<String>,
     ) -> BridgeResult<Self> {
-        if store.backend() != Backend::Postgres {
-            return Err(BridgeError::new(
-                "invalid_config",
-                "signal sinks read the hub's Postgres; this store is not Postgres",
-            ));
-        }
         let read = |name: &Option<String>| -> BridgeResult<Option<String>> {
             match name {
                 None => Ok(None),

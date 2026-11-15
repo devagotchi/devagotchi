@@ -30,11 +30,7 @@ use tokio::sync::{OwnedSemaphorePermit, Semaphore, mpsc, oneshot};
 use crate::{
     audit::{Audit, AuditEntry},
     config::HubConfig,
-    machines::{
-        devices::{Devices, OWNED_LIMIT},
-        now_secs,
-        update::Update,
-    },
+    machines::{devices::Devices, now_secs, update::Update},
 };
 
 const HELLO_TIMEOUT: Duration = Duration::from_secs(10);

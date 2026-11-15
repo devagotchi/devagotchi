@@ -1,7 +1,7 @@
 //! A note left for an AI, end to end over HTTP, the whole router as it serves: a person leaves
 //! it on a ticket's page, in a section, for `claude`; Claude's next tool call of any kind
 //! carries it, once; the page shows it in its section with who it is for; marking it read
-//! clears it. On SQLite, and on Postgres when the test server is set (CI).
+//! clears it. On the test Postgres (`DEVAGOTCHI_TEST_POSTGRES_URL`; CI sets it).
 
 use serde_json::{Value, json};
 
@@ -137,9 +137,6 @@ async fn run(store: Option<&str>) {
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_note_left_for_an_ai_reaches_it_on_its_next_call_once() {
     run(None).await;
-    if let Some(url) = crate::store::testing::empty_postgres().await {
-        run(Some(&url)).await;
-    }
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]

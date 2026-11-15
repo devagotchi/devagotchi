@@ -1,6 +1,6 @@
-//! Stores for a test: a SQLite file always, and a fresh Postgres database when
-//! `DEVAGOTCHI_TEST_POSTGRES_URL` names a server (CI sets it; every hub test that takes
-//! these runs on both backends there).
+//! Stores for a test: a fresh database on the test Postgres that
+//! `DEVAGOTCHI_TEST_POSTGRES_URL` names (CI's hub-postgres job sets it). Without one, a test
+//! that needs a store skips (`or_skip!`, or an empty [`stores`]).
 
 use super::*;
 
@@ -13,22 +13,9 @@ pub struct TestStore {
     pub dir: tempfile::TempDir,
 }
 
+/// The stores a test runs on: one new database on the test Postgres, or none without one.
 pub async fn stores() -> Vec<TestStore> {
-    let mut out = vec![sqlite().await];
-    if let Some(store) = postgres().await {
-        out.push(store);
-    }
-    out
-}
-
-pub async fn sqlite() -> TestStore {
-    let dir = tempfile::tempdir().unwrap();
-    let url = sqlite_url(&dir.path().join("accounts.sqlite3"));
-    TestStore {
-        store: Store::open(&url).await.unwrap(),
-        url,
-        dir,
-    }
+    postgres().await.into_iter().collect()
 }
 
 /// The store at `url` brought to migration `version` and no further, as a hub from
@@ -36,15 +23,8 @@ pub async fn sqlite() -> TestStore {
 pub async fn migrated_to(url: &str, version: i64) {
     static DRIVERS: Once = Once::new();
     DRIVERS.call_once(install_default_drivers);
-    let (migrator, file) = match sqlite_path(url) {
-        Some(file) => (&SQLITE, Some(file)),
-        None => (&POSTGRES, None),
-    };
-    if let Some(file) = file {
-        write_private(&file, &[]).unwrap();
-    }
     let mut connection = sqlx::AnyConnection::connect(url).await.unwrap();
-    migrator.run_to(version, &mut connection).await.unwrap();
+    POSTGRES.run_to(version, &mut connection).await.unwrap();
     connection.close().await.unwrap();
 }
 

@@ -1,7 +1,6 @@
 //! API keys end to end over HTTP, the whole router as it serves: a person makes one on the
 //! page and sees it once; it works on the MCP endpoint and nowhere else; it does only what it
-//! was given; it can never approve; and ending it stops it at once. On SQLite, and on Postgres
-//! when the test server is set (CI).
+//! was given; it can never approve; and ending it stops it at once. On the test Postgres (`DEVAGOTCHI_TEST_POSTGRES_URL`; CI sets it).
 
 use serde_json::{Value, json};
 
@@ -191,9 +190,6 @@ async fn run(store: Option<&str>) {
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_key_does_what_it_was_made_to_do_and_stops_when_it_is_ended() {
     run(None).await;
-    if let Some(url) = crate::store::testing::empty_postgres().await {
-        run(Some(&url)).await;
-    }
 }
 
 /// A tool nobody assigned a scope is closed to keys by default; this makes that a decision.

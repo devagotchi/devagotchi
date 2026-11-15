@@ -21,7 +21,7 @@ use std::{sync::Mutex, time::Duration};
 use devagotchi_contracts::{BridgeError, BridgeResult};
 use serde_json::{Value, json};
 
-use devagotchi_store::{Backend, Store, transaction};
+use devagotchi_store::{Store, transaction};
 
 /// Where AgentHub exports its board events for statistics.
 #[derive(Debug, Clone, serde::Deserialize)]
@@ -95,12 +95,6 @@ impl Warehouse {
         store: Store,
         password: Option<String>,
     ) -> BridgeResult<Self> {
-        if store.backend() != Backend::Postgres {
-            return Err(BridgeError::new(
-                "invalid_config",
-                "the ClickHouse export reads the Postgres outbox; this store is not Postgres",
-            ));
-        }
         let http = reqwest::Client::builder()
             .timeout(Duration::from_secs(15))
             .build()
@@ -551,12 +545,6 @@ impl Warehouse {
 /// Mark every tenant's board events waiting again, so the export sends them all
 /// (`devagotchi hub analytics-resend`). How many.
 pub async fn resend(store: &Store) -> BridgeResult<i64> {
-    if store.backend() != Backend::Postgres {
-        return Err(BridgeError::new(
-            "invalid_config",
-            "the ClickHouse export reads the Postgres outbox; this store is not Postgres",
-        ));
-    }
     transaction!(store, |connection| {
         Ok(sqlx::query_scalar("SELECT devagotchi.outbox_resend()")
             .fetch_one(&mut *connection)

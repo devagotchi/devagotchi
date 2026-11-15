@@ -1,8 +1,7 @@
 //! The operator page (`/operator`) on a hosted hub, the whole router as it serves: only the
 //! operator sees it (anyone else gets an unknown path's 404), it lists who waits and who is
 //! in, lets people in on a plan with one press and changes plans, takes posts from this hub
-//! only, and a person let in has their next MCP call work. On SQLite, and on Postgres when
-//! the test server is set (CI).
+//! only, and a person let in has their next MCP call work. On the test Postgres (`DEVAGOTCHI_TEST_POSTGRES_URL`; CI sets it).
 
 use std::path::Path;
 
@@ -11,7 +10,6 @@ use serde_json::{Value, json};
 use crate::{
     accounts::identities::Proven,
     site::tests::assert_no_brand,
-    store,
     tenant_tests::{Hosted, hosted_with, refused},
 };
 
@@ -90,10 +88,11 @@ async fn page(hub: &Hosted, cookie: Option<&str>) -> (u16, String) {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn the_operator_lets_a_waiting_person_in_and_their_next_call_works() {
-    let mut stores = vec![None];
-    if let Some(url) = store::testing::empty_postgres().await {
-        stores.push(Some(url));
-    }
+    let stores: Vec<Option<String>> = crate::store::testing::empty_postgres()
+        .await
+        .into_iter()
+        .map(Some)
+        .collect();
     for store in stores {
         operator_page(or_skip!(hub_on(store.as_deref(), None))).await;
     }

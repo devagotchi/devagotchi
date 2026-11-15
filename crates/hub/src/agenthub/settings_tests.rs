@@ -10,7 +10,7 @@ async fn settings(hub: &Hosted, person: &mut Person, arguments: Value) -> Value 
     hub.call(person, "board_settings", arguments).await
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn an_account_names_its_boards_repo_and_environments_and_nobody_else_can() {
     let hub = or_skip!(hosted_with(None, |_, _| json!({})));
     let mut alice = hub.first_connect("Claude").await;

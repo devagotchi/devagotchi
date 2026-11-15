@@ -38,7 +38,7 @@ fn version(view: &Value) -> String {
     view["ticket"]["version"].as_i64().unwrap().to_string()
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_person_works_a_ticket_from_the_phone_and_the_board_records_it() {
     let hub = or_skip!(hosted());
     let mut alice = hub.first_connect("Claude").await;
@@ -261,7 +261,7 @@ async fn a_person_works_a_ticket_from_the_phone_and_the_board_records_it() {
     );
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn undo_lasts_ten_seconds() {
     let hub = or_skip!(hosted());
     let mut alice = hub.first_connect("Claude").await;
@@ -306,7 +306,7 @@ async fn undo_lasts_ten_seconds() {
     assert!(!html.contains("id=\"undo\""), "no Undo once its time is up");
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn the_board_filters_by_anchor_chips_and_the_ticket_shows_its_anchors() {
     let hub = or_skip!(hosted());
     let mut alice = hub.first_connect("Claude").await;
@@ -363,24 +363,25 @@ async fn the_board_filters_by_anchor_chips_and_the_ticket_shows_its_anchors() {
     );
 }
 
-/// A's board `alpha` as an earlier build left it, before this hub opens it: its workflow is
-/// `workflow`, stored without an event.
-async fn earlier_board(hub: &Hosted, alice: &mut Person, workflow: &crate::agenthub::Workflow) {
-    let me = hub.call(alice, "whoami", json!({})).await["structuredContent"]["subject"]
-        .as_str()
-        .unwrap()
-        .to_string();
-    let dir = hub.dir.path().join("account-boards").join(&me);
-    std::fs::create_dir_all(&dir).unwrap();
-    let path = dir.join("alpha.sqlite3");
-    drop(crate::agenthub::Board::open(&path, "alpha").unwrap());
-    rusqlite::Connection::open(&path)
-        .unwrap()
-        .execute(
-            "UPDATE settings SET value = ?1 WHERE key = 'workflow'",
-            [serde_json::to_string(workflow).unwrap()],
-        )
-        .unwrap();
+/// A's board `alpha` with its workflow set to `workflow`, as its owner may customise it.
+async fn board_with_workflow(
+    hub: &Hosted,
+    alice: &mut Person,
+    workflow: &crate::agenthub::Workflow,
+) {
+    let bound = hub
+        .call(alice, "board_bind", json!({ "project": "alpha" }))
+        .await;
+    assert!(!refused(&bound), "{bound}");
+    let set = sqlx::query(
+        "UPDATE devagotchi.board_settings SET value = $1 WHERE key = 'workflow'
+           AND board_id = (SELECT id FROM devagotchi.board_projects WHERE project_name = 'alpha')",
+    )
+    .bind(serde_json::to_string(workflow).unwrap())
+    .execute(hub.accounts.store().admin())
+    .await
+    .unwrap();
+    assert_eq!(set.rows_affected(), 1);
 }
 
 /// Close a new ticket on `alpha` from the phone and press Undo; where Undo sends the browser.
@@ -413,47 +414,13 @@ async fn close_and_undo(hub: &Hosted, alice: &mut Person) -> (String, String) {
     (id, to)
 }
 
-#[tokio::test]
-async fn undo_works_on_a_board_made_before_closed_tickets_reopened() {
-    let hub = or_skip!(hosted());
-    let mut alice = hub.first_connect("Claude").await;
-    earlier_board(
-        &hub,
-        &mut alice,
-        &crate::agenthub::Workflow::previous_default(),
-    )
-    .await;
-    let (id, to) = close_and_undo(&hub, &mut alice).await;
-    assert!(to.ends_with("?done=undo"), "{to}");
-    assert_eq!(
-        ticket(&hub, &mut alice, &id).await["ticket"]["state"],
-        "ready"
-    );
-    let events = hub
-        .call(&mut alice, "board_events", json!({ "project": "alpha" }))
-        .await;
-    let events: Value =
-        serde_json::from_str(events["content"][0]["text"].as_str().unwrap()).unwrap();
-    let upgrades = events
-        .as_array()
-        .unwrap()
-        .iter()
-        .filter(|e| e["action"] == "board.workflow_upgraded")
-        .count();
-    assert_eq!(upgrades, 1, "{events}");
-    let verified = hub
-        .call(&mut alice, "board_verify", json!({ "project": "alpha" }))
-        .await;
-    assert_eq!(verified["structuredContent"]["ok"], true, "{verified}");
-}
-
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn undo_on_a_customised_workflow_says_which_transition_to_add() {
     let hub = or_skip!(hosted());
     let mut alice = hub.first_connect("Claude").await;
     let mut ours = crate::agenthub::Workflow::previous_default();
     ours.id = "ours".into();
-    earlier_board(&hub, &mut alice, &ours).await;
+    board_with_workflow(&hub, &mut alice, &ours).await;
     let (id, to) = close_and_undo(&hub, &mut alice).await;
     assert!(to.contains("?done=no&why="), "{to}");
     let why = crate::tenant_tests::query_param(&to, "why").unwrap();
@@ -468,7 +435,7 @@ async fn undo_on_a_customised_workflow_says_which_transition_to_add() {
     );
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_person_assigns_a_ticket_to_an_agent_and_the_agent_is_told() {
     let hub = or_skip!(hosted());
     let mut alice = hub.first_connect("Claude").await;

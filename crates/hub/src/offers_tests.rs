@@ -4,8 +4,7 @@
 //! with no click against a fake Nomen user API (the user found, made, or found unverified,
 //! and Nomen down), and the one-tap link when the hub cannot: it signs in with the network
 //! and the AI's `offers` then says linked. Off (or with no offerings), and on the neutral
-//! site, nothing of it shows: no tool, no section, no word, no page. On SQLite, and on
-//! Postgres when the test server is set (CI).
+//! site, nothing of it shows: no tool, no section, no word, no page. On the test Postgres (`DEVAGOTCHI_TEST_POSTGRES_URL`; CI sets it).
 
 use std::{
     net::SocketAddr,
@@ -17,15 +16,15 @@ use serde_json::{Value, json};
 
 use crate::{
     accounts::identities::Proven,
-    store,
     tenant_tests::{Hosted, Person, hosted_with, refused, set_cookie},
 };
 
 async fn stores() -> Vec<Option<String>> {
-    let mut out = vec![None];
-    if let Some(url) = store::testing::empty_postgres().await {
-        out.push(Some(url));
-    }
+    let out: Vec<Option<String>> = crate::store::testing::empty_postgres()
+        .await
+        .into_iter()
+        .map(Some)
+        .collect();
     out
 }
 
@@ -730,7 +729,7 @@ pub(crate) fn builtin_with(
     site
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn off_or_empty_or_on_a_neutral_site_nothing_of_the_offers_shows() {
     // On, by default: the section, its rail, the tools and the sentence are there.
     let on = or_skip!(hosted_with(None, |_, _| json!({})));

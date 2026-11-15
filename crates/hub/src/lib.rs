@@ -146,7 +146,6 @@ enum Command {
         config: PathBuf,
     },
     ImportBoard {
-        state: PathBuf,
         config: PathBuf,
         source: PathBuf,
         tenant: String,
@@ -263,7 +262,7 @@ fn parse_board_import(args: Vec<OsString>) -> BridgeResult<Command> {
     if args.len() == 1 && (args[0] == "--help" || args[0] == "-h") {
         return Ok(Command::Help);
     }
-    let (mut state, mut config, mut source, mut tenant) = (None, None, None, None);
+    let (mut config, mut source, mut tenant) = (None, None, None);
     let mut apply = false;
     let mut args = args.into_iter();
     while let Some(flag) = args.next() {
@@ -275,7 +274,6 @@ fn parse_board_import(args: Vec<OsString>) -> BridgeResult<Command> {
             .next()
             .ok_or_else(|| BridgeError::new("invalid_cli", "flag without a value"))?;
         match flag.to_str() {
-            Some("--state-dir") if state.is_none() => state = Some(PathBuf::from(value)),
             Some("--config") if config.is_none() => config = Some(PathBuf::from(value)),
             Some("--source") if source.is_none() => source = Some(PathBuf::from(value)),
             Some("--tenant") if tenant.is_none() => {
@@ -289,15 +287,13 @@ fn parse_board_import(args: Vec<OsString>) -> BridgeResult<Command> {
             }
         }
     }
-    match (state, config, source, tenant) {
-        (Some(state), Some(config), Some(source), Some(tenant))
-            if state.is_absolute()
-                && config.is_absolute()
+    match (config, source, tenant) {
+        (Some(config), Some(source), Some(tenant))
+            if config.is_absolute()
                 && source.is_absolute()
                 && accounts::tenants::valid_tenant_id(&tenant) =>
         {
             Ok(Command::ImportBoard {
-                state,
                 config,
                 source,
                 tenant,
@@ -306,7 +302,7 @@ fn parse_board_import(args: Vec<OsString>) -> BridgeResult<Command> {
         }
         _ => Err(BridgeError::new(
             "invalid_cli",
-            "import-board needs --state-dir ABS_PATH --config ABS_JSON --source ABS_SQLITE --tenant t-UUID [--apply]",
+            "import-board needs --config ABS_JSON --source ABS_SQLITE --tenant t-UUID [--apply]",
         )),
     }
 }
@@ -426,14 +422,14 @@ fn read_config(path: &std::path::Path) -> BridgeResult<HubConfig> {
     HubConfig::parse_with(&text, |name| env::var(name).ok())
 }
 
-/// The accounts of a hub whose state is in `state_dir`: in the store `storage` names (see
-/// `store.rs`: the environment's URL, the config's, or the state directory's SQLite file).
+/// The accounts of a hub whose state is in `state_dir`: in the Postgres `storage` names (see
+/// `store.rs`: the environment's URL, else the config's).
 async fn accounts_at(
     state_dir: &std::path::Path,
     config: &HubConfig,
 ) -> BridgeResult<accounts::Accounts> {
     prepare_state_dir(state_dir)?;
-    let url = store::url_for(config.storage_url(), state_dir);
+    let url = store::postgres_url(config.storage_url())?;
     let schema = store::schema_for(config.storage_schema());
     let store = store::Store::open_in(&url, schema.as_deref()).await?;
     configured_accounts(store, config).await
@@ -445,7 +441,7 @@ async fn configured_accounts(
 ) -> BridgeResult<accounts::Accounts> {
     // A hosted hub on Postgres keeps its tenants apart in the database as well: its queries
     // run as a role row-level security holds, or it does not start.
-    if config.multi_tenant() && store.backend() == store::Backend::Postgres && !store.enforced() {
+    if config.multi_tenant() && !store.enforced() {
         return Err(BridgeError::new(
             "account_store",
             "a hosted hub (tenancy.mode multi) on Postgres runs its queries as the role devagotchi_hub, held to row-level security, and its login role cannot switch to that role; see crates/hub/README.md, \"The store\"",
@@ -499,7 +495,6 @@ async fn operator_event(
 fn manage(command: Command) -> BridgeResult<()> {
     match command {
         Command::ImportBoard {
-            state,
             config,
             source,
             tenant,
@@ -513,19 +508,7 @@ fn manage(command: Command) -> BridgeResult<()> {
                     .build()
                     .map_err(|error| BridgeError::new("runtime", error.to_string()))?;
                 runtime.block_on(async {
-                    let url = store::url_for(
-                        config
-                            .storage
-                            .as_ref()
-                            .and_then(|storage| storage.url.as_deref()),
-                        &state,
-                    );
-                    if !url.starts_with("postgres://") && !url.starts_with("postgresql://") {
-                        return Err(BridgeError::new(
-                            "invalid_config",
-                            "import-board requires Postgres storage",
-                        ));
-                    }
+                    let url = store::postgres_url(config.storage_url())?;
                     let schema = store::schema_for(
                         config
                             .storage
@@ -641,13 +624,7 @@ fn manage(command: Command) -> BridgeResult<()> {
         }
         Command::AnalyticsResend { config } => {
             let config = read_config(&config)?;
-            let url = store::url_for(config.storage_url(), std::path::Path::new("."));
-            if !url.starts_with("postgres://") && !url.starts_with("postgresql://") {
-                return Err(BridgeError::new(
-                    "invalid_config",
-                    "analytics-resend reads the hub's Postgres: set storage.url or DEVAGOTCHI_HUB_STORAGE_URL",
-                ));
-            }
+            let url = store::postgres_url(config.storage_url())?;
             let runtime = tokio::runtime::Builder::new_current_thread()
                 .enable_all()
                 .build()
@@ -783,13 +760,7 @@ async fn run(
 ) -> BridgeResult<()> {
     let mut config = read_config(&config_path)?;
     config.extensions = extensions;
-    let url = store::url_for(config.storage_url(), &state_dir);
-    if !url.starts_with("postgres://") && !url.starts_with("postgresql://") {
-        return Err(BridgeError::new(
-            "invalid_config",
-            "hub serve requires Postgres for accounts and boards; set storage.url or DEVAGOTCHI_HUB_STORAGE_URL. SQLite is only for standalone local work and offline client storage.",
-        ));
-    }
+    let url = store::postgres_url(config.storage_url())?;
     let schema = store::schema_for(config.storage_schema());
     let board_store = store::Store::open_in(&url, schema.as_deref()).await?;
     let config = Arc::new(config);
@@ -963,9 +934,7 @@ async fn run(
             "devagotchi hub: exporting board events to ClickHouse at {} (database {})",
             clickhouse.url, clickhouse.database
         );
-    } else if let Some(hub) = &passkeys
-        && warehouse_store.backend() == store::Backend::Postgres
-    {
+    } else if let Some(hub) = &passkeys {
         // Else the ClickHouse the owner set on the settings page, if any. One it cannot
         // start is said here and on the page; the boards work without it.
         match warehouse::start_stored(&boards, hub.accounts(), hub.sealer(), warehouse_store).await
@@ -1527,7 +1496,7 @@ async fn healthz(State(state): State<AppState>) -> Response {
         },
     });
     // The hub's own accounts: whether the database holds its queries to one tenant's rows
-    // (Postgres row-level security; false on SQLite, a standalone hub's own file).
+    // (Postgres row-level security, under a role that cannot bypass it).
     if let Some(passkeys) = &state.passkeys {
         body["store"] = serde_json::json!({ "tenant_rls": passkeys.tenant_rls() });
         // Whether it can send mail and how the last send went: reported, not counted, like
@@ -1754,8 +1723,6 @@ mod tests {
         let tenant = "t-00000000-0000-4000-8000-000000000001";
         let args = [
             "import-board",
-            "--state-dir",
-            STATE,
             "--config",
             CONFIG,
             "--source",
@@ -1772,13 +1739,13 @@ mod tests {
             Command::ImportBoard { apply: true, .. }
         ));
         let mut relative = args;
-        relative[6] = "relative.sqlite3";
+        relative[4] = "relative.sqlite3";
         assert!(parse_args(relative.map(OsString::from)).is_err());
         let mut missing_tenant = args.to_vec();
-        missing_tenant.truncate(7);
+        missing_tenant.truncate(5);
         assert!(parse_args(missing_tenant.into_iter().map(OsString::from)).is_err());
         let mut bad_tenant = args;
-        bad_tenant[8] = "account-is-not-a-tenant";
+        bad_tenant[6] = "account-is-not-a-tenant";
         assert!(parse_args(bad_tenant.map(OsString::from)).is_err());
         for extra in [
             vec!["--apply", "--apply"],
@@ -2001,9 +1968,8 @@ mod tests {
         let config = Arc::new(HubConfig::parse(&value.to_string()).unwrap());
         prepare_state_dir(dir).unwrap();
         let accounts = if config.has_accounts() {
-            let url = store::sqlite_url(&dir.join("accounts.sqlite3"));
             Some(Arc::new(
-                accounts::Accounts::open(store::Store::open(&url).await.unwrap())
+                accounts::Accounts::open(store::testing::postgres().await?.store)
                     .await
                     .unwrap()
                     .with_tokens(config.token_config()),

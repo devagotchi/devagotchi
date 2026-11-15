@@ -267,7 +267,7 @@ fn plugin_hooks_are_silent_without_a_board_and_name_the_client_that_runs_them() 
 }
 
 #[test]
-fn hub_serve_refuses_default_or_explicit_sqlite_without_creating_state() {
+fn hub_serve_without_postgres_refuses_and_creates_nothing() {
     let dir = tempfile::tempdir().unwrap();
     for explicit in [false, true] {
         let state = dir
@@ -294,7 +294,7 @@ fn hub_serve_refuses_default_or_explicit_sqlite_without_creating_state() {
             .unwrap();
         assert!(!out.status.success());
         assert!(
-            String::from_utf8_lossy(&out.stderr).contains("hub serve requires Postgres"),
+            String::from_utf8_lossy(&out.stderr).contains("the hub keeps everything in Postgres"),
             "{}",
             String::from_utf8_lossy(&out.stderr)
         );
@@ -304,7 +304,7 @@ fn hub_serve_refuses_default_or_explicit_sqlite_without_creating_state() {
 }
 
 #[test]
-fn hub_board_import_previews_without_opening_a_destination_and_refuses_sqlite_apply() {
+fn hub_board_import_previews_without_opening_a_destination_and_applies_only_to_postgres() {
     let dir = tempfile::tempdir().unwrap();
     for args in [
         vec!["board", "init", "--project", "migration-demo"],
@@ -322,17 +322,14 @@ fn hub_board_import_previews_without_opening_a_destination_and_refuses_sqlite_ap
         );
     }
     let source = dir.path().join(".devagotchi").join("board.sqlite3");
-    let state = dir.path().join("unopened-state");
     let config = dir.path().join("hub.json");
-    let destination = dir.path().join("must-not-exist.sqlite3");
     std::fs::write(
         &config,
         serde_json::to_vec(&serde_json::json!({
             "listen": "127.0.0.1:8787",
             "public_url": "http://127.0.0.1:8787",
             "auth": {"mode": "dev", "tokens_file": dir.path().join("tokens.json")},
-            "brokers": [], "grants": [],
-            "storage": {"url": format!("sqlite:{}", destination.display())}
+            "brokers": [], "grants": []
         }))
         .unwrap(),
     )
@@ -340,9 +337,7 @@ fn hub_board_import_previews_without_opening_a_destination_and_refuses_sqlite_ap
     let invoke = |apply| {
         let mut command = devagotchi();
         command
-            .args(["hub", "import-board", "--state-dir"])
-            .arg(&state)
-            .arg("--config")
+            .args(["hub", "import-board", "--config"])
             .arg(&config)
             .arg("--source")
             .arg(&source)
@@ -363,16 +358,12 @@ fn hub_board_import_previews_without_opening_a_destination_and_refuses_sqlite_ap
     let receipt: serde_json::Value = serde_json::from_slice(&preview.stdout).unwrap();
     assert_eq!(receipt["project"], "migration-demo");
     assert_eq!(receipt["counts"]["tickets"], 1);
-    assert!(!state.exists());
-    assert!(!destination.exists());
     let repeat = invoke(false);
     assert!(repeat.status.success());
     assert_eq!(preview.stdout, repeat.stdout);
     let apply = invoke(true);
     assert!(!apply.status.success());
-    assert!(String::from_utf8_lossy(&apply.stderr).contains("requires Postgres storage"));
-    assert!(!destination.exists());
-    assert!(!state.exists());
+    assert!(String::from_utf8_lossy(&apply.stderr).contains("keeps everything in Postgres"));
     assert!(source.exists());
 }
 

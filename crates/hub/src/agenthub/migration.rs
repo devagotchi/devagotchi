@@ -10,13 +10,13 @@ use sha2::{Digest, Sha256};
 use sqlx::Row as _;
 
 use super::{GENESIS, SCHEMA_VERSION, event_from_row, event_hash, fail, store_error};
-use crate::store::{Backend, Store, transaction};
+use crate::store::{Store, transaction};
 
 const SNAPSHOT_MAX_BYTES: usize = 256 * 1024 * 1024;
 const SNAPSHOT_MAX_ROWS: usize = 1_000_000;
 
-pub const USAGE: &str = "devagotchi hub import-board --state-dir ABS_PATH --config ABS_JSON \
---source ABS_SQLITE --tenant t-UUID [--apply]
+pub const USAGE: &str = "devagotchi hub import-board --config ABS_JSON --source ABS_SQLITE \
+--tenant t-UUID [--apply]
 Preview a verified board snapshot by default; --apply imports it transactionally into
 Postgres. Retains the source, refuses a different existing import and does not change
 live routing. Stop source writers and back up before importing.";
@@ -310,12 +310,6 @@ impl Snapshot {
     }
 
     pub async fn import_postgres(&self, store: &Store, tenant: &str) -> BridgeResult<Receipt> {
-        if store.backend() != Backend::Postgres {
-            return Err(fail(
-                "invalid_config",
-                "hub board import requires Postgres storage",
-            ));
-        }
         self.import(store, tenant).await
     }
 
@@ -416,9 +410,7 @@ impl Snapshot {
                     .order
                     .split(',')
                     .map(|column| {
-                        if store.backend() == Backend::Postgres
-                            && !integer_column(table.source, column)
-                        {
+                        if !integer_column(table.source, column) {
                             format!("{column} COLLATE \"C\"")
                         } else {
                             column.to_string()

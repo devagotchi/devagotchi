@@ -18,7 +18,7 @@ use super::{Accounts, account_columns_a, account_row, hash, now_secs, secs, tena
 use crate::{
     auth::Subject,
     config::valid_name,
-    store::{Backend, Failed, transaction},
+    store::{Failed, transaction},
 };
 
 #[cfg(test)]
@@ -507,14 +507,11 @@ impl Accounts {
         let now = now_secs();
         let key_hash = hash(token);
         let found = transaction!(&self.store, |connection| {
-            let sql = match self.store.backend() {
-                Backend::Postgres => "SELECT devagotchi.api_key_tenant($1)",
-                Backend::Sqlite => "SELECT tenant_id FROM api_keys WHERE hash = $1",
-            };
-            let tenant: Option<Option<String>> = sqlx::query_scalar(sql)
-                .bind(&key_hash)
-                .fetch_optional(&mut *connection)
-                .await?;
+            let tenant: Option<Option<String>> =
+                sqlx::query_scalar("SELECT devagotchi.api_key_tenant($1)")
+                    .bind(&key_hash)
+                    .fetch_optional(&mut *connection)
+                    .await?;
             let Some(tenant) = tenant.flatten() else {
                 return Ok(None);
             };

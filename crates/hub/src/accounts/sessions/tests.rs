@@ -1,16 +1,12 @@
 use super::*;
-use crate::store::{
-    Backend,
-    testing::{self, TestStore},
-};
+use crate::store::testing::{self, TestStore};
 
 const A: &str = "acct_aaaaaaaaaaaaaaaaaaaaaaaaaa";
 const B: &str = "acct_bbbbbbbbbbbbbbbbbbbbbbbbbb";
 const T: u64 = 1_000_000;
 const DAY: u64 = 86_400;
 
-/// Accounts A (the owner) and B in every store this run has: SQLite always, Postgres when
-/// the test server is set.
+/// Accounts A (the owner) and B on the test Postgres (none without one).
 async fn stores() -> Vec<(TestStore, Accounts)> {
     let mut out = Vec::new();
     for store in testing::stores().await {
@@ -59,7 +55,7 @@ async fn who(accounts: &Accounts, token: &str, now: u64) -> Option<String> {
 
 #[tokio::test]
 async fn a_session_names_its_account_and_is_stored_only_as_a_hash() {
-    for (store, accounts) in stores().await {
+    for (_, accounts) in stores().await {
         let key = passkey(&accounts, A, 1).await;
         let token = accounts
             .open_session_at(A, Some(&key), [5; 32], T)
@@ -76,22 +72,6 @@ async fn a_session_names_its_account_and_is_stored_only_as_a_hash() {
             .await
             .unwrap();
         assert_eq!(stored, vec![hash(&token)]);
-        if store.store.backend() == Backend::Sqlite {
-            sqlx::query("PRAGMA wal_checkpoint(TRUNCATE)")
-                .execute(accounts.store().admin())
-                .await
-                .unwrap();
-            let mut raw = std::fs::read(store.dir.path().join("accounts.sqlite3")).unwrap();
-            raw.extend(
-                std::fs::read(store.dir.path().join("accounts.sqlite3-wal")).unwrap_or_default(),
-            );
-            let contains = |needle: &[u8]| raw.windows(needle.len()).any(|w| w == needle);
-            assert!(contains(hash(&token).as_bytes()));
-            assert!(
-                !contains(token.as_bytes()),
-                "the session id itself is never stored"
-            );
-        }
 
         for wrong in ["", "dgs_", "dgs_nonsense", &token[..token.len() - 1]] {
             assert_eq!(who(&accounts, wrong, T + 1).await, None, "{wrong:?}");
@@ -248,23 +228,16 @@ async fn an_account_keeps_a_bounded_number_of_sessions() {
 
 #[tokio::test]
 async fn a_link_adds_the_passkey_and_opens_its_session_together_or_not_at_all() {
-    for (store, accounts) in stores().await {
+    for (_, accounts) in stores().await {
         let link = accounts.issue_link(LinkPurpose::Owner, A).await.unwrap();
         // The session cannot be stored: nothing else happens either.
-        let (refuse, allow) = match store.store.backend() {
-            Backend::Sqlite => (
-                "CREATE TRIGGER no_sessions BEFORE INSERT ON auth_sessions
-                 BEGIN SELECT RAISE(ABORT, 'no sessions'); END;",
-                "DROP TRIGGER no_sessions;",
-            ),
-            Backend::Postgres => (
-                "CREATE FUNCTION no_sessions() RETURNS trigger LANGUAGE plpgsql AS
-                   $$ BEGIN RAISE EXCEPTION 'no sessions'; END $$;
-                 CREATE TRIGGER no_sessions BEFORE INSERT ON auth_sessions
-                   FOR EACH ROW EXECUTE FUNCTION no_sessions();",
-                "DROP TRIGGER no_sessions ON auth_sessions; DROP FUNCTION no_sessions();",
-            ),
-        };
+        let (refuse, allow) = (
+            "CREATE FUNCTION no_sessions() RETURNS trigger LANGUAGE plpgsql AS
+               $$ BEGIN RAISE EXCEPTION 'no sessions'; END $$;
+             CREATE TRIGGER no_sessions BEFORE INSERT ON auth_sessions
+               FOR EACH ROW EXECUTE FUNCTION no_sessions();",
+            "DROP TRIGGER no_sessions ON auth_sessions; DROP FUNCTION no_sessions();",
+        );
         sqlx::raw_sql(refuse)
             .execute(accounts.store().admin())
             .await

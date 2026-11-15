@@ -72,15 +72,9 @@ async fn world_configured(owner: Option<&str>, site: Option<&std::path::Path>) -
         .unwrap(),
     );
     let accounts = Arc::new(
-        Accounts::open(
-            crate::store::Store::open(&crate::store::sqlite_url(
-                &dir.path().join("accounts.sqlite3"),
-            ))
+        Accounts::open(crate::store::testing::postgres().await?.store)
             .await
             .unwrap(),
-        )
-        .await
-        .unwrap(),
     );
     let devices = crate::machines::devices::test_registry().await?;
     let audit = crate::audit::test_audit().await?;
@@ -848,7 +842,6 @@ async fn a_copied_passkey_ends_the_sessions_it_opened() {
 
 #[tokio::test]
 async fn on_https_the_cookies_are_the_hosts_alone() {
-    let dir = tempfile::tempdir().unwrap();
     let config = Arc::new(
         HubConfig::parse(
             &json!({
@@ -863,15 +856,9 @@ async fn on_https_the_cookies_are_the_hosts_alone() {
         .unwrap(),
     );
     let accounts = Arc::new(
-        Accounts::open(
-            crate::store::Store::open(&crate::store::sqlite_url(
-                &dir.path().join("accounts.sqlite3"),
-            ))
+        Accounts::open(or_skip!(crate::store::testing::postgres()).store)
             .await
             .unwrap(),
-        )
-        .await
-        .unwrap(),
     );
     let hub = HubSignIn::new(config, accounts).unwrap();
     assert_eq!(hub.session_cookie(), "__Host-dg_session");

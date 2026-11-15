@@ -202,7 +202,7 @@ fn the_ai_client_family_comes_from_its_oauth_client_name() {
 
 #[tokio::test]
 async fn the_visitor_key_lives_one_day_so_a_visitor_on_two_days_has_two_ids() {
-    let store = testing::sqlite().await;
+    let store = or_skip!(testing::postgres());
     let analytics = Analytics::start(
         store.store.clone(),
         AnalyticsConfig::default(),
