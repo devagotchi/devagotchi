@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 
 use super::{StepStatus, WorkflowStatus};
 use crate::{
-    accounts::workflows::WorkflowRow, auth::Subject, hub::Hub, machines::now_secs, site::Ctx,
+    auth::Subject, hub::Hub, machines::now_secs, site::Ctx, workflows::stored::WorkflowRow,
 };
 
 /// The longest a `workflow_wait` holds.

@@ -46,10 +46,7 @@ use super::{
 };
 use crate::{
     AppState,
-    accounts::{
-        sessions::SESSION_MAX_SECS,
-        workflows::{WorkflowRow, browser_hash, new_browser_secret},
-    },
+    accounts::sessions::SESSION_MAX_SECS,
     auth::Subject,
     machines::{devices::CODE_TTL_SECS, join::valid_code, now_secs, random},
     site::{
@@ -57,6 +54,7 @@ use crate::{
         workflows::{AI_CLIENT, MACHINE, PHONE, SECURE_ACCOUNT},
     },
     workflows::WorkflowStatus,
+    workflows::stored::{WorkflowRow, browser_hash, new_browser_secret},
 };
 
 fn secure(state: &AppState) -> bool {

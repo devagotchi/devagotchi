@@ -23,12 +23,10 @@ use super::{
 use crate::ops::warehouse;
 use crate::{
     AppState,
-    accounts::{
-        analytics_settings::StoredClickHouse,
-        sign_in_settings::{NewSignIn, StoredSignIn},
-    },
+    accounts::sign_in_settings::{NewSignIn, StoredSignIn},
     auth::Subject,
     config::providers::ProviderConfig,
+    ops::analytics_settings::StoredClickHouse,
 };
 
 /// What a person follows to get a provider's id and secret, and its name on the page.

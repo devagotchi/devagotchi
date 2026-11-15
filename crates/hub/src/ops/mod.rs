@@ -6,8 +6,8 @@
 //!
 //! In the hub's Postgres: `audit_entries` (migration 0027, the hash chain, `audit`);
 //! `hub_analytics_events`, `hub_analytics_views` and `hub_analytics_daily` (migration 0009,
-//! `analytics`); `analytics_settings` (the ClickHouse connection set on `/admin`, read
-//! through `crate::accounts::analytics_settings`). Board events reach ClickHouse through
+//! `analytics`); `analytics_settings` (the ClickHouse connection set on `/admin`, kept
+//! through the account store, `analytics_settings`). Board events reach ClickHouse through
 //! AgentHub's own outbox (`devagotchi_agenthub::clickhouse`, re-exported by `warehouse`).
 //!
 //! # Serves
@@ -30,6 +30,7 @@
 //! `crate::agenthub` (the boards whose events are exported), `crate::config`.
 
 pub mod analytics;
+pub mod analytics_settings;
 pub mod audit;
 pub mod warehouse;
 

@@ -9,6 +9,7 @@
 use std::{sync::Arc, time::Duration};
 
 pub(crate) mod catalog;
+pub mod stored;
 
 use catalog::Service;
 use devagotchi_contracts::BridgeError;

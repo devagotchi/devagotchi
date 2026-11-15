@@ -11,22 +11,18 @@
 //! the one-time link.
 
 pub mod access;
-pub mod analytics_settings;
 pub mod api_keys;
 pub mod claim;
 pub mod clients;
-pub mod connections;
 pub mod email;
 pub mod identities;
 pub mod oauth;
-pub mod offers;
 pub mod operator;
 pub mod passkey;
 mod passwords;
 pub mod sessions;
 pub mod sign_in_settings;
 pub mod tenants;
-pub mod workflows;
 
 use aws_lc_rs::hmac;
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
@@ -166,7 +162,8 @@ pub struct Passkey {
 }
 
 pub struct Accounts {
-    store: Store,
+    /// Read by the domains that keep rows through the account store (`<domain>/stored.rs`).
+    pub(crate) store: Store,
     /// How long the hub's own AI tokens live (`auth.tokens`).
     tokens: crate::config::TokenConfig,
     /// One owner's hub or a hosted one, and what an account not secured yet may hold.
@@ -194,7 +191,7 @@ pub struct Accounts {
     extensions: crate::extensions::Extensions,
 }
 
-fn hash(secret: &str) -> String {
+pub(crate) fn hash(secret: &str) -> String {
     hex::encode(Sha256::digest(secret.trim().as_bytes()))
 }
 
@@ -245,7 +242,7 @@ macro_rules! passkey_columns {
     };
 }
 
-async fn account_in(
+pub(crate) async fn account_in(
     connection: &mut AnyConnection,
     id: &str,
 ) -> Result<Option<Account>, sqlx::Error> {
@@ -1014,7 +1011,7 @@ impl Accounts {
     }
 }
 
-fn account_disabled(account: &str) -> BridgeError {
+pub(crate) fn account_disabled(account: &str) -> BridgeError {
     BridgeError::new("account_disabled", format!("{account} is disabled"))
 }
 

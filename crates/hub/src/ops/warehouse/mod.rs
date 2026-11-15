@@ -8,10 +8,8 @@ use serde_json::{Value, json};
 use std::sync::Arc;
 
 use crate::{
-    accounts::{Accounts, analytics_settings::StoredClickHouse},
-    agenthub::mcp::Boards,
-    sealed::Sealer,
-    store::Store,
+    accounts::Accounts, agenthub::mcp::Boards, ops::analytics_settings::StoredClickHouse,
+    sealed::Sealer, store::Store,
 };
 
 /// The name a ClickHouse password is sealed under (`crate::sealed`).

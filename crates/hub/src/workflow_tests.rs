@@ -791,7 +791,7 @@ async fn expiry_cancelling_and_a_new_link_each_end_the_old_one() {
         let token = second.trim_start_matches("/go/");
         let row = hub.accounts.workflow_by_link(token).await.unwrap().unwrap();
         assert_eq!(row.state, "open");
-        assert_eq!(crate::accounts::workflows::link_hash(token).len(), 64);
+        assert_eq!(crate::workflows::stored::link_hash(token).len(), 64);
     }
 }
 
@@ -873,7 +873,7 @@ async fn keeping_the_account_is_offered_after_the_first_success_to_the_browser_t
         assert_eq!(answer["keep"], false);
         let stranger = format!(
             "dg_wfb={}",
-            crate::accounts::workflows::new_browser_secret([1; 32])
+            crate::workflows::stored::new_browser_secret([1; 32])
         );
         for cookies in [None, Some(stranger.as_str())] {
             let answer = keep(cookies).await.unwrap();
