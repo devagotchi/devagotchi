@@ -6,7 +6,7 @@
 use serde_json::json;
 
 use crate::{
-    tenant_tests::Hosted,
+    tenancy::tests::tenants::{Hosted, hosted_with},
     web::operator_tests_support::{hub_on, operator_cookie},
 };
 
@@ -523,7 +523,7 @@ async fn a_clickhouse_saved_on_the_settings_page_is_checked_sealed_and_exported_
 
     // A ClickHouse the hub's configuration sets is shown, not changed, here.
     let fresh = crate::store::testing::empty_postgres().await.unwrap();
-    let configured = or_skip!(crate::tenant_tests::hosted_with(Some(&fresh), |_, _| {
+    let configured = or_skip!(hosted_with(Some(&fresh), |_, _| {
         json!({ "operators": ["github:42"], "clickhouse": { "url": url, "database": "from_config" } })
     }));
     let owner = operator_cookie(&configured).await;

@@ -350,7 +350,7 @@ pub async fn test(State(state): State<AppState>, headers: HeaderMap) -> Response
         Who::Unavailable => return unavailable(),
         Who::NotSetUp => return not_set_up(),
     };
-    // A tenant waiting to be let in writes no board (`tenant_access.rs`).
+    // A tenant waiting to be let in writes no board (`tenancy/gate.rs`).
     if let Some(refused) = state.hub.waiting_refusal(&subject) {
         return waiting_page(&refused);
     }
@@ -422,7 +422,7 @@ pub async fn decide(
         Who::Unavailable => return unavailable(),
         Who::NotSetUp => return not_set_up(),
     };
-    // A tenant waiting to be let in writes no board (`tenant_access.rs`).
+    // A tenant waiting to be let in writes no board (`tenancy/gate.rs`).
     if let Some(refused) = state.hub.waiting_refusal(&subject) {
         return waiting_page(&refused);
     }

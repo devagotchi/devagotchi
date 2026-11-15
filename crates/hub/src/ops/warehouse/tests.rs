@@ -18,8 +18,8 @@ use serde_json::Value;
 use super::*;
 use crate::{
     agenthub::{Actor, NewTicket, hosted::HostedBoard},
-    orgs::Orgs,
     store::{Store, testing, transaction},
+    tenancy::orgs::Orgs,
 };
 
 #[derive(Clone, Copy, PartialEq, Eq)]

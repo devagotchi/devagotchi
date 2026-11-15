@@ -20,7 +20,7 @@
 
 use std::net::IpAddr;
 
-use crate::ops::analytics::funnel;
+use crate::{ops::analytics::funnel, tenancy::access};
 
 use super::*;
 
@@ -77,7 +77,7 @@ pub(crate) async fn settle_in(
     let home = home_in(connection).await?;
     store.scope(connection, &home).await?;
     // The operator's tenant is always in (`access.rs`).
-    super::access::home_in(connection, &home, now).await?;
+    access::home_in(connection, &home, now).await?;
     let told = sqlx::query("SELECT 1 FROM tenancy_events WHERE tenant_id = $1 LIMIT 1")
         .bind(&home)
         .fetch_optional(&mut *connection)
@@ -105,7 +105,7 @@ pub(crate) async fn settle_in(
 }
 
 /// The home tenant's id.
-pub(super) async fn home_in(connection: &mut AnyConnection) -> Result<String, Failed> {
+pub(crate) async fn home_in(connection: &mut AnyConnection) -> Result<String, Failed> {
     Ok(sqlx::query("SELECT id FROM tenancy_tenants WHERE home = 1")
         .fetch_one(&mut *connection)
         .await?
@@ -385,8 +385,7 @@ impl Accounts {
             )
             .await?;
             let access =
-                super::access::begin_in(connection, &tenant, &self.site(), self.counting, now)
-                    .await?;
+                access::begin_in(connection, &tenant, &self.site(), self.counting, now).await?;
             sqlx::query(
                 "INSERT INTO auth_accounts (id, name, owner, created_at, tenant_id, provisional, last_active)
                  VALUES ($1, $2, 0, $3, $4, 1, $3)",

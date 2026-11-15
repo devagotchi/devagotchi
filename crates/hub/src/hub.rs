@@ -189,7 +189,7 @@ pub struct OrgRole {
     pub org: String,
     pub name: String,
     /// owner, admin, member, agent or viewer: what the caller may do on its projects.
-    pub role: crate::orgs::Role,
+    pub role: crate::tenancy::orgs::Role,
 }
 
 #[derive(Debug, Serialize, JsonSchema)]
@@ -266,7 +266,7 @@ pub struct WhoAmI {
 
 impl Hub {
     /// The machines `subject` reaches, each with whether it can be used right now, named
-    /// as it knows them (on a hosted hub, its tenant's names: `tenant_machines.rs`).
+    /// as it knows them (on a hosted hub, its tenant's names: `tenancy/machines.rs`).
     pub async fn machine_status(&self, subject: &Subject) -> Vec<Machine> {
         let configured = self.config.brokers_for(&subject.id);
         let owned: Vec<Machine> = self
@@ -544,9 +544,9 @@ impl Hub {
         Ok(Json(WhoAmI {
             access: subject.access.as_ref().map(|access| {
                 if access.waiting {
-                    crate::accounts::access::WAITING
+                    crate::tenancy::access::WAITING
                 } else {
-                    crate::accounts::access::ADMITTED
+                    crate::tenancy::access::ADMITTED
                 }
                 .to_string()
             }),
@@ -877,7 +877,7 @@ pub(crate) fn unexpected_response(expected: &str, actual: &ResponseBody) -> Json
 impl ServerHandler for Hub {
     /// Every tool call, unless the caller's tenant waits to be let in (early access): then
     /// every tool but `whoami` answers with the site's message instead of acting
-    /// (`tenant_access.rs`), and the call is audited as `early_access`.
+    /// (`tenancy/gate.rs`), and the call is audited as `early_access`.
     async fn call_tool(
         &self,
         request: rmcp::model::CallToolRequestParams,

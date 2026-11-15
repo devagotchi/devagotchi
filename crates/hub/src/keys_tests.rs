@@ -6,7 +6,7 @@ use serde_json::{Value, json};
 
 use crate::{
     accounts::api_keys,
-    tenant_tests::{Hosted, Person, hosted_with, refused},
+    tenancy::tests::tenants::{Hosted, Person, hosted_with, refused},
 };
 
 fn form(

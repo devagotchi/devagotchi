@@ -13,7 +13,7 @@ use axum::{
 };
 use serde_json::{Value, json};
 
-use crate::tenant_tests::{Hosted, hosted_with, refused};
+use crate::tenancy::tests::tenants::{Hosted, hosted_with, refused};
 
 const GOOD: &str = "re_good_key_123456";
 
@@ -267,7 +267,7 @@ async fn run(store: Option<&str>) {
 }
 
 /// The tenant a person's account is in.
-async fn tenant(hub: &Hosted, person: &mut crate::tenant_tests::Person) -> String {
+async fn tenant(hub: &Hosted, person: &mut crate::tenancy::tests::tenants::Person) -> String {
     let who: Value = hub.call(person, "whoami", json!({})).await;
     let subject = who["structuredContent"]["subject"]
         .as_str()

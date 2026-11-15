@@ -11,7 +11,7 @@
 //! - A waiting tenant's account works as before: it is made on first connect, it is
 //!   secured with any sign-in, its AI connects and asks `whoami`. Nothing else runs for it:
 //!   no tool, no machine added or enrolled, no board written (`hub.rs`,
-//!   `tenant_machines.rs`, `lib.rs`, `web/approvals.rs`).
+//!   `tenancy/machines.rs`, `lib.rs`, `web/approvals.rs`).
 //! - Opening sign-up lets each waiting tenant in on its next request (`settle_in`),
 //!   recorded as `open sign-up`. Going back to early access never puts anyone back.
 //! - An operator lets tenants in and changes their plans (`admit`, `set_plan`); each step
@@ -24,16 +24,17 @@
 //! The operator's lists go through `Store::tenants_in`, which names the tenants in one state
 //! and nothing else; each tenant's details are read in a transaction scoped to it.
 
-use std::{
-    collections::BTreeSet,
-    sync::{Arc, Mutex},
-};
+use std::sync::Arc;
 
-use super::*;
+use devagotchi_contracts::{BridgeError, BridgeResult};
+use sqlx::{AnyConnection, Row, any::AnyRow};
+
+use crate::accounts::*;
+use crate::store::{Failed, Lookup, secs, transaction, unsecs};
 use crate::{
+    machines::now_secs,
     ops::analytics::funnel,
-    site::{Plan, SignUp, Site},
-    store::Lookup,
+    site::{SignUp, Site},
 };
 
 pub const ADMITTED: &str = "admitted";
@@ -84,7 +85,7 @@ fn access_row(row: &AnyRow) -> Result<(Access, bool), sqlx::Error> {
 
 /// `tenant`'s access as kept, and whether it is the home tenant; `None` for a tenant with
 /// no row yet. Inside a transaction scoped to `tenant`.
-pub(super) async fn read_in(
+pub(crate) async fn read_in(
     connection: &mut AnyConnection,
     tenant: &str,
 ) -> Result<Option<(Access, bool)>, sqlx::Error> {
@@ -124,7 +125,7 @@ async fn insert_in(
 /// A new tenant's row: in, or waiting since `now`, as the site's sign-up is now; on its
 /// default plan; and, `counting`, its waiting or admitted milestone. Inside the transaction
 /// that makes the tenant, scoped to it.
-pub(super) async fn begin_in(
+pub(crate) async fn begin_in(
     connection: &mut AnyConnection,
     tenant: &str,
     site: &Site,
@@ -158,7 +159,7 @@ pub(super) async fn begin_in(
 }
 
 /// The home tenant's row, made if missing: always in. Scoped to the home tenant.
-pub(super) async fn home_in(
+pub(crate) async fn home_in(
     connection: &mut AnyConnection,
     home: &str,
     now: u64,
@@ -204,7 +205,7 @@ impl Accounts {
     }
 
     /// Tell whoever listens about the tenants just let in. After their transaction.
-    pub(super) fn announce(&self, admitted: impl IntoIterator<Item = Admitted>) {
+    pub(crate) fn announce(&self, admitted: impl IntoIterator<Item = Admitted>) {
         if let Some(announce) = self.announce.get() {
             for one in admitted {
                 announce(one);
@@ -267,7 +268,7 @@ impl Accounts {
     /// (made by a hub from before early access) is in; a waiting one is let in now when
     /// sign-up is open, or when it is the home tenant. Inside a transaction scoped to the
     /// account's tenant; the tenant it let in, if it did.
-    pub(super) async fn settle_in(
+    pub(crate) async fn settle_in(
         &self,
         connection: &mut AnyConnection,
         account: &mut Account,
@@ -393,115 +394,10 @@ impl Accounts {
         self.announce(admitted.clone());
         Ok(admitted)
     }
-
-    /// An operator puts `tenant` on `plan` (a plan the site lists), recorded in its chain and
-    /// the home tenant's.
-    pub async fn set_plan(&self, tenant: &str, plan: &str, operator: &str) -> BridgeResult<()> {
-        self.known_plan(plan)?;
-        let now = now_secs();
-        transaction!(&self.store, |connection| {
-            self.store.scope(connection, tenant).await?;
-            let changed = sqlx::query("UPDATE tenancy_access SET plan = $2 WHERE tenant_id = $1")
-                .bind(tenant)
-                .bind(plan)
-                .execute(&mut *connection)
-                .await?
-                .rows_affected();
-            if changed == 0 {
-                return Err(
-                    BridgeError::new("unknown_tenant", format!("no tenant {tenant} here")).into(),
-                );
-            }
-            tenants::record_in(connection, tenant, operator, "tenant.plan", plan, now).await?;
-            let home = tenants::home_in(connection).await?;
-            self.store.scope(connection, &home).await?;
-            tenants::record_in(
-                connection,
-                &home,
-                operator,
-                "tenant.plan",
-                &format!("{tenant}: {plan}"),
-                now,
-            )
-            .await
-        })
-    }
-
-    /// Refuse a new AI connection for `tenant` once it has as many live ones (each refresh
-    /// family is one) as its plan's `clients`. Inside a transaction scoped to it.
-    pub(super) async fn room_on_the_plan(
-        &self,
-        connection: &mut AnyConnection,
-        tenant: &str,
-        now: u64,
-    ) -> Result<(), Failed> {
-        let Some((access, _)) = read_in(connection, tenant).await? else {
-            return Ok(());
-        };
-        let Some(plan) = self.plan_of(tenant, &access) else {
-            return Ok(());
-        };
-        let crate::site::Cap::AtMost(most) = plan.cap("clients") else {
-            return Ok(());
-        };
-        let live: i64 = sqlx::query(
-            "SELECT COUNT(DISTINCT family) FROM oauth_tokens
-             WHERE tenant_id = $1 AND kind = 'refresh' AND used_at IS NULL AND expires_at > $2",
-        )
-        .bind(tenant)
-        .bind(secs(now))
-        .fetch_one(&mut *connection)
-        .await?
-        .try_get(0)?;
-        let live = usize::try_from(live).unwrap_or(0);
-        if live >= most as usize {
-            let site = self.site();
-            return Err(BridgeError::new(
-                "plan_limit",
-                site.limit_message(&plan, "clients", most, live, &self.public_url),
-            )
-            .into());
-        }
-        Ok(())
-    }
-
-    fn known_plan(&self, plan: &str) -> BridgeResult<()> {
-        if self.site().plan(plan).is_none() {
-            return Err(BridgeError::new(
-                "unknown_plan",
-                format!("site.json lists no plan {plan:?}"),
-            ));
-        }
-        Ok(())
-    }
-
-    /// The plan `tenant`, kept on `access`, is on as the site is now: its plan, else the
-    /// site's default plan (said in the log once per tenant and plan id).
-    pub fn plan_of(&self, tenant: &str, access: &Access) -> Option<Plan> {
-        plan_for(&self.site(), tenant, access)
-    }
 }
 
-/// The plan a tenant kept on `access` is on in `site`; a plan id the site no longer lists
-/// is its default plan, said in the log once per tenant and plan id.
-pub fn plan_for(site: &Site, tenant: &str, access: &Access) -> Option<Plan> {
-    static SAID: Mutex<BTreeSet<(String, String)>> = Mutex::new(BTreeSet::new());
-    let (plan, fell_back) = site.plan_for(access.plan.as_deref());
-    if fell_back {
-        let kept = access.plan.clone().unwrap_or_default();
-        let first = SAID
-            .lock()
-            .map(|mut said| said.insert((tenant.to_string(), kept.clone())))
-            .unwrap_or(false);
-        if first {
-            eprintln!(
-                "devagotchi hub: tenant {tenant} is on plan {kept:?}, which site.json no longer lists; holding it to the default plan {:?}",
-                plan.map(|plan| plan.id.as_str()).unwrap_or("")
-            );
-        }
-    }
-    plan.cloned()
-}
+mod plans;
+pub use plans::plan_for;
 
 #[cfg(test)]
 mod tests;

@@ -19,7 +19,7 @@ use sha2::{Digest, Sha256};
 use crate::{
     accounts::identities::Proven,
     machines::now_secs,
-    tenant_tests::{Hosted, Person, hosted_with, set_cookie},
+    tenancy::tests::tenants::{Hosted, Person, hosted_with, set_cookie},
 };
 
 /// A browser that never signed in: only the cookies a workflow's page gave it.
@@ -1420,7 +1420,7 @@ async fn a_neutral_sites_workflow_pages_name_only_that_site() {
 async fn connect_in(hub: &Hosted, app: &str, cookie: &str) -> Person {
     use crate::{
         accounts::oauth::s256,
-        tenant_tests::{query_param, web_encode},
+        tenancy::tests::tenants::{query_param, web_encode},
     };
     let redirect = "http://127.0.0.1:9/callback";
     let registered: Value = hub

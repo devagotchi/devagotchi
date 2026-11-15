@@ -1,5 +1,5 @@
 //! Early access and plans on a hosted hub end to end over HTTP, the whole router as it
-//! serves (`accounts/access.rs`, `tenant_access.rs`): a person waiting to be let in is
+//! serves (`tenancy/access/`, `tenancy/gate.rs`): a person waiting to be let in is
 //! answered and not served on every write path, an operator lets them in and their next
 //! call works, sign-up opening lets everyone in on their next call, and a plan's limits
 //! hold at the boundary. On the test Postgres (`DEVAGOTCHI_TEST_POSTGRES_URL`; CI sets it).
@@ -9,7 +9,7 @@ use std::path::Path;
 use serde_json::{Value, json};
 
 use super::*;
-use crate::tenant_tests::{Hosted, Person, fill, hosted_with, refused};
+use crate::tenancy::tests::tenants::{Hosted, Person, fill, hosted_with, refused};
 
 /// A site directory under `dir`: the built-in site with `edit` applied to its site.json
 /// (every other file the built-in one's).

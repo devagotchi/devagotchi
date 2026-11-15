@@ -42,8 +42,8 @@ use crate::{
     config::{DEFAULT_FREE_LIMIT, HubConfig, valid_name},
     hub::Hub,
     ops::audit::AuditEntry,
-    orgs::Role,
     site::Cap,
+    tenancy::orgs::{self, Role},
 };
 
 /// The header a caller names its seat in: the account's own agent on that machine.
@@ -60,7 +60,7 @@ pub struct Boards {
     hosted: super::registry::Registry,
     /// Organisations, their members and who works which project (`crate::orgs`): in the
     /// hub's store, beside the hosted boards.
-    orgs: Option<crate::orgs::Orgs>,
+    orgs: Option<orgs::Orgs>,
     /// What people told the hub they want, kept beside the organisations.
     preferences: Option<crate::preferences::PreferenceStore>,
     /// The export of these boards' events to ClickHouse (`crate::warehouse`), when the hub
@@ -145,7 +145,7 @@ impl Boards {
         });
         Ok(Self {
             hosted: super::registry::Registry::new(store.clone())?,
-            orgs: Some(crate::orgs::Orgs::new(store.clone())),
+            orgs: Some(orgs::Orgs::new(store.clone())),
             preferences: Some(crate::preferences::PreferenceStore::new(store)),
             warehouse: std::sync::RwLock::new(None),
             sinks: std::sync::OnceLock::new(),
@@ -166,7 +166,7 @@ impl Boards {
     }
 
     /// This hub's organisations, when it keeps them (always under `hub serve`).
-    pub(crate) fn orgs(&self) -> Option<&crate::orgs::Orgs> {
+    pub(crate) fn orgs(&self) -> Option<&orgs::Orgs> {
         self.orgs.as_ref()
     }
 
@@ -334,7 +334,7 @@ impl Boards {
     }
 
     /// `bind_for`, with the limit a plan sets in place of the free limit (`planned`:
-    /// `Some(Some(n))` at most `n`, `Some(None)` none; `tenant_access.rs`). The owner and the
+    /// `Some(Some(n))` at most `n`, `Some(None)` none; `tenancy/gate.rs`). The owner and the
     /// `unlimited` accounts have none either way.
     pub fn bind_held(
         &self,
@@ -779,14 +779,14 @@ impl Hub {
 
     /// Where a configured board keeps the members the store gives it: the home tenant,
     /// under the owner every configured board has (`@shared`).
-    fn shared_ref(&self, project: &str) -> BridgeResult<Option<crate::orgs::ProjectRef>> {
+    fn shared_ref(&self, project: &str) -> BridgeResult<Option<orgs::ProjectRef>> {
         let Some(orgs) = self.boards.orgs() else {
             return Ok(None);
         };
         Ok(self
             .boards
             .block(orgs.home_tenant())?
-            .map(|tenant| crate::orgs::ProjectRef {
+            .map(|tenant| orgs::ProjectRef {
                 tenant,
                 owner: SHARED_OWNER.to_string(),
                 project: project.to_string(),
@@ -819,9 +819,9 @@ impl Hub {
             return Err(unknown());
         };
         let org = self.boards.block(orgs.by_slug(slug))?.ok_or_else(unknown)?;
-        let at = crate::orgs::ProjectRef {
+        let at = orgs::ProjectRef {
             tenant: org.id.clone(),
-            owner: crate::orgs::owner_of(&org.id),
+            owner: orgs::owner_of(&org.id),
             project: name.to_string(),
         };
         let Some(role) = self.boards.block(orgs.project_role(&at, &subject.id))? else {
@@ -847,10 +847,7 @@ impl Hub {
 
     /// Where the store keeps who works `project`: an organisation's project, or a
     /// configured board. None for an account's own board, which is its account's alone.
-    pub(crate) fn project_ref(
-        &self,
-        project: &str,
-    ) -> BridgeResult<Option<crate::orgs::ProjectRef>> {
+    pub(crate) fn project_ref(&self, project: &str) -> BridgeResult<Option<orgs::ProjectRef>> {
         let Some(orgs) = self.boards.orgs() else {
             return Ok(None);
         };
@@ -858,8 +855,8 @@ impl Hub {
             return Ok(self
                 .boards
                 .block(orgs.by_slug(slug))?
-                .map(|org| crate::orgs::ProjectRef {
-                    owner: crate::orgs::owner_of(&org.id),
+                .map(|org| orgs::ProjectRef {
+                    owner: orgs::owner_of(&org.id),
                     tenant: org.id,
                     project: name.to_string(),
                 }));
@@ -897,9 +894,7 @@ impl Hub {
             }
         }
         for (org, _) in self.boards.block(orgs.of_subject(&subject.id))? {
-            let projects = self
-                .boards
-                .account_boards(&crate::orgs::owner_of(&org.id))?;
+            let projects = self.boards.account_boards(&orgs::owner_of(&org.id))?;
             for (project, _) in self
                 .boards
                 .block(orgs.visible(&org, &projects, &subject.id))?
@@ -908,7 +903,7 @@ impl Hub {
             }
         }
         for (at, _) in given {
-            if crate::orgs::tenant_of_owner(&at.owner) == Some(at.tenant.as_str())
+            if orgs::tenant_of_owner(&at.owner) == Some(at.tenant.as_str())
                 && let Some(org) = self.boards.block(orgs.by_id(&at.tenant))?
             {
                 add(&mut names, format!("{}/{}", org.slug, at.project));
@@ -1041,7 +1036,7 @@ impl Hub {
                 ));
             }
         }
-        let owner = crate::orgs::owner_of(&org.id);
+        let owner = orgs::owner_of(&org.id);
         let boards = self.boards.clone();
         let project = name.to_string();
         let created = tokio::task::spawn_blocking(move || boards.make_for_org(&owner, &project))
@@ -1052,7 +1047,7 @@ impl Hub {
                     format!("board call did not complete: {join}"),
                 ))
             })?;
-        orgs.register_project(&org, &subject.id, name, crate::orgs::Visibility::Org)
+        orgs.register_project(&org, &subject.id, name, orgs::Visibility::Org)
             .await?;
         let hub = self.clone();
         let who = subject.clone();
@@ -2411,7 +2406,7 @@ impl Hub {
             .chain(subject.org.clone())
             .collect();
         let project = input.project.clone();
-        // A tenant on a plan binds as many projects as the plan says (`tenant_access.rs`).
+        // A tenant on a plan binds as many projects as the plan says (`tenancy/gate.rs`).
         let plan = self.plan_cap(&subject, "projects");
         let planned = match &plan {
             Some((_, Cap::AtMost(most))) => Some(Some(*most as usize)),
@@ -2800,7 +2795,7 @@ mod tests {
     async fn a_ticket_made_after_a_run_carries_the_machine_the_seat_and_the_repo() {
         use serde_json::json;
 
-        use crate::tenant_tests::{hosted_with, refused};
+        use crate::tenancy::tests::tenants::{hosted_with, refused};
 
         let hub = or_skip!(hosted_with(None, |_, _| json!({})));
         let mut person = hub.first_connect("Claude").await;
@@ -2915,7 +2910,7 @@ mod tests {
     async fn ticket_results_match_their_schemas_with_anchors_present_and_absent() {
         use serde_json::json;
 
-        use crate::tenant_tests::{hosted_with, refused};
+        use crate::tenancy::tests::tenants::{hosted_with, refused};
 
         let hub = or_skip!(hosted_with(None, |_, _| json!({})));
         let mut person = hub.first_connect("Claude").await;

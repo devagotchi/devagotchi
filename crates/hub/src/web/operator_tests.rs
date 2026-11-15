@@ -10,7 +10,7 @@ use serde_json::{Value, json};
 use crate::{
     accounts::identities::Proven,
     site::tests::assert_no_brand,
-    tenant_tests::{Hosted, hosted_with, refused},
+    tenancy::tests::tenants::{Hosted, hosted_with, refused},
 };
 
 /// A site directory under `dir`: the built-in site, or `base`'s, with `edit` applied to its

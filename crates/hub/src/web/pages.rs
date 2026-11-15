@@ -137,7 +137,7 @@ pub struct Viewer<'a> {
     /// The sign-ins linked to the account (Google, GitHub, email, an OpenID Connect provider…).
     pub linked: &'a [crate::accounts::identities::Linked],
     /// Its tenant's place on a hosted hub: waiting since when, or in since when.
-    pub access: Option<&'a crate::accounts::access::Access>,
+    pub access: Option<&'a crate::tenancy::access::Access>,
     /// The name of the plan its tenant is on, when a plan holds it.
     pub plan: Option<&'a str>,
     /// The hosted hub's operator: the account page leads to the operator page.

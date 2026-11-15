@@ -8,7 +8,7 @@ use serde_json::json;
 use super::operator_tests::{hub_on, operator_cookie};
 use crate::{
     site::tests::assert_no_brand,
-    tenant_tests::{Hosted, hosted_with},
+    tenancy::tests::tenants::{Hosted, hosted_with},
 };
 
 const DESKTOP: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36";

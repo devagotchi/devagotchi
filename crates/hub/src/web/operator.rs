@@ -1,5 +1,5 @@
 //! `/operator`: where a hosted hub's operator lets people in and sets their plans
-//! (increment 64; what it changes is `accounts/access.rs`'s).
+//! (increment 64; what it changes is `tenancy/access/`'s).
 //!
 //! - Served only to the hub's owner, signed in, on a hosted hub (`tenancy.mode multi`): the
 //!   platform operator, whose `operators` sign-ins reach no other account. Anyone else, and
@@ -33,12 +33,12 @@ use super::{
 };
 use crate::{
     AppState,
-    accounts::{
+    auth::Subject,
+    site::{Cap, Ctx, Plan, SignUp, Site, model::LIMIT_KEYS},
+    tenancy::{
         access::{self, ADMITTED, WAITING},
         operator::TenantView,
     },
-    auth::Subject,
-    site::{Cap, Ctx, Plan, SignUp, Site, model::LIMIT_KEYS},
 };
 
 /// The most tenants each list shows.

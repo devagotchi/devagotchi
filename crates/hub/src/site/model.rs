@@ -234,7 +234,7 @@ pub struct Mcp {
 }
 
 /// A plan: what the Plans section shows, and what a hosted hub holds each tenant on that
-/// plan to (`accounts/access.rs`). `limits` names only what the hub counts and enforces
+/// plan to (`tenancy/access/`). `limits` names only what the hub counts and enforces
 /// ([`LIMIT_KEYS`]); a limit a plan leaves out is the hub config's (`account_boards.
 /// free_limit`, the machine quota, `tenancy.unsecured`).
 #[derive(Debug, Clone, Deserialize)]
@@ -901,7 +901,7 @@ pub struct Messages {
     pub welcome: Welcome,
     /// Under every public page (inline markup; `{updated}` is the page's date).
     pub page_footer: String,
-    /// Early access and plans on a hosted hub (`accounts/access.rs`).
+    /// Early access and plans on a hosted hub (`tenancy/access/`).
     pub access: AccessCopy,
     /// The operator page (`web/operator.rs`).
     pub operator: OperatorCopy,

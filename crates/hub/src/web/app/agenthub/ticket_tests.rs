@@ -5,7 +5,7 @@
 use serde_json::{Value, json};
 
 use super::super::tests::{hosted, page, things_of};
-use crate::tenant_tests::{Hosted, Person, refused};
+use crate::tenancy::tests::tenants::{Hosted, Person, refused};
 
 async fn ticket(hub: &Hosted, alice: &mut Person, id: &str) -> Value {
     let got = hub
@@ -423,7 +423,7 @@ async fn undo_on_a_customised_workflow_says_which_transition_to_add() {
     board_with_workflow(&hub, &mut alice, &ours).await;
     let (id, to) = close_and_undo(&hub, &mut alice).await;
     assert!(to.contains("?done=no&why="), "{to}");
-    let why = crate::tenant_tests::query_param(&to, "why").unwrap();
+    let why = crate::tenancy::tests::tenants::query_param(&to, "why").unwrap();
     assert!(
         why.contains("workflow (ours) has no transition cancelled -> ready")
             && why.contains("add {\"from\": \"cancelled\", \"to\": \"ready\"}"),

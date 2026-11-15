@@ -162,7 +162,7 @@ pub enum UpdateAsked {
 }
 
 /// Whether an account may enroll a machine now: false while its tenant waits to be let in
-/// (`tenant_access.rs`), or when that cannot be told.
+/// (`tenancy/gate.rs`), or when that cannot be told.
 pub type EnrollGate =
     Arc<dyn Fn(String) -> futures_util::future::BoxFuture<'static, bool> + Send + Sync>;
 
@@ -278,7 +278,7 @@ impl Links {
     }
 
     /// The name a machine's person knows it by: on a hosted hub, without its tenant's tag
-    /// (`tenant_machines.rs`).
+    /// (`tenancy/machines.rs`).
     fn shown(&self, device: &str) -> String {
         if self.config.multi_tenant()
             && let Some((tag, name)) = device.split_once('-')

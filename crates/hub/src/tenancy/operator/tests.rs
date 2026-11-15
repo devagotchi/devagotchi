@@ -4,13 +4,11 @@ use std::{net::IpAddr, sync::Arc};
 
 use super::*;
 use crate::{
-    accounts::{
-        access::{ADMITTED, WAITING},
-        identities::Proven,
-    },
+    accounts::identities::Proven,
     config::{TenancyConfig, TenancyMode},
     site::{SiteCell, tests::neutral},
     store::testing,
+    tenancy::access::{ADMITTED, WAITING},
 };
 
 fn proven(provider: &str, subject: &str, email: Option<&str>) -> Proven {

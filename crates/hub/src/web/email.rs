@@ -202,16 +202,16 @@ it, tell whoever operates the hub. Nothing in this email does anything.\n"
     }
 }
 
-/// What tells a tenant it was let in (early access, `accounts/access.rs`): the site's email
+/// What tells a tenant it was let in (early access, `tenancy/access/`): the site's email
 /// (`content/messages.json` `access.admitted_email`) to the first verified address among its
 /// sign-ins, sent in the background. A tenant with none hears nothing by mail; its account
 /// page says it is in.
 pub(crate) fn announce_admissions(
     mailer: Mailer,
     config: Arc<crate::config::HubConfig>,
-) -> crate::accounts::access::Announce {
+) -> crate::tenancy::access::Announce {
     let mailer = Arc::new(mailer);
-    Arc::new(move |admitted: crate::accounts::access::Admitted| {
+    Arc::new(move |admitted: crate::tenancy::access::Admitted| {
         let Some(to) = admitted.email else {
             return;
         };

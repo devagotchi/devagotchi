@@ -11,7 +11,7 @@ use super::analytics;
 use crate::*;
 use crate::{
     accounts::identities::Proven,
-    tenant_tests::{Hosted, hosted_with, refused},
+    tenancy::tests::tenants::{Hosted, hosted_with, refused},
 };
 
 const PHONE: &str = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1";

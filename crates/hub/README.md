@@ -81,7 +81,7 @@ opens a prototype SQLite store.
 
 ## Organisations, members and roles
 
-An organisation is a tenant of its own in the hub's store (migration 0017, `src/orgs.rs`).
+An organisation is a tenant of its own in the hub's store (migration 0017, `src/tenancy/orgs/`).
 Its projects are hosted boards named `<org>/<project>` wherever a board is named: in every
 `board_*` tool, `whoami`'s `boards`, the web pages and the issue routes. Every caller is
 resolved by one function (`board::mcp::Hub::board_access`), which reads the caller's role
@@ -582,9 +582,9 @@ gets an account and a tenant (`t-<uuid>`) of their own, made on the spot:
   tenant's tag, `t1a2b3c4d5e6f-laptop`; people and their AI see `laptop`), so two people can
   both have a `laptop` and neither can find the other's by trying names. Boards are the
   account's own (`board_bind`), tokens die with their account, and configured brokers need a
-  grant as before. `tenant_tests.rs` drives every MCP tool and every account page as one
+  grant as before. `tenancy/tests/tenants.rs` drives every MCP tool and every account page as one
   tenant with another's ids, on SQLite and Postgres.
-- **Early access and plans** (`accounts/access.rs`, `tenant_access.rs`). The site's
+- **Early access and plans** (`tenancy/access/`, `tenancy/gate.rs`). The site's
   `early_access.mode` decides whether a new tenant is let in at once (`open`) or waits
   (`early_access`). A waiting tenant's account is made and secured exactly as above, and its
   AI connects and asks `whoami` (`access: waiting`, `waiting_since`, `access_note`); every

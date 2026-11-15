@@ -1,10 +1,10 @@
-//! The phone app's pages on a hosted hub over HTTP (`tenant_tests.rs`'s world): each page
+//! The phone app's pages on a hosted hub over HTTP (`tenancy/tests/tenants.rs`'s world): each page
 //! renders signed in, sends the signed out to sign in, and shows only the account's own
 //! machines and boards.
 
 use serde_json::{Value, json};
 
-use crate::tenant_tests::{Hosted, Person, hosted_with, refused};
+use crate::tenancy::tests::tenants::{Hosted, Person, hosted_with, refused};
 
 pub(super) async fn hosted() -> Option<Hosted> {
     hosted_with(None, |_, _| json!({})).await
@@ -78,7 +78,7 @@ pub(super) async fn things_of(hub: &Hosted, person: &mut Person) -> String {
         .call(person, "machine_add", json!({ "name": "desk" }))
         .await;
     assert!(!refused(&added), "{added}");
-    // It joins with its code, as `tenant_tests.rs` enrolls one.
+    // It joins with its code, as `tenancy/tests/tenants.rs` enrolls one.
     let added = &added["structuredContent"];
     let stored = added["manual"]
         .as_str()
