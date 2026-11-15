@@ -1,6 +1,6 @@
 [package]
 name = "devagotchi-core"
-description = "The Devagotchi broker: admission, operation lifecycle, SQLite journal, output retention, and native process supervision"
+description = "The Devagotchi machine engine: admission, operation lifecycle, SQLite journal, output retention, native process supervision, and the machine's private AI evidence"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -14,8 +14,15 @@ workspace = true
 [dependencies]
 devagotchi-contracts = { workspace = true }
 devagotchi-ipc = { workspace = true }
+getrandom = "0.4"
+hex = { workspace = true }
+# The SQLite journals: the broker's, and `ai`'s (the machine's private AI evidence).
+rusqlite = { workspace = true }
+# `devagotchi ai schema`: the capture event's JSON schema.
+schemars = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+sha2 = { workspace = true }
 tokio = { workspace = true }
 
 [target.'cfg(unix)'.dependencies]
@@ -26,9 +33,6 @@ libc = { workspace = true }
 [target.'cfg(any(target_os = "linux", windows))'.dependencies]
 base64 = { workspace = true }
 dunce = { workspace = true }
-hex = { workspace = true }
-rusqlite = { workspace = true }
-sha2 = { workspace = true }
 uuid = { workspace = true }
 
 [target.'cfg(windows)'.dependencies]

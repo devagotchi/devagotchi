@@ -29,7 +29,6 @@ schemars = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 tokio = { workspace = true, features = ["fs", "io-util"] }
-rusqlite = { workspace = true }
 sqlx = { workspace = true }
 percent-encoding = "2"
 sha2 = { workspace = true }
