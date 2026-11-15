@@ -8,7 +8,7 @@ use std::path::Path;
 use serde_json::{Value, json};
 
 use crate::{
-    accounts::identities::Proven,
+    identity::accounts::identities::Proven,
     site::tests::assert_no_brand,
     tenancy::tests::tenants::{Hosted, hosted_with, refused},
 };

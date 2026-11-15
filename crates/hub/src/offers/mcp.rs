@@ -10,7 +10,10 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use super::nomen::Found;
-use crate::{accounts::identities::Proven, auth::Subject, hub::Hub, machines::now_secs, site::Ctx};
+use crate::{
+    hub::Hub, identity::Subject, identity::accounts::identities::Proven, machines::now_secs,
+    site::Ctx,
+};
 
 #[derive(Debug, Serialize, JsonSchema)]
 pub struct OffersView {

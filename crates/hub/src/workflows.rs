@@ -33,9 +33,9 @@ use serde::Serialize;
 
 use crate::ops::analytics::funnel;
 use crate::{
-    accounts::Accounts,
-    auth::Subject,
     hub::Hub,
+    identity::Subject,
+    identity::accounts::Accounts,
     site::{
         Ctx, Site,
         workflows::{AI_CLIENT, DONE, MACHINE, MACHINE_OS, PHONE, SECURE_ACCOUNT},
@@ -78,7 +78,7 @@ impl Workflows {
             let noted = self.noted.lock().expect("noted");
             if noted
                 .get(&key)
-                .is_some_and(|at| now < at + crate::accounts::clients::NOTE_EVERY_SECS)
+                .is_some_and(|at| now < at + crate::identity::accounts::clients::NOTE_EVERY_SECS)
             {
                 return;
             }

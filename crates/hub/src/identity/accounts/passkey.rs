@@ -88,14 +88,14 @@ pub struct Registration<'a> {
 /// credential, its key, and the challenge it answered.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NewCredential {
-    pub(in crate::accounts) id: Vec<u8>,
-    pub(in crate::accounts) public_key: Vec<u8>,
-    pub(in crate::accounts) alg: Alg,
-    pub(in crate::accounts) sign_count: u32,
+    pub(in crate::identity::accounts) id: Vec<u8>,
+    pub(in crate::identity::accounts) public_key: Vec<u8>,
+    pub(in crate::identity::accounts) alg: Alg,
+    pub(in crate::identity::accounts) sign_count: u32,
     /// The authenticator may sync this passkey to the person's other devices.
-    pub(in crate::accounts) backup_eligible: bool,
+    pub(in crate::identity::accounts) backup_eligible: bool,
     /// The challenge the registration answered; the store checks and spends this one.
-    pub(in crate::accounts) challenge: Vec<u8>,
+    pub(in crate::identity::accounts) challenge: Vec<u8>,
 }
 
 /// A sign-in that passed every check, as `check_sign_in` returns it: which passkey, by its
@@ -104,14 +104,14 @@ pub struct NewCredential {
 /// the store, which takes nothing else.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Asserted {
-    pub(in crate::accounts) id: Vec<u8>,
-    pub(in crate::accounts) public_key: Vec<u8>,
+    pub(in crate::identity::accounts) id: Vec<u8>,
+    pub(in crate::identity::accounts) public_key: Vec<u8>,
     /// The algorithm and backup eligibility the signature was checked with.
-    pub(in crate::accounts) alg: Alg,
-    pub(in crate::accounts) backup_eligible: bool,
-    pub(in crate::accounts) sign_count: u32,
-    pub(in crate::accounts) user_handle: Vec<u8>,
-    pub(in crate::accounts) challenge: Vec<u8>,
+    pub(in crate::identity::accounts) alg: Alg,
+    pub(in crate::identity::accounts) backup_eligible: bool,
+    pub(in crate::identity::accounts) sign_count: u32,
+    pub(in crate::identity::accounts) user_handle: Vec<u8>,
+    pub(in crate::identity::accounts) challenge: Vec<u8>,
 }
 
 impl Asserted {
@@ -239,7 +239,7 @@ pub fn check_sign_in(
 
 /// Every check of an assertion but the counter's, which the store makes against what it
 /// holds now: returns the counter the authenticator reported.
-pub(in crate::accounts) fn check_assertion(
+pub(in crate::identity::accounts) fn check_assertion(
     relying: Relying<'_>,
     challenge: &[u8],
     stored: Stored<'_>,

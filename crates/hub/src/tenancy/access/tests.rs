@@ -4,8 +4,8 @@ use std::{net::IpAddr, sync::Mutex};
 
 use super::*;
 use crate::{
-    accounts::identities::Proven,
     config::{TenancyConfig, TenancyMode, tenancy::UnsecuredLimits},
+    identity::accounts::identities::Proven,
     site::{SiteCell, tests::neutral_with},
     store::testing::{self, TestStore},
 };
@@ -389,7 +389,7 @@ async fn a_plan_holds_a_tenant_to_its_ai_apps_and_a_lost_plan_reads_as_the_defau
             .await
             .unwrap();
         let verifier = "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk";
-        let challenge = crate::accounts::oauth::s256(verifier);
+        let challenge = crate::identity::accounts::oauth::s256(verifier);
         let connect = || async {
             let code = accounts
                 .issue_code(

@@ -16,8 +16,8 @@ use sqlx::{AnyConnection, Row};
 
 use super::{Accounts, account_columns_a, account_row, hash, now_secs, secs, tenants};
 use crate::{
-    auth::Subject,
     config::valid_name,
+    identity::auth::Subject,
     store::{Failed, transaction},
 };
 

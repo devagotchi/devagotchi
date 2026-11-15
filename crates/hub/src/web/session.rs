@@ -7,7 +7,7 @@ use std::sync::Arc;
 use axum::response::Response;
 
 use super::{HubSignIn, routes::see_other};
-use crate::{accounts::Account, auth::Subject};
+use crate::{identity::Subject, identity::accounts::Account};
 
 pub(super) async fn open_and_return(
     hub: &Arc<HubSignIn>,
@@ -28,7 +28,7 @@ pub(super) async fn open_and_return(
             let mut cookies = vec![hub.cookie(
                 hub.session_cookie(),
                 &token,
-                crate::accounts::sessions::SESSION_MAX_SECS,
+                crate::identity::accounts::sessions::SESSION_MAX_SECS,
             )];
             cookies.extend_from_slice(extra_cookies);
             see_other(return_to, &cookies)

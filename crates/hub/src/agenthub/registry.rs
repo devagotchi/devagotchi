@@ -49,10 +49,12 @@ impl Registry {
             return Ok(home);
         }
         drop(connection);
-        let home = crate::accounts::tenants::new_tenant_id(crate::machines::random::<16>());
+        let home =
+            crate::identity::accounts::tenants::new_tenant_id(crate::machines::random::<16>());
         let now = (crate::agenthub::system_clock()() / 1000) as u64;
         transaction!(&self.store, |connection| {
-            crate::accounts::tenants::settle_in(&self.store, connection, &home, now).await?;
+            crate::identity::accounts::tenants::settle_in(&self.store, connection, &home, now)
+                .await?;
             Ok(
                 sqlx::query_scalar("SELECT id FROM tenancy_tenants WHERE home=1")
                     .fetch_one(&mut *connection)

@@ -11,8 +11,8 @@ use axum::{
 use super::{board_names, person};
 use crate::{
     AppState,
-    accounts::api_keys::{ApiKey, DURATIONS, NewKey, Scope},
-    auth::Subject,
+    identity::Subject,
+    identity::accounts::api_keys::{ApiKey, DURATIONS, NewKey, Scope},
     web::{
         approvals::same_origin,
         pages::{self, Tab, escape},

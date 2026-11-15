@@ -75,7 +75,7 @@ async fn a_person_adds_a_machine_of_their_own_and_revokes_it() {
         .await
         .unwrap();
     assert!(!theirs.to_string().contains("platinum"), "{theirs}");
-    let subject = |id: &str| crate::auth::Subject {
+    let subject = |id: &str| crate::identity::Subject {
         id: id.into(),
         via: "dev",
         tenant: None,

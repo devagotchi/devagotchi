@@ -66,7 +66,7 @@ fn redeem(stub: &mut Stub, form: &std::collections::HashMap<String, String>) -> 
     let at = stub.codes.iter().position(|(c, ..)| c == code)?;
     let (_, nonce, challenge) = stub.codes.remove(at);
     let verifier = form.get("code_verifier")?;
-    (crate::accounts::oauth::s256(verifier) == challenge).then_some(nonce)
+    (crate::identity::accounts::oauth::s256(verifier) == challenge).then_some(nonce)
 }
 
 async fn oidc_token(
@@ -317,7 +317,7 @@ async fn google_and_shippin_sign_a_new_person_in_to_a_tenant_of_their_own() {
     let made = world
         .hub
         .accounts
-        .sign_in_identity(&crate::accounts::identities::Proven {
+        .sign_in_identity(&crate::identity::accounts::identities::Proven {
             provider: "google".into(),
             subject: "g-100".into(),
             verified_email: None,

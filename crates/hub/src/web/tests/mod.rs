@@ -17,7 +17,7 @@ use sha2::{Digest, Sha256};
 
 use super::*;
 use crate::{
-    AppState, auth::Verifier, config::HubConfig, hub::Hub, machines::devices::Devices,
+    AppState, config::HubConfig, hub::Hub, identity::auth::Verifier, machines::devices::Devices,
     machines::link::Links, notify::push::Push,
 };
 
@@ -524,7 +524,7 @@ async fn a_person_approves_on_the_phone_page_and_the_agent_sees_it() {
 /// names the board; a grant that is not a person, and an account without one, never.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn configured_boards_decide_for_the_owner_and_human_grants_only() {
-    use crate::{agenthub::Actor, auth::Subject};
+    use crate::{agenthub::Actor, identity::Subject};
     let w = or_skip!(world());
     let board = w.hub.boards.open("estate").unwrap();
     let asked = board
@@ -986,7 +986,7 @@ mod first_connect {
     use reqwest::header;
     use serde_json::{Value, json};
 
-    use crate::accounts::oauth::s256;
+    use crate::identity::accounts::oauth::s256;
     use crate::tenancy::tests::tenants::*;
 
     const REDIRECT: &str = "http://127.0.0.1:9/callback";

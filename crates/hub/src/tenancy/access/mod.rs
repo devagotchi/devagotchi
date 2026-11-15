@@ -29,7 +29,7 @@ use std::sync::Arc;
 use devagotchi_contracts::{BridgeError, BridgeResult};
 use sqlx::{AnyConnection, Row, any::AnyRow};
 
-use crate::accounts::*;
+use crate::identity::accounts::*;
 use crate::store::{Failed, Lookup, secs, transaction, unsecs};
 use crate::{
     machines::now_secs,

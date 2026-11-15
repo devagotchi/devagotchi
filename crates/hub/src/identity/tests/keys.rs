@@ -5,7 +5,7 @@
 use serde_json::{Value, json};
 
 use crate::{
-    accounts::api_keys,
+    identity::accounts::api_keys,
     tenancy::tests::tenants::{Hosted, Person, hosted_with, refused},
 };
 

@@ -12,7 +12,7 @@ use axum::{
 use axum::{Json, http::header, response::IntoResponse};
 use serde::Deserialize;
 
-use crate::auth::AuthError;
+use crate::identity::auth::AuthError;
 
 use super::{
     approvals::same_origin,
@@ -30,7 +30,7 @@ pub struct Named {
 async fn person(
     state: &AppState,
     headers: &HeaderMap,
-) -> Result<crate::auth::Subject, Box<Response>> {
+) -> Result<crate::identity::Subject, Box<Response>> {
     if state.web.is_none() && state.passkeys.is_none() {
         return Err(Box::new(not_set_up()));
     }

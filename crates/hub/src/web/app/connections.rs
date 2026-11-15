@@ -16,8 +16,8 @@ use serde::Deserialize;
 use super::person;
 use crate::{
     AppState,
-    auth::Subject,
     connections::Connections,
+    identity::Subject,
     web::{
         approvals::same_origin,
         pages::{self, Tab, escape},

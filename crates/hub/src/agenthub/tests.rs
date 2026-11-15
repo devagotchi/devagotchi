@@ -42,9 +42,9 @@ mod bound {
         AppState,
         account::{self, Account, Stored},
         agenthub::cli::{self, EXIT_OK, EXIT_REFUSED, EXIT_UNAVAILABLE, Invocation},
-        auth::Verifier,
         config::HubConfig,
         hub::Hub,
+        identity::auth::Verifier,
         machines::link::Links,
     };
 

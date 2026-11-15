@@ -98,7 +98,7 @@ impl WebLogin {
         let issuer = issuer.trim_end_matches('/');
         // Nomen puts a project in a token's audience, and the account's org in its
         // answers, only when the scope asks for them.
-        let scope = crate::auth::sign_in_scopes(audiences);
+        let scope = crate::identity::auth::sign_in_scopes(audiences);
         let http = reqwest::Client::builder()
             .timeout(Duration::from_secs(10))
             .connect_timeout(Duration::from_secs(5))

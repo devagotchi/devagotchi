@@ -10,7 +10,7 @@ use devagotchi_contracts::BridgeResult;
 use sqlx::Row;
 
 use crate::{
-    auth::Subject,
+    identity::auth::Subject,
     store::{Store, secs, transaction, unsecs},
 };
 

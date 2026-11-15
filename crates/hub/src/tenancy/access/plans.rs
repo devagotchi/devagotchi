@@ -7,7 +7,7 @@ use devagotchi_contracts::{BridgeError, BridgeResult};
 use sqlx::{AnyConnection, Row};
 
 use super::{Access, read_in};
-use crate::accounts::*;
+use crate::identity::accounts::*;
 use crate::machines::now_secs;
 use crate::site::{Plan, Site};
 use crate::store::{Failed, secs, transaction};

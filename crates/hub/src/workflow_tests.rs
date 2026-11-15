@@ -17,7 +17,7 @@ use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 
 use crate::{
-    accounts::identities::Proven,
+    identity::accounts::{identities::Proven, tenants},
     machines::now_secs,
     tenancy::tests::tenants::{Hosted, Person, hosted_with, set_cookie},
 };
@@ -567,7 +567,7 @@ async fn get_my_command_issues_the_line_and_the_step_ticks_once_online() {
         assert_eq!(step(&status, 0)["state"], "current");
         assert_eq!(step(&status, 0)["fact"], "Waiting for server to join.");
         // The machine enrolls with that code: joined, offline.
-        let stored = format!("{}-server", crate::accounts::tenants::tag(&tenant));
+        let stored = format!("{}-server", tenants::tag(&tenant));
         join(&hub, &stored, &code, "ab").await;
         let status = structured(&hub, &mut person, "workflow_status", json!({ "id": id })).await;
         assert_eq!(step(&status, 0)["state"], "current");
@@ -837,7 +837,7 @@ async fn keeping_the_account_is_offered_after_the_first_success_to_the_browser_t
         assert_eq!(answer.status(), 303);
         assert!(set_cookie(&answer, "dg_session").is_none());
         // The machine joins and comes online: the first success.
-        let stored = format!("{}-server", crate::accounts::tenants::tag(&tenant));
+        let stored = format!("{}-server", tenants::tag(&tenant));
         join(&hub, &stored, &code_in(&cookies), "ab").await;
         let _link = hub.hub.links.connect_for_test(&stored);
         let answer: Value = hub
@@ -953,7 +953,7 @@ async fn keeping_the_account_is_offered_after_the_first_success_to_the_browser_t
         &[("step", "0"), ("os", "linux"), ("name", "server")],
     )
     .await;
-    let stored = format!("{}-server", crate::accounts::tenants::tag(&tenant));
+    let stored = format!("{}-server", tenants::tag(&tenant));
     join(&hub, &stored, &code_in(&cookies), "ab").await;
     let _link = hub.hub.links.connect_for_test(&stored);
     let (_, body) = page(&hub, &path, Some(&cookies)).await;
@@ -1084,7 +1084,7 @@ async fn each_step_kind_is_done_when_the_hub_sees_it_and_a_wait_returns_the_mome
                 && body.contains(".compose.yml -o compose.yml"),
             "{body}"
         );
-        let stored = format!("{}-box", crate::accounts::tenants::tag(&tenant));
+        let stored = format!("{}-box", tenants::tag(&tenant));
         join(&hub, &stored, &code_in(&cookies), "cd").await;
         // A wait returns when the machine connects.
         let at = Instant::now();
@@ -1364,7 +1364,7 @@ async fn a_neutral_sites_workflow_pages_name_only_that_site() {
         let (_, body) = page(&hub, &path, Some(&cookies)).await;
         assert!(body.contains("/join/dvg-"), "{body}");
         seen.push((format!("{workflow} with its line page"), body));
-        let stored = format!("{}-{name}", crate::accounts::tenants::tag(&tenant));
+        let stored = format!("{}-{name}", tenants::tag(&tenant));
         join(&hub, &stored, &code_in(&cookies), "ef").await;
         let _link = hub.hub.links.connect_for_test(&stored);
         let (_, body) = page(&hub, &path, Some(&cookies)).await;
@@ -1419,7 +1419,7 @@ async fn a_neutral_sites_workflow_pages_name_only_that_site() {
 /// consent page names that account, Connect, and the client's tokens.
 async fn connect_in(hub: &Hosted, app: &str, cookie: &str) -> Person {
     use crate::{
-        accounts::oauth::s256,
+        identity::accounts::oauth::s256,
         tenancy::tests::tenants::{query_param, web_encode},
     };
     let redirect = "http://127.0.0.1:9/callback";

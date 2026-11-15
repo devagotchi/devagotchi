@@ -47,8 +47,8 @@ use sha2::{Digest, Sha256};
 use tokio::sync::Semaphore;
 
 use crate::{
-    auth::{AuthError, Subject, read_private},
     config::valid_subject,
+    identity::auth::{AuthError, Subject, read_private},
 };
 
 /// How long Nomen's answer about one token is reused, counted from when the hub asked.
@@ -672,7 +672,7 @@ fn assess(answer: &Introspection, accepts: &Accepts, now: u64) -> Result<Subject
             .org
             .as_deref()
             .map(str::trim)
-            .filter(|org| crate::auth::valid_org(org))
+            .filter(|org| crate::identity::auth::valid_org(org))
             .map(str::to_string),
         provisional_until: None,
         agent: None,

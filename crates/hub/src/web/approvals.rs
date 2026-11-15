@@ -33,7 +33,7 @@ use crate::{
         Actor,
         approval::{self, ApprovalStatus, MAX_STANDING_DAYS, Standing, Suggestion, Verdict},
     },
-    preferences::Preferences,
+    identity::{Subject, preferences::Preferences},
 };
 
 #[derive(Deserialize)]
@@ -157,7 +157,7 @@ pub async fn list(
 /// the person keeps approving.
 async fn ahead(
     state: &AppState,
-    subject: &crate::auth::Subject,
+    subject: &Subject,
     preferences: &Preferences,
 ) -> devagotchi_contracts::BridgeResult<Vec<Ahead>> {
     let boards = state.hub.approval_boards(subject)?;
@@ -200,7 +200,7 @@ async fn decider(
     state: &AppState,
     headers: &HeaderMap,
     project: &str,
-) -> Result<(crate::auth::Subject, std::sync::Arc<crate::agenthub::Board>), Response> {
+) -> Result<(Subject, std::sync::Arc<crate::agenthub::Board>), Response> {
     if !same_origin(headers, &state.hub.config.public_url) {
         return Err(pages::message(
             StatusCode::FORBIDDEN,
@@ -317,7 +317,7 @@ pub async fn revoke(
 /// (`web/app/home.rs`).
 pub(super) async fn pending(
     state: &AppState,
-    subject: &crate::auth::Subject,
+    subject: &Subject,
 ) -> devagotchi_contracts::BridgeResult<Vec<(String, ApprovalStatus)>> {
     let boards = state.hub.approval_boards(subject)?;
     tokio::task::spawn_blocking(move || {

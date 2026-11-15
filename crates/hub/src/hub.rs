@@ -19,7 +19,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::ops::{analytics::Analytics, audit::Audit};
-use crate::{agenthub::mcp::Boards, auth::Subject, config::HubConfig, machines::link::Links};
+use crate::{agenthub::mcp::Boards, config::HubConfig, identity::Subject, machines::link::Links};
 
 #[derive(Clone)]
 pub struct Hub {
@@ -895,7 +895,7 @@ impl ServerHandler for Hub {
             .and_then(|parts| {
                 parts
                     .extensions
-                    .get::<crate::accounts::api_keys::KeyLimits>()
+                    .get::<crate::identity::accounts::api_keys::KeyLimits>()
             })
             .cloned();
         if let (Some(limits), Some(subject)) = (&limits, &subject)

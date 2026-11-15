@@ -21,7 +21,7 @@ use serde::Deserialize;
 use serde_json::json;
 
 use super::{Org, Principal, ProjectRef, Role, Visibility, owner_of};
-use crate::{AppState, agenthub::mcp::SEAT_HEADER, auth::Subject, ops::audit::AuditEntry};
+use crate::{AppState, agenthub::mcp::SEAT_HEADER, identity::Subject, ops::audit::AuditEntry};
 
 mod projects;
 use projects::{

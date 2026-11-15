@@ -479,7 +479,7 @@ async fn a_clickhouse_saved_on_the_settings_page_is_checked_sealed_and_exported_
     );
 
     // After a restart: what was saved starts again, unsealed with the hub's own key.
-    let sealer = crate::sealed::Sealer::ephemeral();
+    let sealer = crate::identity::Sealer::ephemeral();
     let mut on = hub.accounts.clickhouse_setting().await.unwrap().unwrap();
     on.enabled = true;
     on.sealed_password = sealer.seal(crate::ops::warehouse::SEALED_AS, "after-restart");

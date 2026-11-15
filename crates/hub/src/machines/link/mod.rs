@@ -29,6 +29,7 @@ use tokio::sync::{OwnedSemaphorePermit, Semaphore, mpsc, oneshot};
 
 use crate::{
     config::HubConfig,
+    identity::preferences::wanting_machine_pushes,
     machines::{devices::Devices, now_secs, update::Update},
     ops::audit::{Audit, AuditEntry},
 };
@@ -112,7 +113,7 @@ pub struct Links {
     /// How long a machine stays offline before its account's phones hear it (P1d).
     offline_after: Duration,
     /// Who turned pushes about their machines off (set once, at start).
-    preferences: OnceLock<crate::preferences::PreferenceStore>,
+    preferences: OnceLock<crate::identity::PreferenceStore>,
     /// The pushes about machines this hub made, for the tests to read.
     #[cfg(test)]
     pushed: Mutex<Vec<(Vec<String>, serde_json::Value)>>,
@@ -238,7 +239,7 @@ impl Links {
     }
 
     /// Ask `preferences` before a machine pushes to a person.
-    pub fn set_preferences(&self, preferences: crate::preferences::PreferenceStore) {
+    pub fn set_preferences(&self, preferences: crate::identity::PreferenceStore) {
         let _ = self.preferences.set(preferences);
     }
 
@@ -321,8 +322,7 @@ impl Links {
         if let (Some(push), false) = (self.push.clone(), people.is_empty()) {
             let preferences = self.preferences.get().cloned();
             tokio::spawn(async move {
-                let people =
-                    crate::preferences::wanting_machine_pushes(preferences.as_ref(), people).await;
+                let people = wanting_machine_pushes(preferences.as_ref(), people).await;
                 if !people.is_empty() {
                     push.notify(&people, &payload).await;
                 }

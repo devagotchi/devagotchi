@@ -23,9 +23,9 @@ use super::{
 use crate::ops::warehouse;
 use crate::{
     AppState,
-    accounts::sign_in_settings::{NewSignIn, StoredSignIn},
-    auth::Subject,
     config::providers::ProviderConfig,
+    identity::Subject,
+    identity::accounts::sign_in_settings::{NewSignIn, StoredSignIn},
     ops::analytics_settings::StoredClickHouse,
 };
 

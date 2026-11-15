@@ -2,7 +2,7 @@
 //! form. The first time someone connects an AI client (`/oauth/authorize`) or the CLI
 //! (`/device`) with no session, the page they already have to see, Connect or Approve, is
 //! also where their account and its own tenant are made, with one click
-//! (`accounts/tenants.rs`). Their AI is working within seconds.
+//! (`identity/accounts/tenants.rs`). Their AI is working within seconds.
 //!
 //! Securing it never blocks that: the account page, every page's bar, the device page's
 //! answer and `whoami` (`secure_url`) offer it afterwards, and say plainly that until then
@@ -20,7 +20,7 @@ use axum::{
 };
 
 use super::{HubSignIn, pages};
-use crate::{AppState, accounts::sessions::SESSION_MAX_SECS, auth::Subject};
+use crate::{AppState, identity::Subject, identity::accounts::sessions::SESSION_MAX_SECS};
 
 /// The address a request came from, as `tenancy.trusted_proxies` lets the hub believe it.
 pub(super) fn client_address(

@@ -8,8 +8,8 @@ use serde_json::{Value, json};
 use std::sync::Arc;
 
 use crate::{
-    accounts::Accounts, agenthub::mcp::Boards, ops::analytics_settings::StoredClickHouse,
-    sealed::Sealer, store::Store,
+    agenthub::mcp::Boards, identity::Sealer, identity::accounts::Accounts,
+    ops::analytics_settings::StoredClickHouse, store::Store,
 };
 
 /// The name a ClickHouse password is sealed under (`crate::sealed`).
@@ -90,7 +90,7 @@ pub(crate) fn routes() -> axum::Router<crate::AppState> {
 
 async fn project_stats(
     axum::extract::State(state): axum::extract::State<crate::AppState>,
-    axum::Extension(subject): axum::Extension<crate::auth::Subject>,
+    axum::Extension(subject): axum::Extension<crate::identity::Subject>,
     axum::extract::Path(project): axum::extract::Path<String>,
     axum::extract::Query(query): axum::extract::Query<StatsQuery>,
 ) -> axum::response::Response {
@@ -99,7 +99,7 @@ async fn project_stats(
 
 async fn org_project_stats(
     axum::extract::State(state): axum::extract::State<crate::AppState>,
-    axum::Extension(subject): axum::Extension<crate::auth::Subject>,
+    axum::Extension(subject): axum::Extension<crate::identity::Subject>,
     axum::extract::Path((org, project)): axum::extract::Path<(String, String)>,
     axum::extract::Query(query): axum::extract::Query<StatsQuery>,
 ) -> axum::response::Response {
@@ -108,7 +108,7 @@ async fn org_project_stats(
 
 async fn stats_for(
     state: &crate::AppState,
-    subject: &crate::auth::Subject,
+    subject: &crate::identity::Subject,
     project: String,
     days: Option<u32>,
 ) -> axum::response::Response {

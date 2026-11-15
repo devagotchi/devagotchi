@@ -41,7 +41,7 @@ pub struct Me {
     pub name: String,
     /// One or two letters for the round mark that stands for them.
     pub initials: String,
-    pub theme: crate::preferences::Theme,
+    pub theme: crate::identity::preferences::Theme,
 }
 
 tokio::task_local! {
@@ -131,11 +131,11 @@ pub struct Viewer<'a> {
     /// When an account nobody secured yet ends if unused: the page offers to secure it.
     pub unsecured_until: Option<u64>,
     /// The latest steps in the account's tenant, newest first.
-    pub events: &'a [crate::accounts::tenants::Event],
+    pub events: &'a [crate::identity::accounts::tenants::Event],
     /// The other sign-ins the offer to secure the account lists, ready to link.
     pub ways: &'a str,
     /// The sign-ins linked to the account (Google, GitHub, email, an OpenID Connect provider…).
-    pub linked: &'a [crate::accounts::identities::Linked],
+    pub linked: &'a [crate::identity::accounts::identities::Linked],
     /// Its tenant's place on a hosted hub: waiting since when, or in since when.
     pub access: Option<&'a crate::tenancy::access::Access>,
     /// The name of the plan its tenant is on, when a plan holds it.
@@ -472,7 +472,7 @@ fn render(status: StatusCode, title: &str, body: &str, kind: Kind, meta: &str) -
     let theme = BAR
         .try_with(|bar| match bar {
             Bar::SignedIn { me: Some(me), .. }
-                if framed && me.theme != crate::preferences::Theme::System =>
+                if framed && me.theme != crate::identity::preferences::Theme::System =>
             {
                 format!(" data-theme=\"{}\"", me.theme.as_str())
             }

@@ -104,7 +104,7 @@ pub use routes::router;
 pub(crate) async fn session_subject(
     state: &crate::AppState,
     headers: &axum::http::HeaderMap,
-) -> Option<crate::auth::Subject> {
+) -> Option<crate::identity::Subject> {
     match routes::who(state, headers).await {
         routes::Who::Person(subject) => Some(subject),
         _ => None,

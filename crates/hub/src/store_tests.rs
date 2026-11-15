@@ -175,7 +175,9 @@ async fn on_postgres_the_hubs_tables_live_in_their_own_schema() {
     let again = crate::store::open_in(&url, Some("devagotchi_hub"))
         .await
         .unwrap();
-    let accounts = crate::accounts::Accounts::open(again).await.unwrap();
+    let accounts = crate::identity::accounts::Accounts::open(again)
+        .await
+        .unwrap();
     accounts
         .create("acct_aaaaaaaaaaaaaaaaaaaaaaaaaa", "Jesse", true)
         .await

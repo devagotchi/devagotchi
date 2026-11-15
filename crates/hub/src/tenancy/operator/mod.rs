@@ -9,7 +9,7 @@
 use devagotchi_contracts::BridgeResult;
 use sqlx::{AnyConnection, Row};
 
-use crate::accounts::{identities::Linked, *};
+use crate::identity::accounts::{identities::Linked, *};
 use crate::machines::now_secs;
 use crate::store::{secs, transaction, unsecs};
 use crate::tenancy::access::{self, Access};

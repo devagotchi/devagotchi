@@ -8,14 +8,10 @@
 #[cfg(test)]
 #[macro_use]
 extern crate devagotchi_store;
-#[cfg(test)]
-mod access_tests;
 pub mod account;
-mod accounts;
 pub mod agenthub;
 #[cfg(test)]
 mod ahead_tests;
-mod auth;
 mod config;
 mod connect;
 mod connections;
@@ -25,12 +21,8 @@ pub mod extensions;
 mod hub;
 #[cfg(test)]
 mod hub_settings_tests;
-#[cfg(test)]
-mod keys_tests;
+mod identity;
 mod machines;
-#[cfg(test)]
-mod me_tests;
-mod nomen;
 #[cfg(test)]
 mod notes_tests;
 mod notify;
@@ -42,10 +34,6 @@ mod ops;
 mod output_schema;
 #[cfg(test)]
 mod plugin_tests;
-mod preferences;
-#[cfg(test)]
-mod provider_tests;
-mod sealed;
 mod site;
 mod store;
 #[cfg(test)]
@@ -64,9 +52,9 @@ use std::{
 };
 
 use crate::{
-    auth::{AuthError, Verifier},
     config::HubConfig,
     hub::Hub,
+    identity::auth::{AuthError, Verifier},
     machines::devices::Devices,
     machines::link::Links,
     ops::audit::Audit,
@@ -356,7 +344,7 @@ fn read_config(path: &std::path::Path) -> BridgeResult<HubConfig> {
 async fn accounts_at(
     state_dir: &std::path::Path,
     config: &HubConfig,
-) -> BridgeResult<accounts::Accounts> {
+) -> BridgeResult<identity::accounts::Accounts> {
     prepare_state_dir(state_dir)?;
     let url = store::postgres_url(config.storage_url())?;
     let schema = store::schema_for(config.storage_schema());
@@ -367,7 +355,7 @@ async fn accounts_at(
 async fn configured_accounts(
     store: store::Store,
     config: &HubConfig,
-) -> BridgeResult<accounts::Accounts> {
+) -> BridgeResult<identity::accounts::Accounts> {
     // A hosted hub on Postgres keeps its tenants apart in the database as well: its queries
     // run as a role row-level security holds, or it does not start.
     if config.multi_tenant() && !store.enforced() {
@@ -376,7 +364,7 @@ async fn configured_accounts(
             "a hosted hub (tenancy.mode multi) on Postgres runs its queries as the role devagotchi_hub, held to row-level security, and its login role cannot switch to that role; see crates/hub/README.md, \"The store\"",
         ));
     }
-    Ok(accounts::Accounts::open(store)
+    Ok(identity::accounts::Accounts::open(store)
         .await?
         .with_tokens(config.token_config())
         .with_tenancy(config.tenancy.clone(), config.operators.clone())
@@ -462,11 +450,11 @@ fn manage(command: Command) -> BridgeResult<()> {
                     .await?;
                 let token = if replace {
                     accounts
-                        .issue_replacing_link(accounts::LinkPurpose::Owner, &owner.id)
+                        .issue_replacing_link(identity::accounts::LinkPurpose::Owner, &owner.id)
                         .await?
                 } else {
                     accounts
-                        .issue_link(accounts::LinkPurpose::Owner, &owner.id)
+                        .issue_link(identity::accounts::LinkPurpose::Owner, &owner.id)
                         .await?
                 };
                 // The link itself is never audited or logged; only that one was issued.
@@ -479,7 +467,7 @@ fn manage(command: Command) -> BridgeResult<()> {
             eprintln!(
                 "One-time link for the owner ({}), valid {} minutes; any earlier unused one no longer works.\nOpen it to make a passkey or set a local email and password. Using it ends the owner's other sessions{}.",
                 owner.id,
-                accounts::LINK_TTL_SECS / 60,
+                identity::accounts::LINK_TTL_SECS / 60,
                 if replace {
                     " and removes every other passkey of the owner"
                 } else {
@@ -709,7 +697,7 @@ async fn run(
         hub.reload_providers().await?;
     }
     // A one-owner hub whose config names neither its owner nor its operators may be claimed
-    // from the browser (`accounts/claim.rs`); its code is issued once the hub listens, below.
+    // from the browser (`identity/accounts/claim.rs`); its code is issued once the hub listens, below.
     // A hosted hub (`tenancy.mode multi`) is never claimed.
     let claimable = match (&passkeys, &accounts) {
         (Some(_), Some(accounts)) if config.claim_allowed() => Some(accounts.clone()),
@@ -787,7 +775,7 @@ async fn run(
         Some(accounts) => Some(Arc::new(
             connections::Connections::new(
                 accounts.clone(),
-                sealed::Sealer::open(&state_dir)
+                identity::Sealer::open(&state_dir)
                     .map_err(|why| BridgeError::new("invalid_config", why))?,
             )
             .map_err(|why| BridgeError::new("invalid_config", why))?,
@@ -1088,7 +1076,7 @@ async fn require_bearer(
             }
             Some(nomen) => format!(
                 ", scope=\"{}\"",
-                crate::auth::sign_in_scopes(nomen.audiences)
+                crate::identity::auth::sign_in_scopes(nomen.audiences)
             ),
             None => String::new(),
         };
@@ -1269,7 +1257,7 @@ fn resource_metadata(state: &AppState, resource: String) -> Response {
     } else if let Some(nomen) = state.hub.config.auth.nomen() {
         // MCP clients ask for exactly these (RFC 9728 `scopes_supported`), so the account's
         // org reaches the hub with every call.
-        body["scopes_supported"] = crate::auth::sign_in_scopes(nomen.audiences)
+        body["scopes_supported"] = crate::identity::auth::sign_in_scopes(nomen.audiences)
             .split(' ')
             .collect::<Vec<_>>()
             .into();
@@ -1373,7 +1361,7 @@ async fn healthz(State(state): State<AppState>) -> Response {
     let audit = state.hub.audit.verify().await;
     let chain_ok = audit.as_ref().map(|status| status.ok).unwrap_or(false);
     // The identity provider is reported, not counted: an outage there leaves the hub, its
-    // links and confirmed sign-ins working (see nomen.rs).
+    // links and confirmed sign-ins working (see identity/nomen/).
     let mut body = serde_json::json!({
         "ok": all_up && chain_ok,
         "brokers": brokers,
@@ -1736,7 +1724,9 @@ mod tests {
         run(None).unwrap();
         let (owner, chain) = runtime.block_on(async {
             let store = store::open(&url).await.unwrap();
-            let accounts = accounts::Accounts::open(store.clone()).await.unwrap();
+            let accounts = identity::accounts::Accounts::open(store.clone())
+                .await
+                .unwrap();
             let chain = Audit::new(store).verify().await.unwrap();
             (accounts.owner().await.unwrap().unwrap(), chain)
         });
@@ -1820,7 +1810,7 @@ mod tests {
         prepare_state_dir(dir).unwrap();
         let accounts = if config.has_accounts() {
             Some(Arc::new(
-                accounts::Accounts::open(store::testing::postgres().await?.store)
+                identity::accounts::Accounts::open(store::testing::postgres().await?.store)
                     .await
                     .unwrap()
                     .with_tokens(config.token_config()),
