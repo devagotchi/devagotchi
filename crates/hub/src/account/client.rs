@@ -1,6 +1,6 @@
 //! One MCP session with a hub, as the account on file: the client side of Streamable
 //! HTTP. `devagotchi mcp --hub` relays an agent's stdio through it (`front`); the board's
-//! remote face (`agenthub::remote`) calls tools through it. The token comes from
+//! command line reaches a bound project's hub through it ([`AccountHub`]). The token comes from
 //! `account.json` at each request — refreshed when due, so a long session rides over a
 //! rotation — and the seat (`X-Devagotchi-Seat`) names the account's agent on this machine.
 //!
@@ -358,5 +358,34 @@ impl HubClient {
                 format!("{name}: the hub's answer is not the record expected: {error}"),
             )
         })
+    }
+}
+
+/// The hub the board's command line reaches (`devagotchi_agenthub::cli::Hub`): the account on
+/// file, `DEVAGOTCHI_HUB` or the last sign-in's hub when a command names none.
+pub struct AccountHub;
+
+impl devagotchi_agenthub::cli::Hub for AccountHub {
+    fn default_hub(&self, account_file: &Path) -> Option<String> {
+        configured_hub().or_else(|| saved_hub(account_file))
+    }
+
+    fn connect(
+        &self,
+        hub: &str,
+        account_file: &Path,
+        seat: Option<&str>,
+    ) -> BridgeResult<Box<dyn devagotchi_agenthub::cli::Session>> {
+        Ok(Box::new(HubClient::new(hub, account_file, seat)?))
+    }
+}
+
+impl devagotchi_agenthub::cli::Session for HubClient {
+    fn hub(&self) -> &str {
+        HubClient::hub(self)
+    }
+
+    fn call_tool(&mut self, name: &str, arguments: Value) -> BridgeResult<Value> {
+        HubClient::call_tool(self, name, arguments)
     }
 }

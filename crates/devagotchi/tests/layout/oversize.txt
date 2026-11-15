@@ -3,6 +3,7 @@
 # not listed may not exceed the cap. Never add a line or raise a number to make the test
 # pass: see .ai/patterns/layout.md.
 607	crates/agenthub/src/approval.rs
+1472	crates/agenthub/src/cli/mod.rs
 588	crates/agenthub/src/clickhouse.rs
 912	crates/agenthub/src/hosted.rs
 736	crates/agenthub/src/hosted/operations.rs
@@ -12,7 +13,7 @@
 1712	crates/core/src/broker.rs
 577	crates/core/src/execution/platform/linux.rs
 838	crates/core/src/execution/platform/windows.rs
-1212	crates/devagotchi/tests/one_binary.rs
+1148	crates/devagotchi/tests/one_binary.rs
 1153	crates/hub/src/account.rs
 1268	crates/hub/src/accounts.rs
 507	crates/hub/src/accounts/access.rs
@@ -23,19 +24,18 @@
 768	crates/hub/src/accounts/tenants/tests.rs
 919	crates/hub/src/accounts/tests.rs
 681	crates/hub/src/accounts/workflows.rs
-1620	crates/hub/src/agenthub/cli.rs
-859	crates/hub/src/agenthub/hosted_tests.rs
+853	crates/hub/src/agenthub/hosted_tests.rs
 626	crates/hub/src/agenthub/issue_lifecycle/tests.rs
-3337	crates/hub/src/agenthub/mcp/mod.rs
-2669	crates/hub/src/agenthub/tests.rs
+3070	crates/hub/src/agenthub/mcp/mod.rs
+2124	crates/hub/src/agenthub/tests.rs
 1017	crates/hub/src/ai.rs
 651	crates/hub/src/ai/tests.rs
 575	crates/hub/src/analytics/tests.rs
 686	crates/hub/src/auth.rs
-1570	crates/hub/src/config.rs
+1544	crates/hub/src/config.rs
 1098	crates/hub/src/hub.rs
 542	crates/hub/src/hub_settings_tests.rs
-2146	crates/hub/src/lib.rs
+2009	crates/hub/src/lib.rs
 1142	crates/hub/src/machines/link/mod.rs
 539	crates/hub/src/mail.rs
 696	crates/hub/src/nomen.rs
@@ -49,7 +49,7 @@
 1651	crates/hub/src/site/model.rs
 843	crates/hub/src/site/tests.rs
 574	crates/hub/src/site/workflows.rs
-903	crates/hub/src/tenant_tests.rs
+898	crates/hub/src/tenant_tests.rs
 607	crates/hub/src/web/analytics.rs
 510	crates/hub/src/web/app/agenthub/ticket_tests.rs
 713	crates/hub/src/web/approvals.rs
@@ -59,11 +59,11 @@
 751	crates/hub/src/web/oauth.rs
 1082	crates/hub/src/web/orgs.rs
 751	crates/hub/src/web/pages.rs
-1535	crates/hub/src/web/passkey_tests.rs
+1534	crates/hub/src/web/passkey_tests.rs
 1112	crates/hub/src/web/passkeys.rs
 949	crates/hub/src/web/providers.rs
 687	crates/hub/src/web/routes.rs
-1227	crates/hub/src/web/tests/mod.rs
+1206	crates/hub/src/web/tests/mod.rs
 1088	crates/hub/src/web/workflow.rs
 1771	crates/hub/src/workflow_tests.rs
 586	crates/hub/src/workflows.rs

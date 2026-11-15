@@ -1,13 +1,13 @@
-//! AgentHub (`devagotchi-agenthub`): the agents' board. Tickets that any subscription claims
-//! under a lease, works, annotates and hands off: a standalone board in
-//! `<project>/.devagotchi/board.sqlite3` (ADR 0002), a hosted one in Postgres (`hosted`, its
-//! tables made by `migrations`), with notes that reach agents (`inbox`, `wake`), approvals
-//! (`approval`) and GitHub issues (`issue_lifecycle`). Its Postgres engine is `devagotchi-store`.
-//! The hub uses its public API: the hub's MCP tools, tenant registry and pages are its own
-//! (`crates/hub/src/agenthub/`). Contract: `docs/agent-board.md`. A ticket is a unit of
-//! coordination and memory; a broker operation is a unit of execution, never run here.
+//! AgentHub (`devagotchi-agenthub`): the agents' board. Tickets any subscription claims under a
+//! lease, works, annotates and hands off: a standalone board in `<project>/.devagotchi/
+//! board.sqlite3` (ADR 0002), a hosted one in Postgres (`hosted`, tables by `migrations`); notes
+//! that reach agents (`inbox`, `wake`), approvals (`approval`), GitHub issues (`issue_lifecycle`)
+//! and the `board` command line (`cli`). Its Postgres engine is `devagotchi-store`; the hub's MCP
+//! tools, tenant registry and pages are the hub's (`crates/hub/src/agenthub/`). Contract:
+//! `docs/agent-board.md`. A ticket coordinates and remembers; a broker operation executes.
 
 pub mod approval;
+pub mod cli;
 pub mod clickhouse;
 pub mod connections;
 pub mod face;

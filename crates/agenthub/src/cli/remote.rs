@@ -1,5 +1,5 @@
 //! The board's remote face: the command line's operations as calls to a hub's `board_*`
-//! tools, through one session as the signed-in account (`account::client`). This is what a
+//! tools, through one session as the signed-in account ([`Session`]). This is what a
 //! bound project uses (B11): the hub is the board of record and the arbiter; this machine's
 //! actor name travels as the seat, so one account's agents are distinct there. The records
 //! that come back are the store's own types, so the command line renders them as it always
@@ -16,15 +16,15 @@ use devagotchi_contracts::{BridgeError, BridgeResult};
 use serde::Deserialize;
 use serde_json::{Value, json};
 
-use super::{
+use super::{Session, call};
+use crate::{
     Actor, ChainStatus, Dep, DepKind, Filter, Lease, NewTicket, NextFilter, Note, Patch, Prime,
     ProjectSettings, Settings, Ticket, TicketView,
     face::{Face, ME},
 };
-use crate::account::client::HubClient;
 
 pub struct Remote {
-    client: RefCell<HubClient>,
+    client: RefCell<Box<dyn Session>>,
     project: String,
     prefix: String,
 }
@@ -37,7 +37,7 @@ struct ClaimOut {
 }
 
 impl Remote {
-    pub fn new(client: HubClient, project: &str, prefix: &str) -> Self {
+    pub fn new(client: Box<dyn Session>, project: &str, prefix: &str) -> Self {
         Self {
             client: RefCell::new(client),
             project: project.to_string(),
@@ -47,7 +47,7 @@ impl Remote {
 
     fn call<T: serde::de::DeserializeOwned>(&self, tool: &str, mut args: Value) -> BridgeResult<T> {
         args["project"] = Value::String(self.project.clone());
-        self.client.borrow_mut().call(tool, args)
+        call(self.client.borrow_mut().as_mut(), tool, args)
     }
 
     /// The hub is the arbiter; its tools name the seat from the session, never from a

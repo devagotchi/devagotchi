@@ -34,7 +34,8 @@ use serde::{Deserialize, Serialize};
 
 use super::{
     Actor, AnchorPatch, Anchors, Board, ChainStatus, Dep, DepKind, Event, Filter, Lease, NewTicket,
-    NextFilter, Note, Patch, Prime, Ticket, TicketView, approval::ApprovalStatus, face::ME,
+    NextFilter, Note, Patch, Prime, Ticket, TicketView, approval::ApprovalStatus, cli::Attached,
+    face::ME,
 };
 use crate::{
     audit::AuditEntry,
@@ -102,12 +103,6 @@ pub struct Bound {
     /// How many account boards this account may hold here; absent for no limit.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub limit: Option<usize>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-pub struct Attached {
-    pub project: String,
-    pub prefix: String,
 }
 
 /// Which kind of board answered a project name.

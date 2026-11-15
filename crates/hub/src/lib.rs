@@ -639,6 +639,7 @@ pub fn board_cli(args: Vec<OsString>, account_file: Option<PathBuf>) -> ExitCode
         stdout_is_terminal: std::io::stdout().is_terminal(),
         account_file,
         plugin_host: agenthub::cli::plugin_host(|name| env::var_os(name)),
+        hub: Some(Arc::new(account::client::AccountHub)),
     };
     let (mut out, mut err) = (std::io::stdout(), std::io::stderr());
     ExitCode::from(agenthub::cli::run(invocation, &mut out, &mut err))
