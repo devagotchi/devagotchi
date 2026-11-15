@@ -1,4 +1,0 @@
-# Migrations are embedded and checked by checksum (sqlx): their bytes are the same in every
-# checkout, whatever the OS converts.
-*.sql text eol=lf
-*.sh  text eol=lf

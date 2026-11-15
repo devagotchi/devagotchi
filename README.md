@@ -137,6 +137,8 @@ As the product grows, graph scheduling extends this broker and journal. A step a
 
 ## Build the Linux core
 
+AgentHub is its own repository ([devagotchi/agenthub](https://github.com/devagotchi/agenthub)), pulled in as a submodule at `crates/agenthub`: clone with `git clone --recurse-submodules`, or run `git submodule update --init` in an existing checkout.
+
 Install the Rust toolchain specified in `rust-toolchain.toml`. Then, from this repository root:
 
 ```bash
@@ -159,6 +161,8 @@ The endpoint is `/absolute/private/state/devagotchi/broker.sock`. Run the broker
 The example config's paths are placeholders, deliberately not broad default grants. The broker loads one workspace and one operator configuration at startup. Configuration errors prevent admission. MCP tools cannot modify grants.
 
 ## Build and run on Windows
+
+AgentHub is its own repository ([devagotchi/agenthub](https://github.com/devagotchi/agenthub)), pulled in as a submodule at `crates/agenthub`: clone with `git clone --recurse-submodules`, or run `git submodule update --init` in an existing checkout.
 
 Install the toolchain from `rust-toolchain.toml` for the MSVC host and the Visual Studio C++ build tools, which compile the bundled SQLite. From the repository root in PowerShell:
 
