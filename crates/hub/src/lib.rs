@@ -15,7 +15,6 @@ mod accounts;
 pub mod agenthub;
 #[cfg(test)]
 mod ahead_tests;
-pub mod ai;
 mod analytics;
 #[cfg(test)]
 mod analytics_tests;

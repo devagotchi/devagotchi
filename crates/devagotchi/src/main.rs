@@ -60,7 +60,7 @@ fn run(args: Vec<OsString>) -> ExitCode {
         Some("mcp") => mcp(args),
         Some("connect") => connect(args, false),
         Some("setup") => connect(args, true),
-        Some("ai") => devagotchi_hub::ai::cli(args, paths::state_dir()),
+        Some("ai") => devagotchi_core::ai::cli(args, paths::state_dir()),
         Some("board") => devagotchi_hub::board_cli(
             args,
             paths::config_dir().map(|d| d.join(devagotchi_hub::account::FILE_NAME)),

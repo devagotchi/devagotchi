@@ -1,8 +1,11 @@
-//! The Devagotchi broker core: admission and operation lifecycle (`broker`),
-//! native process supervision (`execution`), and the durable SQLite journal.
+//! The Devagotchi machine engine: admission and operation lifecycle (`broker`),
+//! native process supervision (`execution`), the durable SQLite journal, and the
+//! machine's private AI evidence (`ai`, the `devagotchi ai` command).
 //! Wire types live in `devagotchi-contracts`; local IPC in `devagotchi-ipc`.
-//! These modules build where a native execution provider exists; on other
-//! targets the crate is empty and the broker binary reports `unsupported_platform`.
+//! The broker modules build where a native execution provider exists; on other
+//! targets only `ai` is here and the broker binary reports `unsupported_platform`.
+
+pub mod ai;
 
 #[cfg(any(target_os = "linux", windows))]
 pub mod broker;

@@ -308,7 +308,12 @@ try:
     else:
         print("--- promote-hub dry-run: skipped on Windows (a Linux deploy script)", flush=True)
         promote_ok = True
-    ok = adapter_ok and hub_ok and board_ok and orgs_ok and analytics_ok and signals_ok and link_ok and update_ok and nomen_ok and web_ok and promote_ok
+    # The hub keeps everything in Postgres: after every probe above, its state directory
+    # holds no SQLite file (the machines' brokers keep theirs; they are not the hub).
+    left = sorted(str(p.relative_to(hub_state)) for p in hub_state.rglob("*.sqlite3*"))
+    postgres_only = not left
+    print(f"--- hub state holds no SQLite: {'ok' if postgres_only else left}", flush=True)
+    ok = adapter_ok and hub_ok and board_ok and orgs_ok and analytics_ok and signals_ok and link_ok and update_ok and nomen_ok and web_ok and promote_ok and postgres_only
 except SkipRest:
     pass
 finally:

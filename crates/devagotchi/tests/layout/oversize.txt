@@ -10,6 +10,8 @@
 527	crates/agenthub/src/lease.rs
 2270	crates/agenthub/src/lib.rs
 732	crates/contracts/src/lib.rs
+1017	crates/core/src/ai/mod.rs
+651	crates/core/src/ai/tests.rs
 1712	crates/core/src/broker.rs
 577	crates/core/src/execution/platform/linux.rs
 838	crates/core/src/execution/platform/windows.rs
@@ -27,8 +29,6 @@
 626	crates/hub/src/agenthub/issue_lifecycle/tests.rs
 3003	crates/hub/src/agenthub/mcp/mod.rs
 592	crates/hub/src/agenthub/tests.rs
-1017	crates/hub/src/ai.rs
-651	crates/hub/src/ai/tests.rs
 575	crates/hub/src/analytics/tests.rs
 686	crates/hub/src/auth.rs
 1544	crates/hub/src/config.rs
