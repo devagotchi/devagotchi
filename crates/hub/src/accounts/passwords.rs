@@ -6,7 +6,7 @@
 //! and it waits. Neither the password nor its hash is ever logged.
 
 use super::{email::normalize_email, identities::Proven, *};
-use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier, password_hash::SaltString};
+use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
 
 const MIN_LEN: usize = 8;
 const FAILURES_MAX: usize = 10; // per address in FAILURES_SECS
@@ -26,7 +26,7 @@ fn checked(password: &str) -> BridgeResult<()> {
 
 fn hash_with(password: &[u8], salt: &[u8]) -> Option<String> {
     Argon2::default()
-        .hash_password(password, &SaltString::encode_b64(salt).ok()?)
+        .hash_password_with_salt(password, salt)
         .ok()
         .map(|h| h.to_string())
 }
