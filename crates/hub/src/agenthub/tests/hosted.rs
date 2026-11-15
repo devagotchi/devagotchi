@@ -2,8 +2,8 @@
 //! the lease reaper over every tenant, and the home tenant. The hosted board itself is
 //! AgentHub's (`crates/agenthub/src/tests/hosted*.rs`).
 
-use super::{registry, *};
 use crate::agenthub::hosted::*;
+use crate::agenthub::{registry, *};
 use crate::store::{Store, testing, transaction};
 
 use crate::agenthub::Filter;

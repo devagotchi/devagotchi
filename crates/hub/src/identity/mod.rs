@@ -35,6 +35,7 @@
 
 pub mod accounts;
 pub mod auth;
+pub mod connect;
 pub mod nomen;
 pub mod preferences;
 pub mod sealed;

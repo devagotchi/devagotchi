@@ -385,3 +385,6 @@ impl Hub {
         result.map(Json).map_err(Json)
     }
 }
+
+#[cfg(test)]
+mod tests;

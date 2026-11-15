@@ -14,8 +14,4 @@ pub mod mcp;
 pub(crate) mod registry;
 
 #[cfg(test)]
-mod hosted_tests;
-#[cfg(test)]
-mod settings_tests;
-#[cfg(test)]
 mod tests;
