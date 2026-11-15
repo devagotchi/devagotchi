@@ -26,7 +26,7 @@ pub struct EmailLink {
 /// An address as the hub keeps it: trimmed, in lowercase, plausible; `None` otherwise.
 pub fn normalize_email(typed: &str) -> Option<String> {
     let email = typed.trim().to_ascii_lowercase();
-    crate::mail::address_of(&email).filter(|address| *address == email)
+    crate::notify::mail::address_of(&email).filter(|address| *address == email)
 }
 
 impl Accounts {

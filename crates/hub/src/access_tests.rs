@@ -345,7 +345,7 @@ async fn limits(hub: Hosted) {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_tenant_let_in_hears_so_by_email_when_it_has_a_verified_address() {
-    let mail = crate::mail::stub::start("hub").await;
+    let mail = crate::notify::mail::stub::start("hub").await;
     let mail_url = mail.url.clone();
     let hub = or_skip!(hosted_with(None, |dir, _| {
         let site = site_dir(dir, "site", early_access);

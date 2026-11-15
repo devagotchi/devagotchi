@@ -28,12 +28,12 @@ mod hub_settings_tests;
 #[cfg(test)]
 mod keys_tests;
 mod machines;
-mod mail;
 #[cfg(test)]
 mod me_tests;
 mod nomen;
 #[cfg(test)]
 mod notes_tests;
+mod notify;
 mod offers;
 #[cfg(test)]
 mod offers_tests;
@@ -48,9 +48,7 @@ mod plugin_tests;
 mod preferences;
 #[cfg(test)]
 mod provider_tests;
-mod push;
 mod sealed;
-mod signals;
 mod site;
 mod store;
 #[cfg(test)]
@@ -332,7 +330,7 @@ fn parse_check_mail(args: Vec<OsString>) -> BridgeResult<Command> {
             Some("--config") if config.is_none() => config = Some(PathBuf::from(value)),
             Some("--to") if to.is_none() => {
                 let address = value.to_string_lossy().into_owned();
-                if mail::address_of(&address).is_none() {
+                if notify::mail::address_of(&address).is_none() {
                     return Err(BridgeError::new(
                         "invalid_cli",
                         "--to needs an email address",
@@ -725,7 +723,7 @@ async fn run(
     };
     let push = match (&config.web, &passkeys) {
         (None, None) => None,
-        _ => Some(Arc::new(push::Push::open(
+        _ => Some(Arc::new(notify::push::Push::open(
             &state_dir,
             &config.public_url,
             devices.clone(),
@@ -842,11 +840,11 @@ async fn run(
             Err(error) => eprintln!("devagotchi hub: ClickHouse from the settings page: {error}"),
         }
     }
-    // Signals to the operator's sinks (`signals.rs`, docs/signals.md): each on its own task,
+    // Signals to the operator's sinks (`notify/signals/`, docs/signals.md): each on its own task,
     // reported in /healthz, never holding back the hub or another sink.
     let mut sinks = Vec::new();
     for config in &config.signals.sinks {
-        let sink = Arc::new(signals::Sink::new(
+        let sink = Arc::new(notify::signals::Sink::new(
             config,
             signals_store.clone(),
             audit.clone(),
@@ -855,7 +853,7 @@ async fn run(
         tokio::spawn(sink.clone().run());
         eprintln!(
             "devagotchi hub: signals ({}) to sink {} at {}",
-            signals::SCHEMA,
+            notify::signals::SCHEMA,
             config.name,
             config.url
         );
@@ -1533,7 +1531,7 @@ mod tests {
     fn check_mail_signs_in_and_sends_the_check_to_one_address() {
         // The stub mail server lives on its own runtime; `manage` builds one of its own.
         let runtime = tokio::runtime::Runtime::new().unwrap();
-        let stub = runtime.block_on(mail::stub::start("hub"));
+        let stub = runtime.block_on(notify::mail::stub::start("hub"));
         let dir = tempfile::tempdir().unwrap();
         let password = dir.path().join("smtp-password");
         std::fs::write(&password, "mail-pass\n").unwrap();

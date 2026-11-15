@@ -1,11 +1,11 @@
 //! The phones and browsers a person turned notifications on from (Web Push), in
-//! `push_subscriptions` (migration 0026). Kept with the machine registry until the notify
-//! domain takes them (structure-cleanup S4).
+//! `push_subscriptions` (migration 0026). Methods of the machine registry (`Devices`), which
+//! holds the hub's store and moves a person's subscriptions with their machines.
 
 use devagotchi_contracts::BridgeResult;
 use sqlx::Row;
 
-use super::{Devices, now_secs};
+use crate::machines::devices::{Devices, now_secs};
 use crate::store::{secs, transaction};
 
 /// A phone or browser a person turned notifications on from (Web Push). The keys are the

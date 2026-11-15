@@ -5,6 +5,9 @@
 //! (0600) and only its public half is ever served. A payload names the approval and links
 //! to it; it never carries the command text.
 
+pub mod subscriptions;
+pub use subscriptions::PushSubscription;
+
 use std::{path::Path, sync::Arc, time::Duration};
 
 use aws_lc_rs::{
@@ -17,10 +20,7 @@ use aws_lc_rs::{
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use devagotchi_contracts::{BridgeError, BridgeResult};
 
-use crate::machines::{
-    devices::{Devices, PushSubscription},
-    now_secs,
-};
+use crate::machines::{devices::Devices, now_secs};
 
 fn push_error(message: impl Into<String>) -> BridgeError {
     BridgeError::new("push", message)

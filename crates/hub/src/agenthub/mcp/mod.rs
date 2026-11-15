@@ -67,7 +67,7 @@ pub struct Boards {
     /// has one: from the config at start, or from the settings page at any time.
     warehouse: std::sync::RwLock<Option<Arc<crate::ops::warehouse::Warehouse>>>,
     /// The hub's signal sinks (`crate::signals`), set once at start.
-    sinks: std::sync::OnceLock<Vec<Arc<crate::signals::Sink>>>,
+    sinks: std::sync::OnceLock<Vec<Arc<crate::notify::signals::Sink>>>,
     /// The boards the hub's config names (`boards`), shared by grant.
     configured: BTreeSet<String>,
     accounts: Option<Accounts>,
@@ -198,12 +198,12 @@ impl Boards {
     }
 
     /// The signal sinks (set once, at start).
-    pub(crate) fn set_sinks(&self, sinks: Vec<Arc<crate::signals::Sink>>) {
+    pub(crate) fn set_sinks(&self, sinks: Vec<Arc<crate::notify::signals::Sink>>) {
         let _ = self.sinks.set(sinks);
     }
 
     /// The signal sinks, none when the hub has none.
-    pub(crate) fn sinks(&self) -> &[Arc<crate::signals::Sink>] {
+    pub(crate) fn sinks(&self) -> &[Arc<crate::notify::signals::Sink>] {
         self.sinks.get().map(Vec::as_slice).unwrap_or_default()
     }
 

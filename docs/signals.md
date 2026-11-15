@@ -1,6 +1,6 @@
 # Signals: the hub's event contract, version 1
 
-Status: implemented in increment 117 (`crates/hub/src/signals.rs`). The JSON Schema is
+Status: implemented in increment 117 (`crates/hub/src/notify/signals/`). The JSON Schema is
 [`signals/v1.schema.json`](signals/v1.schema.json), generated from the Rust type and held
 equal to it by a test.
 

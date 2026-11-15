@@ -67,7 +67,7 @@ impl SessionStore {
             Ok(bytes) => bytes,
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
                 let bytes = crate::machines::random::<32>().to_vec();
-                crate::push::write_private(&key_path, &bytes)?;
+                crate::notify::push::write_private(&key_path, &bytes)?;
                 bytes
             }
             Err(error) => {
@@ -379,7 +379,7 @@ mod tests {
         assert_eq!(opened.held.access, "ACCESS-SECRET-A");
         // Another key cannot open the store's sessions.
         std::fs::remove_file(dir.path().join(KEY_FILE)).unwrap();
-        crate::push::write_private(&dir.path().join(KEY_FILE), &[9u8; 32]).unwrap();
+        crate::notify::push::write_private(&dir.path().join(KEY_FILE), &[9u8; 32]).unwrap();
         let rekeyed = SessionStore::open(dir.path(), test.store.clone()).unwrap();
         assert!(rekeyed.get(&a, t + 1).await.unwrap().is_none());
         #[cfg(unix)]

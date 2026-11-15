@@ -90,7 +90,7 @@ pub struct HubConfig {
     #[serde(default)]
     pub clickhouse: Option<ClickHouseConfig>,
     /// Where the hub pushes its signals, the versioned stream of what happens on it
-    /// (`signals.rs`, `docs/signals.md`). Absent: none leave the hub.
+    /// (`notify/signals/`, `docs/signals.md`). Absent: none leave the hub.
     #[serde(default)]
     pub signals: SignalsConfig,
     /// One owner's hub (`single`, the default) or a hosted service where everyone who
@@ -181,7 +181,7 @@ pub struct AccountBoardsConfig {
 
 pub use devagotchi_agenthub::clickhouse::ClickHouseConfig;
 
-/// The hub's signal sinks (`signals.rs`).
+/// The hub's signal sinks (`notify/signals/`).
 #[derive(Debug, Clone, Default, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct SignalsConfig {

@@ -33,7 +33,7 @@ pub struct ChainStatus {
     pub head: String,
 }
 
-/// One recorded call, as the signal sinks read it (`signals.rs`).
+/// One recorded call, as the signal sinks read it (`notify::signals`).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Recorded {
     pub seq: u64,

@@ -27,7 +27,7 @@ use crate::{
     AppState,
     accounts::{email::normalize_email, identities::Proven},
     config::EmailConfig,
-    mail,
+    notify::mail,
 };
 
 /// The mail server and sender the email link goes out through.

@@ -35,15 +35,15 @@
 542	crates/hub/src/hub_settings_tests.rs
 2007	crates/hub/src/lib.rs
 1142	crates/hub/src/machines/link/mod.rs
-539	crates/hub/src/mail.rs
 696	crates/hub/src/nomen.rs
 711	crates/hub/src/nomen/tests/mod.rs
+539	crates/hub/src/notify/mail.rs
+588	crates/hub/src/notify/signals/mod.rs
 844	crates/hub/src/offers_tests.rs
 575	crates/hub/src/ops/analytics/tests.rs
 1548	crates/hub/src/orgs.rs
 521	crates/hub/src/orgs/api/mod.rs
 764	crates/hub/src/provider_tests.rs
-588	crates/hub/src/signals.rs
 717	crates/hub/src/site.rs
 1651	crates/hub/src/site/model.rs
 843	crates/hub/src/site/tests.rs
