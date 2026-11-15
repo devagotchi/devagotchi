@@ -256,7 +256,7 @@ async fn llms_txt_carries_this_hubs_address_and_the_steps_an_ai_follows() {
     assert!(llms.contains(&format!("({SITE}/llms-full.txt)")));
     assert!(!llms.contains(&format!("({url}/")), "{llms}");
     // Every tool it names is one the hub serves; every placeholder is filled.
-    let served = crate::hub::tool_names();
+    let served = crate::mcp::tool_names();
     for name in llms.split('`').skip(1).step_by(2) {
         if name.chars().all(|c| c.is_ascii_lowercase() || c == '_') {
             assert!(served.iter().any(|s| s == name), "{name} is not a tool");
@@ -526,7 +526,7 @@ async fn no_other_product_is_named_in_the_site_any_page_or_the_mcp_surface() {
     // What an AI reads: the instructions, and every tool as tools/list describes it.
     let info = rmcp::ServerHandler::get_info(&hub.hub);
     assert_names_no_other_product("instructions", &info.instructions.unwrap_or_default());
-    for tool in crate::hub::tools() {
+    for tool in crate::mcp::tools() {
         assert_names_no_other_product(&tool.name, &serde_json::to_string(&tool).unwrap());
     }
 }

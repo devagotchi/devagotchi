@@ -832,13 +832,13 @@ async fn a_blank_offering_is_left_out_and_offers_matches_its_output_schema() {
     assert_eq!(offerings[0]["url"], "https://vaultix.cloud");
     // As a client that checks holds it: the result matches the declared output schema.
     let schema =
-        crate::output_schema::declared("offers").expect("offers declares an output schema");
-    crate::output_schema::assert_matches("offers", &schema, structured);
+        crate::mcp::output_schema::declared("offers").expect("offers declares an output schema");
+    crate::mcp::output_schema::assert_matches("offers", &schema, structured);
     // And the check is real: a half-empty offering, as sent before, is refused.
     let mut half = structured.clone();
     half["offerings"][0].as_object_mut().unwrap().remove("url");
     assert!(
-        !crate::output_schema::errors(&schema, &half).is_empty(),
+        !crate::mcp::output_schema::errors(&schema, &half).is_empty(),
         "{half}"
     );
 }

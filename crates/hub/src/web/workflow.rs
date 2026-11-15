@@ -615,7 +615,7 @@ data-return-to=\"{}\" disabled>{}</button></p><p class=\"meta\" id=\"passkey-sta
             && matches!(hub.links.live_code(code).await, Ok(Some(device)) if device == stored)
         {
             let os = progress.and_then(|p| p.os.as_deref()).unwrap_or("linux");
-            let line = crate::hub::join_line(&self.state.hub.config.public_url, os, code);
+            let line = crate::mcp::join_line(&self.state.hub.config.public_url, os, code);
             return format!(
                 "<p class=\"meta\">{}</p><div class=\"command\"><pre><code id=\"command-{n}\">{}</code></pre>\
 <button type=\"button\" class=\"copy\" data-copy=\"command-{n}\" hidden>{}</button></div>\

@@ -21,7 +21,6 @@
 2998	crates/hub/src/agenthub/mcp/mod.rs
 592	crates/hub/src/agenthub/tests/served.rs
 1544	crates/hub/src/config.rs
-1097	crates/hub/src/hub.rs
 573	crates/hub/src/identity/accounts/api_keys.rs
 1263	crates/hub/src/identity/accounts/mod.rs
 647	crates/hub/src/identity/accounts/oauth.rs
@@ -33,8 +32,9 @@
 696	crates/hub/src/identity/nomen/mod.rs
 711	crates/hub/src/identity/nomen/tests/mod.rs
 764	crates/hub/src/identity/tests/providers.rs
-1974	crates/hub/src/lib.rs
+1970	crates/hub/src/lib.rs
 1142	crates/hub/src/machines/link/mod.rs
+1097	crates/hub/src/mcp/surface.rs
 539	crates/hub/src/notify/mail.rs
 588	crates/hub/src/notify/signals/mod.rs
 844	crates/hub/src/offers/tests.rs

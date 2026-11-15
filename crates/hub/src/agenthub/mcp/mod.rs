@@ -39,8 +39,8 @@ use super::{
 };
 use crate::{
     config::{DEFAULT_FREE_LIMIT, HubConfig, valid_name},
-    hub::Hub,
     identity::Subject,
+    mcp::Hub,
     ops::audit::AuditEntry,
     site::Cap,
     tenancy::orgs::{self, Role},

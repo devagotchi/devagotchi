@@ -368,7 +368,7 @@ impl Hosted {
     }
 
     /// One tool call. A successful result is held to the tool's declared output schema, as
-    /// a client that checks holds it (`output_schema.rs`): every test that calls a tool
+    /// a client that checks holds it (`mcp/output_schema.rs`): every test that calls a tool
     /// through here checks that too.
     pub(crate) async fn call(&self, person: &mut Person, tool: &str, arguments: Value) -> Value {
         let answer = self
@@ -378,7 +378,7 @@ impl Hosted {
                 json!({ "name": tool, "arguments": arguments }),
             )
             .await;
-        crate::output_schema::assert_result(tool, &answer);
+        crate::mcp::output_schema::assert_result(tool, &answer);
         answer
     }
 }

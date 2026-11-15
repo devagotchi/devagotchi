@@ -16,8 +16,8 @@ use devagotchi_contracts::BridgeError;
 use rmcp::model::{CallToolResult, ContentBlock};
 
 use crate::{
-    hub::Hub,
     identity::Subject,
+    mcp::Hub,
     site::{Cap, Plan},
     tenancy::access,
 };

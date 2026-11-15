@@ -13,7 +13,7 @@ use serde::Deserialize;
 use super::{home, person, words};
 use crate::{
     AppState,
-    hub::MachineUpdate,
+    mcp::MachineUpdate,
     site::Ctx,
     web::{
         approvals::same_origin,

@@ -74,7 +74,7 @@ pub fn request_base(site: &Site, public_url: &str, host: Option<&str>) -> String
 /// machine on each system (with `<code>` where `machine_add`'s code goes).
 pub fn llms_ctx<'a>(ctx: Ctx<'a>, public_url: &str) -> Ctx<'a> {
     let hub = base(public_url);
-    let join = |os: &str| crate::hub::join_line(hub, os, "<code>");
+    let join = |os: &str| crate::mcp::join_line(hub, os, "<code>");
     let site = site_base(ctx.site, public_url);
     ctx.with("hub", hub)
         .with("site", site)

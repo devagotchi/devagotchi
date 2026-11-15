@@ -46,7 +46,7 @@ fn the_agenthub_plugin_ships_exactly_the_hooks_the_handler_prints() {
 
 #[test]
 fn every_tool_a_skill_names_is_one_the_hub_serves() {
-    let tools = crate::hub::tool_names();
+    let tools = crate::mcp::tool_names();
     let prefixes = [
         "board_",
         "approval_",

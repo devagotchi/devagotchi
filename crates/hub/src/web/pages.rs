@@ -17,7 +17,7 @@ use axum::{
 pub static CSS: std::sync::LazyLock<String> =
     std::sync::LazyLock::new(|| crate::site::builtin().stylesheet().to_string());
 
-pub use crate::hub::Machine;
+pub use crate::mcp::Machine;
 pub use crate::site::Front;
 use crate::site::Site;
 

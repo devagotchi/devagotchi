@@ -184,7 +184,7 @@ impl Audit {
     }
 }
 
-impl crate::hub::Hub {
+impl crate::mcp::Hub {
     /// Record one call in the audit chain. A call that cannot be audited is not a call
     /// this bastion made, so a failure here fails the call. An operation that started
     /// (`operation_start`, or `run`) is also its tenant's operation milestone

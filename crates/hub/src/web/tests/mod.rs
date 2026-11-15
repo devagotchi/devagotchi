@@ -17,8 +17,8 @@ use sha2::{Digest, Sha256};
 
 use super::*;
 use crate::{
-    AppState, config::HubConfig, hub::Hub, identity::auth::Verifier, machines::devices::Devices,
-    machines::link::Links, notify::push::Push,
+    AppState, config::HubConfig, identity::auth::Verifier, machines::devices::Devices,
+    machines::link::Links, mcp::Hub, notify::push::Push,
 };
 
 const OWNER: &str = "300000000000000001";
