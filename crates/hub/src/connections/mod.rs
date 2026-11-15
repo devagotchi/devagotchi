@@ -8,7 +8,9 @@
 
 use std::{sync::Arc, time::Duration};
 
-use devagotchi_agenthub::connections::{self as catalog, Service};
+pub(crate) mod catalog;
+
+use catalog::Service;
 use devagotchi_contracts::BridgeError;
 use rmcp::{
     Json, RoleServer, handler::server::wrapper::Parameters, service::RequestContext, tool,

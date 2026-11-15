@@ -19,7 +19,8 @@ path = "src/lib.rs"
 devagotchi-contracts = { workspace = true }
 # A note for "codex" also reaches the names a client is known by (`inbox.rs`).
 devagotchi-connectors = { workspace = true }
-# The database it shares with the hub: Postgres (its own schema, tenant RLS) or SQLite.
+# The Postgres engine it shares with a host (schema `devagotchi`, tenant RLS); its tables are
+# its own migrations (`migrations/`).
 devagotchi-store = { workspace = true }
 # A local board is a SQLite file in the project (`.devagotchi/board.sqlite3`).
 rusqlite = { workspace = true }

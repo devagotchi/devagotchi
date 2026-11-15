@@ -9,7 +9,6 @@
 pub mod approval;
 pub mod cli;
 pub mod clickhouse;
-pub mod connections;
 pub mod face;
 pub mod hosted;
 pub mod inbox;

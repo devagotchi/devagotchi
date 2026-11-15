@@ -4,13 +4,13 @@
 //! with `connections` and call them with `connection_call` (`crate::connections`). Laid out for
 //! the phone, and as two columns in a wide browser window (`hub.css`, `.connections`).
 
+use crate::connections::catalog::{self, CATALOG};
 use axum::{
     Form,
     extract::{Path, Query, State},
     http::{HeaderMap, HeaderValue, StatusCode, header},
     response::Response,
 };
-use devagotchi_agenthub::connections::{self as catalog, CATALOG};
 use serde::Deserialize;
 
 use super::person;

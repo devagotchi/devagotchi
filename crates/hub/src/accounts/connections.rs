@@ -13,7 +13,7 @@ use crate::store::transaction;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StoredConnection {
     pub name: String,
-    /// Its service in the catalog (`devagotchi_agenthub::connections::CATALOG`).
+    /// Its service in the catalog (`crate::connections::catalog::CATALOG`).
     pub service: String,
     pub sealed_key: String,
     /// The key's last four characters.

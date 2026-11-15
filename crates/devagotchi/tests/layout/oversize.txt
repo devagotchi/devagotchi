@@ -8,7 +8,7 @@
 912	crates/agenthub/src/hosted.rs
 736	crates/agenthub/src/hosted/operations.rs
 527	crates/agenthub/src/lease.rs
-2271	crates/agenthub/src/lib.rs
+2270	crates/agenthub/src/lib.rs
 732	crates/contracts/src/lib.rs
 1712	crates/core/src/broker.rs
 577	crates/core/src/execution/platform/linux.rs

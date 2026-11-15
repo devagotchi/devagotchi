@@ -1,8 +1,7 @@
-//! Connections: the outside services agents and apps call through the hub (plan:
-//! `.ai/dev/plans/connections-gateway.md`). This is the part that needs no store: the catalog
-//! of services, where a request may go, how the key is attached, and keeping the key out of
-//! whatever comes back. The hub keeps each tenant's connections sealed and makes the calls
-//! (`crates/hub/src/connections.rs`).
+//! The catalog of outside services agents and apps call through the hub (plan:
+//! `.ai/dev/plans/connections-gateway.md`): the part that needs no store. Which services, where
+//! a request may go, how the key is attached, and keeping the key out of whatever comes back.
+//! The hub keeps each tenant's keys sealed (`connector_keys`) and makes the calls (`super`).
 //!
 //! A call reaches only its service's own host: the path is checked before the URL is built,
 //! and the built URL's origin is checked again after, so nothing an agent passes can send the
@@ -285,7 +284,7 @@ mod tests {
         assert_eq!(ids.len(), CATALOG.len(), "one entry per service");
         for service in CATALOG {
             assert!(service.base.starts_with("https://"), "{}", service.id);
-            assert!(crate::valid_name(service.id));
+            assert!(crate::config::valid_name(service.id));
             assert!(METHODS.contains(&service.check.0));
             assert!(target(service.base, service.check.1, &[]).is_ok());
         }
