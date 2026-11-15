@@ -34,6 +34,7 @@ its versioned contracts, not another agent or task engine.
 - [Editions](docs/editions.md): what is core, what is cloud, and the license.
 - [Patterns](patterns/README.md): reusable guidance, not duplicated architecture decisions.
 - [Connector pattern](patterns/connectors.md): how an AI client is defined, proven and added.
+- [Layout pattern](patterns/layout.md): where Rust code lives, and the file-size ratchet.
 - [Capture schema](docs/capture-event.schema.json): generated from canonical Rust types.
 - [Cross-project training-data standard](docs/cross-project-training-standard.md):
   researched recommendations, data inventory, curation/evaluation gates and explicit
