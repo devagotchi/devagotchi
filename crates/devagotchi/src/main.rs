@@ -63,7 +63,7 @@ fn run(args: Vec<OsString>) -> ExitCode {
         Some("ai") => devagotchi_core::ai::cli(args, paths::state_dir()),
         Some("board") => devagotchi_hub::board_cli(
             args,
-            paths::config_dir().map(|d| d.join(devagotchi_hub::account::FILE_NAME)),
+            paths::config_dir().map(|d| d.join(devagotchi_hub::login::FILE_NAME)),
         ),
         Some("broker") => devagotchi_broker::cli(args),
         Some("hub") => devagotchi_hub::cli(args),
@@ -103,10 +103,10 @@ fn account(verb: &str, args: Vec<OsString>) -> ExitCode {
         );
         return ExitCode::from(64);
     };
-    devagotchi_hub::account::cli(
+    devagotchi_hub::login::cli(
         verb,
         args,
-        config_dir.join(devagotchi_hub::account::FILE_NAME),
+        config_dir.join(devagotchi_hub::login::FILE_NAME),
     )
 }
 
@@ -134,14 +134,14 @@ fn connect(args: Vec<OsString>, setup: bool) -> ExitCode {
     } else {
         env_dir("XDG_CONFIG_HOME").or_else(|| home.as_ref().map(|h| h.join(".config")))
     };
-    let account_file = paths::config_dir().map(|d| d.join(devagotchi_hub::account::FILE_NAME));
+    let account_file = paths::config_dir().map(|d| d.join(devagotchi_hub::login::FILE_NAME));
     let signed_in = account_file
         .as_ref()
-        .is_some_and(|f| devagotchi_hub::account::signed_in(f));
+        .is_some_and(|f| devagotchi_hub::login::signed_in(f));
     let account_on_file = account_file.as_ref().is_some_and(|f| {
         matches!(
-            devagotchi_hub::account::read(f),
-            Ok(Some(devagotchi_hub::account::Stored::Account(_)))
+            devagotchi_hub::login::read(f),
+            Ok(Some(devagotchi_hub::login::Stored::Account(_)))
         )
     });
     let machine = devagotchi_mcp::connect::Machine {
@@ -234,9 +234,9 @@ fn mcp(args: Vec<OsString>) -> ExitCode {
         let seat = std::env::var("DEVAGOTCHI_ACTOR")
             .ok()
             .filter(|a| !a.trim().is_empty());
-        return devagotchi_hub::account::front::cli(
+        return devagotchi_hub::login::front::cli(
             hub.as_deref(),
-            &config_dir.join(devagotchi_hub::account::FILE_NAME),
+            &config_dir.join(devagotchi_hub::login::FILE_NAME),
             seat.as_deref(),
         );
     }

@@ -170,7 +170,7 @@ pub fn run(args: Vec<OsString>) -> ExitCode {
         // two is on file every run says so. Nothing local waits on it.
         // The sign-in lives in the config directory, wherever the broker's config is.
         if let Some(dir) = paths::config_dir().or_else(|| config.parent().map(Path::to_path_buf)) {
-            account_line(&dir.join(devagotchi_hub::account::FILE_NAME));
+            account_line(&dir.join(devagotchi_hub::login::FILE_NAME));
         }
     }
     match devagotchi_broker::serve_blocking(state, config) {
@@ -239,7 +239,7 @@ fn background(
 /// one, or — neither on file — the two commands that settle it.
 #[cfg(any(target_os = "linux", windows))]
 fn account_line(path: &Path) {
-    use devagotchi_hub::account::{Stored, read};
+    use devagotchi_hub::login::{Stored, read};
     match read(path) {
         Ok(Some(Stored::Account(account))) => eprintln!(
             "devagotchi: signed in as {} (account {})",

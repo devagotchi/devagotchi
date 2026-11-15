@@ -21,7 +21,7 @@ use base64::Engine;
 use devagotchi_contracts::{BridgeError, BridgeResult};
 use serde_json::{Value, json};
 
-use crate::{account::Issuer, config::HubConfig};
+use crate::{config::HubConfig, login::Issuer};
 
 /// Nomen's management API, on top of the sign-in itself.
 pub const API_SCOPE: &str =
@@ -217,7 +217,7 @@ pub async fn run(connect: &Connect, tell: &mut dyn Write) -> BridgeResult<()> {
 
     let backup = connect.config.with_extension(format!(
         "json.before-connect-nomen-{}",
-        crate::account::unix_now()
+        crate::login::unix_now()
     ));
     write_private(&backup, text.as_bytes())?;
     write_private(&connect.config, format!("{new_text}\n").as_bytes())?;

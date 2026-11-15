@@ -397,13 +397,13 @@ async fn mcp_issue_tools_share_rest_authority_receipts_and_refuse_shadow_boards(
 
     let checkout = hub.dir.path().join("shared checkout with spaces");
     let account_file = hub.dir.path().join("cli-account.json");
-    crate::account::write(
+    crate::login::write(
         &account_file,
-        &crate::account::Stored::Account(crate::account::Account::for_tests(
+        &crate::login::Stored::Account(crate::login::Account::for_tests(
             "https://id.example",
             me["structuredContent"]["subject"].as_str().unwrap(),
             &alice.token,
-            crate::account::unix_now() + 3600,
+            crate::login::unix_now() + 3600,
         )),
     )
     .unwrap();
@@ -423,7 +423,7 @@ async fn mcp_issue_tools_share_rest_authority_receipts_and_refuse_shadow_boards(
                     stdout_is_terminal: false,
                     account_file: Some(account_file.clone()),
                     plugin_host: None,
-                    hub: Some(std::sync::Arc::new(crate::account::client::AccountHub)),
+                    hub: Some(std::sync::Arc::new(crate::login::client::AccountHub)),
                 },
                 &mut out,
                 &mut err,
