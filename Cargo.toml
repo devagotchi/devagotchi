@@ -60,8 +60,8 @@ hex = "0.4.3"
 # `fallible_uint`: rusqlite 0.38 put the u64/usize conversions behind it; they store values
 # up to i64::MAX and refuse larger ones, exactly as 0.37 did by default.
 rusqlite = { version = "0.39", features = ["bundled", "fallible_uint"] }
-# The hub's store: Postgres for a hosted hub, SQLite built in for a standalone one, one
-# code path over both (`crates/store/src/lib.rs`).
+# The Postgres engine every part shares (`crates/store`); the client's offline cache and
+# a standalone board are rusqlite (ADR 0002).
 sqlx = { version = "0.9", default-features = false, features = ["runtime-tokio", "tls-rustls-aws-lc-rs", "postgres", "any", "migrate", "macros"] }
 sha2 = "0.11.1"
 uuid = { version = "1", features = ["v4"] }
@@ -78,6 +78,13 @@ windows-sys = { version = "0.61.2", features = [
     "Win32_System_SystemServices",
     "Win32_System_Threading",
 ] }
+
+# AgentHub is its own repository (devagotchi/agenthub, the submodule at crates/agenthub) and
+# takes these crates from this repository by git; built here, they are this workspace's own.
+[patch."https://github.com/devagotchi/devagotchi"]
+devagotchi-contracts = { path = "crates/contracts" }
+devagotchi-connectors = { path = "crates/connectors" }
+devagotchi-store = { path = "crates/store" }
 
 [workspace.lints.rust]
 unsafe_code = "deny"

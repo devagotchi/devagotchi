@@ -1,36 +1,43 @@
 [package]
 name = "devagotchi-agenthub"
-description = "AgentHub: the agents' board - tickets claimed under a lease, worked, annotated and handed off - on a local SQLite file or a Postgres of record, with its events exported to ClickHouse when there is one"
-version.workspace = true
-edition.workspace = true
-rust-version.workspace = true
-publish.workspace = true
-license.workspace = true
-repository.workspace = true
+description = "AgentHub: the agents' board - tickets claimed under a lease, worked, annotated and handed off - in a project's own SQLite file or in Postgres, with its events exported to ClickHouse when there is one"
+version = "0.1.0"
+edition = "2024"
+# sqlx 0.9 sets the floor; the pinned toolchain in rust-toolchain.toml is what builds.
+rust-version = "1.94"
+publish = false
+license = "BUSL-1.1"
+repository = "https://github.com/devagotchi/agenthub"
 
-[lints]
-workspace = true
+[lints.rust]
+unsafe_code = "deny"
+
+[lints.clippy]
+all = "warn"
 
 [lib]
 name = "devagotchi_agenthub"
 path = "src/lib.rs"
 
+# Built from Devagotchi's repository: its error type, the names an AI client is known by, and
+# the Postgres engine. Inside Devagotchi's workspace (this repository as its submodule at
+# crates/agenthub) its root Cargo.toml patches these to its own crates.
 [dependencies]
-devagotchi-contracts = { workspace = true }
+devagotchi-contracts = { git = "https://github.com/devagotchi/devagotchi", branch = "main" }
 # A note for "codex" also reaches the names a client is known by (`inbox.rs`).
-devagotchi-connectors = { workspace = true }
+devagotchi-connectors = { git = "https://github.com/devagotchi/devagotchi", branch = "main" }
 # The Postgres engine it shares with a host (schema `devagotchi`, tenant RLS); its tables are
 # its own migrations (`migrations/`).
-devagotchi-store = { workspace = true }
-# A local board is a SQLite file in the project (`.devagotchi/board.sqlite3`).
-rusqlite = { workspace = true }
-sqlx = { workspace = true }
-tokio = { workspace = true }
-serde = { workspace = true }
-serde_json = { workspace = true }
-schemars = { workspace = true }
-sha2 = { workspace = true }
-hex = { workspace = true }
+devagotchi-store = { git = "https://github.com/devagotchi/devagotchi", branch = "main" }
+# A standalone board is a SQLite file in the project (`.devagotchi/board.sqlite3`, ADR 0002).
+rusqlite = { version = "0.39", features = ["bundled", "fallible_uint"] }
+sqlx = { version = "0.9", default-features = false, features = ["runtime-tokio", "tls-rustls-aws-lc-rs", "postgres", "any", "migrate", "macros"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "process", "io-util", "io-std", "net", "sync", "signal", "time"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+schemars = "1"
+sha2 = "0.11.1"
+hex = "0.4.3"
 getrandom = "0.4"
 # Wake: notes POSTed to an agent's webhook, signed (`wake.rs`); the ClickHouse export.
 hmac = "0.13"
@@ -41,5 +48,5 @@ percent-encoding = "2"
 [dev-dependencies]
 # A webhook endpoint for the wake tests.
 axum = { version = "0.8", default-features = false, features = ["http1", "tokio"] }
-devagotchi-store = { workspace = true, features = ["testing"] }
-tempfile = { workspace = true }
+devagotchi-store = { git = "https://github.com/devagotchi/devagotchi", branch = "main", features = ["testing"] }
+tempfile = "3"
