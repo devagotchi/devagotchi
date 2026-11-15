@@ -190,6 +190,8 @@ pub struct Accounts {
     /// Failed password sign-ins per email, the times of those in the last 15 minutes
     /// (`passwords.rs`); in memory, like the hosted hub's other limits.
     password_failures: std::sync::Mutex<std::collections::HashMap<String, Vec<u64>>>,
+    /// Tenant lifecycle and in-process events a hosted edition listens to (`extensions`).
+    extensions: crate::extensions::Extensions,
 }
 
 fn hash(secret: &str) -> String {
@@ -318,7 +320,14 @@ impl Accounts {
             counting: false,
             challenge_key: std::sync::RwLock::new(key),
             password_failures: Default::default(),
+            extensions: crate::extensions::Extensions::core(),
         })
+    }
+
+    /// These accounts notifying `extensions` when a tenant is created.
+    pub fn with_extensions(mut self, extensions: crate::extensions::Extensions) -> Self {
+        self.extensions = extensions;
+        self
     }
 
     /// These accounts reading early access and plans from `site` (the hub's, which follows

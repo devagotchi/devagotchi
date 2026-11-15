@@ -1,6 +1,6 @@
 # Devagotchi identity
 
-One account system, on the hub, that an AI can open and a person can claim. Nomen is a way in, not the account. This is the model for `https://app.devagotchi.com` and for any hub in `auth.mode` `devagotchi`. It is written from the code that is running there (commit `190978ae` on Texas CT 110) and from the passkey work already on `main` (`crates/hub/src/accounts.rs`, `web/passkeys.rs`, `devagotchi hub owner`).
+One account system, on the hub, that an AI can open and a person can claim. Nomen is a way in, not the account. This is the model for the hosted service at devagotchi.com and for any hub in `auth.mode` `devagotchi`. It is written from the hub code (commit `190978ae`) and from the passkey work on `main` (`crates/hub/src/accounts.rs`, `web/passkeys.rs`, `devagotchi hub owner`). Hosts and container ids are not part of this model; `docs/deploy.md` says where an operator names them.
 
 Nothing in this document deploys.
 

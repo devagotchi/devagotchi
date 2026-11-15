@@ -19,7 +19,7 @@ use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 
 use super::client::{Refused, Session};
 
-pub use super::client::default_hub;
+pub use super::client::configured_hub;
 const MAX_LINE_BYTES: usize = 4 * 1024 * 1024;
 
 /// A relay to one hub as one account.
@@ -96,9 +96,26 @@ pub async fn serve(mut front: Front) -> Result<(), String> {
 }
 
 /// `devagotchi mcp --hub [URL]`; `seat` is `DEVAGOTCHI_ACTOR` when set.
+/// With no URL, the hub is `DEVAGOTCHI_HUB` or the one `devagotchi login` saved.
+/// There is no built-in hub.
 pub fn cli(hub: Option<&str>, account_file: &Path, seat: Option<&str>) -> ExitCode {
-    let fallback = default_hub();
-    let hub = hub.unwrap_or(&fallback);
+    let saved;
+    let hub = match hub.map(str::trim).filter(|hub| !hub.is_empty()) {
+        Some(hub) => hub,
+        None => {
+            saved =
+                super::client::configured_hub().or_else(|| super::client::saved_hub(account_file));
+            match saved.as_deref() {
+                Some(hub) => hub,
+                None => {
+                    eprintln!(
+                        "devagotchi mcp: pass --hub https://hub.example.com, or set DEVAGOTCHI_HUB, or sign in with `devagotchi login --hub URL`"
+                    );
+                    return ExitCode::from(64);
+                }
+            }
+        }
+    };
     let front = match Front::new(hub, account_file, seat) {
         Ok(front) => front,
         Err(why) => {

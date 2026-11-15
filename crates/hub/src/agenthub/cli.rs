@@ -626,16 +626,26 @@ fn bind(
                 .map(|n| n.to_string_lossy().into_owned())
         })
         .unwrap_or_else(|| "project".into());
-    let hub = parsed
-        .flag("--hub")
-        .map(str::to_string)
-        .or_else(|| existing.as_ref().and_then(|c| c.hub.clone()))
-        .unwrap_or_else(account::client::default_hub);
     let Some(account_file) = &invocation.account_file else {
         return output.error(
             &BridgeError::new(
                 "not_signed_in",
                 "no home directory to hold an account; set DEVAGOTCHI_CONFIG_DIR",
+            ),
+            None,
+        );
+    };
+    let Some(hub) = parsed
+        .flag("--hub")
+        .map(str::to_string)
+        .or_else(|| existing.as_ref().and_then(|c| c.hub.clone()))
+        .or_else(account::client::configured_hub)
+        .or_else(|| account::client::saved_hub(account_file))
+    else {
+        return output.error(
+            &BridgeError::new(
+                "invalid_cli",
+                "pass --hub https://hub.example.com, or set DEVAGOTCHI_HUB, or sign in with `devagotchi login --hub URL`",
             ),
             None,
         );

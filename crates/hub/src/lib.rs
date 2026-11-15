@@ -24,6 +24,7 @@ mod connections;
 mod connections_tests;
 mod devices;
 mod downloads;
+pub mod extensions;
 mod files;
 mod hub;
 #[cfg(test)]
@@ -102,7 +103,7 @@ use crate::{
     link::Links,
 };
 
-pub const USAGE: &str = "Usage:\n  devagotchi hub serve --state-dir ABS_PATH --config ABS_JSON\n  devagotchi hub enroll --state-dir ABS_PATH --device NAME\n  devagotchi hub revoke --state-dir ABS_PATH --device NAME\n  devagotchi hub devices --state-dir ABS_PATH\n  devagotchi hub owner --state-dir ABS_PATH --config ABS_JSON [--name NAME] [--replace]\n  devagotchi hub setup-code --state-dir ABS_PATH --config ABS_JSON\n  devagotchi hub connect-nomen --state-dir ABS_PATH --config ABS_JSON --client-id ID --project ID [--issuer URL]\n  devagotchi hub check-site ABS_DIR\n  devagotchi hub check-mail --config ABS_JSON [--to ADDRESS]\n  devagotchi hub analytics-resend --config ABS_JSON\n  devagotchi board <command> …            the agents' board in this project (board --help)\n\nserve starts the bastion: an authenticated Streamable HTTP MCP endpoint at /mcp that routes\nrun and operation_start/get/read/cancel to brokers by name, with whoami, /healthz and RFC 9728\nprotected-resource metadata, and /link where machines' `devagotchi link` connects out.\nWith a `web` section, people sign in with Shippin at /account to see their machines;\n/api/v1/me returns the same view for a session or a bearer token. Put it behind the edge for TLS.\n\nenroll prints a one-time code (15 minutes) that binds one machine's key to NAME;\nrevoke cuts that machine off within seconds; devices lists enrolled machines.\n\nowner (auth.mode hub) prints a one-time link (15 minutes) that makes the owner's passkey:\nthe first time it makes the owner's account, with the config's owner id if it names one;\nagain, it adds a passkey to the owner and ends the owner's other sessions; with --replace the\nlink also removes every other passkey of the owner (to take the account back).\n\nsetup-code (auth.mode devagotchi) prints a one-time code (15 minutes) that makes the account\nclaimed with it the hub's owner at /claim, or the owner already on file.\n\nconnect-nomen joins this hub to a Nomen with its owner's approval: it shows a code to confirm\non any device through the devagotchi-cli app (--client-id) of the hub's Nomen project (--project),\nthen adds the hub's own apps to that project (the key Nomen makes is written to the state\ndirectory, owner-only, and nowhere else), sets auth, owner and web in the config, and keeps a\ncopy of the old one. Issuer: https://id.shippin.cloud unless --issuer.\n\ncheck-site reads and checks a site directory (crates/hub/README.md, \"The site\") as serve would, and\nsays what is wrong and where; serve follows its site.dir and serves a change once it checks out.\n\ncheck-mail (auth.mode hub) connects to auth.email's mail server as serve would, negotiates TLS and\nsigns in as its user, sending nothing; with --to it also sends one email that says this hub's mail\nworks, to read in that mailbox. It prints the server's refusal and never the password; the running\nhub reports the same in /healthz under mail.\n\nanalytics-resend marks every board event in the hub's Postgres to be sent to ClickHouse again,\nas after a ClickHouse that lost its data: the running hub sends them, and ClickHouse keeps one\nrow per event. /healthz reports the export under analytics.";
+pub const USAGE: &str = "Usage:\n  devagotchi hub serve --state-dir ABS_PATH --config ABS_JSON\n  devagotchi hub enroll --state-dir ABS_PATH --device NAME\n  devagotchi hub revoke --state-dir ABS_PATH --device NAME\n  devagotchi hub devices --state-dir ABS_PATH\n  devagotchi hub owner --state-dir ABS_PATH --config ABS_JSON [--name NAME] [--replace]\n  devagotchi hub setup-code --state-dir ABS_PATH --config ABS_JSON\n  devagotchi hub connect-nomen --state-dir ABS_PATH --config ABS_JSON --issuer URL --client-id ID --project ID\n  devagotchi hub check-site ABS_DIR\n  devagotchi hub check-mail --config ABS_JSON [--to ADDRESS]\n  devagotchi hub analytics-resend --config ABS_JSON\n  devagotchi board <command> …            the agents' board in this project (board --help)\n\nserve starts the bastion: an authenticated Streamable HTTP MCP endpoint at /mcp that routes\nrun and operation_start/get/read/cancel to brokers by name, with whoami, /healthz and RFC 9728\nprotected-resource metadata, and /link where machines' `devagotchi link` connects out.\nWith a `web` section, people sign in with Shippin at /account to see their machines;\n/api/v1/me returns the same view for a session or a bearer token. Put it behind the edge for TLS.\n\nenroll prints a one-time code (15 minutes) that binds one machine's key to NAME;\nrevoke cuts that machine off within seconds; devices lists enrolled machines.\n\nowner (auth.mode hub) prints a one-time link (15 minutes) that makes the owner's passkey:\nthe first time it makes the owner's account, with the config's owner id if it names one;\nagain, it adds a passkey to the owner and ends the owner's other sessions; with --replace the\nlink also removes every other passkey of the owner (to take the account back).\n\nsetup-code (auth.mode devagotchi) prints a one-time code (15 minutes) that makes the account\nclaimed with it the hub's owner at /claim, or the owner already on file.\n\nconnect-nomen joins this hub to a Nomen with its owner's approval: it shows a code to confirm\non any device through the devagotchi-cli app (--client-id) of the hub's Nomen project (--project),\nthen adds the hub's own apps to that project (the key Nomen makes is written to the state\ndirectory, owner-only, and nowhere else), sets auth, owner and web in the config, and keeps a\ncopy of the old one. --issuer is that Nomen's https URL; there is no built-in one.\n\ncheck-site reads and checks a site directory (crates/hub/README.md, \"The site\") as serve would, and\nsays what is wrong and where; serve follows its site.dir and serves a change once it checks out.\n\ncheck-mail (auth.mode hub) connects to auth.email's mail server as serve would, negotiates TLS and\nsigns in as its user, sending nothing; with --to it also sends one email that says this hub's mail\nworks, to read in that mailbox. It prints the server's refusal and never the password; the running\nhub reports the same in /healthz under mail.\n\nanalytics-resend marks every board event in the hub's Postgres to be sent to ClickHouse again,\nas after a ClickHouse that lost its data: the running hub sends them, and ClickHouse keeps one\nrow per event. /healthz reports the export under analytics.";
 
 #[derive(Debug, PartialEq, Eq)]
 enum Command {
@@ -335,14 +336,19 @@ fn parse_connect(args: Vec<OsString>) -> BridgeResult<Command> {
             Ok(Command::ConnectNomen(connect::Connect {
                 state,
                 config,
-                issuer: issuer.unwrap_or_else(|| account::DEFAULT_ISSUER.to_string()),
+                issuer: issuer.ok_or_else(|| {
+                    BridgeError::new(
+                        "invalid_cli",
+                        "connect-nomen needs --issuer URL (the Nomen's https address)",
+                    )
+                })?,
                 client_id,
                 project,
             }))
         }
         _ => Err(BridgeError::new(
             "invalid_cli",
-            "connect-nomen needs --state-dir ABS_PATH --config ABS_JSON --client-id ID --project ID",
+            "connect-nomen needs --state-dir ABS_PATH --config ABS_JSON --issuer URL --client-id ID --project ID",
         )),
     }
 }
@@ -504,7 +510,8 @@ async fn configured_accounts(
         .with_tokens(config.token_config())
         .with_tenancy(config.tenancy.clone(), config.operators.clone())
         .with_site(config.site_cell(), &config.public_url)
-        .with_analytics(config.counts_visits()))
+        .with_analytics(config.counts_visits())
+        .with_extensions(config.extensions.clone()))
 }
 
 fn prepare_state_dir(state_dir: &std::path::Path) -> BridgeResult<()> {
@@ -819,7 +826,11 @@ pub fn cli(args: Vec<OsString>) -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
-    match runtime.block_on(run(state_dir, config_path)) {
+    match runtime.block_on(serve_with(
+        state_dir,
+        config_path,
+        extensions::Extensions::core(),
+    )) {
         Ok(()) => ExitCode::SUCCESS,
         Err(error) => {
             eprintln!("devagotchi hub: {error}");
@@ -850,8 +861,23 @@ pub fn board_cli(args: Vec<OsString>, account_file: Option<PathBuf>) -> ExitCode
     ExitCode::from(agenthub::cli::run(invocation, &mut out, &mut err))
 }
 
-async fn run(state_dir: PathBuf, config_path: PathBuf) -> BridgeResult<()> {
+/// Start the hub the way `devagotchi hub serve` does, with `extensions` in place of the
+/// core defaults. The command line passes [`extensions::Extensions::core`].
+pub async fn serve_with(
+    state_dir: PathBuf,
+    config_path: PathBuf,
+    extensions: extensions::Extensions,
+) -> BridgeResult<()> {
+    run(state_dir, config_path, extensions).await
+}
+
+async fn run(
+    state_dir: PathBuf,
+    config_path: PathBuf,
+    extensions: extensions::Extensions,
+) -> BridgeResult<()> {
     let mut config = read_config(&config_path)?;
+    config.extensions = extensions;
     let url = store::url_for(config.storage_url(), &state_dir);
     if !url.starts_with("postgres://") && !url.starts_with("postgresql://") {
         return Err(BridgeError::new(
@@ -1322,7 +1348,8 @@ fn app(state: AppState) -> Router {
         ),
         None => router,
     };
-    router.with_state(state)
+    let routes = state.hub.config.extensions.routes.clone();
+    routes.mount(router.with_state(state))
 }
 
 #[derive(Deserialize)]
@@ -2189,19 +2216,13 @@ mod tests {
             args.extend_from_slice(extra);
             parse_args(args.into_iter().map(OsString::from))
         };
-        assert_eq!(
-            connect(&["--project", "5"]).unwrap(),
-            Command::ConnectNomen(connect::Connect {
-                state: STATE.into(),
-                config: CONFIG.into(),
-                issuer: account::DEFAULT_ISSUER.into(),
-                client_id: "7".into(),
-                project: "5".into(),
-            })
+        assert!(
+            connect(&["--project", "5"]).is_err(),
+            "no issuer: nothing is assumed"
         );
         assert!(matches!(
-            connect(&["--project", "5", "--issuer", "https://id.example"]).unwrap(),
-            Command::ConnectNomen(c) if c.issuer == "https://id.example"
+            connect(&["--project", "5", "--issuer", "https://id.example.com"]).unwrap(),
+            Command::ConnectNomen(c) if c.issuer == "https://id.example.com"
         ));
         assert!(connect(&[]).is_err(), "no project");
         assert!(connect(&["--project", "5", "--device", "x"]).is_err());

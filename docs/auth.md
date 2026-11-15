@@ -62,7 +62,7 @@ A new person gets an account id `dg_` plus 32 hex characters and a personal work
 2. Else a verified email already on file → link this subject to that account.
 3. Else create an account. An unverified email never selects an account.
 
-`devagotchi login` (no flags) does device authorization against the hub, default `https://app.devagotchi.com`. `--issuer` still talks to an upstream issuer directly. `connect-nomen` keeps using that direct path. `--hub URL` points the device flow at another hub. The CLI finds the endpoints in the hub's `/.well-known/oauth-authorization-server`, so the same command works against a hub in `auth.mode hub`, where the code is approved on the hub's `/device` page by a person signed in to their account (`crates/hub/README.md`, "A terminal signs in").
+`devagotchi login --hub URL` does device authorization against that hub. There is no built-in hub: pass `--hub`, set `DEVAGOTCHI_HUB`, or reuse the hub the last login saved. `--issuer URL` talks to an upstream issuer directly and needs `--issuer`; `connect-nomen` uses that path and requires `--issuer` too. The CLI finds the endpoints in the hub's `/.well-known/oauth-authorization-server`, so the same command works against a hub in `auth.mode hub`, where the code is approved on the hub's `/device` page by a person signed in to their account (`crates/hub/README.md`, "A terminal signs in").
 
 ## Magic links
 

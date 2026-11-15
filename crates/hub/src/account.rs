@@ -3,8 +3,9 @@
 //! Sign-in is OAuth device authorization (RFC 8628): the terminal shows a short code and a
 //! URL, the person opens it anywhere — a phone will do — and the tokens arrive here. No
 //! browser on this machine, no local port, no secret in the binary: the CLI is a public
-//! client. By default it signs in at a hub (`--hub`, app.devagotchi.com unless named),
-//! finding the endpoints in the hub's RFC 8414 metadata: a hub with its own accounts
+//! client. It signs in at the hub `--hub` names (or `DEVAGOTCHI_HUB`, or the hub a previous
+//! login saved). Nothing here picks a hub for you. It finds the endpoints in the hub's
+//! RFC 8414 metadata: a hub with its own accounts
 //! (`auth.mode hub`) shows the code on its `/device` page, approved by a person signed in
 //! with their passkey; a hub that opens accounts for agents (`auth.mode devagotchi`) gives
 //! one at once, claimed later. `--issuer` signs in at Nomen directly. The tokens rest in one
@@ -44,19 +45,26 @@ pub const USAGE: &str = "Usage:
 
 login shows a code and a URL; open the URL on any device, check or enter the code, approve
 it there (on a hub, signed in to your account), and the sign-in lands here (OAuth device
-authorization, RFC 8628). --hub defaults to @HUB@. Tokens are kept in account.json under
-the config directory, readable by you alone. A hosted hub requires an account; a local or
-self-hosted run does not, and --local records that choice.
+authorization, RFC 8628). --hub is the hub's https URL. When it is omitted, login uses
+DEVAGOTCHI_HUB if that is set (@HUB@), otherwise the hub saved by the last login here,
+otherwise it asks.
+Tokens are kept in account.json under the config directory, readable by you alone. A
+hosted hub requires an account; a local or self-hosted run does not, and --local records
+that choice.
 
-With --issuer, the client id is devagotchi-cli@shippin unless --client-id names another (the
-native application the operator registers in Nomen with device authorization and refresh
-tokens).";
+With --issuer, sign in at that issuer directly. The client id is devagotchi unless
+--client-id names the public client that issuer registered for this command (device
+authorization and refresh tokens). The hub's own device flow uses a different built-in
+client, devagotchi-cli.";
 
-pub const DEFAULT_ISSUER: &str = "https://id.shippin.cloud";
-pub const DEFAULT_CLIENT_ID: &str = "devagotchi-cli@shippin";
-/// The help, with the hub `devagotchi login` signs in at by default.
+/// The public client id `devagotchi login --issuer` sends unless `--client-id` names another.
+/// It is not the hub's built-in client (`devagotchi-cli`): a saved login is refreshed on the
+/// path that matches its client.
+pub const DEFAULT_CLIENT_ID: &str = "devagotchi";
+/// The help, naming the hub a previous login or `DEVAGOTCHI_HUB` would use.
 fn help() -> String {
-    USAGE.replace("@HUB@", &client::default_hub())
+    let hub = client::configured_hub().unwrap_or_else(|| "(none saved)".to_string());
+    USAGE.replace("@HUB@", &hub)
 }
 const DEVICE_GRANT_HUB: &str = "urn:ietf:params:oauth:grant-type:device_code";
 pub const FILE_NAME: &str = "account.json";
@@ -89,6 +97,10 @@ pub struct Account {
     pub username: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub email: Option<String>,
+    /// The hub this login was for, when sign-in went through a hub. `devagotchi mcp --hub`
+    /// uses it when no hub is named again. An issuer login leaves it empty.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hub: Option<String>,
     access_token: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     refresh_token: Option<String>,
@@ -136,6 +148,7 @@ impl Account {
             subject: subject.into(),
             username: None,
             email: None,
+            hub: None,
             access_token: token.into(),
             refresh_token: None,
             expires_at,
@@ -439,6 +452,7 @@ impl Issuer {
             subject: info.sub,
             username: info.preferred_username.filter(|u| !u.is_empty()),
             email: info.email.filter(|e| !e.is_empty()),
+            hub: None,
             access_token: tokens.access_token,
             refresh_token: tokens.refresh_token,
             expires_at: now + tokens.expires_in.unwrap_or(3600),
@@ -558,9 +572,31 @@ fn usage(message: impl Into<String>) -> (u8, String) {
     (64, message.into())
 }
 
+/// Ask for a hub URL on a terminal. A pipe or a service gets the flag it should have passed.
+fn prompt_hub() -> Result<String, (u8, String)> {
+    use std::io::IsTerminal;
+    if !std::io::stdin().is_terminal() {
+        return Err(usage(
+            "pass --hub https://hub.example.com (or set DEVAGOTCHI_HUB)",
+        ));
+    }
+    eprint!("Hub URL (https://…): ");
+    let _ = std::io::stderr().flush();
+    let mut line = String::new();
+    std::io::stdin()
+        .read_line(&mut line)
+        .map_err(|error| (1, error.to_string()))?;
+    let hub = line.trim().to_string();
+    if hub.is_empty() {
+        return Err(usage("a hub URL is required"));
+    }
+    Ok(hub)
+}
+
 async fn login(args: &[String], path: &Path) -> Outcome {
-    // The hub `devagotchi login` talks to, unless `--hub` or `--issuer` says otherwise.
-    let mut hub = client::default_hub();
+    // The hub `devagotchi login` talks to. Nothing is assumed: a flag, then
+    // DEVAGOTCHI_HUB, then the hub the last login saved, then a prompt on a terminal.
+    let mut hub = client::configured_hub().or_else(|| client::saved_hub(path));
     let mut issuer: Option<String> = None;
     let mut client_id = DEFAULT_CLIENT_ID.to_string();
     let mut local = false;
@@ -569,10 +605,11 @@ async fn login(args: &[String], path: &Path) -> Outcome {
         match flag.as_str() {
             "--local" => local = true,
             "--hub" => {
-                hub = iter
-                    .next()
-                    .ok_or_else(|| usage("--hub needs a URL"))?
-                    .clone();
+                hub = Some(
+                    iter.next()
+                        .ok_or_else(|| usage("--hub needs a URL"))?
+                        .clone(),
+                );
             }
             "--issuer" => {
                 issuer = Some(
@@ -608,7 +645,7 @@ async fn login(args: &[String], path: &Path) -> Outcome {
         )
         .map_err(|e| (1, e))?;
         eprintln!(
-            "devagotchi: this machine runs without an account ({}). `devagotchi login` changes that.",
+            "devagotchi: this machine runs without an account ({}). `devagotchi login --hub URL` changes that.",
             path.display()
         );
         return Ok(());
@@ -621,6 +658,10 @@ async fn login(args: &[String], path: &Path) -> Outcome {
             .await
             .map_err(|why| (1, why.to_string()))?
     } else {
+        let hub = match hub {
+            Some(hub) => hub,
+            None => prompt_hub()?,
+        };
         hub_device_login(&hub, &mut stderr)
             .await
             .map_err(|why| (1, why.to_string()))?
@@ -722,6 +763,7 @@ async fn hub_device_login(hub: &str, tell: &mut dyn Write) -> Result<Account, Re
             subject,
             username: None,
             email: None,
+            hub: Some(hub.to_string()),
             access_token: access.to_string(),
             refresh_token: started["refresh_token"].as_str().map(str::to_string),
             expires_at: unix_now() + started["expires_in"].as_u64().unwrap_or(3600),
@@ -856,6 +898,7 @@ async fn hub_account(
         subject,
         username,
         email: None,
+        hub: Some(hub.to_string()),
         access_token: tokens.access_token,
         refresh_token: tokens.refresh_token,
         expires_at: now + tokens.expires_in.unwrap_or(3600),
@@ -905,6 +948,7 @@ async fn hub_refresh(account: &Account) -> Result<Account, Refusal> {
         subject: jwt_sub(&access).unwrap_or_else(|| account.subject.clone()),
         username: account.username.clone(),
         email: account.email.clone(),
+        hub: account.hub.clone(),
         access_token: access,
         refresh_token: body["refresh_token"]
             .as_str()
@@ -1018,7 +1062,9 @@ pub async fn current(path: &Path) -> Result<Option<Stored>, String> {
     ) {
         return Ok(stored);
     }
-    if account.client_id == HUB_CLIENT {
+    // A hub login records `hub`. A login from before that field existed is still a hub
+    // login when its client is the hub's built-in one. A direct issuer login uses another.
+    if account.hub.is_some() || account.client_id == HUB_CLIENT {
         if let Ok(refreshed) = hub_refresh(account).await {
             write(path, &Stored::Account(refreshed.clone()))?;
             return Ok(Some(Stored::Account(refreshed)));

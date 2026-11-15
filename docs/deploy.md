@@ -2,7 +2,7 @@
 
 This does not deploy anything by itself. It is the pipeline for a later run, aimed at the hosted hub.
 
-It is the path for a hub installed from the release tarball (`deploy/linux/promote-hub.sh`, the `auth.mode` `devagotchi` hub on Texas CT 110). The other path is the hub's Docker image from GHCR with its own Postgres, `auth.mode` `hub`: [deploy/compose/README.md](../deploy/compose/README.md).
+It is the path for a hub installed from the release tarball (`deploy/linux/promote-hub.sh`). The other path is the hub's Docker image from GHCR with its own Postgres, `auth.mode` `hub`: [deploy/compose/README.md](../deploy/compose/README.md). Hosts, addresses and container ids live in the environment that runs the script. This repository does not name them.
 
 ## What may be deployed
 
@@ -14,23 +14,21 @@ Only a cargo-dist artifact built from a commit that is on `main`. `.github/workf
 - `DEVAGOTCHI_STAGING_HOST` and `DEVAGOTCHI_PROD_HOST` are set
 - `--confirm` is passed
 
-It does not connect anywhere those variables are unset, and it contains no key. The Texas host and CT 110 are named in the script's comment so the operator knows which values to set. They are not defaults.
+It does not connect anywhere those variables are unset, and it contains no key. The script's comments use placeholders (`user@203.0.113.10`, `https://hub.example.com`). They are not hosts.
 
 ## Where it runs
 
-Production is the hub already on Texas.
+Production and staging are two hubs the operator names. The commercial cloud at devagotchi.com is one deployment of this core. Its addresses are not in this repository.
 
 | | Production | Staging |
 |---|---|---|
-| Proxmox host | `tx-infra-prod` | the same host |
-| Public address | `23.156.136.173` | the same address |
-| Container | CT 110 | a second CT, not 110 |
-| HTTPS name | `app.devagotchi.com` | `staging.app.devagotchi.com` |
-| Edge | Cloudflare in front of the name | Cloudflare in front of the name |
+| Proxmox host | `DEVAGOTCHI_PROD_HOST` | `DEVAGOTCHI_STAGING_HOST` |
+| Container | `DEVAGOTCHI_PROD_LXC` | `DEVAGOTCHI_STAGING_LXC`, a different container |
+| HTTPS name | `DEVAGOTCHI_PROD_URL` | `DEVAGOTCHI_STAGING_URL` |
 
-Each instance has its own state directory, listen port, and hub process. The stock installer (`install-devagotchi.sh --role hub`) uses one account, `127.0.0.1:8787`, and `~/.local/state/devagotchi-hub`. Two hubs in CT 110 would share those. Staging is a second container on the same Proxmox host so the installer can run unchanged inside it. Caddy in that container proxies `staging.app.devagotchi.com` to its own loopback port. DNS for both names points at `23.156.136.173`; Cloudflare terminates the public TLS.
+Each instance has its own state directory, listen port, and hub process. The stock installer (`install-devagotchi.sh --role hub`) uses one account, `127.0.0.1:8787`, and `~/.local/state/devagotchi-hub`. Two hubs in one container would share those. Staging is a second container on the same Proxmox host so the installer can run unchanged inside it. Caddy in that container proxies the staging name to its own loopback port.
 
-A second service inside CT 110 is not what the promote script installs. It would need another system account, another unit, another port, and another state directory, which this installer does not take.
+A second service inside the production container is not what the promote script installs. It would need another system account, another unit, another port, and another state directory, which this installer does not take.
 
 ## Order
 
@@ -38,7 +36,7 @@ A second service inside CT 110 is not what the promote script installs. It would
 2. Install that version on the staging container with `install-devagotchi.sh --role hub --version <version>`, beside the version already there. The installer keeps `/opt/devagotchi/versions/<version>` and points `current` at one.
 3. Smoke staging. `GET /healthz` must be HTTP 200 with `auth.ready` true when the hub is in `devagotchi` mode. `GET /.well-known/oauth-protected-resource/mcp` must set `resource` to `{public_url}/mcp` and `authorization_servers` to the hub itself. The full connector path (dynamic registration, PKCE, upstream login, MCP `initialize`, `whoami`) is `tests/oauth_probe.py`, which CI runs against a fake provider. Do not run that probe against production or staging: it would create accounts.
 4. If smoke fails, run the installer again with the previous version. That is the rollback (`deploy/linux/README.md`).
-5. If smoke passes, install the same version on production (CT 110) and smoke it the same way. If production smoke fails, install the previous version again.
+5. If smoke passes, install the same version on production and smoke it the same way. If production smoke fails, install the previous version again.
 
 The script reaches the Proxmox host over SSH and, when a container id is set, runs the installer with `pct exec`. Nothing here SSHs until the variables below are set and `--confirm` is present. The addresses in the table are the operator's map. They are not defaults in the script.
 
@@ -46,12 +44,12 @@ The script reaches the Proxmox host over SSH and, when a container id is set, ru
 DEVAGOTCHI_SHA=<commit on origin/main>
 DEVAGOTCHI_VERSION=<release version>
 DEVAGOTCHI_PREVIOUS_VERSION=<version to roll back to>
-DEVAGOTCHI_STAGING_HOST=<user>@23.156.136.173
+DEVAGOTCHI_STAGING_HOST=user@203.0.113.10
 DEVAGOTCHI_STAGING_LXC=<staging CT id>
-DEVAGOTCHI_STAGING_URL=https://staging.app.devagotchi.com
-DEVAGOTCHI_PROD_HOST=<user>@23.156.136.173
-DEVAGOTCHI_PROD_LXC=110
-DEVAGOTCHI_PROD_URL=https://app.devagotchi.com
+DEVAGOTCHI_STAGING_URL=https://staging.hub.example.com
+DEVAGOTCHI_PROD_HOST=user@203.0.113.10
+DEVAGOTCHI_PROD_LXC=<prod CT id>
+DEVAGOTCHI_PROD_URL=https://hub.example.com
 deploy/linux/promote-hub.sh --confirm
 ```
 
@@ -74,15 +72,15 @@ DEVAGOTCHI_PROMOTE_TARGET=live
 DEVAGOTCHI_SHA=<tested commit>
 DEVAGOTCHI_VERSION=<version>
 DEVAGOTCHI_PREVIOUS_VERSION=<version now running>
-DEVAGOTCHI_PROD_HOST=<user>@23.156.136.173
-DEVAGOTCHI_PROD_LXC=110
-DEVAGOTCHI_PROD_URL=https://app.devagotchi.com
+DEVAGOTCHI_PROD_HOST=user@203.0.113.10
+DEVAGOTCHI_PROD_LXC=<prod CT id>
+DEVAGOTCHI_PROD_URL=https://hub.example.com
 DEVAGOTCHI_DIST_DIR=/path/to/archives
 DEVAGOTCHI_DOWNLOADS_DIR=/var/lib/devagotchi/downloads
 SSH_OPTS='-o BatchMode=yes'
 deploy/linux/promote-hub.sh --confirm \
   --artifact /path/to/ci-artifact-or-tarball \
-  --ssh-key ~/.ssh/texas \
+  --ssh-key ~/.ssh/hub \
   --ssh-opts '-p 22'
 ```
 
@@ -92,4 +90,4 @@ This script is not run from the pull request.
 
 ## What the script will not do
 
-It will not create a Nomen user, print a key, or talk to `id.shippin.cloud`. Upstream discovery is the hub's own `/healthz` once the process is up.
+It will not create an identity-provider user or print a key. Upstream discovery is the hub's own `/healthz` once the process is up.

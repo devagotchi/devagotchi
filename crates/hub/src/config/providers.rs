@@ -9,7 +9,7 @@
 //!       "client_secret_env": "DEVAGOTCHI_GOOGLE_CLIENT_SECRET" },
 //!     { "kind": "github", "client_id_env": "DEVAGOTCHI_GITHUB_CLIENT_ID",
 //!       "client_secret_env": "DEVAGOTCHI_GITHUB_CLIENT_SECRET" },
-//!     { "kind": "oidc", "name": "nomen", "label": "Shippin", "issuer": "https://id.shippin.cloud",
+//!     { "kind": "oidc", "name": "oidc", "label": "Example ID", "issuer": "https://id.example.com",
 //!       "client_id_env": "DEVAGOTCHI_NOMEN_CLIENT_ID", "client_secret_env": "DEVAGOTCHI_NOMEN_CLIENT_SECRET" }
 //!   ],
 //!   "email": { "smtp_url_env": "DEVAGOTCHI_SMTP_URL", "password_env": "DEVAGOTCHI_SMTP_PASSWORD",

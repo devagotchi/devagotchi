@@ -85,20 +85,21 @@ fn every_tool_a_skill_names_is_one_the_hub_serves() {
 }
 
 #[test]
-fn the_connector_points_at_the_hosted_hub_and_claude_names_its_seat() {
-    let hub = crate::account::client::default_hub();
-    assert!(hub.starts_with("https://"), "{hub}");
-    // The shared default: Codex and Grok read it as is.
+fn the_connector_names_a_placeholder_hub_and_claude_names_its_seat() {
+    let hub = "https://hub.example.com";
+    // The shared address is a placeholder. A person sets their own hub; nothing here
+    // points at a hosted service until they do.
     let shared = json("plugins/devagotchi/.mcp.json");
     assert_eq!(shared["mcpServers"]["devagotchi"]["type"], "http");
     assert_eq!(
         shared["mcpServers"]["devagotchi"]["url"],
         format!("{hub}/mcp")
     );
+    assert!(!shared.to_string().contains("app.devagotchi.com"));
     // Claude Code's manifest replaces it by name: the hub the person set, as Claude's seat.
     let claude = json("plugins/devagotchi/.claude-plugin/plugin.json");
     assert_eq!(claude["name"], "devagotchi");
-    assert_eq!(claude["userConfig"]["hub_url"]["default"], hub.as_str());
+    assert_eq!(claude["userConfig"]["hub_url"]["default"], hub);
     let server = &claude["mcpServers"]["devagotchi"];
     assert_eq!(server["url"], "${user_config.hub_url}/mcp");
     let seat = server["headers"]["X-Devagotchi-Seat"].as_str().unwrap();
@@ -127,7 +128,7 @@ fn codex_gets_this_release_and_both_marketplaces_list_real_plugins() {
         assert_eq!(manifest["name"], entry["name"], "{source}");
         assert_eq!(
             manifest["privacyPolicyUrl"],
-            "https://app.devagotchi.com/privacy"
+            "https://devagotchi.com/privacy"
         );
         listed.push(entry["name"].as_str().unwrap().to_string());
     }

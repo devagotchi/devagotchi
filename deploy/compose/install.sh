@@ -26,7 +26,13 @@ install.sh --domain NAME [options]
                        external: a proxy elsewhere terminates TLS and reaches the hub's port
   --hub-bind ADDR      where the hub's HTTP port is published (default 127.0.0.1)
   --hub-port PORT      that port (default 8787)
-  --track IMAGE        the image tag to follow (default ghcr.io/devagotchi/devagotchi:main)
+  --channel release|main
+                       release (default): follow ghcr.io/devagotchi/devagotchi:latest, which
+                       moves only when a stable release is published (a tag with no prerelease
+                       suffix). main: follow :main. Until the first stable tag, :latest does
+                       not exist: pass --tag v0.1.0-alpha.1 or --channel main
+  --tag TAG            pin one release tag, prerelease included (v0.1.0 or v0.1.0-alpha.1)
+  --track IMAGE        follow this image instead of --channel or --tag
   --dir DIR            where the stack lives (default /opt/devagotchi-hub)
   --source DIR|URL     where compose.yaml and update.sh come from (default: beside this
                        script, else https://raw.githubusercontent.com/<repo>/<ref>/deploy/compose)
@@ -53,8 +59,8 @@ A hosted hub, who runs it, and how people sign in (see crates/hub/README.md):
                        (default: private and loopback addresses)
   --google             Sign in with Google: DEVAGOTCHI_GOOGLE_CLIENT_ID and _SECRET
   --github             Sign in with GitHub: DEVAGOTCHI_GITHUB_CLIENT_ID and _SECRET
-  --nomen ISSUER       Sign in with Shippin: DEVAGOTCHI_NOMEN_CLIENT_ID (and _SECRET if its app
-                       has one), at the Nomen issuer ISSUER
+  --nomen ISSUER       an OpenID Connect sign-in at ISSUER (https://id.example.com):
+                       DEVAGOTCHI_NOMEN_CLIENT_ID and, when the app has one, _SECRET
   --email-from ADDRESS sign-in links by email from ADDRESS: DEVAGOTCHI_SMTP_URL
                        (smtps://user@host:465 or smtp://user@host:587) and DEVAGOTCHI_SMTP_PASSWORD
   --env-file FILE      read those variables from FILE (KEY=VALUE lines, as the secret store
@@ -64,7 +70,7 @@ EOF
 }
 
 domain="" public_url="" rp_id="" edge=caddy hub_bind=127.0.0.1 hub_port=8787
-track=ghcr.io/devagotchi/devagotchi:main dir=/opt/devagotchi-hub source=""
+track="" channel="" tag="" dir=/opt/devagotchi-hub source=""
 repo=devagotchi/devagotchi ref=main timer=true site="" site_only=false no_site=false
 tenancy="" operators="" proxies="" google=false github=false nomen="" email_from="" env_file=""
 analytics="" analytics_days=""
@@ -77,6 +83,8 @@ while [[ $# -gt 0 ]]; do
     --hub-bind) hub_bind="$2"; shift 2 ;;
     --hub-port) hub_port="$2"; shift 2 ;;
     --track) track="$2"; shift 2 ;;
+    --channel) channel="$2"; shift 2 ;;
+    --tag) tag="$2"; shift 2 ;;
     --dir) dir="$2"; shift 2 ;;
     --source) source="$2"; shift 2 ;;
     --repo) repo="$2"; shift 2 ;;
@@ -108,6 +116,27 @@ fi
 [[ -z "$analytics" || "$analytics" == on || "$analytics" == off ]] || die "--analytics is on or off"
 [[ -z "$analytics_days" || "$analytics_days" =~ ^[0-9]+$ ]] || die "--analytics-retention-days is a number of days"
 $no_site && [[ -n "$site" ]] && die "--site and --no-site, not both"
+# The image this hub follows. release is :latest (stable tags only). main is the moving
+# development image. A tag pins one release, including a prerelease. --track names an image.
+image_base=ghcr.io/devagotchi/devagotchi
+if [[ -z "$track" ]]; then
+  if [[ -n "$tag" ]]; then
+    [[ -z "$channel" ]] || die "--tag replaces --channel"
+    ver="${tag#v}"
+    [[ "$ver" =~ ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$ ]] || die "--tag is a release tag such as v0.1.0"
+    track="${image_base}:${ver}"
+    channel=tag
+  else
+    case "${channel:-release}" in
+      release) track="${image_base}:latest"; channel=release ;;
+      main) track="${image_base}:main"; channel=main ;;
+      *) die "--channel is release or main" ;;
+    esac
+  fi
+else
+  [[ -z "$channel" && -z "$tag" ]] || die "--track replaces --channel and --tag"
+  channel=track
+fi
 if $site_only; then
   [[ -n "$site" ]] || die "--site-only needs --site DIR"
   [[ $EUID -eq 0 ]] || die "run it as root"
@@ -159,7 +188,7 @@ rp_id="${rp_id:-$domain}"
 [[ -z "$tenancy" || "$tenancy" == single || "$tenancy" == multi ]] || die "--tenancy is single or multi"
 [[ "$operators" =~ ^[A-Za-z0-9@._+:,-]*$ ]] || die "--operators is email:ADDRESS or PROVIDER:SUBJECT, comma separated"
 [[ "$proxies" =~ ^[0-9A-Fa-f.:/,]*$ ]] || die "--trusted-proxies is IP addresses or CIDR ranges, comma separated"
-[[ -z "$nomen" || "$nomen" =~ ^https://[A-Za-z0-9.:/-]+$ ]] || die "--nomen is the Nomen issuer's https URL"
+[[ -z "$nomen" || "$nomen" =~ ^https://[A-Za-z0-9.:/-]+$ ]] || die "--nomen is that issuer's https URL"
 [[ -z "$email_from" || ( "$email_from" == *@* && "$email_from" != *[\'\"]* ) ]] \
   || die "--email-from is an address (Name <address> works too)"
 [[ -z "$env_file" || -f "$env_file" ]] || die "--env-file $env_file is not a file"
@@ -258,7 +287,7 @@ if [[ -n "$nomen" ]]; then
   need DEVAGOTCHI_NOMEN_CLIENT_ID --nomen
   nomen_secret=""
   [[ -n "${secret[DEVAGOTCHI_NOMEN_CLIENT_SECRET]}" ]] && nomen_secret=',"client_secret_env":"DEVAGOTCHI_NOMEN_CLIENT_SECRET"'
-  providers+=("{\"kind\":\"oidc\",\"name\":\"nomen\",\"label\":\"Shippin\",\"issuer\":\"${nomen%/}\",\"client_id_env\":\"DEVAGOTCHI_NOMEN_CLIENT_ID\"$nomen_secret}")
+  providers+=("{\"kind\":\"oidc\",\"name\":\"nomen\",\"label\":\"OpenID Connect\",\"issuer\":\"${nomen%/}\",\"client_id_env\":\"DEVAGOTCHI_NOMEN_CLIENT_ID\"$nomen_secret}")
 fi
 email=null
 if [[ -n "$email_from" ]]; then
@@ -279,6 +308,7 @@ DEVAGOTCHI_PUBLIC_URL=$public_url
 DEVAGOTCHI_RP_ID=$rp_id
 DEVAGOTCHI_HUB_BIND=$hub_bind
 DEVAGOTCHI_HUB_PORT=$hub_port
+DEVAGOTCHI_CHANNEL=$channel
 DEVAGOTCHI_TRACK=$track
 DEVAGOTCHI_EDGE=$edge
 DEVAGOTCHI_PG_SHARED_BUFFERS=${shared}MB

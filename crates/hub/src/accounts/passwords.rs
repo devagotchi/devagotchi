@@ -92,7 +92,7 @@ impl Accounts {
         let (hash, now) = (hash_of(password).await?, now_secs());
         let (tenant_random, account_random) =
             (crate::link::random::<16>(), crate::link::random::<16>());
-        transaction!(&self.store, |connection| {
+        let account = transaction!(&self.store, |connection| {
             // Any account this address already reaches, by password or email link, is taken.
             if self
                 .enter(connection, Lookup::Identity("email", &email))
@@ -123,7 +123,11 @@ impl Accounts {
             .execute(&mut *connection)
             .await?;
             Ok(account)
-        })
+        })?;
+        if account.tenant == super::tenants::new_tenant_id(tenant_random) {
+            self.extensions.tenant_created(&account.tenant, "sign-up");
+        }
+        Ok(account)
     }
 
     /// The account `email` and `password` reach; `password_wrong` for an unknown address or a
