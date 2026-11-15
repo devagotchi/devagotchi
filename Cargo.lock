@@ -1046,7 +1046,6 @@ dependencies = [
  "devagotchi-contracts",
  "getrandom 0.4.3",
  "hex",
- "percent-encoding",
  "sqlx",
  "tempfile",
  "tokio",

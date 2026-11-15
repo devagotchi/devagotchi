@@ -118,9 +118,9 @@ impl HostedBoard {
     pub async fn initialize_limited(&self, limit: Option<usize>) -> BridgeResult<bool> {
         transaction!(&self.store, |connection| {
             self.store.scope(connection, &self.tenant).await?;
-            sqlx::query("SELECT id FROM tenancy_tenants WHERE id=$1 FOR UPDATE")
+            sqlx::query("SELECT pg_advisory_xact_lock(hashtext('board_projects:' || $1))")
                 .bind(&self.tenant)
-                .fetch_one(&mut *connection)
+                .execute(&mut *connection)
                 .await?;
             if let (Some(limit), Some(owner)) = (limit, &self.owner) {
                 let exists: i64 = sqlx::query_scalar(

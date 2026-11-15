@@ -110,9 +110,53 @@ redirect matches, and treats it as a public client with PKCE. Nothing is registe
 secret exists. This is a change in Nomen (`D:\localdev\nomen-react-go`), made and tested there
 first (S0).
 
-AgentHub runs its own migrations against the hub's one Postgres; how sqlx 0.9 keeps its
-version history apart from the hub's (a migration table of its own, or a schema of its own) is
-settled in R1 with a test, not assumed.
+AgentHub runs its own migrations against the hub's one Postgres, with a version history of
+its own (decided below, held by a test).
+
+## R1 in detail: AgentHub as its own repository (increment 148)
+
+Facts (checked on `e2caeb3`, 2026-11-15):
+- The crate uses three workspace crates: `devagotchi-contracts` (`BridgeError`, `BridgeResult`
+  only), `devagotchi-connectors` (`aliases_for_client` only), `devagotchi-store` (`Store`,
+  `transaction!`, `scope`, `read`, `random`, `store_error`, `valid_tenant_id`).
+- Its tables are made by the hub's migrator: 0014, 0015, 0016 and 0018 are board-only, in
+  the one `_sqlx_migrations` history. `board_projects.tenant_id` references `tenancy_tenants`,
+  and `HostedBoard::initialize_limited` locks a `tenancy_tenants` row.
+- Its domain tests are in the hub: the local board protocol (`agenthub/tests.rs`), the hosted
+  board (`hosted_tests.rs`), `inbox_tests.rs` and `standing_tests.rs`. The crate has 2 tests.
+- The `devagotchi board` CLI, its hooks and its remote face (4,000 lines) are in the hub,
+  tied to the hub's account client; the account client in turn uses AgentHub's seat header.
+- `connections.rs` (the connector catalogue) and `ClickHouseConfig` are in the AgentHub
+  crate but used by the hub.
+
+Decisions:
+1. **Its own migrations, its own history.** AgentHub carries `migrations/` with its own sqlx
+   history table, `_agenthub_migrations` (`Migrator::dangerous_set_table_name`, sqlx 0.9), in
+   the same schema `devagotchi`. Its first migration is the board schema as it is today, made
+   `IF NOT EXISTS` so a database the hub already migrated is adopted, not rebuilt. The hub's
+   0014, 0015, 0016 and 0018 leave the hub's set (its migrator runs with `ignore_missing`, so
+   a database that applied them still opens). A test migrates a new database with both
+   migrators, and one that the hub migrated before the split.
+2. **No hub table under a board table.** The foreign key to `tenancy_tenants` is dropped; the
+   tenant is the scope the host gives it (RLS on `devagotchi.tenant`, as now). The per-tenant
+   board count lock becomes `pg_advisory_xact_lock` on the tenant.
+3. **The Postgres engine is shared, the hub's tables are not.** `devagotchi-store` keeps the
+   engine (open, the hub role, `scope`, `transaction!`, retries, `testing`) and loses the
+   hub's migrations, which move to the hub crate (each domain owns its tables). AgentHub
+   depends on `devagotchi-store` and `devagotchi-contracts` by git; this workspace patches
+   them to its own paths, so one copy of each is built here.
+4. **What moves into AgentHub:** the board domain tests; the `devagotchi board` CLI, its hooks
+   and remote face, with the remote side a trait the hub's account client implements (the
+   seat header lives in AgentHub); `migration.rs` is deleted (pre-release: nothing is
+   imported) along with `hub import-board`. The hub keeps `agenthub/`: the MCP tools, the
+   board router (Postgres only: the account-board files and the `boards` shared from a
+   directory are deleted), the registry and the pages.
+5. **What leaves AgentHub:** the connector catalogue goes to the hub's `connectors` domain;
+   `ClickHouseConfig` stays (the export is AgentHub's).
+
+Acceptance: `devagotchi/agenthub`'s own CI runs its tests on Postgres; this repo builds with
+the submodule (`git submodule update --init`, CI checks out with `submodules: true`);
+`grep -rln rusqlite crates/hub` lists only `ai.rs` (R2 moves it).
 
 ## Milestones
 

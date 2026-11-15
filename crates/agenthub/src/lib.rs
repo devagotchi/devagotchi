@@ -1,13 +1,11 @@
 //! AgentHub (`devagotchi-agenthub`): the agents' board. Tickets that any subscription claims
-//! under a lease, works, annotates and hands off, stored per project in
-//! `<project>/.devagotchi/board.sqlite3` or in a Postgres of record (`hosted`), with notes that
-//! reach agents (`inbox`, `wake`), approvals (`approval`) and GitHub issues
-//! (`issue_lifecycle`). Its database layer is `devagotchi-store`.
-//!
-//! The hub uses it through this crate's public API: its MCP tools, the `board` command line,
-//! the tenant registry and the web pages stay in the hub (`crates/hub/src/agenthub/`).
-//! Contract: `docs/agent-board.md`. A ticket is a unit of coordination and memory; a broker
-//! operation is a unit of execution, and this crate never runs one.
+//! under a lease, works, annotates and hands off: a standalone board in
+//! `<project>/.devagotchi/board.sqlite3` (ADR 0002), a hosted one in Postgres (`hosted`, its
+//! tables made by `migrations`), with notes that reach agents (`inbox`, `wake`), approvals
+//! (`approval`) and GitHub issues (`issue_lifecycle`). Its Postgres engine is `devagotchi-store`.
+//! The hub uses its public API: the hub's MCP tools, tenant registry and pages are its own
+//! (`crates/hub/src/agenthub/`). Contract: `docs/agent-board.md`. A ticket is a unit of
+//! coordination and memory; a broker operation is a unit of execution, never run here.
 
 pub mod approval;
 pub mod clickhouse;
@@ -17,6 +15,7 @@ pub mod hosted;
 pub mod inbox;
 pub mod issue_lifecycle;
 mod lease;
+pub mod migrations;
 pub mod wake;
 pub mod welcome;
 pub mod workflow;
@@ -35,7 +34,6 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use tokio::sync::{Notify, watch};
 
-#[allow(unused_imports)]
 pub use lease::{Lease, NextFilter};
 pub use workflow::{StateKind, Workflow};
 

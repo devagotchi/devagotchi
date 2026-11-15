@@ -86,7 +86,7 @@ pub(crate) async fn hosted_with_ingress(
         None => store::testing::empty_postgres().await?,
     };
     let accounts = Arc::new(
-        accounts::Accounts::open(store::Store::open(&store_url).await.unwrap())
+        accounts::Accounts::open(store::open(&store_url).await.unwrap())
             .await
             .unwrap()
             .with_tokens(config.token_config())

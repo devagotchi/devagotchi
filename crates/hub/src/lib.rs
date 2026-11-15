@@ -431,7 +431,7 @@ async fn accounts_at(
     prepare_state_dir(state_dir)?;
     let url = store::postgres_url(config.storage_url())?;
     let schema = store::schema_for(config.storage_schema());
-    let store = store::Store::open_in(&url, schema.as_deref()).await?;
+    let store = store::open_in(&url, schema.as_deref()).await?;
     configured_accounts(store, config).await
 }
 
@@ -515,7 +515,7 @@ fn manage(command: Command) -> BridgeResult<()> {
                             .as_ref()
                             .and_then(|storage| storage.schema.as_deref()),
                     );
-                    let store = store::Store::open_in(&url, schema.as_deref()).await?;
+                    let store = store::open_in(&url, schema.as_deref()).await?;
                     snapshot.import_postgres(&store, &tenant).await
                 })?
             } else {
@@ -631,7 +631,7 @@ fn manage(command: Command) -> BridgeResult<()> {
                 .map_err(|error| BridgeError::new("runtime", error.to_string()))?;
             runtime.block_on(async {
                 let schema = store::schema_for(config.storage_schema());
-                let store = store::Store::open_in(&url, schema.as_deref()).await?;
+                let store = store::open_in(&url, schema.as_deref()).await?;
                 let marked = warehouse::resend(&store).await?;
                 println!(
                     "marked {marked} board events to send again; the running hub sends them to ClickHouse, which keeps one row per event"
@@ -762,7 +762,7 @@ async fn run(
     config.extensions = extensions;
     let url = store::postgres_url(config.storage_url())?;
     let schema = store::schema_for(config.storage_schema());
-    let board_store = store::Store::open_in(&url, schema.as_deref()).await?;
+    let board_store = store::open_in(&url, schema.as_deref()).await?;
     let config = Arc::new(config);
     // The running hub follows its site directory: a change is served without a restart,
     // and one that does not check out is refused while the site it had stays.
@@ -1884,7 +1884,7 @@ mod tests {
         run(Some("Jesse")).unwrap();
         run(None).unwrap();
         let (owner, chain) = runtime.block_on(async {
-            let store = store::Store::open(&url).await.unwrap();
+            let store = store::open(&url).await.unwrap();
             let accounts = accounts::Accounts::open(store.clone()).await.unwrap();
             let chain = Audit::new(store).verify().await.unwrap();
             (accounts.owner().await.unwrap().unwrap(), chain)

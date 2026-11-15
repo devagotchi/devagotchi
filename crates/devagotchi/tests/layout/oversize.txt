@@ -7,7 +7,7 @@
 912	crates/agenthub/src/hosted.rs
 736	crates/agenthub/src/hosted/operations.rs
 527	crates/agenthub/src/lease.rs
-2327	crates/agenthub/src/lib.rs
+2325	crates/agenthub/src/lib.rs
 732	crates/contracts/src/lib.rs
 1712	crates/core/src/broker.rs
 577	crates/core/src/execution/platform/linux.rs
@@ -71,4 +71,4 @@
 516	crates/ipc/src/windows/security.rs
 582	crates/mcp/src/adapter.rs
 802	crates/mcp/src/connect.rs
-591	crates/store/src/lib.rs
+523	crates/store/src/lib.rs
