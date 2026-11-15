@@ -248,7 +248,7 @@ fn account_line(path: &Path) {
         ),
         Ok(Some(Stored::Local { .. })) => {}
         Ok(None) => eprintln!(
-            "devagotchi: not signed in — `devagotchi login` syncs your boards to devagotchi.com with a free account; `devagotchi login --local` keeps everything on this machine"
+            "devagotchi: not signed in — `devagotchi login --hub https://your-hub.example` signs this machine in to that hub; `devagotchi login --local` keeps everything on this machine"
         ),
         Err(why) => eprintln!("devagotchi: {why}"),
     }

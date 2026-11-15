@@ -10,10 +10,10 @@
   "repository": "https://github.com/devagotchi/devagotchi",
   "license": "BUSL-1.1",
   "icon": "./.claude-plugin/icon.png",
-  "documentationUrl": "https://app.devagotchi.com/docs",
-  "supportUrl": "https://app.devagotchi.com/support",
-  "privacyPolicyUrl": "https://app.devagotchi.com/privacy",
-  "termsOfServiceUrl": "https://app.devagotchi.com/terms",
+  "documentationUrl": "https://devagotchi.com/docs",
+  "supportUrl": "https://devagotchi.com/support",
+  "privacyPolicyUrl": "https://devagotchi.com/privacy",
+  "termsOfServiceUrl": "https://devagotchi.com/terms",
   "keywords": [
     "mcp",
     "agents",
@@ -26,8 +26,8 @@
     "hub_url": {
       "type": "string",
       "title": "Hub address",
-      "description": "Your Devagotchi hub, without /mcp. Keep it for the hosted hub; change it if you run your own.",
-      "default": "https://app.devagotchi.com"
+      "description": "The hub this connector talks to, without /mcp. Use that hub's public URL. The hosted service, when you want it, is https://app.devagotchi.com.",
+      "default": "https://hub.example.com"
     }
   },
   "mcpServers": {

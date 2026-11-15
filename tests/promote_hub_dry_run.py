@@ -51,7 +51,7 @@ def main():
                 "DEVAGOTCHI_PREVIOUS_VERSION": "previous-build",
                 "DEVAGOTCHI_PROD_HOST": "root@203.0.113.10",
                 "DEVAGOTCHI_PROD_LXC": "110",
-                "DEVAGOTCHI_PROD_URL": "https://app.devagotchi.com",
+                "DEVAGOTCHI_PROD_URL": "https://hub.example.com",
                 "DEVAGOTCHI_DIST_DIR": str(dist),
                 "DEVAGOTCHI_DOWNLOADS_DIR": "/var/lib/devagotchi/downloads",
                 "SSH_OPTS": "-o BatchMode=yes",

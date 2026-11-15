@@ -4,7 +4,7 @@
 # Proxmox host:
 #
 #   curl -fsSL https://raw.githubusercontent.com/devagotchi/devagotchi/main/deploy/proxmox/hub-up.sh \
-#     | bash -s -- --ct 110 --domain hub.example.com
+#     | bash -s -- --ct <id> --domain hub.example.com
 #
 # 1. Snapshots the container (devagotchi-<time>), so `pct rollback` undoes all of this.
 # 2. Turns on what Docker needs in it (nesting; keyctl when unprivileged), restarting it
@@ -20,11 +20,11 @@
 #    the phone that will hold the owner's passkey. A hosted hub (--tenancy multi) has none:
 #    each person's account is made the first time their AI connects.
 #
-# A hosted hub, as app.devagotchi.com runs:
+# A hosted hub, with the sign-ins that hub's operator chose:
 #
-#   ... | bash -s -- --ct 110 --domain app.devagotchi.com --rp-id devagotchi.com \
+#   ... | bash -s -- --ct <id> --domain hub.example.com --rp-id example.com \
 #     --tenancy multi --operators email:you@example.com --google --github \
-#     --nomen https://id.shippin.cloud --email-from "Devagotchi <sign-in@devagotchi.com>" \
+#     --nomen https://id.example.com --email-from "Hub <sign-in@example.com>" \
 #     --env-file /root/devagotchi-hub.env
 #
 # --env-file is a file on this host (from the secret store) with the providers' ids and
@@ -36,7 +36,7 @@
 # it with the hub image and puts it in place. To change the site of a hub this script set
 # up, edit DIR and push it alone; nothing else is touched, and the hub serves it in seconds:
 #
-#   ... | bash -s -- --ct 110 --site /root/hub-site --site-only
+#   ... | bash -s -- --ct <id> --site /root/hub-site --site-only
 #
 # Re-running it is safe. Nothing here names a host, a domain or a container of its own.
 set -euo pipefail
@@ -48,7 +48,11 @@ hub-up.sh --ct ID --domain NAME [options]
   --domain NAME      the name the hub answers at (required)
   --rp-id NAME       passkeys' relying party: NAME or a parent domain (default NAME)
   --port PORT        the hub's port on the container's loopback (default 8787)
-  --track IMAGE      the image tag the hub follows (default ghcr.io/devagotchi/devagotchi:main)
+  --channel release|main
+                     release (default): follow :latest, which moves on a stable release.
+                     main: follow :main. --tag TAG pins one release, prerelease included
+  --tag TAG          pin one release tag (v0.1.0 or v0.1.0-alpha.1)
+  --track IMAGE      follow this image instead of --channel or --tag
   --repo OWNER/NAME --ref REF
                      where the deploy files come from (default devagotchi/devagotchi at
                      main, resolved to one commit)
@@ -56,6 +60,7 @@ hub-up.sh --ct ID --domain NAME [options]
 A hosted hub, who runs it, and how people sign in (passed to install.sh; see its --help):
   --tenancy single|multi  --operators LIST  --trusted-proxies LIST
   --google  --github  --nomen ISSUER  --email-from ADDRESS
+                     --nomen is an OpenID Connect issuer (https://id.example.com)
   --analytics on|off  --analytics-retention-days N
   --env-file FILE    on this host: the providers' ids and secrets (KEY=VALUE lines)
 The hub's site (crates/hub/README.md, "The site"):
@@ -65,7 +70,7 @@ The hub's site (crates/hub/README.md, "The site"):
 EOF
 }
 
-ct="" domain="" rp_id="" port=8787 track=ghcr.io/devagotchi/devagotchi:main
+ct="" domain="" rp_id="" port=8787 track="" channel="" tag=""
 repo=devagotchi/devagotchi ref=main snapshot=true
 hosted=() env_file="" tenancy="" site="" site_only=false
 while [[ $# -gt 0 ]]; do
@@ -75,6 +80,8 @@ while [[ $# -gt 0 ]]; do
     --rp-id) rp_id="$2"; shift 2 ;;
     --port) port="$2"; shift 2 ;;
     --track) track="$2"; shift 2 ;;
+    --channel) channel="$2"; shift 2 ;;
+    --tag) tag="$2"; shift 2 ;;
     --repo) repo="$2"; shift 2 ;;
     --ref) ref="$2"; shift 2 ;;
     --no-snapshot) snapshot=false; shift ;;
@@ -224,8 +231,12 @@ if [[ -n "$env_file" ]]; then
   secrets=(--env-file /root/devagotchi-hub-src/secrets.env)
 fi
 installed=0
+track_args=()
+[[ -n "$track" ]] && track_args+=(--track "$track")
+[[ -n "$channel" ]] && track_args+=(--channel "$channel")
+[[ -n "$tag" ]] && track_args+=(--tag "$tag")
 in_ct /root/devagotchi-hub-src/install.sh --domain "$domain" --rp-id "$rp_id" --edge "$edge" \
-  --hub-bind "$bind" --hub-port "$port" --track "$track" "${hosted[@]}" "${secrets[@]}" \
+  --hub-bind "$bind" --hub-port "$port" "${track_args[@]}" "${hosted[@]}" "${secrets[@]}" \
   "${site_args[@]}" || installed=$?
 [[ -n "$env_file" ]] && in_ct rm -f /root/devagotchi-hub-src/secrets.env
 [[ -n "$site" ]] && in_ct rm -rf "$src/site"
@@ -250,7 +261,8 @@ note "https://$domain is the new hub"
 
 claim=$(in_ct sh -c 'cd /opt/devagotchi-hub && docker compose logs --no-color hub 2>/dev/null' \
   | grep -o "https://$domain/claim#[0-9A-Z-]*" | tail -1 || true)
-say "done: CT $ct runs the hub, deploys each new image of $track by itself, and backs up nightly"
+followed="${track:-${tag:-${channel:-the release channel}}}"
+say "done: CT $ct runs the hub, deploys each new image of $followed by itself, and backs up nightly"
 if [[ "$tenancy" == multi ]]; then
   printf '\nA hosted hub: nobody claims it. Each person'"'"'s account is made the first time their AI connects to https://%s/mcp.\n' "$domain"
 fi

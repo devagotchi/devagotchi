@@ -6,7 +6,7 @@
 //!   "provider": "nomen",          // the sign-in (auth.providers) whose accounts are the
 //!                                 // network's: Sign in with Shippin. The default.
 //!   "provisioning": {             // optional: link with no click at all
-//!     "api": "https://id.shippin.cloud",     // Nomen's API (Zitadel-compatible user v2)
+//!     "api": "https://id.example.com",       // that provider's API (Zitadel-compatible user v2)
 //!     "organization_id": "…",                // the Nomen organization new users go in
 //!     "token_env": "DEVAGOTCHI_SHIPPIN_TOKEN" // or "token_file": "/run/secrets/…" (0600)
 //!   }

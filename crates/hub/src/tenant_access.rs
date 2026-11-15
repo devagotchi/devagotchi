@@ -73,10 +73,17 @@ impl Hub {
     /// What `subject`'s plan says about limit `key`, with the plan; `None` when no plan
     /// holds it.
     pub(crate) fn plan_cap(&self, subject: &Subject, key: &str) -> Option<(Plan, Cap)> {
-        self.held_plan(subject).map(|plan| {
-            let cap = plan.cap(key);
-            (plan, cap)
-        })
+        let plan = self.held_plan(subject)?;
+        let tenant = subject.tenant.as_deref().unwrap_or("");
+        let cap = match self.config.extensions.plan.limit(tenant, key) {
+            Some(limit) => match limit {
+                crate::extensions::Limit::Unset => Cap::Unset,
+                crate::extensions::Limit::Unlimited => Cap::Unlimited,
+                crate::extensions::Limit::AtMost(n) => Cap::AtMost(n),
+            },
+            None => plan.cap(key),
+        };
+        Some((plan, cap))
     }
 
     /// The refusal for reaching limit `key` of `plan` (at most `most`, `count` held).

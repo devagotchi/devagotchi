@@ -6,7 +6,7 @@
 //! and it waits. Neither the password nor its hash is ever logged.
 
 use super::{email::normalize_email, identities::Proven, *};
-use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier, password_hash::SaltString};
+use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
 
 const MIN_LEN: usize = 8;
 const FAILURES_MAX: usize = 10; // per address in FAILURES_SECS
@@ -26,7 +26,7 @@ fn checked(password: &str) -> BridgeResult<()> {
 
 fn hash_with(password: &[u8], salt: &[u8]) -> Option<String> {
     Argon2::default()
-        .hash_password(password, &SaltString::encode_b64(salt).ok()?)
+        .hash_password_with_salt(password, salt)
         .ok()
         .map(|h| h.to_string())
 }
@@ -92,7 +92,7 @@ impl Accounts {
         let (hash, now) = (hash_of(password).await?, now_secs());
         let (tenant_random, account_random) =
             (crate::link::random::<16>(), crate::link::random::<16>());
-        transaction!(&self.store, |connection| {
+        let account = transaction!(&self.store, |connection| {
             // Any account this address already reaches, by password or email link, is taken.
             if self
                 .enter(connection, Lookup::Identity("email", &email))
@@ -123,7 +123,11 @@ impl Accounts {
             .execute(&mut *connection)
             .await?;
             Ok(account)
-        })
+        })?;
+        if account.tenant == super::tenants::new_tenant_id(tenant_random) {
+            self.extensions.tenant_created(&account.tenant, "sign-up");
+        }
+        Ok(account)
     }
 
     /// The account `email` and `password` reach; `password_wrong` for an unknown address or a

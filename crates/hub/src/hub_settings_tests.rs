@@ -144,45 +144,50 @@ async fn run(store: Option<&str>) {
     let (status, _) = Hosted::text(hub.get("/auth/provider/github", None).await).await;
     assert_eq!(status, 404, "turned off applies at once");
 
-    // Sign in with Shippin: its card has Nomen's issuer filled in, and saving it offers it at once.
+    // OpenID Connect: the card does not name an issuer. The operator types one, and saving
+    // it offers that provider at once.
     let (_, page) = Hosted::text(hub.get("/admin", Some(&owner)).await).await;
-    assert!(page.contains("Shippin (Nomen)"), "{page}");
+    assert!(page.contains("OpenID Connect"), "{page}");
     assert!(
-        page.contains("value=\"https://id.shippin.cloud\""),
+        !page.contains("id.shippin.cloud") && !page.contains("app.devagotchi.com"),
+        "{page}"
+    );
+    assert!(
+        page.contains("placeholder=\"https://id.example.com\""),
         "{page}"
     );
     assert!(
         page.contains("Add another OpenID Connect provider"),
         "{page}"
     );
-    let nomen = save(
+    let oidc = save(
         &hub,
         &owner,
-        "nomen",
+        "oidc",
         &[
-            ("issuer", "https://id.shippin.cloud"),
-            ("label", "Shippin"),
+            ("issuer", "https://id.example.com"),
+            ("label", "Example ID"),
             ("client_id", "devagotchi-hub"),
-            ("client_secret", "nomen-secret-value"),
+            ("client_secret", "oidc-secret-value"),
             ("enabled", "on"),
         ],
     )
     .send()
     .await
     .unwrap();
-    assert_eq!(nomen.status(), 303);
+    assert_eq!(oidc.status(), 303);
     let (_, login) = Hosted::text(hub.get("/auth/login", None).await).await;
     assert!(
-        login.contains("/auth/provider/nomen") && login.contains("Shippin"),
+        login.contains("/auth/provider/oidc") && login.contains("Example ID"),
         "{login}"
     );
     let stored = hub.accounts.sign_in_settings().await.unwrap();
-    let shippin = stored.iter().find(|s| s.name == "nomen").unwrap();
+    let saved = stored.iter().find(|s| s.name == "oidc").unwrap();
     assert_eq!(
-        (shippin.kind.as_str(), shippin.issuer.as_str()),
-        ("oidc", "https://id.shippin.cloud")
+        (saved.kind.as_str(), saved.issuer.as_str()),
+        ("oidc", "https://id.example.com")
     );
-    assert!(!shippin.sealed_secret.contains("nomen-secret-value"));
+    assert!(!saved.sealed_secret.contains("oidc-secret-value"));
 
     // Another provider by name, with a public client; an issuer that is not https is refused,
     // and so is a name already taken.
@@ -207,7 +212,7 @@ async fn run(store: Option<&str>) {
         &owner,
         "new",
         &[
-            ("name", "nomen"),
+            ("name", "oidc"),
             ("issuer", "https://idp.example.com"),
             ("client_id", "x"),
         ],
