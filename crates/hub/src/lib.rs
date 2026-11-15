@@ -8,12 +8,12 @@
 #[cfg(test)]
 #[macro_use]
 extern crate devagotchi_store;
-pub mod account;
 pub mod agenthub;
 mod config;
 mod connections;
 pub mod extensions;
 mod identity;
+pub mod login;
 mod machines;
 mod mcp;
 mod notify;
@@ -595,7 +595,7 @@ pub fn board_cli(args: Vec<OsString>, account_file: Option<PathBuf>) -> ExitCode
         stdout_is_terminal: std::io::stdout().is_terminal(),
         account_file,
         plugin_host: agenthub::cli::plugin_host(|name| env::var_os(name)),
-        hub: Some(Arc::new(account::client::AccountHub)),
+        hub: Some(Arc::new(login::client::AccountHub)),
     };
     let (mut out, mut err) = (std::io::stdout(), std::io::stderr());
     ExitCode::from(agenthub::cli::run(invocation, &mut out, &mut err))

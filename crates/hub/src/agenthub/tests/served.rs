@@ -40,10 +40,10 @@ mod bound {
 
     use crate::{
         AppState,
-        account::{self, Account, Stored},
         agenthub::cli::{self, EXIT_OK, EXIT_REFUSED, EXIT_UNAVAILABLE, Invocation},
         config::HubConfig,
         identity::auth::Verifier,
+        login::{self, Account, Stored},
         machines::link::Links,
         mcp::Hub,
     };
@@ -105,8 +105,8 @@ mod bound {
     }
 
     fn signed_in(path: &Path, token: &str) {
-        let now = account::unix_now();
-        account::write(
+        let now = login::unix_now();
+        login::write(
             path,
             &Stored::Account(Account::for_tests(
                 "https://id.example",
@@ -130,7 +130,7 @@ mod bound {
                 stdout_is_terminal: false,
                 account_file: Some(account.to_path_buf()),
                 plugin_host: None,
-                hub: Some(std::sync::Arc::new(crate::account::client::AccountHub)),
+                hub: Some(std::sync::Arc::new(crate::login::client::AccountHub)),
             },
             &mut out,
             &mut err,
