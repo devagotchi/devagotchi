@@ -13,7 +13,7 @@
 use devagotchi_contracts::{BridgeError, BridgeResult};
 
 use crate::{
-    hub::Hub, identity::Subject, identity::accounts::tenants, machines::devices::Device, site::Cap,
+    identity::Subject, identity::accounts::tenants, machines::devices::Device, mcp::Hub, site::Cap,
 };
 
 /// The longest name a person can give a machine on a hosted hub: the stored name, with the

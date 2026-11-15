@@ -90,7 +90,7 @@ async fn a_person_adds_a_machine_of_their_own_and_revokes_it() {
     };
     assert!(matches!(
         w.hub.route(&subject(OTHER), "platinum").await,
-        Ok(crate::hub::Route::Link(name)) if name == "platinum"
+        Ok(crate::mcp::Route::Link(name)) if name == "platinum"
     ));
     assert_eq!(
         w.hub

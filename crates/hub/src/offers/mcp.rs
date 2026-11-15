@@ -1,5 +1,5 @@
 //! `offers` and `offers_accept`: what the AI offers its person once, and their yes. Listed
-//! and served only while the site's offers show (`Hub::offered`, `hub.rs`).
+//! and served only while the site's offers show (`Hub::offered`, `mcp/surface.rs`).
 
 use devagotchi_contracts::BridgeError;
 use rmcp::{
@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 
 use super::nomen::Found;
 use crate::{
-    hub::Hub, identity::Subject, identity::accounts::identities::Proven, machines::now_secs,
+    identity::Subject, identity::accounts::identities::Proven, machines::now_secs, mcp::Hub,
     site::Ctx,
 };
 

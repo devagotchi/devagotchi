@@ -26,7 +26,7 @@ use std::sync::Arc;
 
 use devagotchi_contracts::{BridgeError, BridgeResult};
 
-use crate::{config::HubConfig, hub::Hub, identity::accounts::Accounts, offers::stored::OfferRow};
+use crate::{config::HubConfig, identity::accounts::Accounts, mcp::Hub, offers::stored::OfferRow};
 
 /// The tools that exist only while the site's offers show.
 pub const TOOLS: [&str; 2] = ["offers", "offers_accept"];

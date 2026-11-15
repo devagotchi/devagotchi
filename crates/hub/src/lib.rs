@@ -13,16 +13,12 @@ pub mod agenthub;
 mod config;
 mod connections;
 pub mod extensions;
-mod hub;
 mod identity;
 mod machines;
+mod mcp;
 mod notify;
 mod offers;
 mod ops;
-#[cfg(test)]
-mod output_schema;
-#[cfg(test)]
-mod plugin_tests;
 mod site;
 mod store;
 mod tenancy;
@@ -38,10 +34,10 @@ use std::{
 
 use crate::{
     config::HubConfig,
-    hub::Hub,
     identity::auth::{AuthError, Verifier},
     machines::devices::Devices,
     machines::link::Links,
+    mcp::Hub,
     ops::audit::Audit,
 };
 use axum::{

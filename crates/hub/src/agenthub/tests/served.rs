@@ -43,9 +43,9 @@ mod bound {
         account::{self, Account, Stored},
         agenthub::cli::{self, EXIT_OK, EXIT_REFUSED, EXIT_UNAVAILABLE, Invocation},
         config::HubConfig,
-        hub::Hub,
         identity::auth::Verifier,
         machines::link::Links,
+        mcp::Hub,
     };
 
     const MEMBER: &str = "300000000000000002";

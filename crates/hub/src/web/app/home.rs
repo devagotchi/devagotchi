@@ -13,8 +13,8 @@ use super::{board_names, card, open_board, person, words};
 use crate::{
     AppState,
     agenthub::{Filter, approval},
-    hub::Machine,
     identity::Subject,
+    mcp::Machine,
     web::pages::{self, Tab, escape},
 };
 

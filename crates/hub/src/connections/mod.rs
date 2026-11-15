@@ -21,7 +21,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::{hub::Hub, identity::Sealer, identity::Subject, identity::accounts::Accounts};
+use crate::{identity::Sealer, identity::Subject, identity::accounts::Accounts, mcp::Hub};
 
 /// The longest answer a call returns; more is cut, and says so.
 const MAX_ANSWER: usize = 256 * 1024;

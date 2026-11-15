@@ -12,13 +12,13 @@ use super::*;
 use crate::{
     AppState,
     config::HubConfig,
-    hub::Hub,
     identity::accounts::{
         Accounts, LinkPurpose,
         passkey::{Alg, soft::Authenticator},
     },
     identity::{accounts::oauth::s256, auth::Verifier},
     machines::link::Links,
+    mcp::Hub,
     ops::audit::Audit,
 };
 

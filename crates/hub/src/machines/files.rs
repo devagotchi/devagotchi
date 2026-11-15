@@ -18,7 +18,7 @@ use rmcp::{
 use schemars::JsonSchema;
 use serde::Deserialize;
 
-use crate::hub::{Hub, unexpected_response};
+use crate::mcp::{Hub, unexpected_response};
 
 #[derive(Debug, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]

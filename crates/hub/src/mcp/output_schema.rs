@@ -29,7 +29,7 @@ pub(crate) fn assert_matches(tool: &str, schema: &Value, structured: &Value) {
 
 /// The output schema `tool` declares, as `tools/list` gives it; `None` when it declares none.
 pub(crate) fn declared(tool: &str) -> Option<Value> {
-    crate::hub::tools()
+    crate::mcp::tools()
         .into_iter()
         .find(|t| t.name == tool)
         .and_then(|t| t.output_schema)

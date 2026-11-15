@@ -327,7 +327,7 @@ fn the_tool_list_is_the_tools_the_hub_serves() {
         .collect();
     let unique: BTreeSet<&str> = listed.iter().copied().collect();
     assert_eq!(unique.len(), listed.len(), "a tool is listed twice");
-    let served: BTreeSet<String> = crate::hub::tool_names().into_iter().collect();
+    let served: BTreeSet<String> = crate::mcp::tool_names().into_iter().collect();
     let listed: BTreeSet<String> = unique.into_iter().map(str::to_string).collect();
     assert_eq!(listed, served);
     let html = body(Front::Passkeys);

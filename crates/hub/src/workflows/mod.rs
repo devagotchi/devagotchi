@@ -34,9 +34,9 @@ use devagotchi_contracts::{BridgeError, BridgeResult};
 
 use crate::ops::analytics::funnel;
 use crate::{
-    hub::Hub,
     identity::Subject,
     identity::accounts::Accounts,
+    mcp::Hub,
     site::{
         Ctx, Site,
         workflows::{AI_CLIENT, DONE, MACHINE, MACHINE_OS, PHONE, SECURE_ACCOUNT},
