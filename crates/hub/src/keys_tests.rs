@@ -47,9 +47,7 @@ fn why(answer: &Value) -> String {
 }
 
 async fn run(store: Option<&str>) {
-    let Some(hub) = hosted_with(store, |_, _| json!({})).await else {
-        return;
-    };
+    let hub = or_skip!(hosted_with(store, |_, _| json!({})));
     let mut person = hub.first_connect("Claude").await;
     for project in ["site", "other"] {
         hub.call(&mut person, "board_bind", json!({ "project": project }))
@@ -201,9 +199,7 @@ async fn a_key_does_what_it_was_made_to_do_and_stops_when_it_is_ended() {
 /// A tool nobody assigned a scope is closed to keys by default; this makes that a decision.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn every_tool_is_either_scoped_or_deliberately_closed_to_keys() {
-    let Some(hub) = hosted_with(None, |_, _| json!({})).await else {
-        return;
-    };
+    let hub = or_skip!(hosted_with(None, |_, _| json!({})));
     let mut person = hub.first_connect("Claude").await;
     let listed = hub.mcp(&mut person, "tools/list", json!({})).await;
     let tools = listed["tools"].as_array().expect("tools");

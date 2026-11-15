@@ -368,9 +368,7 @@ async fn every_change_lands_on_the_organisations_own_chain() {
 /// left without an owner. Two people taking the same invite at once: one gets in.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn concurrent_changes_never_leave_an_organisation_without_an_owner() {
-    let Some(test) = testing::postgres().await else {
-        return;
-    };
+    let test = or_skip!(testing::postgres());
     for round in 0..6 {
         let orgs = Orgs::new(test.store.clone());
         let org = orgs
@@ -411,9 +409,7 @@ async fn concurrent_changes_never_leave_an_organisation_without_an_owner() {
 /// tenant sees none of them, and the cross-tenant functions answer ids and roles only.
 #[tokio::test]
 async fn row_level_security_keeps_each_organisations_rows_to_itself() {
-    let Some(test) = testing::postgres().await else {
-        return;
-    };
+    let test = or_skip!(testing::postgres());
     let orgs = Orgs::new(test.store.clone());
     let acme = orgs.create("alice", "acme", "Acme").await.unwrap();
     let other = orgs.create("mallory", "other", "Other").await.unwrap();

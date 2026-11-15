@@ -497,9 +497,7 @@ async fn on_postgres_the_hubs_role_reads_and_writes_one_tenants_rows_only() {
     // Database-enforced isolation: whatever a query of the hub's forgets, Postgres shows
     // the hub's role (`devagotchi_hub`, no superuser, no BYPASSRLS) the rows of the tenant
     // its transaction is scoped to and no other's, and none at all unscoped.
-    let Some(test) = testing::postgres().await else {
-        return;
-    };
+    let test = or_skip!(testing::postgres());
     let accounts = Accounts::open(test.store.clone())
         .await
         .unwrap()

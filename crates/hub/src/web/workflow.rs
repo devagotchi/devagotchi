@@ -342,9 +342,7 @@ impl View<'_> {
             let mut body = format!("<p>{}</p>", self.words().inline(&step.text));
             if seen.state != "done" && seen.why.is_none() {
                 match step.kind.as_str() {
-                    MACHINE if self.live => {
-                        body.push_str(&self.machine_step(index, seen, shown).await)
-                    }
+                    MACHINE if self.live => body += &self.machine_step(index, seen, shown).await,
                     PHONE if self.live => {
                         if let Some(key) =
                             self.state.hub.push.as_ref().map(|p| p.public_key.clone())
@@ -614,12 +612,9 @@ data-return-to=\"{}\" disabled>{}</button></p><p class=\"meta\" id=\"passkey-sta
             let (id, at, code) = (parts.next()?, parts.next()?, parts.next()?);
             (id == self.row.id && at == index.to_string() && valid_code(code)).then_some(code)
         });
-        let live_device = match live {
-            Some(code) => self.state.hub.links.live_code(code).await.ok().flatten(),
-            None => None,
-        };
+        let hub = &self.state.hub;
         if let (Some(code), Some(stored)) = (live, stored)
-            && live_device.as_deref() == Some(stored)
+            && matches!(hub.links.live_code(code).await, Ok(Some(device)) if device == stored)
         {
             let os = progress.and_then(|p| p.os.as_deref()).unwrap_or("linux");
             let line = crate::hub::join_line(&self.state.hub.config.public_url, os, code);
@@ -639,13 +634,8 @@ data-return-to=\"{}\" disabled>{}</button></p><p class=\"meta\" id=\"passkey-sta
             );
         }
         // A machine that joined and is not online yet needs no new line.
-        if matches!(
-            self.state
-                .hub
-                .machine_seen(&self.subject.id, progress)
-                .await,
-            crate::workflows::MachineSeen::Offline
-        ) {
+        let seen_now = hub.machine_seen(&self.subject.id, progress).await;
+        if matches!(seen_now, crate::workflows::MachineSeen::Offline) {
             return String::new();
         }
         self.command_form(index, seen, false).await

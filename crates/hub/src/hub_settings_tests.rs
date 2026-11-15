@@ -25,9 +25,7 @@ fn save(
 }
 
 async fn run(store: Option<&str>) {
-    let Some(hub) = hub_on(store, None).await else {
-        return;
-    };
+    let hub = or_skip!(hub_on(store, None));
     let owner = operator_cookie(&hub).await;
 
     // The page: guided, with this hub's own callback address, and nothing set yet.
@@ -316,9 +314,7 @@ fn analytics(hub: &Hosted, cookie: &str, fields: &[(&str, &str)]) -> reqwest::Re
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_clickhouse_saved_on_the_settings_page_is_checked_sealed_and_exported_to_at_once() {
     // On SQLite: the page says where the boards are and that statistics need Postgres.
-    let Some(hub) = hub_on(None, None).await else {
-        return;
-    };
+    let hub = or_skip!(hub_on(None, None));
     let owner = operator_cookie(&hub).await;
     let (status, page) = Hosted::text(hub.get("/admin", Some(&owner)).await).await;
     assert_eq!(status, 200, "{page}");
@@ -335,12 +331,8 @@ async fn a_clickhouse_saved_on_the_settings_page_is_checked_sealed_and_exported_
         .unwrap();
     assert_eq!(refused.status(), 409);
 
-    let Some(store) = crate::store::testing::empty_postgres().await else {
-        return;
-    };
-    let Some(hub) = hub_on(Some(&store), None).await else {
-        return;
-    };
+    let store = or_skip!(crate::store::testing::empty_postgres());
+    let hub = or_skip!(hub_on(Some(&store), None));
     let owner = operator_cookie(&hub).await;
     let (url, fake) = StandIn::start().await;
 
@@ -553,12 +545,9 @@ async fn a_clickhouse_saved_on_the_settings_page_is_checked_sealed_and_exported_
 
     // A ClickHouse the hub's configuration sets is shown, not changed, here.
     let fresh = crate::store::testing::empty_postgres().await.unwrap();
-    let Some(configured) = crate::tenant_tests::hosted_with(Some(&fresh), |_, _| {
+    let configured = or_skip!(crate::tenant_tests::hosted_with(Some(&fresh), |_, _| {
         json!({ "operators": ["github:42"], "clickhouse": { "url": url, "database": "from_config" } })
-    })
-    .await else {
-        return;
-    };
+    }));
     let owner = operator_cookie(&configured).await;
     let (_, page) = Hosted::text(configured.get("/admin", Some(&owner)).await).await;
     assert!(

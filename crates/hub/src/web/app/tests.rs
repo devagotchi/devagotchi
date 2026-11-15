@@ -12,12 +12,8 @@ pub(super) async fn hosted() -> Option<Hosted> {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn real_postgres_mcp_and_app_share_one_board_and_surface_storage_failures() {
-    let Some(test) = crate::store::testing::postgres().await else {
-        return;
-    };
-    let Some(hub) = hosted_with(Some(&test.url), |_, _| json!({})).await else {
-        return;
-    };
+    let test = or_skip!(crate::store::testing::postgres());
+    let hub = or_skip!(hosted_with(Some(&test.url), |_, _| json!({})));
     let mut alice = hub.first_connect("Claude").await;
     let bob = hub.first_connect("Codex").await;
     things_of(&hub, &mut alice).await;
@@ -117,9 +113,7 @@ pub(super) async fn things_of(hub: &Hosted, person: &mut Person) -> String {
 
 #[tokio::test]
 async fn the_app_shows_only_the_accounts_own_machines_and_boards_in_one_frame() {
-    let Some(hub) = hosted().await else {
-        return;
-    };
+    let hub = or_skip!(hosted());
     let mut alice = hub.first_connect("Claude").await;
     let bob = hub.first_connect("Claude").await;
     things_of(&hub, &mut alice).await;
@@ -233,9 +227,7 @@ async fn the_app_shows_only_the_accounts_own_machines_and_boards_in_one_frame() 
 
 #[tokio::test]
 async fn signed_out_the_app_sends_you_to_sign_in_and_back() {
-    let Some(hub) = hosted().await else {
-        return;
-    };
+    let hub = or_skip!(hosted());
     for (path, back) in [
         ("/app", "%2Fapp"),
         ("/app/machines", "%2Fapp%2Fmachines"),
@@ -253,9 +245,7 @@ async fn signed_out_the_app_sends_you_to_sign_in_and_back() {
 
 #[tokio::test]
 async fn the_app_installs_at_app_and_opens_offline() {
-    let Some(hub) = hosted().await else {
-        return;
-    };
+    let hub = or_skip!(hosted());
     let manifest: Value = hub
         .get("/manifest.webmanifest", None)
         .await
@@ -317,9 +307,7 @@ fn view(id: &str, state: &str, exit_code: Option<i32>) -> devagotchi_contracts::
 #[tokio::test]
 async fn a_machines_page_shows_its_state_and_jobs_and_updates_from_here_only() {
     use devagotchi_contracts::{ResponseBody, StartOutput};
-    let Some(hub) = hosted().await else {
-        return;
-    };
+    let hub = or_skip!(hosted());
     let mut alice = hub.first_connect("Claude").await;
     let bob = hub.first_connect("Claude").await;
     let device = things_of(&hub, &mut alice).await;

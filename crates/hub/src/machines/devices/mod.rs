@@ -460,10 +460,9 @@ async fn revoke_in(
 /// A registry on a new database of the test server, or `None` without one
 /// (`DEVAGOTCHI_TEST_POSTGRES_URL`; CI's hub-postgres job sets it).
 #[cfg(test)]
-pub(crate) async fn test_devices() -> Option<(crate::store::testing::TestStore, Devices)> {
+pub(crate) async fn test_registry() -> Option<std::sync::Arc<Devices>> {
     let test = crate::store::testing::postgres().await?;
-    let devices = Devices::new(test.store.clone());
-    Some((test, devices))
+    Some(std::sync::Arc::new(Devices::new(test.store)))
 }
 
 mod push_subscriptions;

@@ -95,9 +95,7 @@ async fn the_operator_lets_a_waiting_person_in_and_their_next_call_works() {
         stores.push(Some(url));
     }
     for store in stores {
-        if let Some(hub) = hub_on(store.as_deref(), None).await {
-            operator_page(hub).await;
-        }
+        operator_page(or_skip!(hub_on(store.as_deref(), None))).await;
     }
 }
 
@@ -283,9 +281,7 @@ async fn operator_page(hub: Hosted) {
 async fn a_neutral_sites_operator_page_names_only_that_site() {
     static NEUTRAL: std::sync::LazyLock<std::path::PathBuf> =
         std::sync::LazyLock::new(crate::site::tests::neutral_dir);
-    let Some(hub) = hub_on(None, Some(NEUTRAL.as_path())).await else {
-        return;
-    };
+    let hub = or_skip!(hub_on(None, Some(NEUTRAL.as_path())));
     // A person waiting, made as a first connect makes them.
     hub.accounts
         .start_unsecured(std::net::IpAddr::from([198, 51, 100, 9]), "Claude")

@@ -98,9 +98,7 @@ async fn operator_cookie(hub: &Hosted) -> String {
 #[tokio::test]
 async fn a_public_page_visit_is_counted_by_the_server_with_exactly_what_it_keeps() {
     for store in stores().await {
-        if let Some(hub) = hub_on(store.as_deref(), json!({})).await {
-            counted(hub).await;
-        }
+        counted(or_skip!(hub_on(store.as_deref(), json!({})))).await;
     }
 }
 
@@ -223,9 +221,7 @@ async fn counted(hub: Hosted) {
 
 #[tokio::test]
 async fn a_hub_that_does_not_count_keeps_nothing_and_says_so() {
-    let Some(hub) = hub_on(None, json!({ "analytics": { "enabled": false } })).await else {
-        return;
-    };
+    let hub = or_skip!(hub_on(None, json!({ "analytics": { "enabled": false } })));
     assert!(hub.hub.analytics.is_none());
     assert_eq!(visit(&hub, "/docs", &[("user-agent", DESKTOP)]).await, 200);
     let mut person = hub.first_connect("Claude").await;
@@ -247,9 +243,10 @@ async fn a_hub_that_does_not_count_keeps_nothing_and_says_so() {
     assert!(privacy.contains("no analytics"), "{privacy}");
     assert!(!privacy.contains("Global Privacy Control"), "{privacy}");
     // And a longer retention is what the page says, where the hub counts.
-    let Some(kept) = hub_on(None, json!({ "analytics": { "retention_days": 30 } })).await else {
-        return;
-    };
+    let kept = or_skip!(hub_on(
+        None,
+        json!({ "analytics": { "retention_days": 30 } })
+    ));
     let (_, privacy) = Hosted::text(kept.get("/privacy", None).await).await;
     assert!(privacy.contains("30 days"), "{privacy}");
 }
@@ -257,7 +254,7 @@ async fn a_hub_that_does_not_count_keeps_nothing_and_says_so() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn each_milestone_is_written_once_where_it_happens() {
     for store in stores().await {
-        let Some(hub) = hosted_with(store.as_deref(), |dir, _| {
+        let hub = or_skip!(hosted_with(store.as_deref(), |dir, _| {
             let mut site: Value =
                 serde_json::from_str(include_str!("../site/default/site.json")).unwrap();
             site["early_access"] = json!({ "mode": "early_access" });
@@ -265,11 +262,7 @@ async fn each_milestone_is_written_once_where_it_happens() {
             std::fs::create_dir_all(&path).unwrap();
             std::fs::write(path.join("site.json"), site.to_string()).unwrap();
             json!({ "site": { "dir": path.to_string_lossy() }, "operators": ["github:42"] })
-        })
-        .await
-        else {
-            return;
-        };
+        }));
         milestones_once(hub).await;
     }
 }

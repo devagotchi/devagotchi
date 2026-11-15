@@ -361,10 +361,7 @@ mod tests {
     async fn the_vapid_key_is_made_once_and_its_token_verifies() {
         use aws_lc_rs::signature::{ECDSA_P256_SHA256_FIXED, UnparsedPublicKey as Verify};
         let dir = tempfile::tempdir().unwrap();
-        let Some((_db, devices)) = crate::machines::devices::test_devices().await else {
-            return;
-        };
-        let devices = Arc::new(devices);
+        let devices = or_skip!(crate::machines::devices::test_registry());
         let push = Push::open(dir.path(), "https://hub.example", devices.clone()).unwrap();
         let again = Push::open(dir.path(), "https://hub.example", devices).unwrap();
         assert_eq!(
@@ -432,10 +429,7 @@ mod tests {
         tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
 
         let dir = tempfile::tempdir().unwrap();
-        let Some((_db, devices)) = crate::machines::devices::test_devices().await else {
-            return;
-        };
-        let devices = Arc::new(devices);
+        let devices = or_skip!(crate::machines::devices::test_registry());
         let push = Push::open(dir.path(), "https://hub.example", devices.clone()).unwrap();
         let phone = PrivateKey::generate(&ECDH_P256).unwrap();
         let p256dh = URL_SAFE_NO_PAD.encode(phone.compute_public_key().unwrap().as_ref());

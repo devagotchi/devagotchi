@@ -223,7 +223,8 @@ joined_connected() {
 }
 wait_for 20 "join hub ready" join_hub_ready
 grep -q 'handing out build ci-join' "$WORK/join-hub.log" || fail "the hub did not take the downloads directory"
-code=$("$BIN/devagotchi" hub enroll --state-dir "$WORK/join-state" --device ci-joined 2>/dev/null)
+code=$(DEVAGOTCHI_HUB_STORAGE_URL="$DEVAGOTCHI_HUB_JOIN_STORAGE_URL" \
+    "$BIN/devagotchi" hub enroll --state-dir "$WORK/join-state" --device ci-joined 2>/dev/null)
 [[ $code == dvg-* ]] || fail "no enrollment code"
 # Fetching the script twice (a link preview, a second look) does not spend the code.
 curl -fsS "http://127.0.0.1:$JPORT/join/$code" > /dev/null

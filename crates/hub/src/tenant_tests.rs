@@ -12,8 +12,6 @@ use super::*;
 use crate::accounts::oauth::s256;
 
 pub(crate) struct Hosted {
-    /// The machine registry's test database, kept for the hub's life.
-    pub(crate) _db: crate::store::testing::TestStore,
     pub(crate) url: String,
     pub(crate) http: reqwest::Client,
     pub(crate) accounts: Arc<accounts::Accounts>,
@@ -99,8 +97,7 @@ pub(crate) async fn hosted_with_ingress(
     let analytics = config
         .counts_visits()
         .then(|| analytics::Analytics::start(accounts.store().clone(), config.analytics, &url));
-    let (db, devices) = crate::machines::devices::test_devices().await?;
-    let devices = Arc::new(devices);
+    let devices = crate::machines::devices::test_registry().await?;
     let audit = Arc::new(Audit::open(&dir.path().join("audit.sqlite3")).unwrap());
     let changes = Arc::new(tokio::sync::Notify::new());
     let links = Arc::new(
@@ -183,7 +180,6 @@ pub(crate) async fn hosted_with_ingress(
         .unwrap()
     });
     Some(Hosted {
-        _db: db,
         url,
         http: reqwest::Client::builder()
             .redirect(reqwest::redirect::Policy::none())
@@ -468,13 +464,9 @@ pub(crate) fn fill(schema: &Value, root: &Value, ids: &Value) -> Value {
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn tenant_a_reaches_nothing_of_tenant_bs_through_any_tool_or_page() {
     // On SQLite, and on Postgres when the test server is set (CI).
-    if let Some(hub) = hosted().await {
-        isolation(hub).await;
-    }
+    isolation(or_skip!(hosted())).await;
     if let Some(postgres) = store::testing::empty_postgres().await {
-        if let Some(hub) = hosted_on(Some(&postgres)).await {
-            isolation(hub).await;
-        }
+        isolation(or_skip!(hosted_on(Some(&postgres)))).await;
     }
 }
 
@@ -797,9 +789,7 @@ async fn isolation(hub: Hosted) {
 
 #[tokio::test]
 async fn a_hosted_hub_offers_no_claim_and_says_so_everywhere() {
-    let Some(hub) = hosted().await else {
-        return;
-    };
+    let hub = or_skip!(hosted());
     let (status, page) = Hosted::text(hub.get("/", None).await).await;
     assert_eq!(status, 200);
     assert!(
@@ -846,9 +836,7 @@ async fn a_hosted_hub_offers_no_claim_and_says_so_everywhere() {
 
 #[tokio::test]
 async fn a_terminal_signs_in_to_a_new_account_with_one_approve() {
-    let Some(hub) = hosted().await else {
-        return;
-    };
+    let hub = or_skip!(hosted());
     let started: Value = hub
         .http
         .post(format!("{}/oauth/device", hub.url))
@@ -908,9 +896,7 @@ async fn a_terminal_signs_in_to_a_new_account_with_one_approve() {
 
 #[tokio::test]
 async fn an_unsecured_account_adds_machines_only_up_to_its_quota() {
-    let Some(hub) = hosted().await else {
-        return;
-    };
+    let hub = or_skip!(hosted());
     let mut person = hub.first_connect("Claude").await;
     for name in ["one", "two"] {
         let added = hub

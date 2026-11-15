@@ -49,6 +49,12 @@ fn dist(dir: &Path) -> PathBuf {
 }
 
 /// A hosted hub that hands out a build, with `extra` config (plans, a link's life).
+/// The machine `name` joins with `code`, as its link does, with a key of `key` repeated.
+async fn join(hub: &Hosted, name: &str, code: &str, key: &str) {
+    let key = key.repeat(32);
+    hub.devices.enroll(name, code, &key, false).await.unwrap();
+}
+
 async fn hub_on(store: Option<&str>, extra: Value) -> Option<Hosted> {
     hosted_with(store, move |dir, _| {
         let mut value = json!({ "downloads": dist(dir).to_string_lossy() });
@@ -241,9 +247,7 @@ async fn turn_on_phone(
 #[tokio::test]
 async fn the_list_offers_each_workflow_and_says_plainly_what_cannot_be_done_here() {
     for store in stores().await {
-        let Some(hub) = hub_on(store.as_deref(), json!({})).await else {
-            return;
-        };
+        let hub = or_skip!(hub_on(store.as_deref(), json!({})));
         let mut person = hub.first_connect("Claude").await;
         let listed = structured(&hub, &mut person, "workflow_list", json!({})).await;
         let all = listed["workflows"].as_array().unwrap().clone();
@@ -313,9 +317,7 @@ async fn the_list_offers_each_workflow_and_says_plainly_what_cannot_be_done_here
         }
     }
     // A hub that hands out no build has no one-line install to give, and says so.
-    let Some(hub) = hosted_with(None, |_, _| json!({})).await else {
-        return;
-    };
+    let hub = or_skip!(hosted_with(None, |_, _| json!({})));
     let mut person = hub.first_connect("Claude").await;
     let listed = structured(&hub, &mut person, "workflow_list", json!({})).await;
     for workflow in listed["workflows"].as_array().unwrap() {
@@ -336,7 +338,7 @@ async fn the_list_offers_each_workflow_and_says_plainly_what_cannot_be_done_here
         }
     }
     // One with Linux builds alone has no Windows line, and offers no Windows to pick.
-    let Some(hub) = hosted_with(None, |dir, _| {
+    let hub = or_skip!(hosted_with(None, |dir, _| {
         let dist = dist(dir);
         let sums = std::fs::read_to_string(dist.join("SHA256SUMS")).unwrap();
         let linux: String = sums
@@ -346,11 +348,7 @@ async fn the_list_offers_each_workflow_and_says_plainly_what_cannot_be_done_here
             .collect();
         std::fs::write(dist.join("SHA256SUMS"), linux).unwrap();
         json!({ "downloads": dist.to_string_lossy() })
-    })
-    .await
-    else {
-        return;
-    };
+    }));
     let mut person = hub.first_connect("Claude").await;
     let listed = structured(&hub, &mut person, "workflow_list", json!({})).await;
     let windows = listed["workflows"]
@@ -402,9 +400,7 @@ async fn the_list_offers_each_workflow_and_says_plainly_what_cannot_be_done_here
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn opening_the_link_needs_no_sign_in_spends_nothing_and_shows_no_code() {
     for store in stores().await {
-        let Some(hub) = hub_on(store.as_deref(), json!({})).await else {
-            return;
-        };
+        let hub = or_skip!(hub_on(store.as_deref(), json!({})));
         let mut person = hub.first_connect("Claude").await;
         let (subject, tenant) = who(&hub, &mut person).await;
         let started = structured(
@@ -489,9 +485,7 @@ async fn opening_the_link_needs_no_sign_in_spends_nothing_and_shows_no_code() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn get_my_command_issues_the_line_and_the_step_ticks_once_online() {
     for store in stores().await {
-        let Some(hub) = hub_on(store.as_deref(), json!({})).await else {
-            return;
-        };
+        let hub = or_skip!(hub_on(store.as_deref(), json!({})));
         let mut person = hub.first_connect("Claude").await;
         let (subject, tenant) = who(&hub, &mut person).await;
         let started = structured(
@@ -574,10 +568,7 @@ async fn get_my_command_issues_the_line_and_the_step_ticks_once_online() {
         assert_eq!(step(&status, 0)["fact"], "Waiting for server to join.");
         // The machine enrolls with that code: joined, offline.
         let stored = format!("{}-server", crate::accounts::tenants::tag(&tenant));
-        hub.devices
-            .enroll(&stored, &code, &"ab".repeat(32), false)
-            .await
-            .unwrap();
+        join(&hub, &stored, &code, "ab").await;
         let status = structured(&hub, &mut person, "workflow_status", json!({ "id": id })).await;
         assert_eq!(step(&status, 0)["state"], "current");
         assert_eq!(step(&status, 0)["fact"], "server joined but is offline.");
@@ -640,9 +631,7 @@ async fn get_my_command_issues_the_line_and_the_step_ticks_once_online() {
 #[tokio::test]
 async fn another_account_reaches_nothing_of_a_workflow_through_its_ai() {
     for store in stores().await {
-        let Some(hub) = hub_on(store.as_deref(), json!({})).await else {
-            return;
-        };
+        let hub = or_skip!(hub_on(store.as_deref(), json!({})));
         let mut alice = hub.first_connect("Claude").await;
         let mut bob = hub.first_connect("Cursor").await;
         let started = structured(
@@ -694,14 +683,10 @@ async fn another_account_reaches_nothing_of_a_workflow_through_its_ai() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn expiry_cancelling_and_a_new_link_each_end_the_old_one() {
     for store in stores().await {
-        let Some(hub) = hub_on(
+        let hub = or_skip!(hub_on(
             store.as_deref(),
             json!({ "workflows": { "link_ttl_secs": 300 } }),
-        )
-        .await
-        else {
-            return;
-        };
+        ));
         let mut person = hub.first_connect("Claude").await;
         let (subject, tenant) = who(&hub, &mut person).await;
         // The configured life.
@@ -813,9 +798,7 @@ async fn expiry_cancelling_and_a_new_link_each_end_the_old_one() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn keeping_the_account_is_offered_after_the_first_success_to_the_browser_that_did_it() {
     for store in stores().await {
-        let Some(hub) = hub_on(store.as_deref(), json!({})).await else {
-            return;
-        };
+        let hub = or_skip!(hub_on(store.as_deref(), json!({})));
         let mut person = hub.first_connect("Claude").await;
         let (subject, tenant) = who(&hub, &mut person).await;
         let started = structured(
@@ -855,10 +838,7 @@ async fn keeping_the_account_is_offered_after_the_first_success_to_the_browser_t
         assert!(set_cookie(&answer, "dg_session").is_none());
         // The machine joins and comes online: the first success.
         let stored = format!("{}-server", crate::accounts::tenants::tag(&tenant));
-        hub.devices
-            .enroll(&stored, &code_in(&cookies), &"ab".repeat(32), false)
-            .await
-            .unwrap();
+        join(&hub, &stored, &code_in(&cookies), "ab").await;
         let _link = hub.hub.links.connect_for_test(&stored);
         let answer: Value = hub
             .get(&format!("{path}/status"), Some(&cookies))
@@ -937,7 +917,7 @@ async fn keeping_the_account_is_offered_after_the_first_success_to_the_browser_t
         assert!(!body.contains("id=\"keep\""), "{body}");
     }
     // With Google or GitHub configured, those are offered instead of a passkey.
-    let Some(hub) = hosted_with(None, |dir, _| {
+    let hub = or_skip!(hosted_with(None, |dir, _| {
         let secret = dir.join("provider-secret");
         std::fs::write(&secret, "s3cret\n").unwrap();
         #[cfg(unix)]
@@ -955,11 +935,7 @@ async fn keeping_the_account_is_offered_after_the_first_success_to_the_browser_t
                 "api_url": "https://api.github.example"
             }] }
         })
-    })
-    .await
-    else {
-        return;
-    };
+    }));
     let mut person = hub.first_connect("Claude").await;
     let (_, tenant) = who(&hub, &mut person).await;
     let started = structured(
@@ -978,10 +954,7 @@ async fn keeping_the_account_is_offered_after_the_first_success_to_the_browser_t
     )
     .await;
     let stored = format!("{}-server", crate::accounts::tenants::tag(&tenant));
-    hub.devices
-        .enroll(&stored, &code_in(&cookies), &"ab".repeat(32), false)
-        .await
-        .unwrap();
+    join(&hub, &stored, &code_in(&cookies), "ab").await;
     let _link = hub.hub.links.connect_for_test(&stored);
     let (_, body) = page(&hub, &path, Some(&cookies)).await;
     assert!(body.contains("name=\"how\" value=\"github\""), "{body}");
@@ -1018,9 +991,7 @@ async fn keeping_the_account_is_offered_after_the_first_success_to_the_browser_t
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn each_step_kind_is_done_when_the_hub_sees_it_and_a_wait_returns_the_moment_it_is() {
     // The built-in "Get started" is this computer and done (spec first-connect, B).
-    let Some(builtin) = hub_on(None, json!({})).await else {
-        return;
-    };
+    let builtin = or_skip!(hub_on(None, json!({})));
     let mut someone = builtin.first_connect("Claude").await;
     let started = structured(
         &builtin,
@@ -1038,12 +1009,9 @@ async fn each_step_kind_is_done_when_the_hub_sees_it_and_a_wait_returns_the_mome
     assert_eq!(kinds, ["machine", "done"]);
     for store in stores().await {
         // Every step kind, in a site whose "Get started" still has each one.
-        let Some(hub) = hosted_with(store.as_deref(), |dir, _| {
+        let hub = or_skip!(hosted_with(store.as_deref(), |dir, _| {
             json!({ "downloads": dist(dir).to_string_lossy(), "site": { "dir": every_kind_site(dir).to_string_lossy() } })
-        })
-        .await else {
-            return;
-        };
+        }));
         let mut person = hub.first_connect("Claude").await;
         let (subject, tenant) = who(&hub, &mut person).await;
         let started = structured(
@@ -1117,10 +1085,7 @@ async fn each_step_kind_is_done_when_the_hub_sees_it_and_a_wait_returns_the_mome
             "{body}"
         );
         let stored = format!("{}-box", crate::accounts::tenants::tag(&tenant));
-        hub.devices
-            .enroll(&stored, &code_in(&cookies), &"cd".repeat(32), false)
-            .await
-            .unwrap();
+        join(&hub, &stored, &code_in(&cookies), "cd").await;
         // A wait returns when the machine connects.
         let at = Instant::now();
         let (waited, _link) = tokio::join!(
@@ -1252,7 +1217,7 @@ async fn each_step_kind_is_done_when_the_hub_sees_it_and_a_wait_returns_the_mome
 #[tokio::test]
 async fn a_plans_machine_limit_is_said_plainly_to_the_ai_and_on_the_page() {
     for store in stores().await {
-        let Some(hub) = hosted_with(store.as_deref(), |dir, _| {
+        let hub = or_skip!(hosted_with(store.as_deref(), |dir, _| {
             let site = site_dir(dir, |value| {
                 value["plans"] = json!([{ "id": "free", "name": "Free", "price": "Free",
                                           "limits": { "machines": 1 } }]);
@@ -1263,11 +1228,7 @@ async fn a_plans_machine_limit_is_said_plainly_to_the_ai_and_on_the_page() {
                 "tenancy": { "mode": "multi", "starts_per_hour": 100, "anonymous_connect": true,
                              "unsecured": { "machines": 10, "clients": 10, "idle_days": 14 } }
             })
-        })
-        .await
-        else {
-            return;
-        };
+        }));
         let mut person = hub.first_connect("Claude").await;
         let started = structured(
             &hub,
@@ -1340,13 +1301,12 @@ async fn a_plans_machine_limit_is_said_plainly_to_the_ai_and_on_the_page() {
 
 #[tokio::test]
 async fn a_waiting_tenant_gets_the_early_access_message() {
-    let Some(hub) = hosted_with(None, |dir, _| {
-        let site = site_dir(dir, |value| value["early_access"] = json!({ "mode": "early_access" }));
+    let hub = or_skip!(hosted_with(None, |dir, _| {
+        let site = site_dir(dir, |value| {
+            value["early_access"] = json!({ "mode": "early_access" })
+        });
         json!({ "downloads": dist(dir).to_string_lossy(), "site": { "dir": site.to_string_lossy() } })
-    })
-    .await else {
-        return;
-    };
+    }));
     let mut person = hub.first_connect("Claude").await;
     let note = structured(&hub, &mut person, "whoami", json!({})).await["access_note"]
         .as_str()
@@ -1365,18 +1325,16 @@ async fn a_waiting_tenant_gets_the_early_access_message() {
 #[tokio::test]
 async fn a_neutral_sites_workflow_pages_name_only_that_site() {
     let neutral = crate::site::tests::neutral_dir();
-    let Some(hub) = hosted_with(None, move |dir, _| {
+    let hub = or_skip!(hosted_with(None, move |dir, _| {
         let site = dir.join("neutral");
         crate::site::tests::copy(&neutral, &site);
         let path = site.join("site.json");
-        let mut value: Value = serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
+        let mut value: Value =
+            serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
         value["early_access"] = json!({ "mode": "open" });
         std::fs::write(&path, value.to_string()).unwrap();
         json!({ "downloads": dist(dir).to_string_lossy(), "site": { "dir": site.to_string_lossy() } })
-    })
-    .await else {
-        return;
-    };
+    }));
     let mut person = hub.first_connect("Claude").await;
     let tenant = who(&hub, &mut person).await.1;
     let mut seen = Vec::new();
@@ -1407,10 +1365,7 @@ async fn a_neutral_sites_workflow_pages_name_only_that_site() {
         assert!(body.contains("/join/dvg-"), "{body}");
         seen.push((format!("{workflow} with its line page"), body));
         let stored = format!("{}-{name}", crate::accounts::tenants::tag(&tenant));
-        hub.devices
-            .enroll(&stored, &code_in(&cookies), &"ef".repeat(32), false)
-            .await
-            .unwrap();
+        join(&hub, &stored, &code_in(&cookies), "ef").await;
         let _link = hub.hub.links.connect_for_test(&stored);
         let (_, body) = page(&hub, &path, Some(&cookies)).await;
         assert!(body.contains("id=\"keep\""), "{body}");
@@ -1545,9 +1500,7 @@ async fn connect_in(hub: &Hosted, app: &str, cookie: &str) -> Person {
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn an_ai_client_step_is_done_when_a_client_of_its_family_calls_for_the_tenant() {
     for store in stores().await {
-        let Some(hub) = hub_on(store.as_deref(), json!({})).await else {
-            return;
-        };
+        let hub = or_skip!(hub_on(store.as_deref(), json!({})));
         let mut claude = hub.first_connect("Claude").await;
         let (subject, tenant) = who(&hub, &mut claude).await;
         assert_eq!(
@@ -1762,16 +1715,13 @@ async fn the_sites_workflows_name_only_clients_and_kinds_the_hub_runs() {
 #[tokio::test]
 async fn a_client_the_site_marks_unavailable_is_offered_as_unavailable_with_its_words() {
     let why = "Grok is not offered on this hub yet.";
-    let Some(hub) = hosted_with(None, move |dir, _| {
+    let hub = or_skip!(hosted_with(None, move |dir, _| {
         let site = site_dir(dir, |_| {});
         std::fs::create_dir_all(site.join("content")).unwrap();
         let words = json!({ "workflow": { "clients": { "grok": { "unavailable": why } } } });
         std::fs::write(site.join("content/messages.json"), words.to_string()).unwrap();
         json!({ "downloads": dist(dir).to_string_lossy(), "site": { "dir": site.to_string_lossy() } })
-    })
-    .await else {
-        return;
-    };
+    }));
     let mut person = hub.first_connect("Claude").await;
     let listed = structured(&hub, &mut person, "workflow_list", json!({})).await;
     let offer = |id: &str| {
@@ -1800,9 +1750,7 @@ async fn a_client_the_site_marks_unavailable_is_offered_as_unavailable_with_its_
 
 #[tokio::test]
 async fn the_phone_step_shows_its_link_as_a_qr_code() {
-    let Some(hub) = hub_on(None, json!({})).await else {
-        return;
-    };
+    let hub = or_skip!(hub_on(None, json!({})));
     let mut person = hub.first_connect("Claude").await;
     let started = structured(
         &hub,

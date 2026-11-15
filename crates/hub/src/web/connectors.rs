@@ -180,10 +180,10 @@ mod tests {
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn the_page_and_the_api_give_each_client_this_hubs_address() {
-        let Some(hub) = crate::tenant_tests::hosted_with(None, |_, _| serde_json::json!({})).await
-        else {
-            return;
-        };
+        let hub = or_skip!(crate::tenant_tests::hosted_with(
+            None,
+            |_, _| serde_json::json!({})
+        ));
         let address = format!("{}/mcp", hub.url);
         let (status, html) =
             crate::tenant_tests::Hosted::text(hub.get("/connect", None).await).await;

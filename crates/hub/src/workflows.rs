@@ -377,19 +377,11 @@ impl Hub {
         let copy = &site.messages.workflow;
         let facts = &copy.facts;
         let ctx = || Ctx::new(&site);
-        let phones = match self.push.as_ref() {
-            Some(push) => Some(
-                push.devices()
-                    .push_for(&subject.id)
-                    .await
-                    .map_or(0, |p| p.len()),
-            ),
+        let phones = match &self.push {
+            Some(push) => Some(push.phones_for(std::slice::from_ref(&subject.id)).await),
             None => None,
         };
-        let room = self
-            .machine_room(subject)
-            .await
-            .map(|refused| refused.message);
+        let room = self.machine_room(subject).await.map(|r| r.message);
         let steps = row.definition.steps.clone();
         // The AI clients the tenant has working, when a step waits on one.
         let families = if steps.iter().any(|step| step.kind == AI_CLIENT) {

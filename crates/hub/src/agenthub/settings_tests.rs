@@ -12,9 +12,7 @@ async fn settings(hub: &Hosted, person: &mut Person, arguments: Value) -> Value 
 
 #[tokio::test]
 async fn an_account_names_its_boards_repo_and_environments_and_nobody_else_can() {
-    let Some(hub) = hosted_with(None, |_, _| json!({})).await else {
-        return;
-    };
+    let hub = or_skip!(hosted_with(None, |_, _| json!({})));
     let mut alice = hub.first_connect("Claude").await;
     let mut bob = hub.first_connect("Claude").await;
     let bound = hub

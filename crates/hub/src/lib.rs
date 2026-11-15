@@ -4,6 +4,10 @@
 //! is its whole behaviour; `devagotchi hub` and `devagotchi board` are its names, and
 //! `devagotchi login`, `logout` and `whoami` (`account`) are how a machine signs in to one.
 
+// Tests that need the test Postgres skip without one: `or_skip!` (devagotchi-store).
+#[cfg(test)]
+#[macro_use]
+extern crate devagotchi_store;
 #[cfg(test)]
 mod access_tests;
 pub mod account;
@@ -533,36 +537,6 @@ fn prepare_state_dir(state_dir: &std::path::Path) -> BridgeResult<()> {
     Ok(())
 }
 
-/// The machine registry in the hub's Postgres for `enroll`, `revoke` and `devices`: the
-/// storage `config` names, or `DEVAGOTCHI_HUB_STORAGE_URL`. Run `work` on it to the end.
-fn with_registry<T>(
-    state_dir: &std::path::Path,
-    config: Option<&std::path::Path>,
-    work: impl AsyncFnOnce(&Devices) -> BridgeResult<T>,
-) -> BridgeResult<T> {
-    prepare_state_dir(state_dir)?;
-    let storage = match config {
-        Some(path) => read_config(path)?.storage,
-        None => None,
-    };
-    let url = store::url_for(storage.as_ref().and_then(|s| s.url.as_deref()), state_dir);
-    if !url.starts_with("postgres://") && !url.starts_with("postgresql://") {
-        return Err(BridgeError::new(
-            "invalid_config",
-            "machines are kept in the hub's Postgres: pass --config with the hub's config, or set DEVAGOTCHI_HUB_STORAGE_URL",
-        ));
-    }
-    let schema = store::schema_for(storage.as_ref().and_then(|s| s.schema.as_deref()));
-    tokio::runtime::Builder::new_current_thread()
-        .enable_all()
-        .build()
-        .map_err(|error| BridgeError::new("runtime", error.to_string()))?
-        .block_on(async {
-            let store = store::Store::open_in(&url, schema.as_deref()).await?;
-            work(&Devices::new(store)).await
-        })
-}
-
 /// Record an operator command on the hub's audit chain: who ran it and what it did.
 fn operator_event(
     state: &std::path::Path,
@@ -645,61 +619,13 @@ fn manage(command: Command) -> BridgeResult<()> {
             state,
             config,
             device,
-        } => {
-            if !config::valid_name(&device) {
-                return Err(BridgeError::new(
-                    "invalid_cli",
-                    "device must be [a-z0-9][a-z0-9-]{0,62}, the broker name in the hub config",
-                ));
-            }
-            let code = with_registry(&state, config.as_deref(), async |devices| {
-                devices.issue_code(&device, machines::random::<16>()).await
-            })?;
-            // The code itself is never audited or logged; only that one was issued.
-            operator_event(&state, "link.code_issued", &device, "ok")?;
-            // The code is the one secret this prints; it goes to stdout only, once.
-            println!("{code}");
-            eprintln!(
-                "One-time code for {device}, valid {} minutes; any earlier unused code for {device} no longer works.\nOn that machine, with the code in DEVAGOTCHI_ENROLL_CODE (or on stdin):\n  devagotchi link enroll --state-dir ... --hub ... --device {device} --broker ...",
-                machines::devices::CODE_TTL_SECS / 60
-            );
-        }
+        } => machines::cli::enroll(&state, config.as_deref(), &device)?,
         Command::Revoke {
             state,
             config,
             device,
-        } => {
-            let (revoked, cancelled) = with_registry(&state, config.as_deref(), async |devices| {
-                devices.revoke(&device).await
-            })?;
-            operator_event(
-                &state,
-                "link.revoke",
-                &device,
-                &format!("revoked={revoked} codes_cancelled={cancelled}"),
-            )?;
-            match (revoked, cancelled) {
-                (false, 0) => {
-                    return Err(BridgeError::new(
-                        "not_enrolled",
-                        format!("no active device or pending code named {device}"),
-                    ));
-                }
-                (true, _) => eprintln!(
-                    "{device} revoked; its link closes within seconds ({cancelled} pending codes cancelled)"
-                ),
-                (false, _) => eprintln!("{cancelled} pending codes for {device} cancelled"),
-            }
-        }
-        Command::Devices { state, config } => {
-            let list = with_registry(&state, config.as_deref(), async |devices| {
-                devices.list().await
-            })?;
-            println!(
-                "{}",
-                serde_json::to_string_pretty(&list).unwrap_or_default()
-            );
-        }
+        } => machines::cli::revoke(&state, config.as_deref(), &device)?,
+        Command::Devices { state, config } => machines::cli::devices(&state, config.as_deref())?,
         Command::SetupCode { state, config } => {
             for line in setup_code_lines(&state, &config)? {
                 if let Some(code) = line.strip_prefix("code ") {
@@ -2422,10 +2348,7 @@ mod tests {
             )
             .unwrap(),
         );
-        let Some((_db, devices)) = machines::devices::test_devices().await else {
-            return;
-        };
-        let devices = Arc::new(devices);
+        let devices = or_skip!(crate::machines::devices::test_registry());
         let audit = Arc::new(Audit::open(&dir.path().join("audit.sqlite3")).unwrap());
         let links = Arc::new(machines::link::Links::new(
             config.clone(),
@@ -2659,8 +2582,7 @@ mod tests {
         let passkeys = accounts
             .clone()
             .and_then(|accounts| web::HubSignIn::new(config.clone(), accounts).map(Arc::new));
-        let (_db, devices) = machines::devices::test_devices().await?;
-        let devices = Arc::new(devices);
+        let devices = machines::devices::test_registry().await?;
         let audit = Arc::new(Audit::open(&dir.join("audit.sqlite3")).unwrap());
         let links = Arc::new(Links::new(config.clone(), devices, audit.clone()));
         Some(AppState {
@@ -2751,9 +2673,7 @@ mod tests {
             .build()
             .unwrap();
         for (mode, auth, owner) in cases {
-            let Some(state) = state_for(&dir.path().join(mode), auth, owner).await else {
-                return;
-            };
+            let state = or_skip!(state_for(&dir.path().join(mode), auth, owner));
             let devagotchi = mode == "devagotchi";
             let hub_mode = mode.starts_with("hub");
             assert_eq!(state.verifier.authority().is_some(), devagotchi, "{mode}");

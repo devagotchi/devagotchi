@@ -478,9 +478,7 @@ async fn shared_runtime_resolver_uses_postgres_without_board_files_and_observes_
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn listener_reconnect_invalidates_waiters_even_without_a_new_event() {
-    let Some(test) = testing::postgres().await else {
-        return;
-    };
+    let test = or_skip!(testing::postgres());
     let dir = tempfile::tempdir().unwrap();
     let config = crate::config::HubConfig::parse_with(
         &serde_json::json!({
@@ -536,9 +534,7 @@ async fn listener_reconnect_invalidates_waiters_even_without_a_new_event() {
 
 #[tokio::test]
 async fn outbox_failure_rolls_back_ticket_lease_event_and_fence() {
-    let Some(test) = testing::postgres().await else {
-        return;
-    };
+    let test = or_skip!(testing::postgres());
     seed(&test.store).await;
     let board = HostedBoard::new(test.store.clone(), TENANT, "demo").unwrap();
     board.initialize().await.unwrap();
@@ -580,9 +576,7 @@ async fn outbox_failure_rolls_back_ticket_lease_event_and_fence() {
 
 #[tokio::test]
 async fn persisted_leases_are_reaped_without_opening_any_runtime_board() {
-    let Some(test) = testing::postgres().await else {
-        return;
-    };
+    let test = or_skip!(testing::postgres());
     seed(&test.store).await;
     for (tenant, owner) in [(TENANT, "one"), (OTHER, "two")] {
         let board = HostedBoard::for_owner(test.store.clone(), tenant, owner, "demo").unwrap();
@@ -637,9 +631,7 @@ async fn seed(store: &Store) {
 
 #[tokio::test]
 async fn externally_authenticated_boards_provision_the_home_tenant_without_local_accounts() {
-    let Some(test) = testing::postgres().await else {
-        return;
-    };
+    let test = or_skip!(testing::postgres());
     let registry = registry::Registry::new(test.store.clone()).unwrap();
     let (a, b) = tokio::join!(
         registry.open("@shared", "demo", true, None),
@@ -857,9 +849,7 @@ async fn concurrent_native_claims_have_one_winner_and_reclaim_burns_fences() {
 /// transactions, on the board's chain.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_hosted_board_approves_a_kind_ahead_of_time() {
-    let Some(test) = testing::postgres().await else {
-        return;
-    };
+    let test = or_skip!(testing::postgres());
     seed(&test.store).await;
     let hosted = HostedBoard::new(test.store.clone(), TENANT, "ahead").unwrap();
     hosted.initialize().await.unwrap();
@@ -874,9 +864,7 @@ async fn a_hosted_board_approves_a_kind_ahead_of_time() {
 /// A note reaching who it is for on a hosted board (`agenthub::inbox`).
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_hosted_board_delivers_a_note_once() {
-    let Some(test) = testing::postgres().await else {
-        return;
-    };
+    let test = or_skip!(testing::postgres());
     seed(&test.store).await;
     let hosted = HostedBoard::new(test.store.clone(), TENANT, "inbox").unwrap();
     hosted.initialize().await.unwrap();

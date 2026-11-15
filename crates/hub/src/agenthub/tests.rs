@@ -1503,8 +1503,7 @@ mod bound {
             value[key] = more.clone();
         }
         let config = Arc::new(HubConfig::parse(&value.to_string()).unwrap());
-        let (_db, devices) = crate::machines::devices::test_devices().await?;
-        let devices = Arc::new(devices);
+        let devices = crate::machines::devices::test_registry().await?;
         let audit = Arc::new(Audit::open(&dir.join("audit.sqlite3")).unwrap());
         let links = Arc::new(Links::new(config.clone(), devices.clone(), audit.clone()));
         let state = AppState {
@@ -1577,9 +1576,7 @@ mod bound {
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn two_machines_one_account_one_board() {
         let dir = tempfile::tempdir().unwrap();
-        let Some(url) = hub(dir.path()).await else {
-            return;
-        };
+        let url = or_skip!(hub(dir.path()));
         let machine_a = dir.path().join("a").join("demo");
         let machine_b = dir.path().join("b").join("demo");
         std::fs::create_dir_all(&machine_a).unwrap();
@@ -1739,9 +1736,7 @@ mod bound {
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn a_bound_project_carries_anchors_to_the_hub_and_back() {
         let dir = tempfile::tempdir().unwrap();
-        let Some(url) = hub(dir.path()).await else {
-            return;
-        };
+        let url = or_skip!(hub(dir.path()));
         let project = dir.path().join("a").join("demo");
         std::fs::create_dir_all(&project).unwrap();
         let account = dir.path().join("a").join("account.json");
@@ -1881,18 +1876,14 @@ mod bound {
             &["init", "--project", "shared"],
         );
         assert_eq!(code, EXIT_OK, "{err}");
-        let Some(url) = hub_with(
+        let url = or_skip!(hub_with(
             dir.path(),
             json!({
                 "boards": [{ "project": "shared", "dir": shared }],
                 "grants": [{ "subject": AGENT, "boards": ["shared"] }]
             }),
             &[("tok-agent", AGENT)],
-        )
-        .await
-        else {
-            return;
-        };
+        ));
         let project = dir.path().join("m").join("demo");
         std::fs::create_dir_all(&project).unwrap();
         let account = dir.path().join("m").join("account.json");

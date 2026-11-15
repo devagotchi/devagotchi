@@ -72,9 +72,7 @@ async fn stores() -> Vec<Option<String>> {
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_waiting_tenant_is_answered_not_served_until_an_operator_lets_it_in() {
     for store in stores().await {
-        if let Some(hub) = hub_with(store.as_deref(), early_access).await {
-            waiting(hub).await;
-        }
+        waiting(or_skip!(hub_with(store.as_deref(), early_access))).await;
     }
 }
 
@@ -208,9 +206,7 @@ async fn waiting(hub: Hosted) {
 
 #[tokio::test]
 async fn opening_sign_up_lets_everyone_waiting_in_and_closing_it_puts_nobody_back() {
-    let Some(hub) = hub_with(None, early_access).await else {
-        return;
-    };
+    let hub = or_skip!(hub_with(None, early_access));
     let mut early = hub.first_connect("Claude").await;
     assert_eq!(whoami(&hub, &mut early).await["access"], "waiting");
     let refusal = hub.call(&mut early, "machines", json!({})).await;
@@ -253,9 +249,7 @@ async fn opening_sign_up_lets_everyone_waiting_in_and_closing_it_puts_nobody_bac
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_plans_limits_hold_at_the_boundary_and_name_the_plan() {
     for store in stores().await {
-        if let Some(hub) = hub_with(store.as_deref(), plans).await {
-            limits(hub).await;
-        }
+        limits(or_skip!(hub_with(store.as_deref(), plans))).await;
     }
 }
 
@@ -352,7 +346,7 @@ async fn limits(hub: Hosted) {
 async fn a_tenant_let_in_hears_so_by_email_when_it_has_a_verified_address() {
     let mail = crate::mail::stub::start("hub").await;
     let mail_url = mail.url.clone();
-    let Some(hub) = hosted_with(None, |dir, _| {
+    let hub = or_skip!(hosted_with(None, |dir, _| {
         let site = site_dir(dir, "site", early_access);
         let password = dir.join("smtp-password");
         std::fs::write(&password, "mail-pass\n").unwrap();
@@ -366,11 +360,7 @@ async fn a_tenant_let_in_hears_so_by_email_when_it_has_a_verified_address() {
             "auth": { "email": { "smtp_url": mail_url, "password_file": password.to_string_lossy(),
                                  "from": "Hub <hub@hub.test>" } }
         })
-    })
-    .await
-    else {
-        return;
-    };
+    }));
     let mailer = web::Providers::from_config(&hub.config)
         .unwrap()
         .email

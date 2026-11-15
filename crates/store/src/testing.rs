@@ -80,13 +80,13 @@ pub async fn empty_postgres() -> Option<String> {
     Some(format!("{root}/{name}"))
 }
 
-/// The value of a test fixture that needs the test Postgres, or the end of the test when
-/// `DEVAGOTCHI_TEST_POSTGRES_URL` names none: `let w = or_skip!(world().await);`. CI's
-/// `hub-postgres` job runs these with a server.
+/// What a test fixture that needs the test Postgres gives, or the end of the test when
+/// `DEVAGOTCHI_TEST_POSTGRES_URL` names none: `let w = or_skip!(world());` (it awaits the
+/// fixture). CI's `hub-postgres` job runs these with a server.
 #[macro_export]
 macro_rules! or_skip {
     ($fixture:expr) => {
-        match $fixture {
+        match $fixture.await {
             Some(found) => found,
             None => return,
         }

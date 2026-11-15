@@ -1,17 +1,8 @@
 use super::*;
 
-macro_rules! registry {
-    () => {
-        match test_devices().await {
-            Some(found) => found,
-            None => return,
-        }
-    };
-}
-
 #[tokio::test]
 async fn a_code_binds_one_key_once_and_only_for_its_device() {
-    let (_db, devices) = registry!();
+    let devices = or_skip!(test_registry());
     let code = devices.issue_code("gus", [7; 16]).await.unwrap();
     assert!(code.starts_with("dvg-") && code.len() == 36);
     assert_eq!(
@@ -37,7 +28,7 @@ async fn a_code_binds_one_key_once_and_only_for_its_device() {
 
 #[tokio::test]
 async fn only_the_newest_code_lives_and_binding_or_revoking_ends_it() {
-    let (_db, devices) = registry!();
+    let devices = or_skip!(test_registry());
     let older = devices.issue_code("gus", [10; 16]).await.unwrap();
     let newer = devices.issue_code("gus", [11; 16]).await.unwrap();
     assert!(
@@ -63,7 +54,7 @@ async fn only_the_newest_code_lives_and_binding_or_revoking_ends_it() {
 
 #[tokio::test]
 async fn expired_and_unknown_codes_are_refused() {
-    let (_db, devices) = registry!();
+    let devices = or_skip!(test_registry());
     let code = devices.issue_code("gus", [1; 16]).await.unwrap();
     devices.expire_codes().await;
     assert!(devices.enroll("gus", &code, "aa", true).await.is_err());
@@ -73,7 +64,7 @@ async fn expired_and_unknown_codes_are_refused() {
 
 #[tokio::test]
 async fn revoke_sticks_until_a_new_code_re_enrolls() {
-    let (_db, devices) = registry!();
+    let devices = or_skip!(test_registry());
     let first = devices.issue_code("gus", [2; 16]).await.unwrap();
     devices.enroll("gus", &first, "aa", true).await.unwrap();
     assert!(!devices.is_revoked("gus").await.unwrap());
@@ -89,7 +80,7 @@ async fn revoke_sticks_until_a_new_code_re_enrolls() {
 
 #[tokio::test]
 async fn an_owned_code_binds_a_machine_to_its_account_only() {
-    let (_db, devices) = registry!();
+    let devices = or_skip!(test_registry());
     let code = devices
         .issue_owned_code("acct-a", "platinum", [20; 16], OWNED_LIMIT)
         .await
@@ -152,7 +143,7 @@ async fn an_owned_code_binds_a_machine_to_its_account_only() {
 
 #[tokio::test]
 async fn operator_codes_and_configured_names_stay_the_operators() {
-    let (_db, devices) = registry!();
+    let devices = or_skip!(test_registry());
     // An operator's code joins only a device the hub config names.
     let code = devices.issue_code("gus", [30; 16]).await.unwrap();
     assert_eq!(
@@ -193,7 +184,7 @@ async fn operator_codes_and_configured_names_stay_the_operators() {
 
 #[tokio::test]
 async fn a_pending_owned_code_holds_the_name_until_it_is_spent_or_expires() {
-    let (_db, devices) = registry!();
+    let devices = or_skip!(test_registry());
     let pending = devices
         .issue_owned_code("acct-a", "spare", [40; 16], OWNED_LIMIT)
         .await
@@ -237,7 +228,7 @@ async fn a_pending_owned_code_holds_the_name_until_it_is_spent_or_expires() {
 
 #[tokio::test]
 async fn an_account_holds_at_most_its_limit_and_revoking_frees_a_place() {
-    let (_db, devices) = registry!();
+    let devices = or_skip!(test_registry());
     let one = devices
         .issue_owned_code("acct-a", "one", [50; 16], 2)
         .await
@@ -273,7 +264,7 @@ async fn an_account_holds_at_most_its_limit_and_revoking_frees_a_place() {
 
 #[tokio::test]
 async fn a_live_code_names_its_machine_until_it_is_spent_or_expires() {
-    let (_db, devices) = registry!();
+    let devices = or_skip!(test_registry());
     let code = devices
         .issue_owned_code("acct-a", "platinum", [60; 16], OWNED_LIMIT)
         .await
@@ -303,7 +294,7 @@ async fn a_live_code_names_its_machine_until_it_is_spent_or_expires() {
 
 #[tokio::test]
 async fn push_subscriptions_are_kept_per_person_and_replaced_by_endpoint() {
-    let (_db, devices) = registry!();
+    let devices = or_skip!(test_registry());
     devices
         .add_push("acct-a", "https://push.example/1", "k1", "a1")
         .await
@@ -329,7 +320,7 @@ async fn push_subscriptions_are_kept_per_person_and_replaced_by_endpoint() {
 
 #[tokio::test]
 async fn reassign_owner_moves_a_machine_onto_a_devagotchi_account() {
-    let (_db, devices) = registry!();
+    let devices = or_skip!(test_registry());
     let code = devices
         .issue_owned_code("300000000000000001", "gus", [9; 16], OWNED_LIMIT)
         .await

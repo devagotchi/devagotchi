@@ -279,9 +279,7 @@ fn google(sub: &str, email: Option<&str>) -> Person {
 
 #[tokio::test]
 async fn google_and_shippin_sign_a_new_person_in_to_a_tenant_of_their_own() {
-    let Some(world) = world(google("g-100", Some("sam@example.com"))).await else {
-        return;
-    };
+    let world = or_skip!(world(google("g-100", Some("sam@example.com"))));
     let home = world.hub.accounts.home_tenant().await.unwrap();
     let done = world.sign_in("google", None, false).await;
     assert_eq!(done.status(), 303);
@@ -333,9 +331,7 @@ async fn google_and_shippin_sign_a_new_person_in_to_a_tenant_of_their_own() {
 
 #[tokio::test]
 async fn the_operators_google_sign_in_is_the_owner_with_no_claim() {
-    let Some(world) = world(google("g-1", Some("jesse@example.com"))).await else {
-        return;
-    };
+    let world = or_skip!(world(google("g-1", Some("jesse@example.com"))));
     let done = world.sign_in("google", None, false).await;
     let session = set_cookie(&done, "dg_session").unwrap();
     let page = world.account_page(&session).await;
@@ -359,16 +355,12 @@ async fn the_operators_google_sign_in_is_the_owner_with_no_claim() {
 
 #[tokio::test]
 async fn github_secures_the_account_made_on_first_connect() {
-    let Some(world) = world(Person {
+    let world = or_skip!(world(Person {
         sub: "4242".into(),
         email: Some("octo@example.com".into()),
         verified: true,
         ..Person::default()
-    })
-    .await
-    else {
-        return;
-    };
+    }));
     let person = world.hub.first_connect("Claude").await;
     let before = world.account_page(&person.cookie).await;
     assert!(before.contains("id=\"secure\""), "{before}");
@@ -408,9 +400,7 @@ async fn github_secures_the_account_made_on_first_connect() {
 
 #[tokio::test]
 async fn a_sign_in_that_does_not_check_out_is_refused() {
-    let Some(world) = world(google("g-3", Some("x@example.com"))).await else {
-        return;
-    };
+    let world = or_skip!(world(google("g-3", Some("x@example.com"))));
     // The provider's answer for another client.
     world.person(Person {
         wrong_audience: true,
@@ -485,9 +475,7 @@ async fn wait_for_mail(world: &World, count: usize) {
 
 #[tokio::test]
 async fn an_email_link_signs_in_once_and_secures_an_account() {
-    let Some(world) = world(google("g-9", None)).await else {
-        return;
-    };
+    let world = or_skip!(world(google("g-9", None)));
     // Asking says the same thing whatever the address; the link goes only by mail.
     let (status, page) = Hosted::text(
         world
@@ -605,9 +593,7 @@ async fn an_email_link_signs_in_once_and_secures_an_account() {
 
 #[tokio::test]
 async fn email_links_are_rate_limited_per_address() {
-    let Some(world) = world(google("g-9", None)).await else {
-        return;
-    };
+    let world = or_skip!(world(google("g-9", None)));
     for _ in 0..5 {
         let (status, _) = Hosted::text(
             world
@@ -631,9 +617,7 @@ async fn email_links_are_rate_limited_per_address() {
 #[tokio::test]
 async fn google_for_an_address_with_a_password_account_asks_to_link_it() {
     // Spec first-connect, A2: the same address signed up with a password, then Google.
-    let Some(world) = world(google("g-300", Some("pat@example.com"))).await else {
-        return;
-    };
+    let world = or_skip!(world(google("g-300", Some("pat@example.com"))));
     let password = world
         .hub
         .accounts
@@ -701,9 +685,7 @@ async fn google_for_an_address_with_a_password_account_asks_to_link_it() {
 async fn link_with_a_wrong_password_links_nothing_and_signs_nobody_in() {
     // Someone signed up first with this address and their own password: the person Google
     // proved the address for cannot be joined to that account without its password.
-    let Some(world) = world(google("g-302", Some("ash@example.com"))).await else {
-        return;
-    };
+    let world = or_skip!(world(google("g-302", Some("ash@example.com"))));
     let squatter = world
         .hub
         .accounts
@@ -750,9 +732,7 @@ async fn link_with_a_wrong_password_links_nothing_and_signs_nobody_in() {
 
 #[tokio::test]
 async fn keep_separate_makes_a_new_account_for_the_google_sign_in() {
-    let Some(world) = world(google("g-301", Some("lee@example.com"))).await else {
-        return;
-    };
+    let world = or_skip!(world(google("g-301", Some("lee@example.com"))));
     let password = world
         .hub
         .accounts

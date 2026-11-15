@@ -40,9 +40,7 @@ fn version(view: &Value) -> String {
 
 #[tokio::test]
 async fn a_person_works_a_ticket_from_the_phone_and_the_board_records_it() {
-    let Some(hub) = hosted().await else {
-        return;
-    };
+    let hub = or_skip!(hosted());
     let mut alice = hub.first_connect("Claude").await;
     let bob = hub.first_connect("Claude").await;
     things_of(&hub, &mut alice).await;
@@ -268,9 +266,7 @@ async fn a_person_works_a_ticket_from_the_phone_and_the_board_records_it() {
 
 #[tokio::test]
 async fn undo_lasts_ten_seconds() {
-    let Some(hub) = hosted().await else {
-        return;
-    };
+    let hub = or_skip!(hosted());
     let mut alice = hub.first_connect("Claude").await;
     things_of(&hub, &mut alice).await;
     let made = hub
@@ -315,9 +311,7 @@ async fn undo_lasts_ten_seconds() {
 
 #[tokio::test]
 async fn the_board_filters_by_anchor_chips_and_the_ticket_shows_its_anchors() {
-    let Some(hub) = hosted().await else {
-        return;
-    };
+    let hub = or_skip!(hosted());
     let mut alice = hub.first_connect("Claude").await;
     things_of(&hub, &mut alice).await;
     let made = hub
@@ -424,9 +418,7 @@ async fn close_and_undo(hub: &Hosted, alice: &mut Person) -> (String, String) {
 
 #[tokio::test]
 async fn undo_works_on_a_board_made_before_closed_tickets_reopened() {
-    let Some(hub) = hosted().await else {
-        return;
-    };
+    let hub = or_skip!(hosted());
     let mut alice = hub.first_connect("Claude").await;
     earlier_board(
         &hub,
@@ -460,9 +452,7 @@ async fn undo_works_on_a_board_made_before_closed_tickets_reopened() {
 
 #[tokio::test]
 async fn undo_on_a_customised_workflow_says_which_transition_to_add() {
-    let Some(hub) = hosted().await else {
-        return;
-    };
+    let hub = or_skip!(hosted());
     let mut alice = hub.first_connect("Claude").await;
     let mut ours = crate::agenthub::Workflow::previous_default();
     ours.id = "ours".into();
@@ -483,9 +473,7 @@ async fn undo_on_a_customised_workflow_says_which_transition_to_add() {
 
 #[tokio::test]
 async fn a_person_assigns_a_ticket_to_an_agent_and_the_agent_is_told() {
-    let Some(hub) = hosted().await else {
-        return;
-    };
+    let hub = or_skip!(hosted());
     let mut alice = hub.first_connect("Claude").await;
     things_of(&hub, &mut alice).await;
     let made = hub

@@ -457,10 +457,8 @@ impl Hub {
             // A machine the caller added is the caller's alone; anyone else is told it
             // does not exist, so names of other accounts' machines are not revealed.
             None if self.config.broker(broker).is_none() => {
-                match self.own_machine(subject, broker).await {
-                    Some(device) => Ok(Route::Link(device.name)),
-                    None => unknown(),
-                }
+                (self.own_machine(subject, broker).await)
+                    .map_or_else(unknown, |device| Ok(Route::Link(device.name)))
             }
             None => Err(Json(BridgeError::new(
                 "not_granted",

@@ -46,9 +46,7 @@ async fn subject_of(hub: &Hosted, person: &mut Person) -> String {
 }
 
 async fn run(store: Option<&str>) {
-    let Some(hub) = hosted_with(store, |_, _| json!({})).await else {
-        return;
-    };
+    let hub = or_skip!(hosted_with(store, |_, _| json!({})));
     let mut alice = hub.first_connect("Claude").await;
     let mut bob = hub.first_connect("Codex").await;
     let bob_id = subject_of(&hub, &mut bob).await;
@@ -262,9 +260,7 @@ async fn a_change_of_role_holds_from_the_ais_next_call() {
 /// invite shown once and taken on `/invite`, the organisation's board in the app, and a
 /// person made viewer refused on the ticket page's actions.
 async fn pages(store: Option<&str>) {
-    let Some(hub) = hosted_with(store, |_, _| json!({})).await else {
-        return;
-    };
+    let hub = or_skip!(hosted_with(store, |_, _| json!({})));
     let alice = hub.first_connect("Claude").await;
     let mut bob = hub.first_connect("Codex").await;
     let bob_id = subject_of(&hub, &mut bob).await;

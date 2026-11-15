@@ -372,12 +372,7 @@ pub async fn test(State(state): State<AppState>, headers: HeaderMap) -> Response
             Some(("/account", "Your account")),
         );
     };
-    let phones = push
-        .devices()
-        .push_for(&subject.id)
-        .await
-        .map(|p| p.len())
-        .unwrap_or(0);
+    let phones = push.phones_for(std::slice::from_ref(&subject.id)).await;
     if phones == 0 {
         return see_other("/approvals?test=no-phone", &[]);
     }

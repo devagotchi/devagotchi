@@ -143,9 +143,7 @@ async fn both_backends_have_the_same_tables_and_columns() {
     // The two migration directories are kept in step by hand for the tables made before
     // the hub went Postgres only (POSTGRES_ONLY below); this holds them to it. Runs where the
     // test Postgres server is set (CI).
-    let Some(postgres) = postgres().await else {
-        return;
-    };
+    let postgres = or_skip!(postgres());
     let sqlite = sqlite().await;
     let mut lite = BTreeSet::new();
     let tables: Vec<String> = sqlx::query_scalar(
@@ -225,9 +223,7 @@ async fn on_postgres_the_hubs_tables_live_in_their_own_schema() {
     // A database something else also uses (a Supabase project): the hub's tables go in the
     // `devagotchi` schema under their prefixed names, its migration record in the schema
     // configured (made if missing); `public` stays as it was.
-    let Some(url) = empty_postgres().await else {
-        return;
-    };
+    let url = or_skip!(empty_postgres());
     let store = Store::open_in(&url, Some("devagotchi_hub")).await.unwrap();
     let mut placed = std::collections::BTreeMap::<String, Vec<String>>::new();
     let rows = sqlx::query(

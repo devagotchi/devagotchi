@@ -459,9 +459,7 @@ async fn a_plan_holds_a_tenant_to_its_ai_apps_and_a_lost_plan_reads_as_the_defau
 
 #[tokio::test]
 async fn on_postgres_a_tenants_access_is_its_own_and_the_operators_list_names_tenants_only() {
-    let Some(test) = testing::postgres().await else {
-        return;
-    };
+    let test = or_skip!(testing::postgres());
     let accounts = Accounts::open(test.store.clone())
         .await
         .unwrap()

@@ -72,9 +72,7 @@ const USUAL: [(&str, &str); 4] = [
 ];
 
 async fn run(store: Option<&str>) {
-    let Some(hub) = hosted_with(store, |_, _| json!({})).await else {
-        return;
-    };
+    let hub = or_skip!(hosted_with(store, |_, _| json!({})));
     let mut person = hub.first_connect("Claude").await;
     let bound = hub
         .call(&mut person, "board_bind", json!({ "project": "site" }))

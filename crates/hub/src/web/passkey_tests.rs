@@ -19,14 +19,10 @@ use crate::{
     auth::Verifier,
     config::HubConfig,
     hub::Hub,
-    machines::devices::Devices,
     machines::link::Links,
 };
 
 pub(super) struct World {
-    /// The registry's test database, kept for the world's life, and the registry.
-    _db: crate::store::testing::TestStore,
-    devices: Arc<Devices>,
     pub(super) url: String,
     pub(super) http: reqwest::Client,
     pub(super) accounts: Arc<Accounts>,
@@ -86,9 +82,7 @@ async fn world_configured(owner: Option<&str>, site: Option<&std::path::Path>) -
         .await
         .unwrap(),
     );
-    let (db, devices) = crate::machines::devices::test_devices().await?;
-    let devices = Arc::new(devices);
-    let registry = devices.clone();
+    let devices = crate::machines::devices::test_registry().await?;
     let audit = Arc::new(Audit::open(&dir.path().join("audit.sqlite3")).unwrap());
     let links = Arc::new(Links::new(config.clone(), devices.clone(), audit.clone()));
     let push = Arc::new(crate::push::Push::open(dir.path(), &url, devices).unwrap());
@@ -124,8 +118,6 @@ async fn world_configured(owner: Option<&str>, site: Option<&std::path::Path>) -
         .with_state(state);
     tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
     Some(World {
-        _db: db,
-        devices: registry,
         url,
         http: reqwest::Client::builder()
             .redirect(reqwest::redirect::Policy::none())
@@ -244,9 +236,7 @@ impl World {
 
 #[tokio::test]
 async fn the_owner_makes_a_passkey_from_the_link_and_signs_in_with_it() {
-    let Some(world) = world().await else {
-        return;
-    };
+    let world = or_skip!(world());
     let owner = world
         .accounts
         .ensure_owner(None, "Jesse", [1; 16])
@@ -343,9 +333,7 @@ async fn the_owner_makes_a_passkey_from_the_link_and_signs_in_with_it() {
 
 #[tokio::test]
 async fn a_self_hosted_owner_can_set_and_use_a_password_without_public_signup() {
-    let Some(world) = world().await else {
-        return;
-    };
+    let world = or_skip!(world());
     let owner = world
         .accounts
         .ensure_owner(None, "Jesse", [2; 16])
@@ -427,9 +415,7 @@ async fn a_self_hosted_owner_can_set_and_use_a_password_without_public_signup() 
 
 #[tokio::test]
 async fn the_owner_link_can_set_a_local_password_without_a_passkey_or_external_provider() {
-    let Some(world) = world().await else {
-        return;
-    };
+    let world = or_skip!(world());
     let claim_code = world.accounts.issue_claim_code().await.unwrap().unwrap();
     let claim_page = world.get("/claim", None).await.text().await.unwrap();
     assert!(
@@ -524,9 +510,7 @@ async fn the_owner_link_can_set_a_local_password_without_a_passkey_or_external_p
 
 #[tokio::test]
 async fn ceremonies_answer_only_the_hubs_own_pages_and_work_once() {
-    let Some(world) = world().await else {
-        return;
-    };
+    let world = or_skip!(world());
     let owner = world
         .accounts
         .ensure_owner(None, "Jesse", [1; 16])
@@ -624,9 +608,7 @@ async fn ceremonies_answer_only_the_hubs_own_pages_and_work_once() {
 
 #[tokio::test]
 async fn a_hub_alone_signs_people_in_with_no_identity_provider() {
-    let Some(world) = world().await else {
-        return;
-    };
+    let world = or_skip!(world());
     let home = world.get("/", None).await;
     assert_eq!(home.status(), 200);
     // Nobody owns it yet: the landing page offers the claim (`claim_tests.rs`), and no
@@ -681,9 +663,7 @@ async fn a_hub_alone_signs_people_in_with_no_identity_provider() {
 async fn the_owner_takes_the_account_back_from_a_passkey_it_did_not_make() {
     // Someone used a leaked owner link first. `hub owner --replace` gives the owner a link
     // whose use removes every other passkey of the account and ends its sessions.
-    let Some(world) = world().await else {
-        return;
-    };
+    let world = or_skip!(world());
     let owner = world
         .accounts
         .ensure_owner(None, "Jesse", [1; 16])
@@ -721,9 +701,7 @@ async fn the_owner_takes_the_account_back_from_a_passkey_it_did_not_make() {
 
 #[tokio::test]
 async fn using_an_owner_link_ends_the_owners_other_sessions() {
-    let Some(world) = world().await else {
-        return;
-    };
+    let world = or_skip!(world());
     let owner = world
         .accounts
         .ensure_owner(None, "Jesse", [1; 16])
@@ -752,9 +730,7 @@ async fn using_an_owner_link_ends_the_owners_other_sessions() {
 
 #[tokio::test]
 async fn signing_out_takes_the_hubs_own_page() {
-    let Some(world) = world().await else {
-        return;
-    };
+    let world = or_skip!(world());
     let owner = world
         .accounts
         .ensure_owner(None, "Jesse", [1; 16])
@@ -786,9 +762,7 @@ async fn signing_out_takes_the_hubs_own_page() {
 #[tokio::test]
 async fn a_link_for_another_owner_than_the_configs_is_refused_before_it_is_spent() {
     // The config names the Texas owner, but the store's owner was made without it.
-    let Some(world) = world_owned_by(Some("395290028818825218")).await else {
-        return;
-    };
+    let world = or_skip!(world_owned_by(Some("395290028818825218")));
     let stray = world
         .accounts
         .ensure_owner(None, "Owner", [1; 16])
@@ -841,9 +815,7 @@ async fn a_link_for_another_owner_than_the_configs_is_refused_before_it_is_spent
 
 #[tokio::test]
 async fn a_copied_passkey_ends_the_sessions_it_opened() {
-    let Some(world) = world().await else {
-        return;
-    };
+    let world = or_skip!(world());
     let owner = world
         .accounts
         .ensure_owner(None, "Jesse", [1; 16])
@@ -914,9 +886,7 @@ async fn on_https_the_cookies_are_the_hosts_alone() {
 async fn a_replacing_link_lets_the_device_that_holds_the_old_passkey_make_the_new_one() {
     // The owner's usual phone already holds a passkey for this hub: listing it in
     // excludeCredentials would make the phone refuse to make another.
-    let Some(world) = world().await else {
-        return;
-    };
+    let world = or_skip!(world());
     let owner = world
         .accounts
         .ensure_owner(None, "Jesse", [1; 16])
@@ -952,9 +922,7 @@ async fn a_replacing_link_lets_the_device_that_holds_the_old_passkey_make_the_ne
 async fn an_old_answer_replayed_signs_nobody_out() {
     // A captured sign-in from a key that keeps a counter, replayed after the counter has
     // moved on: refused, and the sessions opened since stay.
-    let Some(world) = world().await else {
-        return;
-    };
+    let world = or_skip!(world());
     let owner = world
         .accounts
         .ensure_owner(None, "Jesse", [1; 16])
@@ -989,9 +957,7 @@ async fn an_old_answer_replayed_signs_nobody_out() {
 
 #[tokio::test]
 async fn ceremony_bodies_are_json_only() {
-    let Some(world) = world().await else {
-        return;
-    };
+    let world = or_skip!(world());
     let plain = world
         .http
         .post(format!("{}/passkey/sign-in/options", world.url))
@@ -1021,9 +987,7 @@ fn query_param(url: &str, key: &str) -> Option<String> {
 #[tokio::test]
 async fn an_ai_client_registers_the_owner_approves_it_and_the_hub_checks_its_tokens() {
     // What Claude or ChatGPT does against `<hub>/mcp`, with nothing but the hub deployed.
-    let Some(world) = world().await else {
-        return;
-    };
+    let world = or_skip!(world());
     let owner = world
         .accounts
         .ensure_owner(None, "Jesse", [1; 16])
@@ -1268,9 +1232,7 @@ async fn an_ai_client_registers_the_owner_approves_it_and_the_hub_checks_its_tok
 #[tokio::test]
 async fn an_authorization_request_for_an_unknown_client_or_redirect_goes_nowhere() {
     // Redirecting an error to an address nobody registered would hand it to a stranger.
-    let Some(world) = world().await else {
-        return;
-    };
+    let world = or_skip!(world());
     let owner = world
         .accounts
         .ensure_owner(None, "Jesse", [1; 16])
@@ -1338,9 +1300,7 @@ async fn an_authorization_request_for_an_unknown_client_or_redirect_goes_nowhere
 #[tokio::test]
 async fn a_terminal_signs_in_with_a_device_code_the_owner_approves() {
     // `devagotchi login --hub` against a hub with its own accounts (RFC 8628).
-    let Some(world) = world().await else {
-        return;
-    };
+    let world = or_skip!(world());
     let owner = world
         .accounts
         .ensure_owner(None, "Jesse", [1; 16])
@@ -1534,9 +1494,7 @@ async fn a_terminal_signs_in_with_a_device_code_the_owner_approves() {
 
 #[tokio::test]
 async fn a_cancelled_device_code_tells_the_terminal() {
-    let Some(world) = world().await else {
-        return;
-    };
+    let world = or_skip!(world());
     let owner = world
         .accounts
         .ensure_owner(None, "Jesse", [1; 16])

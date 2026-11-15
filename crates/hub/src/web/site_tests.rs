@@ -21,9 +21,7 @@ async fn text(world: &World, path: &str, cookie: Option<&str>) -> (StatusCode, S
 
 #[tokio::test]
 async fn every_page_of_a_hub_with_a_neutral_site_names_only_that_site() {
-    let Some(world) = world_with_site(&neutral_dir()).await else {
-        return;
-    };
+    let world = or_skip!(world_with_site(&neutral_dir()));
     assert_eq!(world.config.site().name(), "Lumen Relay");
 
     // Before anyone owns it: the claim, the public pages and the sign-in pages.
@@ -167,9 +165,7 @@ async fn every_page_of_a_hub_with_a_neutral_site_names_only_that_site() {
 
 #[tokio::test]
 async fn the_built_in_site_is_what_a_hub_shows_with_no_directory() {
-    let Some(world) = super::passkey_tests::world().await else {
-        return;
-    };
+    let world = or_skip!(super::passkey_tests::world());
     let (_, home) = text(&world, "/", None).await;
     assert!(
         home.contains("<title>A new Devagotchi hub · Devagotchi</title>"),

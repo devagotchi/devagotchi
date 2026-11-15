@@ -137,9 +137,7 @@ fn distinct(fake: &Fake) -> BTreeSet<String> {
 /// behind it is, and the rows ClickHouse holds carry each event id however often it came.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn every_event_reaches_clickhouse_at_least_once_and_nothing_is_lost_while_it_is_down() {
-    let Some(test) = testing::postgres().await else {
-        return;
-    };
+    let test = or_skip!(testing::postgres());
     let org = Orgs::new(test.store.clone())
         .create("alice", "acme", "Acme")
         .await
