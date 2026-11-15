@@ -169,7 +169,7 @@ pub fn is_account_id(id: &str) -> bool {
 }
 
 fn new_id(prefix: &str) -> String {
-    format!("{prefix}{}", hex::encode(crate::link::random::<16>()))
+    format!("{prefix}{}", hex::encode(crate::machines::random::<16>()))
 }
 
 fn normalize_issuer(issuer: &str) -> BridgeResult<String> {
@@ -438,8 +438,8 @@ impl Store {
     pub fn issue_claim_code(&self, account_id: &str, ttl_secs: u64) -> BridgeResult<String> {
         let code = format!(
             "{}-{}",
-            &hex::encode(crate::link::random::<2>()).to_ascii_uppercase(),
-            &hex::encode(crate::link::random::<2>()).to_ascii_uppercase()
+            &hex::encode(crate::machines::random::<2>()).to_ascii_uppercase(),
+            &hex::encode(crate::machines::random::<2>()).to_ascii_uppercase()
         );
         let connection = self.connection.lock().expect("identity lock");
         connection
@@ -1465,8 +1465,8 @@ impl Store {
     pub fn issue_setup_code(&self) -> BridgeResult<String> {
         let code = format!(
             "{}-{}",
-            hex::encode(crate::link::random::<8>()),
-            hex::encode(crate::link::random::<8>())
+            hex::encode(crate::machines::random::<8>()),
+            hex::encode(crate::machines::random::<8>())
         );
         let connection = self.connection.lock().expect("identity lock");
         connection
@@ -1591,7 +1591,7 @@ impl Store {
         )
         .map_err(store_error)?;
         for _ in 0..8 {
-            let code = hex::encode(crate::link::random::<5>());
+            let code = hex::encode(crate::machines::random::<5>());
             tx.execute(
                 "INSERT INTO recovery_codes (code_hash, account_id, used) VALUES (?1, ?2, 0)",
                 params![claim_hash(&code).as_slice(), account_id],

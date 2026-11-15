@@ -149,7 +149,7 @@ async fn on_by_default_offered_once_and_a_yes_is_kept_in_the_users_own_words() {
         assert_eq!(vaultix["url"], "https://vaultix.cloud");
         // A yes is kept exactly as said, whatever it says, with the time.
         let words = "Yes! Sure — link it 🙂\nthanks";
-        let before = crate::devices::now_secs();
+        let before = crate::machines::now_secs();
         let accepted = structured(
             &hub,
             &mut person,
@@ -501,7 +501,7 @@ async fn the_one_tap_link_signs_in_with_the_network_and_offers_then_says_linked(
         )
         .await;
         assert_eq!(accepted["state"], "link", "{accepted}");
-        assert!(accepted["expires_at"].as_u64().unwrap() > crate::devices::now_secs());
+        assert!(accepted["expires_at"].as_u64().unwrap() > crate::machines::now_secs());
         let path = path_of(accepted["link"].as_str().unwrap(), &hub);
         // Opening it spends nothing: what the button does, and the button.
         let opened = hub.get(&path, None).await;

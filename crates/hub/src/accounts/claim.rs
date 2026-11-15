@@ -31,7 +31,7 @@ use super::{
     new_account_id,
 };
 use crate::{
-    devices::now_secs,
+    machines::now_secs,
     store::{secs, transaction, unsecs},
 };
 
@@ -133,7 +133,7 @@ impl Accounts {
     /// A new claim code when the hub is unclaimed, replacing any earlier one; `None` when
     /// it is claimed. The caller prints it; the store keeps only its hash.
     pub async fn issue_claim_code(&self) -> BridgeResult<Option<ClaimCode>> {
-        self.issue_claim_code_at(crate::link::random::<CODE_BYTES>(), now_secs())
+        self.issue_claim_code_at(crate::machines::random::<CODE_BYTES>(), now_secs())
             .await
     }
 
@@ -171,8 +171,8 @@ impl Accounts {
         self.claim_at(
             code,
             name,
-            crate::link::random::<16>(),
-            crate::link::random::<32>(),
+            crate::machines::random::<16>(),
+            crate::machines::random::<32>(),
             now_secs(),
         )
         .await

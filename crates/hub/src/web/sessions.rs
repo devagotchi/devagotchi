@@ -64,7 +64,7 @@ impl SessionStore {
         let key = match std::fs::read(&key_path) {
             Ok(bytes) => bytes,
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
-                let bytes = crate::link::random::<32>().to_vec();
+                let bytes = crate::machines::random::<32>().to_vec();
                 crate::push::write_private(&key_path, &bytes)?;
                 bytes
             }
@@ -109,7 +109,7 @@ impl SessionStore {
     }
 
     fn seal(&self, id_hash: &[u8; 32], held: &Held) -> BridgeResult<Vec<u8>> {
-        let nonce = crate::link::random::<NONCE_LEN>();
+        let nonce = crate::machines::random::<NONCE_LEN>();
         let mut body = serde_json::to_vec(held).expect("tokens serialize");
         self.key
             .seal_in_place_append_tag(

@@ -22,19 +22,14 @@ mod connect;
 mod connections;
 #[cfg(test)]
 mod connections_tests;
-mod devices;
-mod downloads;
 pub mod extensions;
-mod files;
 mod hub;
 #[cfg(test)]
 mod hub_settings_tests;
 mod identity;
-mod join;
 #[cfg(test)]
 mod keys_tests;
-mod link;
-mod machine_update;
+mod machines;
 mod mail;
 #[cfg(test)]
 mod me_tests;
@@ -56,7 +51,6 @@ mod preferences;
 #[cfg(test)]
 mod provider_tests;
 mod push;
-mod run;
 mod sealed;
 mod signals;
 mod site;
@@ -98,9 +92,9 @@ use crate::{
     audit::Audit,
     auth::{AuthError, Verifier},
     config::HubConfig,
-    devices::Devices,
     hub::Hub,
-    link::Links,
+    machines::devices::Devices,
+    machines::link::Links,
 };
 
 pub const USAGE: &str = "Usage:\n  devagotchi hub serve --state-dir ABS_PATH --config ABS_JSON\n  devagotchi hub enroll --state-dir ABS_PATH --device NAME\n  devagotchi hub revoke --state-dir ABS_PATH --device NAME\n  devagotchi hub devices --state-dir ABS_PATH\n  devagotchi hub owner --state-dir ABS_PATH --config ABS_JSON [--name NAME] [--replace]\n  devagotchi hub setup-code --state-dir ABS_PATH --config ABS_JSON\n  devagotchi hub connect-nomen --state-dir ABS_PATH --config ABS_JSON --issuer URL --client-id ID --project ID\n  devagotchi hub check-site ABS_DIR\n  devagotchi hub check-mail --config ABS_JSON [--to ADDRESS]\n  devagotchi hub analytics-resend --config ABS_JSON\n  devagotchi board <command> …            the agents' board in this project (board --help)\n\nserve starts the bastion: an authenticated Streamable HTTP MCP endpoint at /mcp that routes\nrun and operation_start/get/read/cancel to brokers by name, with whoami, /healthz and RFC 9728\nprotected-resource metadata, and /link where machines' `devagotchi link` connects out.\nWith a `web` section, people sign in with Shippin at /account to see their machines;\n/api/v1/me returns the same view for a session or a bearer token. Put it behind the edge for TLS.\n\nenroll prints a one-time code (15 minutes) that binds one machine's key to NAME;\nrevoke cuts that machine off within seconds; devices lists enrolled machines.\n\nowner (auth.mode hub) prints a one-time link (15 minutes) that makes the owner's passkey:\nthe first time it makes the owner's account, with the config's owner id if it names one;\nagain, it adds a passkey to the owner and ends the owner's other sessions; with --replace the\nlink also removes every other passkey of the owner (to take the account back).\n\nsetup-code (auth.mode devagotchi) prints a one-time code (15 minutes) that makes the account\nclaimed with it the hub's owner at /claim, or the owner already on file.\n\nconnect-nomen joins this hub to a Nomen with its owner's approval: it shows a code to confirm\non any device through the devagotchi-cli app (--client-id) of the hub's Nomen project (--project),\nthen adds the hub's own apps to that project (the key Nomen makes is written to the state\ndirectory, owner-only, and nowhere else), sets auth, owner and web in the config, and keeps a\ncopy of the old one. --issuer is that Nomen's https URL; there is no built-in one.\n\ncheck-site reads and checks a site directory (crates/hub/README.md, \"The site\") as serve would, and\nsays what is wrong and where; serve follows its site.dir and serves a change once it checks out.\n\ncheck-mail (auth.mode hub) connects to auth.email's mail server as serve would, negotiates TLS and\nsigns in as its user, sending nothing; with --to it also sends one email that says this hub's mail\nworks, to read in that mailbox. It prints the server's refusal and never the password; the running\nhub reports the same in /healthz under mail.\n\nanalytics-resend marks every board event in the hub's Postgres to be sent to ClickHouse again,\nas after a ClickHouse that lost its data: the running hub sends them, and ClickHouse keeps one\nrow per event. /healthz reports the export under analytics.";
@@ -616,14 +610,14 @@ fn manage(command: Command) -> BridgeResult<()> {
                     "device must be [a-z0-9][a-z0-9-]{0,62}, the broker name in the hub config",
                 ));
             }
-            let code = devices_at(&state)?.issue_code(&device, link::random::<16>())?;
+            let code = devices_at(&state)?.issue_code(&device, machines::random::<16>())?;
             // The code itself is never audited or logged; only that one was issued.
             operator_event(&state, "link.code_issued", &device, "ok")?;
             // The code is the one secret this prints; it goes to stdout only, once.
             println!("{code}");
             eprintln!(
                 "One-time code for {device}, valid {} minutes; any earlier unused code for {device} no longer works.\nOn that machine, with the code in DEVAGOTCHI_ENROLL_CODE (or on stdin):\n  devagotchi link enroll --state-dir ... --hub ... --device {device} --broker ...",
-                devices::CODE_TTL_SECS / 60
+                machines::devices::CODE_TTL_SECS / 60
             );
         }
         Command::Revoke { state, device } => {
@@ -685,7 +679,7 @@ fn manage(command: Command) -> BridgeResult<()> {
                     .ensure_owner(
                         config.owner_id(),
                         name.as_deref().unwrap_or("Owner"),
-                        link::random::<16>(),
+                        machines::random::<16>(),
                     )
                     .await?;
                 let token = if replace {
@@ -988,7 +982,7 @@ async fn run(
     // A downloads directory that does not check out is logged and left out: the hub still
     // serves everything else, and /healthz says why /join is off.
     let downloads = match &config.downloads {
-        Some(dir) => match downloads::Downloads::open(std::path::Path::new(dir)) {
+        Some(dir) => match machines::downloads::Downloads::open(std::path::Path::new(dir)) {
             Ok(downloads) => {
                 eprintln!(
                     "devagotchi hub: handing out build {} to joining machines ({} files checked in {dir})",
@@ -1314,7 +1308,7 @@ fn app(state: AppState) -> Router {
                     orgs::api::bearer_or_session,
                 )),
         )
-        .merge(join::routes())
+        .merge(machines::join::routes())
         .route(
             "/.well-known/oauth-protected-resource",
             get(protected_resource),
@@ -2353,10 +2347,15 @@ mod tests {
             )
             .unwrap(),
         );
-        let devices =
-            Arc::new(devices::Devices::open(&dir.path().join("devices.sqlite3")).unwrap());
+        let devices = Arc::new(
+            machines::devices::Devices::open(&dir.path().join("devices.sqlite3")).unwrap(),
+        );
         let audit = Arc::new(Audit::open(&dir.path().join("audit.sqlite3")).unwrap());
-        let links = Arc::new(link::Links::new(config.clone(), devices, audit.clone()));
+        let links = Arc::new(machines::link::Links::new(
+            config.clone(),
+            devices,
+            audit.clone(),
+        ));
         let authority = Arc::new(oauth::Authority::open(dir.path(), "http://127.0.0.1:9").unwrap());
         let owner_token = access_for(&authority, &owner);
         let operator_token = access_for(&authority, &operator);

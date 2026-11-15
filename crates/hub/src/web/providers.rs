@@ -34,7 +34,7 @@ use crate::{
     AppState,
     accounts::identities::Proven,
     config::{HubConfig, ProviderConfig, ProviderKind},
-    devices::now_secs,
+    machines::now_secs,
 };
 
 /// How long a started sign-in waits for the provider to send the browser back.
@@ -338,7 +338,7 @@ struct Started {
 }
 
 fn random() -> String {
-    URL_SAFE_NO_PAD.encode(crate::link::random::<32>())
+    URL_SAFE_NO_PAD.encode(crate::machines::random::<32>())
 }
 
 fn signin_cookie(hub: &HubSignIn) -> &'static str {

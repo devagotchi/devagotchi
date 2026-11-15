@@ -265,7 +265,7 @@ async fn the_real_clickhouse_keeps_one_event_per_id_and_answers_a_boards_statist
         .unwrap();
     let board = HostedBoard::new(test.store.clone(), &org.id, "demo").unwrap();
     board.initialize().await.unwrap();
-    let database = format!("dvg_test_{}", hex::encode(crate::link::random::<6>()));
+    let database = format!("dvg_test_{}", hex::encode(crate::machines::random::<6>()));
     let warehouse = Warehouse::new(
         &ClickHouseConfig {
             url,

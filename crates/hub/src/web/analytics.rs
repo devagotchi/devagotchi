@@ -31,7 +31,7 @@ use crate::{
         report::{self, Counted, Funnel, RANGES, Report, iso_day},
         visit::DEVICES,
     },
-    devices::now_secs,
+    machines::now_secs,
     site::{Ctx, Site},
 };
 

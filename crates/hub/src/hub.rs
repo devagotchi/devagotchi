@@ -23,7 +23,7 @@ use crate::{
     audit::{Audit, AuditEntry},
     auth::Subject,
     config::HubConfig,
-    link::Links,
+    machines::link::Links,
 };
 
 #[derive(Clone)]
@@ -36,7 +36,7 @@ pub struct Hub {
     /// Web Push to people's phones when an approval waits; present with browser sign-in.
     pub push: Option<Arc<crate::push::Push>>,
     /// The build this hub hands to machines that join it (`/join`, `/dist`), when configured.
-    pub downloads: Option<Arc<crate::downloads::Downloads>>,
+    pub downloads: Option<Arc<crate::machines::downloads::Downloads>>,
     /// What a hosted hub counts for its operator (`crate::analytics`), when it counts.
     pub analytics: Option<Arc<crate::analytics::Analytics>>,
     /// The workflows an AI starts for its person (`crate::workflows`), on a hub with its own
@@ -362,10 +362,10 @@ impl Hub {
             .request_update(&device, input.force, &subject.id, subject.via)
             .map_err(Json)?;
         let (state, detail) = match asked {
-            crate::link::UpdateAsked::AlreadyOn(build) => {
+            crate::machines::link::UpdateAsked::AlreadyOn(build) => {
                 ("done".to_string(), Some(format!("already on {build}")))
             }
-            crate::link::UpdateAsked::Sent => {
+            crate::machines::link::UpdateAsked::Sent => {
                 let within =
                     std::time::Duration::from_secs(input.wait_seconds.unwrap_or(50).min(300));
                 match self.links.wait_update(&device, within).await {
@@ -396,12 +396,12 @@ impl Hub {
         let build = self.links.build(device);
         self.links
             .update_of(device)
-            .and_then(|update| update.shown(build.as_deref(), crate::devices::now_secs()))
+            .and_then(|update| update.shown(build.as_deref(), crate::machines::now_secs()))
     }
 
     /// The machines `subject` added with codes of its own (increment 29a). A store that
     /// cannot be read lists none rather than failing the caller's whole request.
-    pub(crate) fn owned(&self, subject: &str) -> Vec<crate::devices::Device> {
+    pub(crate) fn owned(&self, subject: &str) -> Vec<crate::machines::devices::Device> {
         self.links.owned_by(subject).unwrap_or_default()
     }
 
@@ -687,7 +687,7 @@ impl Hub {
         Ok(Json(MachineAdded {
             name,
             code: code.clone(),
-            expires_at: crate::devices::now_secs() + crate::devices::CODE_TTL_SECS,
+            expires_at: crate::machines::now_secs() + crate::machines::devices::CODE_TTL_SECS,
             linux: join_line(hub, "linux", &code),
             windows: join_line(hub, "windows", &code),
             docker: join_line(hub, "docker", &code),

@@ -52,7 +52,7 @@ impl Registry {
             return Ok(home);
         }
         drop(connection);
-        let home = crate::accounts::tenants::new_tenant_id(crate::link::random::<16>());
+        let home = crate::accounts::tenants::new_tenant_id(crate::machines::random::<16>());
         let now = (crate::agenthub::system_clock()() / 1000) as u64;
         transaction!(&self.store, |connection| {
             crate::accounts::tenants::settle_in(&self.store, connection, &home, now).await?;

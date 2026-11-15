@@ -308,7 +308,7 @@ async fn insert(store: &crate::store::Store, view: View) {
 
 /// Noon today, and today.
 fn noon() -> (u64, i64) {
-    let today = day_of(crate::devices::now_secs());
+    let today = day_of(crate::machines::now_secs());
     (u64::try_from(today + DAY / 2).unwrap(), today)
 }
 
@@ -527,7 +527,7 @@ async fn the_tables_are_the_hubs_own_on_both_engines_and_a_milestone_is_kept_onc
 async fn the_report_reads_finished_days_from_the_totals_and_today_from_the_visits() {
     for test in testing::stores().await {
         let store = &test.store;
-        let now = crate::devices::now_secs();
+        let now = crate::machines::now_secs();
         let today = day_of(now);
         let analytics = Analytics::start(
             store.clone(),

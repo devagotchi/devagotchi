@@ -118,7 +118,7 @@ async fn counted(hub: Hosted) {
     let kept = views(&hub).await;
     assert_eq!(kept.len(), 1, "{kept:?}");
     let row = &kept[0];
-    let now = devices::now_secs();
+    let now = machines::now_secs();
     let day = analytics::day_of(now);
     assert_eq!(row[0], day.to_string());
     let hour: i64 = row[1].parse().unwrap();

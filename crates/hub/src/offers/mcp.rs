@@ -10,7 +10,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use super::nomen::Found;
-use crate::{accounts::identities::Proven, auth::Subject, devices::now_secs, hub::Hub, site::Ctx};
+use crate::{accounts::identities::Proven, auth::Subject, hub::Hub, machines::now_secs, site::Ctx};
 
 #[derive(Debug, Serialize, JsonSchema)]
 pub struct OffersView {
@@ -210,7 +210,12 @@ impl Hub {
             });
         }
         let token = accounts
-            .offer_link(tenant, crate::link::random::<32>(), engine.link_ttl(), now)
+            .offer_link(
+                tenant,
+                crate::machines::random::<32>(),
+                engine.link_ttl(),
+                now,
+            )
             .await
             .map_err(Json)?;
         Ok(Accepted {

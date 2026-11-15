@@ -15,7 +15,7 @@ pub(crate) struct Hosted {
     pub(crate) url: String,
     pub(crate) http: reqwest::Client,
     pub(crate) accounts: Arc<accounts::Accounts>,
-    pub(crate) devices: Arc<devices::Devices>,
+    pub(crate) devices: Arc<machines::devices::Devices>,
     pub(crate) config: Arc<HubConfig>,
     /// The hub as the router serves it, for what a test drives under HTTP.
     pub(crate) hub: Hub,
@@ -111,10 +111,9 @@ pub(crate) async fn hosted_with_ingress(
     let push = Some(Arc::new(
         crate::push::Push::open(dir.path(), &url, devices.clone()).unwrap(),
     ));
-    let downloads = config
-        .downloads
-        .as_ref()
-        .map(|dir| Arc::new(crate::downloads::Downloads::open(std::path::Path::new(dir)).unwrap()));
+    let downloads = config.downloads.as_ref().map(|dir| {
+        Arc::new(crate::machines::downloads::Downloads::open(std::path::Path::new(dir)).unwrap())
+    });
     let mut boards = agenthub::mcp::Boards::from_config(&config, dir.path());
     if accounts.store().backend() == store::Backend::Postgres {
         boards = boards.using_postgres(accounts.store().clone()).unwrap();

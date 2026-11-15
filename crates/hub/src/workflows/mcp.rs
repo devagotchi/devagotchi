@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 
 use super::{StepStatus, WorkflowStatus};
 use crate::{
-    accounts::workflows::WorkflowRow, auth::Subject, devices::now_secs, hub::Hub, site::Ctx,
+    accounts::workflows::WorkflowRow, auth::Subject, hub::Hub, machines::now_secs, site::Ctx,
 };
 
 /// The longest a `workflow_wait` holds.
@@ -401,8 +401,8 @@ impl Hub {
                 definition,
                 machine_name.as_deref(),
                 workflows.link_ttl(),
-                crate::link::random::<12>(),
-                crate::link::random::<32>(),
+                crate::machines::random::<12>(),
+                crate::machines::random::<32>(),
                 now,
             )
             .await

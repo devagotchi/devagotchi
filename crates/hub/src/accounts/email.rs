@@ -44,7 +44,7 @@ impl Accounts {
             account,
             source,
             per_address,
-            crate::link::random::<32>(),
+            crate::machines::random::<32>(),
             now_secs(),
         )
         .await

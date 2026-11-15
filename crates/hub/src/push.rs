@@ -17,7 +17,10 @@ use aws_lc_rs::{
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use devagotchi_contracts::{BridgeError, BridgeResult};
 
-use crate::devices::{Devices, PushSubscription, now_secs};
+use crate::machines::{
+    devices::{Devices, PushSubscription},
+    now_secs,
+};
 
 fn push_error(message: impl Into<String>) -> BridgeError {
     BridgeError::new("push", message)

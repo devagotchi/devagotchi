@@ -825,7 +825,7 @@ pub async fn register(
             eprintln!("devagotchi-hub: refused a passkey registration: {refusal}");
             devagotchi_contracts::BridgeError::new("refused", refusal.0)
         })?;
-        let label = format!("Passkey made {}", pages::utc(crate::devices::now_secs()));
+        let label = format!("Passkey made {}", pages::utc(crate::machines::now_secs()));
         // The passkey, the link spent and the session it signs in to: all or nothing.
         let token = accounts
             .register_with_link(&account, &credential, &label, LinkPurpose::Owner, &link)
@@ -915,7 +915,7 @@ async fn secure_with(
     let account = subject.id.clone();
     let kept = session.clone();
     let done = tokio::spawn(async move {
-        let label = format!("Passkey made {}", pages::utc(crate::devices::now_secs()));
+        let label = format!("Passkey made {}", pages::utc(crate::machines::now_secs()));
         accounts
             .add_passkey_signed_in(&account, &credential, &label, &kept)
             .await

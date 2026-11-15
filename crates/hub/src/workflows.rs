@@ -72,7 +72,7 @@ impl Workflows {
         if family == "other" {
             return;
         }
-        let now = crate::devices::now_secs();
+        let now = crate::machines::now_secs();
         let key = (tenant.to_string(), family);
         {
             let noted = self.noted.lock().expect("noted");

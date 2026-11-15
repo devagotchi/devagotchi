@@ -30,8 +30,12 @@ use tokio::sync::{OwnedSemaphorePermit, Semaphore, mpsc, oneshot};
 use crate::{
     audit::{Audit, AuditEntry},
     config::HubConfig,
-    devices::{Devices, now_secs},
-    machine_update::{self, Update},
+    machines::{
+        devices::{Device, Devices, OWNED_LIMIT},
+        join::Shell,
+        now_secs,
+        update::Update,
+    },
 };
 
 const HELLO_TIMEOUT: Duration = Duration::from_secs(10);
@@ -454,12 +458,12 @@ impl Links {
     }
 
     /// The enrolled record for `device`, if any (revoked ones included).
-    pub fn device(&self, device: &str) -> BridgeResult<Option<crate::devices::Device>> {
+    pub fn device(&self, device: &str) -> BridgeResult<Option<Device>> {
         self.devices.get(device)
     }
 
     /// The machines `owner` added, revoked ones included.
-    pub fn owned_by(&self, owner: &str) -> BridgeResult<Vec<crate::devices::Device>> {
+    pub fn owned_by(&self, owner: &str) -> BridgeResult<Vec<Device>> {
         self.devices.owned_by(owner)
     }
 
@@ -477,12 +481,7 @@ impl Links {
 
     /// Spend an account's one-time code and bind `public_key` to `name`. The code is
     /// the secret; this is the same check the link handshake uses.
-    pub fn enroll_owned(
-        &self,
-        name: &str,
-        code: &str,
-        public_key: &str,
-    ) -> BridgeResult<crate::devices::Device> {
+    pub fn enroll_owned(&self, name: &str, code: &str, public_key: &str) -> BridgeResult<Device> {
         let device = self.devices.enroll(name, code, public_key, false)?;
         self.event(
             device.owner.as_deref().unwrap_or(""),
@@ -525,7 +524,7 @@ impl Links {
         let limit = if self.config.is_owner(owner) {
             usize::MAX
         } else {
-            limit.unwrap_or(crate::devices::OWNED_LIMIT)
+            limit.unwrap_or(OWNED_LIMIT)
         };
         let issued = self
             .devices
@@ -540,16 +539,12 @@ impl Links {
 
     /// The machine a live code is for, so `/join` can write its script; audited with
     /// the machine's name, never the code. Looking does not spend the code.
-    pub fn join_script(
-        &self,
-        code: &str,
-        shell: crate::join::Shell,
-    ) -> BridgeResult<Option<String>> {
+    pub fn join_script(&self, code: &str, shell: Shell) -> BridgeResult<Option<String>> {
         let device = self.devices.live_code(code)?;
         if let Some(device) = &device {
             let shell = match shell {
-                crate::join::Shell::Sh => "sh",
-                crate::join::Shell::PowerShell => "powershell",
+                Shell::Sh => "sh",
+                Shell::PowerShell => "powershell",
             };
             self.event(
                 &format!("device:{device}"),
@@ -819,7 +814,7 @@ impl Links {
         }
     }
 
-    /// Ask each connected machine that is due an update for one (`machine_update::select`),
+    /// Ask each connected machine that is due an update for one (`super::update::select`),
     /// when `machines.auto_update` is on and this hub hands out a build.
     pub fn auto_update_now(&self) {
         let (true, Some(version)) = (self.auto_update, self.offered.as_deref()) else {
@@ -834,7 +829,7 @@ impl Links {
         };
         let chosen = {
             let updates = self.updates.lock().expect("updates");
-            machine_update::select(&live, version, &updates, now_secs())
+            super::update::select(&live, version, &updates, now_secs())
         };
         for device in chosen {
             let _ = self.request_update(&device, false, "hub", "auto");
@@ -843,7 +838,7 @@ impl Links {
 
     /// Once an hour, for as long as the hub runs: [`Self::auto_update_now`].
     pub async fn auto_update_hourly(self: Arc<Self>) {
-        let mut every = tokio::time::interval(machine_update::EVERY);
+        let mut every = tokio::time::interval(super::update::EVERY);
         loop {
             every.tick().await;
             self.auto_update_now();
@@ -1457,7 +1452,7 @@ mod tests {
         );
         let code = links
             .devices
-            .issue_owned_code("acct-a", "platinum", [2; 16], crate::devices::OWNED_LIMIT)
+            .issue_owned_code("acct-a", "platinum", [2; 16], OWNED_LIMIT)
             .unwrap();
         let joined = links
             .admit(hello(&key, HUB, "platinum", "n2", Some(&code)), "n2")

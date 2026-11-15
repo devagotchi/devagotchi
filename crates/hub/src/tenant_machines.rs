@@ -12,7 +12,7 @@
 
 use devagotchi_contracts::{BridgeError, BridgeResult};
 
-use crate::{accounts::tenants, auth::Subject, devices::Device, hub::Hub, site::Cap};
+use crate::{accounts::tenants, auth::Subject, hub::Hub, machines::devices::Device, site::Cap};
 
 /// The longest name a person can give a machine on a hosted hub: the stored name, with the
 /// tenant's 13-character tag and a dash before it, is 63 characters at most.
@@ -155,7 +155,7 @@ impl Hub {
             return None;
         }
         let (limit, unsecured, plan) = self.machine_limit(subject);
-        let limit = limit.unwrap_or(crate::devices::OWNED_LIMIT);
+        let limit = limit.unwrap_or(crate::machines::devices::OWNED_LIMIT);
         let held = self.links.held(&subject.id).unwrap_or(0);
         if held < limit {
             return None;

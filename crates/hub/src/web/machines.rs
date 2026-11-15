@@ -19,7 +19,7 @@ use super::{
     pages::{self, escape},
     routes::{Who, not_set_up, see_other, unavailable, who},
 };
-use crate::{AppState, devices};
+use crate::{AppState, machines::devices};
 
 #[derive(Deserialize)]
 pub struct Named {

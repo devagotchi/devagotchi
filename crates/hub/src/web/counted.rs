@@ -14,7 +14,7 @@ use axum::{
 use crate::{
     AppState,
     analytics::{OperatorVisit, View, day_of, visit},
-    devices::now_secs,
+    machines::now_secs,
 };
 
 pub async fn count(State(state): State<AppState>, request: Request, next: Next) -> Response {

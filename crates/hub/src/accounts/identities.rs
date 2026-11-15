@@ -162,8 +162,8 @@ impl Accounts {
         self.sign_in_identity_at(
             proven,
             None,
-            crate::link::random::<16>(),
-            crate::link::random::<16>(),
+            crate::machines::random::<16>(),
+            crate::machines::random::<16>(),
             now_secs(),
         )
         .await
@@ -180,8 +180,8 @@ impl Accounts {
         self.sign_in_identity_at(
             proven,
             current,
-            crate::link::random::<16>(),
-            crate::link::random::<16>(),
+            crate::machines::random::<16>(),
+            crate::machines::random::<16>(),
             now_secs(),
         )
         .await
