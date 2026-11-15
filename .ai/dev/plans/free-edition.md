@@ -176,6 +176,20 @@ the submodule (`git submodule update --init`, CI checks out with `submodules: tr
 | D5 | Listing in Claude's and ChatGPT's connector directories: everything their submission asks for is in place (docs, privacy, support URLs exist since #183) | the submission checklist, filled | not started |
 | E1 | Passkeys after the first connection: no passkey anywhere before a machine is online (landing copy, claim, sign-in); the account page offers one after | `live_check.py` and `first_connect_browser.py` assert no "passkey" before the machine is online | not started |
 | E2 | Then the expansions in their own plans: phone (push exists), AgentHub features, provenance (`self-hosted-and-provenance.md` P1-P4), connections | per plan | not started |
+| K1 | The optional cache ([ADR 0004](../../../docs/adr/0004-optional-cache-dragonfly.md)): `cache.url` / `DEVAGOTCHI_HUB_CACHE_URL` (Redis protocol, Dragonfly recommended), off by default; the `/admin` card with Check; `/healthz` shows it; rate limits shared through it when set, in-process when not; an opt-in Dragonfly service in the compose stack | R3 | hub tests with and without a cache, the cache stopped mid-run (degraded, nothing wrong), compose with the profile | not started |
+| V1 | A release a solo developer installs from GitHub: tag the free edition once D2 passes (the operator tags), then a scheduled CI job installs the **latest release** (not `main`) with each installer and runs the install check against it | D2, the operator's tag | the scheduled job green on the release | not started; the only release, `v0.1.0`, is from before R1 and R3 |
+
+## Order, as of 2026-11-15
+
+The operator, 2026-11-15: before the panel, the app has every feature properly built, on Postgres,
+with Dragonfly optional. The order:
+
+1. R2 (structure), then R4 (tenancy crate: what pooled cells run, [ADR 0003](../../../docs/adr/0003-hosting-pooled-free-per-instance-paid.md)).
+2. D1 to D5 and E1: Desktop Commander parity, with S0 when Nomen is ready.
+3. K1 (the optional cache) beside them; it touches no D item.
+4. AgentHub on its own ([agenthub-crate](agenthub-crate.md) A6 to A9), in the agenthub repository.
+5. V1: the release solo developers install. Then the cloud lane ([cloud-edition](cloud-edition.md)
+   C2b, C2c, C8, C9).
 
 ## Information needed from Jesse
 

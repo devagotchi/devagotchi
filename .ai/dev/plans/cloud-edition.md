@@ -30,6 +30,42 @@ devagotchi-cloud/                 private; organisation: shippinAI (D1, decided 
 The submodule pins an exact tag, so every cloud build names the core it runs. The core is
 public, so the private repository's CI checks it out without a token.
 
+## How it is hosted (ADR 0003, operator 2026-11-15)
+
+[ADR 0003](../../../docs/adr/0003-hosting-pooled-free-per-instance-paid.md) records the decision.
+
+| Tier | Runs as | Isolation | Deployed by |
+|---|---|---|---|
+| Free and community | a **pooled cell**: one hub process and one database, the `tenancy` crate on, many tenants under row-level security; the edge routes each tenant's host name to its cell | row-level security; cells split as they fill | the panel, on Shippin nodes |
+| Paid, managed, consulting | an **instance**: the exact release a solo developer installs from GitHub, its own database, host name and upgrade pace, no tenancy code | a process and a database per customer | the panel, to a Shippin node, AWS, Google Cloud, Oracle or a host the customer names, with its provenance recorded |
+
+One release runs both. The panel moves a release to a staging cell and a staging instance
+before any customer. A free tenant becoming paid is exported from its cell into a new
+instance, and its machines reconnect to the new host name.
+
+## Staff, support and the panel
+
+The panel is the private repository's web app. It is also where staff work.
+
+- **Staff roles** (in the panel, signed in through Nomen with a passkey, every action audited
+  there):
+  - *Support*: answers customers, reads deployment health and versions, and proposes
+    configuration changes the customer approves.
+  - *Operations*: deploys, upgrades, rolls back and restores instances and cells, and handles
+    incidents.
+  - *Admin*: staff accounts, billing and plans.
+- **Inside a customer's hub, staff have no standing access.** The customer's owner grants it
+  on `/admin` → Support access: to a named person, with a role (read, or settings), for a set
+  time (24 hours unless changed), revocable at once. Every call it makes goes into that hub's
+  own audit chain, and the owner sees it. The grant is core (C2b): a self-hoster gives it to
+  their consultant the same way.
+- **Questions and tickets**: support runs on an AgentHub board in the panel (Shippin uses its
+  own product). A customer's "Help" opens a ticket there with the hub's version, health and
+  provenance attached, and nothing else unless the customer adds it.
+- **Infrastructure rights** over a managed instance (deploy, upgrade, roll back, restore a
+  backup) belong to Operations, under the customer's contract, in the panel. They never
+  include signing in to the customer's hub.
+
 ## What the core must offer first (C2)
 
 The cloud adds to the hub through extension points the core defines and uses itself, each with
@@ -48,13 +84,22 @@ the self-hosted behaviour as its default. Nothing cloud-specific is in the core.
 |---|---|---|---|---|
 | C1 | First pre-release tag `v0.1.0-alpha.1`: release archives and image `:0.1.0-alpha.1`; `:latest` moves only for tags without a pre-release suffix | D3 | Release run on the tag; anonymous pull of the tag | image rule done in `image.yml`; release notes drafted under CHANGELOG `Unreleased`; the tag is not created here (the operator tags after review) |
 | C2 | The extension points above, each with its default and tests; no change in behaviour | none for the interfaces; the cloud pins them at the C1 tag | `extensions` tests; hub behaviour unchanged for the defaults | implemented: `serve_with`, `PlanPolicy`, `TenantHooks`, `EventHook`, `RouteMount` in `crates/hub/src/extensions.rs`. Pending merge |
+| C2b | Core: **support access grants** (above): `/admin` → Support access, a named person, role, expiry, revoke; their calls audited in the hub's chain and shown to the owner | free-edition D1 (sign-in) | hub tests: no grant no access, expiry ends it, revoke ends it within a second, every call audited, the owner sees it | not started |
+| C2c | Core: **one tenant's export and import** (all its rows, machines' keys included, as one signed archive), for a cell to instance move | free-edition R4 | round-trip test on Postgres between two databases | not started |
 | C3 | Create the private repository (D1), core as a submodule at the C1 tag, an empty `crates/cloud` that starts the core hub through C2's entry, CI building and testing both | C2, D1 | private CI green; the binary starts and answers `/healthz` | not started |
 | C4 | Billing (D2) and the plan policy from it | C3, the gate in the roadmap | billing tests against the provider's test mode | not started |
 | C5 | Provisioning at scale | C3, the gate | tests on Postgres | not started |
 | C6 | Hosted staging deployment from `deploy/` | C4, C5 | the staging hub answers; a test tenant signs up and connects an AI | not started |
 | C7 | Enterprise chat | C6 | its own plan | not started |
+| C8 | The panel: customers, cells, instances (target, version, provenance, health), staff roles, the support board | C3, C2b | panel tests; a staff member without a grant cannot open a customer's hub | not started |
+| C9 | Deploy targets for instances: a Shippin node first, then AWS, Google Cloud, Oracle and a custom host over SSH, each from the same release and install scripts | C8, a tagged release | an instance deployed, upgraded and rolled back on each target | not started |
 
 ## Risks and approved decisions
+
+- 2026-11-15, operator: hosting is pooled for free and one instance per paying customer
+  ([ADR 0003](../../../docs/adr/0003-hosting-pooled-free-per-instance-paid.md)). The private
+  repository `shippinAI/devagotchi-cloud` exists (made 2026-11-14) with core at `v0.1.0`; C3's
+  repository step is done, its crates are not.
 
 Superseded 2026-11-14 by the [free edition plan](free-edition.md): multi-tenancy becomes its own
 module outside the default build (R4). The earlier ruling read: already in the core and kept there (ruled 2026-11-11): `tenancy.mode multi`, `/operator` and

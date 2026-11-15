@@ -38,7 +38,8 @@ execution. [ADR 0002](0002-bound-board-offline-cache-and-queued-drafts.md) owns 
   documented bounded backpressure, never discarded events or success-shaped failures.
   Neither browser clients nor agents receive direct database access.
 - Do not add Dragonfly without measured need. It replaces neither relational transactions
-  nor analytical storage.
+  nor analytical storage. (Amended 2026-11-15 by [ADR 0004](0004-optional-cache-dragonfly.md):
+  an optional cache, off unless configured, never the record.)
 
 ## Migration and delivery gates
 

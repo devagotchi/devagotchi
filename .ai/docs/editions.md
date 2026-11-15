@@ -36,5 +36,14 @@ Decided by the operator on 2026-11-14, and recorded so this repository does not 
 - Billing, when the cloud repository has code, is Stripe. Plugin submission comes later.
 - A self-hosted install names its own hub. No hostname or address is a default in code,
   scripts, or examples.
+- Decided 2026-11-15 ([ADR 0003](../../docs/adr/0003-hosting-pooled-free-per-instance-paid.md)):
+  free sign-ups run in pooled cells (the tenancy crate); paid, managed and consulting customers
+  each get their own instance of the same release a solo developer installs from GitHub,
+  deployed by the private panel to Shippin, AWS, Google Cloud, Oracle or a customer's host.
+  Staff reach inside a customer's hub only through access its owner grants.
+- Decided 2026-11-15: Dragonfly is an optional cache, off unless configured
+  ([ADR 0004](../../docs/adr/0004-optional-cache-dragonfly.md)); AgentHub is Postgres in every
+  form, a library in Devagotchi and Shippin and a binary or container on its own
+  ([ADR 0005](../../docs/adr/0005-agenthub-postgres-everywhere.md)).
 - What the cloud replaces is `crates/hub/src/extensions.rs`: extra routes, plan limits, tenant
   lifecycle, and an in-process event hook. Each default is what a self-hosted hub already does.
