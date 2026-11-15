@@ -170,6 +170,7 @@ the submodule (`git submodule update --init`, CI checks out with `submodules: tr
 | U0 | The UI contract: each domain's pages listed in its front door; `/admin` grouped by domain; the CI check that every config key has a page or is a listed deploy-time value | the check fails on a config key with neither | not started |
 | S0 | Nomen accepts Client ID Metadata Documents (public client, PKCE, redirect checked against the hub's document); in `nomen-react-go`, with its tests | Nomen's tests; a hub on a fresh domain signs in through id.shippin.cloud with nothing registered | not started |
 | D1 | Sign-in as Desktop Commander's: **Continue with Shippin** on by default (Google and email through Shippin; off with one switch on `/admin` → Sign-in), Continue with Google when the owner adds their own client, email + password (Sign in / Sign up), Forgot password by email; nothing else before the AI app gets its connection | `tests/first_connect_browser.py` on a fresh hub with no settings: the Shippin button is there, turning it off removes it; live check on app.devagotchi.com | not started |
+| D1a | **Shippin sign-in rulings** (operator, 2026-11-15): nothing about Shippin is hardcoded (issuer, project and client are settings, shipped as the installer's defaults); the owner turns it off on `/admin` → Sign-in; the button carries a clear notice: *this gives you an account on Shippin.ai, to use on your site and to activate across the Shippin network suite of services*. Until Nomen takes Client ID Metadata Documents (S0), a hub joins Nomen with `hub connect-nomen` (the owner approves a code) | D1 | the notice shown beside the button; off removes it; a hub with no Shippin settings shows no Shippin button | not started |
 | D2 | Machine connect as Desktop Commander's: one line per OS, no sudo, installs for the user and starts with the computer; the machine shows a code, the person approves it in the browser they are signed in with (device grant), and the AI says the machine is online | e2e on Linux and Windows CI: line → code → approve → `machines` online → `run echo ok` | not started |
 | D3 | Tool parity: search sessions, interactive processes and sessions, process list and kill, `edit_block` by range and fuzzy, `write_pdf`, reading PDF/Excel/DOCX, settings get/set, recent tool calls; each with the machine's grants deciding what runs | one test per tool against a real broker; the tool list compared to teardown §1.3 in a test | not started |
 | D4 | Local mode as Desktop Commander's: one line adds Devagotchi to Claude Code, Codex, Claude Desktop, Cursor on the same computer | a test per client config writer | not started |
@@ -190,6 +191,14 @@ with Dragonfly optional. The order:
 4. AgentHub on its own ([agenthub-crate](agenthub-crate.md) A6 to A9), in the agenthub repository.
 5. V1: the release solo developers install. Then the cloud lane ([cloud-edition](cloud-edition.md)
    C2b, C2c, C8, C9).
+
+## Release baseline (operator, 2026-11-15)
+
+When every item the operator named is merged (the optional cache, AgentHub on its own, Desktop
+Commander parity, the tenancy crate, support access, the leftovers) and the operator says go:
+the old `v0.1.0` release and tag (commit 5c28f8c, before R1 and R3) are deleted, `v0.1.0` is
+made again on that `main`, and the cloud repository's `core` pin moves to it. That release is
+the baseline everything after extends.
 
 ## Information needed from Jesse
 

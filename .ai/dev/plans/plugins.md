@@ -52,6 +52,22 @@ developers.openai.com/codex/plugins/build; docs.x.ai/build/features/skills-plugi
 | G5 | Seats for Codex and Grok: the hub names the seat after the OAuth client (Codex, Grok) when no `X-Devagotchi-Seat` comes, behind an account setting in the UI, so hooks and connector agree; then the hooks plugin for Codex (`.codex-plugin` with `hooks/hooks.json`) and Grok | G1 | hub tests on seat resolution; Codex install receipt | not started |
 | G6 | Updates and listings: Claude Code follows each commit to `main` (no `version` in its manifest); Codex follows the release version (held equal by a test), so each release reaches it. Submit `devagotchi` to Anthropic's directory and OpenAI's (no hooks there) | G1, roadmap D3 (first tag) | listing receipts (operator accounts) | not started |
 | G7 | Real sessions on the operator's machine: Claude Code (`/mcp` sign-in, `board_prime`, hooks at start, beat and Stop), Codex (`codex mcp login devagotchi`, a board call), Grok Build (install from this marketplace) | G1 | operator receipts in this plan | not started |
+| G8 | **Private beta, before any public listing** (operator, 2026-11-15: "test before publicly offering it on the marketplace"): a `beta` channel of both marketplaces that installs the plugins against a hub the operator names (app.devagotchi.com today), in the operator's own Claude Code, Codex, claude.ai and Grok; a page on the hub listing what the beta covers and how to report | G2, G7, free-edition D1 and D2 | the operator installs from `beta` in each client and runs the gate below by hand; each run recorded here | not started |
+| G9 | **The marketplace gate**: every row of the gate below passes, in a script where it can be (`tests/marketplace_gate.py` against a real hub, a real machine on Linux and Windows) and by the operator where it cannot; the public listing is the operator's act after it | G8, free-edition D3 to D5, connections-gateway X3 to X5 | the script green in CI on both OSes; the operator's run recorded | not started |
+
+### The marketplace gate (G9)
+
+Nothing is listed publicly until each row holds, on a hub installed from a tagged release:
+
+| # | What must hold | How it is shown |
+|---|---|---|
+| 1 | Desktop Commander parity: every tool in the teardown (`docs/desktop-commander-teardown.md` §1.3) answers on a real machine, with the machine's grants deciding | free-edition D3's per-tool tests |
+| 2 | First connect as smooth as Desktop Commander's: sign in (Continue with Shippin), one line on the machine, no sudo, the AI says it is online | free-edition D1, D2 e2e |
+| 3 | AgentHub works from each client: `board_prime`, claim, heartbeat, note, complete, handoff; a note reaches the other client's agent | `tests/marketplace_gate.py`, two clients on one board |
+| 4 | Phone: an approval buzzes the phone and the tap decides it; a finished ticket shows on the phone | the gate script with a test push subscription; the operator on a real phone (mobile P2g) |
+| 5 | Secrets never reach a transcript: a connection is called through the hub, Vaultix references resolve, a Lovable app calls through with its own key | connections-gateway X2 to X5 tests |
+| 6 | Updates: a new release reaches each client through its own plugin update | G6 |
+
 
 ## Risks and approved decisions
 

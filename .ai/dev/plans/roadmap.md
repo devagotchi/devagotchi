@@ -21,6 +21,7 @@
 | Connections: outside services through the hub | [connections-gateway.md](connections-gateway.md) | X1 and X2 built: 11 services, keys sealed, `connections` and `connection_call` | X3 apps (Lovable) call through the hub with an API key, X4 Resend end to end, X5 Vaultix as the secret source |
 | Plugins for Claude, Codex and Grok | [plugins.md](plugins.md) | One marketplace in this repository: the `devagotchi` connector and skills, the `devagotchi-agenthub` hooks; validated and installed in throwaway Claude Code and Codex homes | G2 guided install on the hub, G3 views the API opens (MCP Apps), G4 live notices in Claude Code |
 | Full browser | [browser-experience.md](browser-experience.md) | The desktop shows the phone's single column with the tab bar at the bottom | B1 wide layout with a side rail, B2 board as columns |
+| Vibe coder quality of life | [vibe-coder.md](vibe-coder.md) | Proposed 2026-11-15: twelve features (keys never in chat, checkpoints, phone approvals, stuck alerts, Lovable home first), each on an existing milestone | The operator picks |
 | Cloud edition | [cloud-edition.md](cloud-edition.md) | Boundary written ([editions](../../docs/editions.md)); license BSL 1.1; public image; `:latest` only for a stable tag; extension points in `crates/hub/src/extensions.rs`; no tag yet; no private repo | Operator tags `v0.1.0-alpha.1` after review, then C3: `shippinAI/devagotchi-cloud` with core as a submodule |
 
 ## Order

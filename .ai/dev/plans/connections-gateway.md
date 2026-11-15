@@ -24,6 +24,12 @@
   connection key; provider tokens stay in an encrypted store nobody can read back; the gateway
   refreshes them (docs.lovable.dev/integrations/security). Lovable's custom MCP servers are chat
   context only, not the app's runtime, so a Lovable app reaches the hub over HTTP.
+- Rechecked 2026-11-15 (docs.lovable.dev/integrations/mcp-servers, /any-api, /security): custom MCP
+  servers in chat on every plan (a static IP is Enterprise); shared connectors are used by the
+  deployed app at runtime; keys go in project secrets, never readable back; apps made from
+  2026-05-13 on run on TanStack Start with server functions, older ones on Edge Functions. Lovable
+  documents no general REST API, so a project comes home through the GitHub repo Lovable syncs
+  it to, not through Lovable.
 - Credential brokering at egress is where Infisical (Agent Proxy, Agent Vault), Composio, Arcade
   and Cloudflare MCP portals converge: the agent holds a handle, the broker attaches the real
   credential per host, and transcripts never carry it.
@@ -49,6 +55,8 @@
 | X5 | Vaultix as the secret source: a connection's secret may be a Vaultix reference (`vaultix://org/project/env/path#KEY`); the hub signs in to Vaultix with a machine identity (universal auth) set on `/admin`, reads the value at call time, never stores it | X2 | stand-in Vaultix test; operator receipt against their Vaultix | not started |
 | X6 | Nomen: the hub as a Nomen client (`client_credentials`) for services that accept Nomen tokens, and token exchange so a call can carry the person's delegated identity (`act`) | X2 | stand-in token endpoint test | not started |
 | X7 | The big ones: Stripe, GitHub, Slack, Vercel, Supabase, Linear, OpenAI, Anthropic, Postmark, Notion as templates (the same 36 Vaultix ships, where they apply); OAuth connections for those that need a person's account (GitHub, Slack, Linear) | X2 | template tests | not started |
+| X8 | **Lovable, both ways**: (a) the hub as a custom MCP server in Lovable's chat, so a person's Lovable builder reaches their boards, machines and connections; (b) a Lovable app calls through the hub with its own limited key (X3), from a server function or an Edge Function, with the snippet for each; (c) **import from Lovable**: a project's GitHub repo cloned onto the person's machine or devspace, a board started from its README and TODOs (factory F5), and its secrets' *names* listed for the person to fill into Vaultix or the hub, never their values | X3, X5, factory F5 | a real Lovable project on the operator's account: chat reaches the hub, the app sends through Resend via the hub, the import makes the board and the secret list | not started |
+| X9 | **Shippin.ai**: Sign in with Shippin (free-edition S0, D1) and a person's Shippin devspace as one of their machines, joined without a line (the devspace is provisioned already) | free-edition S0, D2; cloud C10 | a devspace appears in `machines` after sign-in and runs `echo ok` | not started |
 
 ## Risks and approved decisions
 

@@ -43,6 +43,23 @@ One release runs both. The panel moves a release to a staging cell and a staging
 before any customer. A free tenant becoming paid is exported from its cell into a new
 instance, and its machines reconnect to the new host name.
 
+## Devspaces and scale (C10)
+
+The hub stays the trusted part: pooled cells for free tenants, an instance per paying customer
+([ADR 0003](../../../docs/adr/0003-hosting-pooled-free-per-instance-paid.md)). What runs
+customers' own code is the devspace, and that is where isolation and density matter most:
+
+- **Firecracker microVMs**, the isolation AWS Lambda and Fly.io run on: a guest kernel per
+  devspace, boot in a fraction of a second, a small memory overhead per VM.
+- **Snapshot and resume** is what makes the free tier affordable: an idle devspace is a file on
+  disk, and the next AI call brings it back in well under a second, with its memory loaded as it
+  is touched. This is "cheap to keep dormant and fast to wake" in the cloud's vision.
+- **Hosts need KVM**: bare-metal instances (AWS `.metal`, Oracle bare metal, Shippin's own
+  nodes) or nested virtualisation where a provider offers it. The panel's deploy targets (C9)
+  record which hosts can run devspaces.
+- Lighter isolation (gVisor, containers) stays for the hub's own processes, which run our code,
+  not the customer's.
+
 ## Staff, support and the panel
 
 The panel is the private repository's web app. It is also where staff work.
@@ -93,6 +110,7 @@ the self-hosted behaviour as its default. Nothing cloud-specific is in the core.
 | C7 | Enterprise chat | C6 | its own plan | not started |
 | C8 | The panel: customers, cells, instances (target, version, provenance, health), staff roles, the support board | C3, C2b | panel tests; a staff member without a grant cannot open a customer's hub | not started |
 | C9 | Deploy targets for instances: a Shippin node first, then AWS, Google Cloud, Oracle and a custom host over SSH, each from the same release and install scripts | C8, a tagged release | an instance deployed, upgraded and rolled back on each target | not started |
+| C10 | **Devspaces on microVMs** (operator, 2026-11-15: "firecracker/microvms ... for scale including free tier"): a person's cloud devspace is a Firecracker microVM with the machine engine inside, joined to their hub like any machine; idle ones are snapshotted to disk and hold no memory; an AI call to a sleeping devspace resumes it from the snapshot (memory loaded lazily on fault) before the hub routes the call; disks are copy-on-write layers over one base image per OS. Free tier: limits on CPU-seconds, disk, egress and no outbound mail ports; paid: always-on if they want it | C8; KVM on the host (bare metal, or nested virtualisation where the provider offers it) | resume to `echo ok` measured on each target; a thousand idle devspaces on one host hold no memory | not started |
 
 ## Risks and approved decisions
 
