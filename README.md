@@ -120,8 +120,8 @@ This desktop implementation does not yet provide file/search/edit tools, PTY inp
 
 | Component | Source | Responsibility |
 |---|---|---|
-| Broker | `crates/core/src/broker.rs`, `crates/core/src/journal.rs`, `crates/broker/src/main.rs` | Admission, operation lifecycle, output retention, cancellation, recovery |
-| Execution | `crates/core/src/execution.rs`, `crates/core/src/execution/platform/linux.rs`, `crates/core/src/execution/platform/windows.rs` | Process orchestration; spawning, observing, and terminating one root's owned process group or Job Object |
+| Broker | `crates/machine-engine/src/broker.rs`, `crates/machine-engine/src/journal.rs`, `crates/broker/src/main.rs` | Admission, operation lifecycle, output retention, cancellation, recovery |
+| Execution | `crates/machine-engine/src/execution.rs`, `crates/machine-engine/src/execution/platform/linux.rs`, `crates/machine-engine/src/execution/platform/windows.rs` | Process orchestration; spawning, observing, and terminating one root's owned process group or Job Object |
 | Local IPC | `crates/ipc/src/lib.rs`, `crates/ipc/src/unix.rs`, `crates/ipc/src/windows.rs`, `crates/ipc/src/windows/security.rs` | Private state directory, Unix socket or named pipe, peer UID or SID, instance lock, bounded framed requests |
 | MCP adapter | `crates/mcp/src/main.rs` | Official `rmcp` 3.5.1 stdio transport and four typed tools |
 | Desktop app | `apps/desktop` | Tauri 2 native host and React/TypeScript inspector |

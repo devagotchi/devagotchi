@@ -267,14 +267,14 @@ fn private_dir(dir: &Path) -> std::io::Result<()> {
 
 /// The first config: the workspace, the toolchains on PATH and the explicit grants, all
 /// as canonical paths in the broker's own form (so a grant must exist now, and must be
-/// what the broker runs directly — its rule, `devagotchi_core::broker::is_directly_executable`).
+/// what the broker runs directly — its rule, `devagotchi_machine_engine::broker::is_directly_executable`).
 #[cfg(any(target_os = "linux", windows))]
 fn write_config(
     path: &Path,
     workspace: Option<PathBuf>,
     grants: &[PathBuf],
 ) -> Result<String, String> {
-    use devagotchi_core::broker::{EXECUTABLE_RULE, is_directly_executable};
+    use devagotchi_machine_engine::broker::{EXECUTABLE_RULE, is_directly_executable};
 
     let workspace = match workspace.map(absolute).or_else(paths::home) {
         Some(workspace) => workspace,
@@ -358,7 +358,7 @@ pub fn find_on_path(name: &str) -> Option<PathBuf> {
 
 #[cfg(any(target_os = "linux", windows))]
 fn find_in(name: &str, path: &std::ffi::OsStr) -> Option<PathBuf> {
-    use devagotchi_core::broker::is_directly_executable;
+    use devagotchi_machine_engine::broker::is_directly_executable;
 
     let candidates: Vec<String> = if cfg!(windows) {
         vec![format!("{name}.exe"), format!("{name}.com")]
@@ -385,7 +385,7 @@ fn find_in(name: &str, path: &std::ffi::OsStr) -> Option<PathBuf> {
 #[cfg(all(test, any(target_os = "linux", windows)))]
 mod tests {
     use super::*;
-    use devagotchi_core::broker::is_directly_executable;
+    use devagotchi_machine_engine::broker::is_directly_executable;
 
     #[test]
     fn options_parse_and_reject_the_unknown() {
@@ -449,11 +449,11 @@ mod tests {
             );
         }
         // The guarantee: what `start` writes is what the broker opens.
-        let broker_config: devagotchi_core::broker::BrokerConfig =
+        let broker_config: devagotchi_machine_engine::broker::BrokerConfig =
             serde_json::from_value(parsed).unwrap();
         let state = dir.path().join("state");
         private_dir(&state).unwrap();
-        devagotchi_core::broker::Broker::open(broker_config, &state)
+        devagotchi_machine_engine::broker::Broker::open(broker_config, &state)
             .expect("the broker accepts the config start wrote");
 
         let not_executable = dir.path().join("notes.txt");

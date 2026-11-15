@@ -18,7 +18,7 @@ path = "src/lib.rs"
 
 [dependencies]
 devagotchi-contracts = { workspace = true }
-devagotchi-core = { workspace = true }
+devagotchi-machine-engine = { workspace = true }
 devagotchi-ipc = { workspace = true }
 serde_json = { workspace = true }
 tokio = { workspace = true }

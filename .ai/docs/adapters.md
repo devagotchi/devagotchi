@@ -2,7 +2,7 @@
 
 Verified against the linked official docs on 2026-11-10. Features may change.
 Harness discovery/trust determines hooks and instructions, **not** frontier/subscription
-model choice. Canonical code is `crates/core/src/ai/mod.rs`; native configs are translation stubs.
+model choice. Canonical code is `crates/machine-engine/src/ai/mod.rs`; native configs are translation stubs.
 
 | Harness | Instruction discovery | Native stub / field differences | Actual coverage / gap |
 |---|---|---|---|

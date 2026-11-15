@@ -1,5 +1,5 @@
 [package]
-name = "devagotchi-core"
+name = "devagotchi-machine-engine"
 description = "The Devagotchi machine engine: admission, operation lifecycle, SQLite journal, output retention, native process supervision, and the machine's private AI evidence"
 version.workspace = true
 edition.workspace = true
