@@ -99,7 +99,7 @@ async fn holds(store: Store) {
     let seen: i64 = transaction!(&store, |connection| {
         store.scope(connection, &b).await?;
         Ok(
-            sqlx::query_scalar("SELECT COUNT(*) FROM person_preferences WHERE tenant_id = $1")
+            sqlx::query_scalar("SELECT COUNT(*) FROM auth_preferences WHERE tenant_id = $1")
                 .bind(&a)
                 .fetch_one(&mut *connection)
                 .await?,
@@ -110,7 +110,7 @@ async fn holds(store: Store) {
     let forged: BridgeResult<()> = transaction!(&store, |connection| {
         store.scope(connection, &b).await?;
         sqlx::query(
-            "INSERT INTO person_preferences
+            "INSERT INTO auth_preferences
                (tenant_id, subject, schema_version, body, updated_at)
              VALUES ($1, 'mallory', 1, '{}', 1)",
         )
@@ -137,7 +137,7 @@ async fn holds(store: Store) {
     transaction!(&store, |connection| {
         store.scope(connection, &b).await?;
         sqlx::query(
-            "INSERT INTO person_preferences
+            "INSERT INTO auth_preferences
                (tenant_id, subject, schema_version, body, machine_pushes, updated_at)
              VALUES ($1, 'carol', 9, $2, 1, 1)",
         )

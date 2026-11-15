@@ -140,7 +140,7 @@ async fn holds(store: crate::store::Store) {
     // The hub keeps a hash, never the key.
     {
         let mut connection = store.admin().acquire().await.unwrap();
-        let stored: String = sqlx::query_scalar("SELECT hash FROM api_keys")
+        let stored: String = sqlx::query_scalar("SELECT hash FROM auth_api_keys")
             .fetch_one(&mut *connection)
             .await
             .unwrap();
@@ -220,7 +220,7 @@ async fn holds(store: crate::store::Store) {
         .unwrap();
     {
         let mut connection = store.admin().acquire().await.unwrap();
-        sqlx::query("UPDATE api_keys SET expires_at = 1 WHERE id = $1")
+        sqlx::query("UPDATE auth_api_keys SET expires_at = 1 WHERE id = $1")
             .bind(&old.id)
             .execute(&mut *connection)
             .await

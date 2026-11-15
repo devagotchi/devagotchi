@@ -45,7 +45,7 @@ impl Accounts {
             let rows = sqlx::query(
                 "SELECT name, kind, label, issuer, client_id, sealed_secret, enabled, updated_at,
                         updated_by
-                 FROM sign_in_settings ORDER BY name",
+                 FROM auth_sign_in_settings ORDER BY name",
             )
             .fetch_all(&mut *connection)
             .await?;
@@ -73,7 +73,7 @@ impl Accounts {
         let home = self.home_tenant().await?;
         transaction!(&self.store, |connection| {
             sqlx::query(
-                "INSERT INTO sign_in_settings
+                "INSERT INTO auth_sign_in_settings
                    (name, kind, label, issuer, client_id, sealed_secret, enabled, updated_at,
                     updated_by)
                  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)

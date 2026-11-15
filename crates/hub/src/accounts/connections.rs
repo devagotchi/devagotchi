@@ -45,7 +45,7 @@ impl Accounts {
         transaction!(&self.store, |connection| {
             self.store.scope(connection, tenant).await?;
             let rows = sqlx::query(sqlx::AssertSqlSafe(format!(
-                "SELECT {COLUMNS} FROM connections WHERE tenant_id = $1 ORDER BY name"
+                "SELECT {COLUMNS} FROM connector_keys WHERE tenant_id = $1 ORDER BY name"
             )))
             .bind(tenant)
             .fetch_all(&mut *connection)
@@ -63,7 +63,7 @@ impl Accounts {
         transaction!(&self.store, |connection| {
             self.store.scope(connection, tenant).await?;
             let row = sqlx::query(sqlx::AssertSqlSafe(format!(
-                "SELECT {COLUMNS} FROM connections WHERE tenant_id = $1 AND name = $2"
+                "SELECT {COLUMNS} FROM connector_keys WHERE tenant_id = $1 AND name = $2"
             )))
             .bind(tenant)
             .bind(name)
@@ -87,7 +87,7 @@ impl Accounts {
         transaction!(&self.store, |connection| {
             self.store.scope(connection, tenant).await?;
             sqlx::query(
-                "INSERT INTO connections
+                "INSERT INTO connector_keys
                    (tenant_id, name, service, sealed_key, hint, created_by, created_at, updated_at)
                  VALUES ($1, $2, $3, $4, $5, $6, $7, $7)
                  ON CONFLICT (tenant_id, name) DO UPDATE SET service = excluded.service,
@@ -126,7 +126,7 @@ impl Accounts {
         let now = now_secs();
         transaction!(&self.store, |connection| {
             self.store.scope(connection, tenant).await?;
-            let gone = sqlx::query("DELETE FROM connections WHERE tenant_id = $1 AND name = $2")
+            let gone = sqlx::query("DELETE FROM connector_keys WHERE tenant_id = $1 AND name = $2")
                 .bind(tenant)
                 .bind(name)
                 .execute(&mut *connection)
@@ -146,7 +146,7 @@ impl Accounts {
         transaction!(&self.store, |connection| {
             self.store.scope(connection, tenant).await?;
             sqlx::query(
-                "UPDATE connections SET last_used_at = $3 WHERE tenant_id = $1 AND name = $2",
+                "UPDATE connector_keys SET last_used_at = $3 WHERE tenant_id = $1 AND name = $2",
             )
             .bind(tenant)
             .bind(name)

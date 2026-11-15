@@ -224,7 +224,7 @@ impl PreferenceStore {
         transaction!(&self.store, |connection| {
             self.store.scope(connection, tenant).await?;
             let row = sqlx::query(
-                "SELECT body FROM person_preferences WHERE tenant_id = $1 AND subject = $2",
+                "SELECT body FROM auth_preferences WHERE tenant_id = $1 AND subject = $2",
             )
             .bind(tenant)
             .bind(subject)
@@ -250,7 +250,7 @@ impl PreferenceStore {
         transaction!(&self.store, |connection| {
             self.store.scope(connection, tenant).await?;
             let row = sqlx::query(
-                "SELECT body FROM person_preferences WHERE tenant_id = $1 AND subject = $2",
+                "SELECT body FROM auth_preferences WHERE tenant_id = $1 AND subject = $2",
             )
             .bind(tenant)
             .bind(subject)
@@ -275,7 +275,7 @@ impl PreferenceStore {
                     BridgeError::new("board_store", format!("preferences: {error}"))
                 })?;
                 sqlx::query(
-                    "INSERT INTO person_preferences
+                    "INSERT INTO auth_preferences
                        (tenant_id, subject, schema_version, body, machine_pushes, updated_at)
                      VALUES ($1, $2, $3, $4, $5, $6)
                      ON CONFLICT (tenant_id, subject) DO UPDATE SET

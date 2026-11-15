@@ -320,7 +320,7 @@ impl Accounts {
         now: u64,
     ) -> Result<ApiKey, Failed> {
         let live: i64 = sqlx::query_scalar(
-            "SELECT COUNT(*) FROM api_keys WHERE tenant_id = $1 AND account = $2
+            "SELECT COUNT(*) FROM auth_api_keys WHERE tenant_id = $1 AND account = $2
              AND revoked_at IS NULL AND expires_at > $3",
         )
         .bind(tenant)
@@ -347,7 +347,7 @@ impl Accounts {
         };
         let json = |value: &[String]| serde_json::to_string(value).expect("names json");
         sqlx::query(
-            "INSERT INTO api_keys (tenant_id, id, account, name, hash, hint, scopes, projects,
+            "INSERT INTO auth_api_keys (tenant_id, id, account, name, hash, hint, scopes, projects,
                machines, created_at, expires_at)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)",
         )
@@ -404,7 +404,7 @@ impl Accounts {
             let rows = sqlx::query(concat!(
                 "SELECT ",
                 key_columns!(),
-                " FROM api_keys WHERE tenant_id = $1 AND account = $2 ORDER BY created_at DESC, id"
+                " FROM auth_api_keys WHERE tenant_id = $1 AND account = $2 ORDER BY created_at DESC, id"
             ))
             .bind(tenant)
             .bind(account)
@@ -427,7 +427,7 @@ impl Accounts {
         now: u64,
     ) -> Result<(), Failed> {
         let ended = sqlx::query(
-            "UPDATE api_keys SET revoked_at = $1
+            "UPDATE auth_api_keys SET revoked_at = $1
              WHERE tenant_id = $2 AND account = $3 AND id = $4 AND revoked_at IS NULL",
         )
         .bind(secs(now))
@@ -470,7 +470,7 @@ impl Accounts {
             let row = sqlx::query(concat!(
                 "SELECT ",
                 key_columns!(),
-                " FROM api_keys WHERE tenant_id = $1 AND account = $2 AND id = $3"
+                " FROM auth_api_keys WHERE tenant_id = $1 AND account = $2 AND id = $3"
             ))
             .bind(tenant)
             .bind(account)
@@ -520,7 +520,7 @@ impl Accounts {
                 "SELECT ",
                 account_columns_a!(),
                 ", k.id AS key_id, k.name AS key_name, k.scopes, k.projects, k.machines
-                 FROM api_keys k JOIN auth_accounts a ON a.id = k.account
+                 FROM auth_api_keys k JOIN auth_accounts a ON a.id = k.account
                  WHERE k.hash = $1 AND k.revoked_at IS NULL AND k.expires_at > $2
                    AND a.disabled_at IS NULL"
             ))
@@ -545,7 +545,7 @@ impl Accounts {
             tenants::touch(connection, &mut account, now).await?;
             let admitted = self.settle_in(connection, &mut account, now).await?;
             sqlx::query(
-                "UPDATE api_keys SET last_used_at = $1 WHERE hash = $2
+                "UPDATE auth_api_keys SET last_used_at = $1 WHERE hash = $2
                  AND (last_used_at IS NULL OR last_used_at < $3)",
             )
             .bind(secs(now))

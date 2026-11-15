@@ -114,7 +114,7 @@ impl Accounts {
                 )
                 .await?;
             sqlx::query(
-                "INSERT INTO passwords (account_id, tenant_id, email, hash, created_at, updated_at)
+                "INSERT INTO auth_passwords (account_id, tenant_id, email, hash, created_at, updated_at)
                  VALUES ($1, $2, $3, $4, $5, $5)",
             )
             .bind(&account.id)
@@ -152,8 +152,8 @@ impl Accounts {
             if !known {
                 return Ok(None);
             }
-            let row =
-                sqlx::query("SELECT account_id, hash FROM passwords WHERE email = $1").bind(&email);
+            let row = sqlx::query("SELECT account_id, hash FROM auth_passwords WHERE email = $1")
+                .bind(&email);
             let Some(row) = row.fetch_optional(&mut *connection).await? else {
                 return Ok(None);
             };
@@ -198,8 +198,9 @@ impl Accounts {
             {
                 return Ok(None);
             }
-            let found = sqlx::query_scalar("SELECT account_id FROM passwords WHERE email = $1")
-                .bind(&email);
+            let found =
+                sqlx::query_scalar("SELECT account_id FROM auth_passwords WHERE email = $1")
+                    .bind(&email);
             Ok(found.fetch_optional(&mut *connection).await?)
         })
     }
@@ -277,7 +278,7 @@ impl Accounts {
                     return Err(taken().into());
                 }
             }
-            sqlx::query("INSERT INTO passwords (account_id, tenant_id, email, hash, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $5)
+            sqlx::query("INSERT INTO auth_passwords (account_id, tenant_id, email, hash, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $5)
                  ON CONFLICT (account_id) DO UPDATE SET email = excluded.email, hash = excluded.hash, updated_at = excluded.updated_at")
             .bind(&holder.id).bind(&holder.tenant).bind(&email).bind(&hash).bind(secs(now))
             .execute(&mut *connection).await?;
@@ -351,7 +352,7 @@ impl Accounts {
                 )
                 .await?;
             }
-            sqlx::query("INSERT INTO passwords (account_id, tenant_id, email, hash, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $5)
+            sqlx::query("INSERT INTO auth_passwords (account_id, tenant_id, email, hash, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $5)
                  ON CONFLICT (account_id) DO UPDATE SET email = excluded.email, hash = excluded.hash, updated_at = excluded.updated_at")
             .bind(&holder.id).bind(&holder.tenant).bind(&email).bind(&hash).bind(secs(now))
             .execute(&mut *connection).await?;

@@ -34,16 +34,6 @@ const DOMAIN_PREFIXES: [(&str, &[&str]); 8] = [
     ("connectors", &["connector_"]),
 ];
 
-/// Tables made before the rule, without a domain prefix. The list only shrinks: renaming one
-/// removes it here, and a table not listed must carry a prefix.
-const UNPREFIXED: [&str; 5] = [
-    "api_keys",
-    "connections",
-    "passwords",
-    "person_preferences",
-    "sign_in_settings",
-];
-
 #[tokio::test]
 async fn every_table_in_the_hub_schema_carries_its_domain_prefix() {
     let Some(test) = testing::postgres().await else {
@@ -66,7 +56,7 @@ async fn every_table_in_the_hub_schema_carries_its_domain_prefix() {
     };
     let mut broken = Vec::new();
     for table in &tables {
-        if !prefixed(table) && !UNPREFIXED.contains(&table.as_str()) {
+        if !prefixed(table) {
             broken.push(format!(
                 "{table}: no domain prefix; name it after its domain ({})",
                 DOMAIN_PREFIXES
@@ -74,13 +64,6 @@ async fn every_table_in_the_hub_schema_carries_its_domain_prefix() {
                     .map(|(domain, p)| format!("{domain}: {}", p.join(" ")))
                     .collect::<Vec<_>>()
                     .join("; ")
-            ));
-        }
-    }
-    for listed in UNPREFIXED {
-        if !tables.iter().any(|t| t == listed) {
-            broken.push(format!(
-                "{listed}: listed as unprefixed but gone; remove it from UNPREFIXED"
             ));
         }
     }
