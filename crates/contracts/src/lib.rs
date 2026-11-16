@@ -73,13 +73,18 @@ pub struct StartInput {
     /// Absolute working directory; defaults to the workspace. A broker that runs only
     /// granted programs keeps it within the workspace.
     pub cwd: Option<String>,
-    /// Execution deadline, not a client wait timeout. 1..=300000 milliseconds.
+    /// Execution deadline, not a client wait timeout. 1..=[`MAX_DEADLINE_MS`] milliseconds.
     pub deadline_ms: u64,
     /// Keep the program's input open for `operation_input`: on a pseudo-terminal (`terminal`,
     /// the default: prompts, REPLs, sign-ins, Ctrl-C) or on a plain pipe (`pipe`). Absent:
     /// the program reads nothing (its stdin is the null device), as before.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub interactive: Option<InteractiveInput>,
+    /// One pipe for stdout and stderr, so the output keeps the order the program wrote it
+    /// (as a terminal shows it); every frame is then `stdout`. `run` sets it. Ignored for an
+    /// interactive operation, whose terminal already merges them.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub combined_output: bool,
     /// Who is starting it, set by the transport that carried the request (this machine's
     /// adapter, a hub), never by an AI: whatever arrives here from a tool call is replaced.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -96,6 +101,10 @@ pub struct GetInput {
     #[schemars(skip)]
     pub caller: Option<Caller>,
 }
+
+/// Longest an operation may run: a day. Long builds and test runs fit; a job that should
+/// outlive a day is a service, not an operation.
+pub const MAX_DEADLINE_MS: u64 = 24 * 60 * 60 * 1000;
 
 /// Longest a broker holds one wait open. MCP clients give up on a call after about a
 /// minute, so a wait ends well before that and the caller waits again.

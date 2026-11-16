@@ -6,6 +6,8 @@
 use crate::execution::platform::{self, SCOPE, SCOPE_TERMINAL};
 use crate::execution::{ExecutionSpec, InputRequest, InputStep, StopReason, run_job};
 use crate::journal::{Journal, JournalFrame, JournalOperation};
+use crate::launch::{self, Os};
+use crate::trace;
 use access::{claim_writer, reach, reach_mut, visible};
 use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
 use devagotchi_contracts::*;
@@ -80,6 +82,8 @@ struct Operation {
     input: Option<mpsc::Sender<InputRequest>>,
     /// The client holding the keyboard, and until when (ms since the epoch).
     writer: Option<(String, u64)>,
+    /// How the program was chosen (see `launch`), kept at the front of the final detail.
+    launch: Option<String>,
 }
 
 struct State {
@@ -256,6 +260,7 @@ impl Broker {
                     persistence_fault: None,
                     input: None,
                     writer: None,
+                    launch: None,
                 },
             );
         }
@@ -283,7 +288,28 @@ impl Broker {
 
     pub async fn handle(&self, request: RequestBody) -> BridgeResult<ResponseBody> {
         match request {
-            RequestBody::OperationStart(input) => self.start(input).map(ResponseBody::Start),
+            RequestBody::OperationStart(input) => {
+                let asked = trace::asked(&input);
+                let started = self.start(input);
+                match &started {
+                    Err(error) => trace::refused(&format!("operation_start ({asked})"), error),
+                    Ok(output) if !output.replayed => {
+                        let operation = &output.operation;
+                        trace::line(
+                            &format!("admitted {}", operation.operation_id),
+                            &format!(
+                                "{} {:?} in {} ({asked}). {}",
+                                operation.executable,
+                                operation.args,
+                                operation.cwd,
+                                operation.detail.as_deref().unwrap_or_default()
+                            ),
+                        );
+                    }
+                    Ok(_) => {}
+                }
+                started.map(ResponseBody::Start)
+            }
             RequestBody::OperationGet(input) => self
                 .get(&input.operation_id, input.caller.as_ref())
                 .map(ResponseBody::Operation),
@@ -344,14 +370,18 @@ impl Broker {
     {
         let workspace = self.shared.workspace.clone();
         let policy = self.shared.config.exec_policy;
-        tokio::task::spawn_blocking(move || {
+        let done = tokio::task::spawn_blocking(move || {
             work(crate::files::Scope {
                 workspace: &workspace,
                 policy,
             })
         })
         .await
-        .map_err(|error| BridgeError::new("internal_error", error.to_string()))?
+        .map_err(|error| BridgeError::new("internal_error", error.to_string()))?;
+        if let Err(error) = &done {
+            trace::refused("file request", error);
+        }
+        done
     }
 
     fn normalize(&self, input: &StartInput) -> BridgeResult<(ExecutionSpec, String)> {
@@ -366,11 +396,21 @@ impl Broker {
                 "args must contain at most 128 entries and 16384 total UTF-8 bytes, without NUL bytes",
             ));
         }
-        if !(1..=300_000).contains(&input.deadline_ms) {
-            return Err(invalid("deadline_ms must be 1..=300000"));
+        if !(1..=MAX_DEADLINE_MS).contains(&input.deadline_ms) {
+            return Err(invalid(format!("deadline_ms must be 1..={MAX_DEADLINE_MS} (a day)")));
         }
         let account = self.shared.config.exec_policy == ExecPolicy::Account;
-        let (executable, args) = match &input.command {
+        let cwd = match &input.cwd {
+            Some(cwd) => canonical_existing(cwd, "cwd", "invalid_request")?,
+            None => self.shared.workspace.clone(),
+        };
+        if !cwd.is_dir() {
+            return Err(invalid("cwd must be an existing directory"));
+        }
+        let cwd_text = path_string(&cwd)?;
+        // What runs is decided once, here: the program spawned, the arguments, and the
+        // sentence the operation's detail and the broker log carry.
+        let (executable, canonical_executable, args, launch) = match &input.command {
             Some(command) => {
                 if !account {
                     return Err(BridgeError::new(
@@ -389,36 +429,36 @@ impl Broker {
                         "command must be 1..=16384 UTF-8 bytes without NUL bytes",
                     ));
                 }
-                platform::shell_command(command)?
+                let (line, launch) =
+                    match launch::line::route(command, &cwd_text, Os::HERE, &launch::Machine)? {
+                        Some((line, how)) => (line, Some(how)),
+                        None => (command.clone(), None),
+                    };
+                let (shell, args) = platform::shell_command(&line)?;
+                (shell.clone(), shell, args, launch)
             }
             None => {
-                let executable =
-                    canonical_existing(&input.executable, "executable", "invalid_request")?;
-                if !account && !self.shared.executables.contains(&executable) {
+                let found = launch::resolve(&input.executable, &cwd_text, Os::HERE, &launch::Machine)?;
+                let canonical =
+                    canonical_existing(&found.program, "executable", "invalid_request")?;
+                if !account && !self.shared.executables.contains(&canonical) {
                     return Err(BridgeError::new(
                         "executable_not_allowed",
-                        "The canonical executable path has no operator grant",
+                        format!(
+                            "{} has no operator grant on this broker ({})",
+                            path_string(&canonical)?,
+                            found.how
+                        ),
                     ));
                 }
-                let metadata = executable
-                    .metadata()
-                    .map_err(|error| invalid(error.to_string()))?;
-                if !platform::is_directly_executable(&executable, &metadata) {
-                    return Err(invalid(format!(
-                        "Executable is not an executable regular file{}",
-                        platform::EXECUTABLE_RULE
-                    )));
+                let mut args = found.lead;
+                args.extend(input.args.iter().cloned());
+                if args.len() > 136 {
+                    return Err(invalid("args must contain at most 128 entries"));
                 }
-                (executable, input.args.clone())
+                (PathBuf::from(found.program), canonical, args, Some(found.how))
             }
         };
-        let cwd = match &input.cwd {
-            Some(cwd) => canonical_existing(cwd, "cwd", "invalid_request")?,
-            None => self.shared.workspace.clone(),
-        };
-        if !cwd.is_dir() {
-            return Err(invalid("cwd must be an existing directory"));
-        }
         if !account && !cwd.starts_with(&self.shared.workspace) {
             return Err(BridgeError::new(
                 "cwd_outside_workspace",
@@ -441,7 +481,7 @@ impl Broker {
         }
         let canonical = (
             &self.shared.config_identity,
-            path_string(&executable)?,
+            path_string(&canonical_executable)?,
             &args,
             path_string(&cwd)?,
             input.deadline_ms,
@@ -461,6 +501,8 @@ impl Broker {
                 deadline_ms: input.deadline_ms,
                 account_environment: account,
                 interactive: input.interactive.clone(),
+                combined_output: input.combined_output && input.interactive.is_none(),
+                launch,
             },
             hex::encode(Sha256::digest(bytes)),
         ))
@@ -528,11 +570,14 @@ impl Broker {
             created_at_ms: timestamp,
             updated_at_ms: timestamp,
             exit_code: None,
-            detail: Some(if spec.account_environment {
-                "Admission committed; the independent broker job owns execution. It runs as the broker's own account with that account's environment; this is not a sandbox.".into()
-            } else {
-                "Admission committed; the independent broker job owns execution. Executable grants and cwd checks do not sandbox the executable.".into()
-            }),
+            detail: Some(with_launch(
+                spec.launch.as_deref(),
+                if spec.account_environment {
+                    "Admission committed; the independent broker job owns execution. It runs as the broker's own account with that account's environment; this is not a sandbox."
+                } else {
+                    "Admission committed; the independent broker job owns execution. Executable grants and cwd checks do not sandbox the executable."
+                },
+            )),
             ownership_scope: match &spec.interactive {
                 Some(InteractiveInput {
                     mode: InputMode::Terminal,
@@ -586,6 +631,7 @@ impl Broker {
                 persistence_fault: None,
                 input: input_sender,
                 writer: None,
+                launch: spec.launch.clone(),
             },
         );
         state.active_count += 1;
@@ -964,6 +1010,14 @@ impl Broker {
     }
 }
 
+/// The launch sentence, then the detail.
+fn with_launch(launch: Option<&str>, detail: &str) -> String {
+    match launch {
+        Some(launch) => format!("Launch: {launch}. {detail}"),
+        None => detail.to_owned(),
+    }
+}
+
 fn validate_id(id: &str) -> BridgeResult<String> {
     uuid::Uuid::parse_str(id)
         .map(|id| id.to_string())
@@ -979,111 +1033,6 @@ fn check_size(cols: u16, rows: u16) -> BridgeResult<()> {
 
 fn no_caller() -> BridgeError {
     invalid("Input needs a caller: send it through devagotchi mcp or a hub")
-}
-
-fn input_closed() -> BridgeError {
-    BridgeError::new(
-        "input_closed",
-        "This operation no longer takes input: it ended, or its input was closed",
-    )
-}
-
-/// What a key sends on a terminal (an xterm in its normal cursor mode).
-fn key_bytes(key: Key) -> &'static [u8] {
-    match key {
-        Key::Enter => b"\r",
-        Key::Tab => b"\t",
-        Key::Backspace => b"\x7f",
-        Key::Escape => b"\x1b",
-        Key::Up => b"\x1b[A",
-        Key::Down => b"\x1b[B",
-        Key::Right => b"\x1b[C",
-        Key::Left => b"\x1b[D",
-        Key::Home => b"\x1b[H",
-        Key::End => b"\x1b[F",
-        Key::PageUp => b"\x1b[5~",
-        Key::PageDown => b"\x1b[6~",
-        Key::Delete => b"\x1b[3~",
-        Key::Space => b" ",
-        Key::CtrlC => b"\x03",
-        Key::CtrlD => b"\x04",
-        Key::CtrlZ => b"\x1a",
-        Key::CtrlL => b"\x0c",
-        Key::CtrlU => b"\x15",
-        Key::CtrlBackslash => b"\x1c",
-    }
-}
-
-/// The steps one input takes. On a terminal everything is bytes and the terminal does the
-/// rest (Ctrl-C becomes SIGINT for the foreground job). On a pipe there is no terminal:
-/// Enter is a newline, Ctrl-C and Ctrl-\\ are signals, Ctrl-D closes the input, and
-/// Ctrl-Z, which would stop a program nothing can continue, is refused.
-fn input_steps(mode: InputMode, text: &str, keys: &[Key]) -> BridgeResult<Vec<InputStep>> {
-    let mut steps = Vec::new();
-    let mut bytes = text.as_bytes().to_vec();
-    for &key in keys {
-        let step = match (mode, key) {
-            (InputMode::Terminal, key) => {
-                bytes.extend_from_slice(key_bytes(key));
-                continue;
-            }
-            (InputMode::Pipe, Key::Enter) => {
-                bytes.push(b'\n');
-                continue;
-            }
-            (InputMode::Pipe, Key::CtrlC) => InputStep::Interrupt,
-            (InputMode::Pipe, Key::CtrlBackslash) => InputStep::Quit,
-            (InputMode::Pipe, Key::CtrlD) => InputStep::Close,
-            (InputMode::Pipe, Key::CtrlZ) => {
-                return Err(BridgeError::new(
-                    "no_terminal",
-                    "ctrl_z needs a terminal: on a pipe it would stop the program with nothing to continue it",
-                ));
-            }
-            (InputMode::Pipe, key) => {
-                bytes.extend_from_slice(key_bytes(key));
-                continue;
-            }
-        };
-        if !bytes.is_empty() {
-            steps.push(InputStep::Bytes(std::mem::take(&mut bytes)));
-        }
-        steps.push(step);
-    }
-    if !bytes.is_empty() {
-        steps.push(InputStep::Bytes(bytes));
-    }
-    if let Some(position) = steps.iter().position(|step| *step == InputStep::Close)
-        && position + 1 != steps.len()
-    {
-        return Err(invalid(
-            "Nothing can follow ctrl_d on a pipe: it closes the input",
-        ));
-    }
-    Ok(steps)
-}
-
-/// Hand steps to the running job and wait (bounded) until the program has them.
-async fn deliver(sender: &mpsc::Sender<InputRequest>, steps: Vec<InputStep>) -> BridgeResult<()> {
-    let (reply, answer) = oneshot::channel();
-    match sender.try_send(InputRequest { steps, reply }) {
-        Ok(()) => {}
-        Err(mpsc::error::TrySendError::Full(_)) => {
-            return Err(BridgeError::new(
-                "input_busy",
-                "Earlier input to this operation is still waiting for the program to read it",
-            ));
-        }
-        Err(mpsc::error::TrySendError::Closed(_)) => return Err(input_closed()),
-    }
-    match timeout(INPUT_WAIT, answer).await {
-        Ok(Ok(result)) => result,
-        Ok(Err(_)) => Err(input_closed()),
-        Err(_) => Err(BridgeError::new(
-            "input_blocked",
-            "The program has not read its input for five seconds; it stays queued and is delivered when it reads",
-        )),
-    }
 }
 
 impl State {
@@ -1305,6 +1254,7 @@ impl Shared {
             interactive.input_open = false;
             interactive.writer_until_ms = None;
         }
+        let detail = with_launch(operation.launch.as_deref(), &detail);
         operation.record.view.detail = Some(match &operation.persistence_fault {
             Some(error) => format!(
                 "{detail} Critical persistence failure remains visible: {error}; durable completion cannot be certified."
@@ -1312,6 +1262,15 @@ impl Shared {
             None => detail,
         });
         let view = operation.record.view.clone();
+        trace::line(
+            &format!("settled {}", &view.operation_id),
+            &format!(
+                "{:?} exit {}: {}",
+                view.state,
+                view.exit_code.map_or_else(|| "none".to_owned(), |code| code.to_string()),
+                view.detail.as_deref().unwrap_or_default()
+            ),
+        );
         if let Err(error) = state.journal.update(&view) {
             state.fault(error);
         }
@@ -1334,3 +1293,5 @@ impl Shared {
 mod tests;
 
 mod access;
+mod input;
+use input::{deliver, input_closed, input_steps};

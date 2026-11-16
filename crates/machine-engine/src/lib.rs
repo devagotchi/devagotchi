@@ -16,4 +16,8 @@ pub mod execution;
 #[cfg(any(target_os = "linux", windows))]
 pub(crate) mod files;
 #[cfg(any(target_os = "linux", windows))]
+pub(crate) mod launch;
+#[cfg(any(target_os = "linux", windows))]
+pub(crate) mod trace;
+#[cfg(any(target_os = "linux", windows))]
 pub mod journal;

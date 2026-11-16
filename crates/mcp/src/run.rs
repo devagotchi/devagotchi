@@ -10,7 +10,7 @@ use std::{
 };
 
 use devagotchi_contracts::{
-    BridgeError, MAX_OUTPUT_PAGE_BYTES, OperationState, ReadInput, RequestBody, ResponseBody,
+    BridgeError, Caller, MAX_OUTPUT_PAGE_BYTES, OperationState, ReadInput, RequestBody, ResponseBody,
     StartInput, WaitInput,
 };
 
@@ -20,9 +20,10 @@ use crate::unexpected;
 /// minute, so the wait stays under it; the command itself may run longer.
 pub const DEFAULT_WAIT_S: u64 = 30;
 pub const MAX_WAIT_S: u64 = 50;
-/// Default and largest run time before the broker stops the command.
-pub const DEFAULT_TIMEOUT_S: u64 = 300;
-pub const MAX_TIMEOUT_S: u64 = 300;
+/// Default and largest run time before the broker stops the command: an hour by default,
+/// a day at most (the broker's own limit), so a long build or test run finishes.
+pub const DEFAULT_TIMEOUT_S: u64 = 60 * 60;
+pub const MAX_TIMEOUT_S: u64 = devagotchi_contracts::MAX_DEADLINE_MS / 1000;
 /// Output handed back in one answer: the end of it, which is where results and errors are.
 pub const OUTPUT_LIMIT: usize = 32 * 1024;
 
@@ -38,6 +39,22 @@ pub fn unique(prefix: &str) -> String {
         std::process::id(),
         COUNT.fetch_add(1, Ordering::Relaxed)
     )
+}
+
+/// The start request of one `run`: a shell line, stdout and stderr on one pipe so the output
+/// keeps the order it was written, stopped after `timeout_s` seconds.
+pub fn start(idempotency_key: String, command: String, cwd: Option<String>, timeout_s: u64, caller: Caller) -> StartInput {
+    StartInput {
+        idempotency_key,
+        executable: String::new(),
+        args: Vec::new(),
+        command: Some(command),
+        cwd,
+        deadline_ms: timeout_s * 1000,
+        caller: Some(caller),
+        interactive: None,
+        combined_output: true,
+    }
 }
 
 /// What a run came to.

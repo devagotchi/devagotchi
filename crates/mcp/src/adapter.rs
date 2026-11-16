@@ -43,7 +43,7 @@ pub struct RunInput {
     /// keeps running; you get its operation_id.
     #[serde(default)]
     pub wait_seconds: Option<u64>,
-    /// Seconds the command may run before the broker stops it, 1 to 300 (default 300).
+    /// Seconds the command may run before the broker stops it, 1 to 86400 (default 3600: an hour).
     #[serde(default)]
     pub timeout_seconds: Option<u64>,
 }
@@ -150,16 +150,7 @@ impl BridgeAdapter {
             "timeout_seconds",
         )
         .map_err(Json)?;
-        let start = StartInput {
-            idempotency_key: run::unique("run"),
-            executable: String::new(),
-            args: Vec::new(),
-            command: Some(input.command),
-            cwd: input.cwd,
-            deadline_ms: timeout * 1000,
-            caller: Some(self.caller.clone()),
-            interactive: None,
-        };
+        let start = run::start(run::unique("run"), input.command, input.cwd, timeout, self.caller.clone());
         let ran = run::run(
             |body| devagotchi_ipc::request(&self.socket, body),
             start,

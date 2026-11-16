@@ -9,23 +9,23 @@ use std::path::PathBuf;
 use std::process::{ExitStatus, Stdio};
 use std::sync::Arc;
 use std::time::Duration;
-use tokio::io::{AsyncRead, AsyncReadExt};
 use tokio::process::Command;
 use tokio::sync::{mpsc, watch};
 use tokio::task::JoinHandle;
 use tokio::time::{Instant, sleep_until, timeout};
 
-const FRAME_BYTES: usize = 1024;
 const GROUP_SETTLE: Duration = Duration::from_millis(1000);
 const ROOT_WAIT: Duration = Duration::from_millis(2000);
 const PIPE_DRAIN: Duration = Duration::from_millis(1000);
 
 pub mod detached;
 mod input;
+mod output;
 pub(crate) mod platform;
 
 pub(crate) use input::{InputRequest, InputStep};
 use input::{InputSink, serve_input};
+use output::{PipeResult, drain_combined, drain_pipe, one_pipe};
 
 /// The canonical, validated inputs of one admitted process.
 #[derive(Clone)]
@@ -39,6 +39,10 @@ pub(crate) struct ExecutionSpec {
     pub(crate) account_environment: bool,
     /// Keep input open, on a pseudo-terminal or a pipe.
     pub(crate) interactive: Option<InteractiveInput>,
+    /// stdout and stderr on one pipe, in the order written (never with `interactive`).
+    pub(crate) combined_output: bool,
+    /// How the program was chosen, for the operation's detail and the broker log.
+    pub(crate) launch: Option<String>,
 }
 
 /// Why the broker asked an operation's process tree to stop.
@@ -51,90 +55,6 @@ pub(crate) enum StopReason {
     ObservationFailure,
 }
 
-/// Stateful UTF-8 decoding. Raw bytes are retained separately and never transformed.
-#[derive(Default)]
-struct Utf8Decoder {
-    pending: Vec<u8>,
-}
-
-impl Utf8Decoder {
-    fn push(&mut self, bytes: &[u8], eof: bool) -> String {
-        self.pending.extend_from_slice(bytes);
-        let mut output = String::new();
-        let mut consumed = 0;
-        while consumed < self.pending.len() {
-            match std::str::from_utf8(&self.pending[consumed..]) {
-                Ok(text) => {
-                    output.push_str(text);
-                    consumed = self.pending.len();
-                }
-                Err(error) => {
-                    let valid = error.valid_up_to();
-                    // from_utf8 validated this exact prefix.
-                    output.push_str(
-                        std::str::from_utf8(&self.pending[consumed..consumed + valid])
-                            .expect("validated UTF-8 prefix"),
-                    );
-                    consumed += valid;
-                    match error.error_len() {
-                        Some(invalid) => {
-                            output.push('\u{fffd}');
-                            consumed += invalid;
-                        }
-                        None if eof => {
-                            output.push('\u{fffd}');
-                            consumed = self.pending.len();
-                        }
-                        None => break,
-                    }
-                }
-            }
-        }
-        if consumed > 0 {
-            self.pending.drain(..consumed);
-        }
-        output
-    }
-}
-
-#[derive(Debug)]
-struct PipeResult {
-    complete: bool,
-    error: Option<String>,
-}
-
-async fn drain_pipe<R: AsyncRead + Unpin>(
-    shared: Arc<Shared>,
-    id: String,
-    stream: &'static str,
-    mut pipe: R,
-) -> PipeResult {
-    let mut decoder = Utf8Decoder::default();
-    let mut buffer = [0_u8; FRAME_BYTES];
-    loop {
-        match pipe.read(&mut buffer).await {
-            Ok(0) => {
-                let text = decoder.push(&[], true);
-                shared.output(&id, stream, Vec::new(), text);
-                return PipeResult {
-                    complete: true,
-                    error: None,
-                };
-            }
-            Ok(length) => {
-                let bytes = buffer[..length].to_vec();
-                let text = decoder.push(&bytes, false);
-                shared.output(&id, stream, bytes, text);
-            }
-            Err(error) => {
-                return PipeResult {
-                    complete: false,
-                    error: Some(format!("{stream} read failed: {error}")),
-                };
-            }
-        }
-    }
-}
 
 pub(crate) async fn run_job(
     shared: Arc<Shared>,
@@ -172,6 +92,7 @@ pub(crate) async fn run_job(
         .as_ref()
         .map(|interactive| interactive.mode);
     let mut terminal = None;
+    let mut combined = None;
     let scope = match &spec.interactive {
         Some(InteractiveInput {
             mode: InputMode::Terminal,
@@ -202,14 +123,33 @@ pub(crate) async fn run_job(
             platform::Scope::Session
         }
         _ => {
-            command
-                .stdin(if mode == Some(InputMode::Pipe) {
-                    Stdio::piped()
-                } else {
-                    Stdio::null()
-                })
-                .stdout(Stdio::piped())
-                .stderr(Stdio::piped());
+            command.stdin(if mode == Some(InputMode::Pipe) {
+                Stdio::piped()
+            } else {
+                Stdio::null()
+            });
+            if spec.combined_output {
+                // One pipe, both streams: the order the program wrote them is kept. The
+                // broker's copies of the write end close with `command`, after the spawn.
+                match one_pipe() {
+                    Ok((reader, out, err)) => {
+                        command.stdout(out).stderr(err);
+                        combined = Some(reader);
+                    }
+                    Err(error) => {
+                        shared.finish(
+                            &id,
+                            OperationState::Failed,
+                            None,
+                            true,
+                            format!("The output pipe could not be made; no process was launched: {error}"),
+                        );
+                        return;
+                    }
+                }
+            } else {
+                command.stdout(Stdio::piped()).stderr(Stdio::piped());
+            }
             // All destructive signalling is explicit while the owned root identity is
             // held. Unexpected task/runtime failure remains Unknown; a drop handler must
             // not turn a lost-ownership condition into an unverified PID-based kill.
@@ -259,6 +199,11 @@ pub(crate) async fn run_job(
                 "stdout",
                 terminal.io(),
             )),
+        ));
+    } else if let Some(reader) = combined.take() {
+        readers.push((
+            "stdout",
+            tokio::spawn(drain_combined(shared.clone(), id.clone(), reader)),
         ));
     } else {
         let pipes =
@@ -449,34 +394,4 @@ pub(crate) async fn run_job(
     }
     detail.push_str(&pipe_detail);
     shared.finish(&id, state, exit_code, output_complete, detail);
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn utf8_is_identical_across_every_split_boundary() {
-        let original = "ASCII € 🐄 日本語\n";
-        for first in 0..=original.len() {
-            for second in first..=original.len() {
-                let mut decoder = Utf8Decoder::default();
-                let bytes = original.as_bytes();
-                let mut result = decoder.push(&bytes[..first], false);
-                result.push_str(&decoder.push(&bytes[first..second], false));
-                result.push_str(&decoder.push(&bytes[second..], true));
-                assert_eq!(result, original, "split at {first}/{second}");
-                assert!(decoder.pending.is_empty());
-            }
-        }
-    }
-
-    #[test]
-    fn utf8_invalid_and_truncated_sequences_are_explicit() {
-        let mut decoder = Utf8Decoder::default();
-        assert_eq!(decoder.push(&[0xe2], false), "");
-        assert_eq!(decoder.push(&[0x82], false), "");
-        assert_eq!(decoder.push(&[], true), "�");
-        assert_eq!(decoder.push(&[0xff, 0, b'x'], true), "�\0x");
-    }
 }

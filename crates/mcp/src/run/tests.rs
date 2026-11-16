@@ -112,6 +112,7 @@ fn start_input() -> StartInput {
         deadline_ms: 300_000,
         caller: None,
         interactive: None,
+        combined_output: false,
     }
 }
 

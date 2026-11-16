@@ -81,11 +81,11 @@ libraries): 19 never-used items in `devagotchi-hub` (for example `store::open`,
 
 | Milestone | Task | Acceptance evidence | State |
 |---|---|---|---|
-| P1 | Tracing in the broker: one line per operation (admitted, spawned, how the program was resolved, exit or refusal with its reason) to `broker.log`, plus `devagotchi broker log`-style reading through `operation_get` | a refused `.py` and a missing interpreter each leave a line naming the reason | not started |
-| P2 | Script launch: resolve a bare program name on PATH (PATHEXT on Windows); run `.py` with the Python launcher or python, `.ps1` with PowerShell `-File`, `.cmd`/`.bat` with `cmd /c`, `.js` with node, `.sh` with bash; say which interpreter ran it; never hand a script to the file association | Linux runs here; Windows unit tests on the resolver | not started |
-| P3 | Keep the program's own name: spawn the path as given after checking the canonical target, so `cargo` runs cargo | `cargo --version` prints cargo | not started |
-| P4 | `run` in order: one pipe for stdout and stderr | the 1 2 3 4 probe | not started |
-| P5 | Long jobs: lift the five-minute cap (operator-set maximum, default hours) | a job past five minutes | not started |
+| P1 | Tracing in the broker: one line per operation (admitted, spawned, how the program was resolved, exit or refusal with its reason) to `broker.log`, and the launch reason in every operation's `detail` | a refused file and a missing interpreter each leave a line naming the reason | done: `trace.rs`; `broker.log` shows `refused operation_start ... not_executable` and `program_not_found ... (15 directories searched)`, and `admitted`/`settled` lines with `Launch: ...` |
+| P2 | Script launch: resolve a bare program name on PATH (PATHEXT on Windows, Store alias skipped); run `.py` with the Python launcher or python, `.ps1` with PowerShell `-File`, `.cmd`/`.bat` through cmd.exe, `.js` with node, `.sh` with bash; honour `#!`; say which interpreter ran it; never hand a script to the file association | Linux runs here; Windows unit tests on the resolver | done (Linux run; Windows in 14 resolver tests, not run on Windows): `launch/` |
+| P3 | Keep the program's own name: spawn the path as found after checking the canonical target, so `cargo` runs cargo | `cargo --version` prints cargo | done: prints `cargo 1.97.0` |
+| P4 | `run` in order: one pipe for stdout and stderr | the 1 2 3 4 probe | done: `1\n2\n3\n4\n` |
+| P5 | Long jobs: the deadline cap is a day; `run` defaults to an hour | a job past five minutes | done: `deadline_ms` 3600000 accepted, 90000000 refused naming the day cap; a 330 s `run` (see receipts) |
 | P6 | Paths: `~` and CRLF-aware edits | probes | not started |
 | P7 | Search: names and contents, paged, through the broker | probes | not started |
 | P8 | Processes and settings: list and stop processes; read and change broker settings | probes | not started |
@@ -95,8 +95,17 @@ libraries): 19 never-used items in `devagotchi-hub` (for example `store::open`,
 Step 1 driver and logs: kept outside Git. `tests/e2e.py --bin-dir target/debug` with
 `DEVAGOTCHI_HUB_STORAGE_URL=postgres://postgres@127.0.0.1:55432/e2e`: E2E PASSED.
 
+Step 2, fixes P1 to P5 (2026-11-16, Linux, this branch): `cargo test` for machine-engine
+(115, including 14 launch tests), mcp (26) and contracts passed; the layout ratchet passed
+after splitting `execution/output.rs` and `broker/input.rs` out. Probes through `devagotchi
+mcp`: `cargo --version` by name printed cargo's version; `./hello.py a b` ran with
+`/usr/bin/python3`; a non-executable `#!/usr/bin/env python3` file ran with python3; `python9`
+and `data.xyz` were refused with `program_not_found` and `not_executable`; `run` returned
+`1 2 3 4` in order and ran `./hello.py x` through python3. `tests/e2e.py` (hub on Postgres,
+link) passed again on this code. Windows: not run (no Windows machine reachable).
+
 ## Delivery
 
-Implementation: map only. Validation: run here, Linux. Push: branch. PR: not_created.
+Implementation: map, and fixes P1 to P5. Validation: run here, Linux. Push: branch. PR: not_created.
 Main: not_verified.
 **DELIVERY INCOMPLETE: NOT MERGED TO MAIN**

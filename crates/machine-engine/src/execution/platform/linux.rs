@@ -446,7 +446,7 @@ fn member_state(pid: u32, root: u32, scope: Scope) -> BridgeResult<bool> {
 }
 
 mod terminal;
-pub(crate) use terminal::{Root, Terminal, TerminalIo, configure_terminal, piped, spawn};
+pub(crate) use terminal::{Terminal, TerminalIo, configure_terminal, piped, spawn};
 
 #[cfg(test)]
 mod tests;
