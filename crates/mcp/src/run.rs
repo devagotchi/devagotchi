@@ -94,7 +94,8 @@ pub fn tail(text: String, limit: usize) -> (String, bool) {
 
 /// Start `start` through `call`, wait up to `wait_s` seconds for it to finish (one held
 /// request: the broker answers the moment it does), then read the output it had written by
-/// then. `cancelled` resolving stops the wait or the reading and leaves the command running.
+/// then, all as `start`'s caller. `cancelled` resolving stops the wait or the reading and leaves
+/// the command running.
 pub async fn run<C, F>(
     call: C,
     start: StartInput,
@@ -106,6 +107,8 @@ where
     F: Future<Output = Result<ResponseBody, BridgeError>>,
 {
     tokio::pin!(cancelled);
+    // The wait and the reads go as whoever started it: the broker answers no one else.
+    let caller = start.caller.clone();
     let operation = match call(RequestBody::OperationStart(start)).await {
         Ok(ResponseBody::Start(output)) => output.operation,
         Ok(other) => return Err(Failed::NotStarted(unexpected("start", &other))),
@@ -123,6 +126,7 @@ where
             operation_id: id.clone(),
             output_after: None,
             timeout_ms: wait_s * 1000,
+            caller: caller.clone(),
         }));
         let view = tokio::select! {
             biased;
@@ -150,6 +154,7 @@ where
             operation_id: id.clone(),
             cursor,
             max_bytes: MAX_OUTPUT_PAGE_BYTES,
+            caller: caller.clone(),
         }));
         let page = tokio::select! {
             biased;

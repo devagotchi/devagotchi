@@ -203,6 +203,9 @@ impl crate::RequestBody {
             Self::OperationList(input) => input.caller.as_ref(),
             Self::OperationInput(input) => input.caller.as_ref(),
             Self::OperationResize(input) => input.caller.as_ref(),
+            Self::OperationGet(input) | Self::OperationCancel(input) => input.caller.as_ref(),
+            Self::OperationRead(input) => input.caller.as_ref(),
+            Self::OperationWait(input) => input.caller.as_ref(),
             _ => None,
         }
     }
@@ -214,11 +217,10 @@ impl crate::RequestBody {
             Self::OperationList(input) => Some(&mut input.caller),
             Self::OperationInput(input) => Some(&mut input.caller),
             Self::OperationResize(input) => Some(&mut input.caller),
-            Self::OperationGet(_)
-            | Self::OperationRead(_)
-            | Self::OperationCancel(_)
-            | Self::OperationWait(_)
-            | Self::OperationsChanged(_)
+            Self::OperationGet(input) | Self::OperationCancel(input) => Some(&mut input.caller),
+            Self::OperationRead(input) => Some(&mut input.caller),
+            Self::OperationWait(input) => Some(&mut input.caller),
+            Self::OperationsChanged(_)
             | Self::FileRead(_)
             | Self::FileList(_)
             | Self::FileWrite(_)

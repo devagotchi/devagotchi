@@ -117,7 +117,7 @@ impl Hub {
             interactive: None,
         };
         let ran = shared::run(
-            |body| self.send(&route, body),
+            |body| self.send_hinted(&route, body),
             start,
             wait,
             context.ct.cancelled(),

@@ -124,8 +124,8 @@ async fn finished_operations_are_retired_so_admission_never_runs_out() {
         ids.push(id);
     }
     // The two newest remain; the older ones are retired and no longer found.
-    assert_eq!(broker.get(&ids[0]).unwrap_err().code, "not_found");
-    assert!(broker.get(&ids[3]).is_ok() && broker.get(&ids[4]).is_ok());
+    assert_eq!(broker.get(&ids[0], None).unwrap_err().code, "not_found");
+    assert!(broker.get(&ids[3], None).is_ok() && broker.get(&ids[4], None).is_ok());
     // A retired key is refused, never run again; a held key still replays.
     let retired = broker
         .start(input("key-0", &executable, vec![]))
@@ -140,8 +140,8 @@ async fn finished_operations_are_retired_so_admission_never_runs_out() {
         .start(input("key-1", &executable, vec![]))
         .unwrap_err();
     assert_eq!(retired.code, "idempotency_key_retired");
-    assert_eq!(broker.get(&ids[1]).unwrap_err().code, "not_found");
-    assert!(broker.get(&ids[4]).is_ok());
+    assert_eq!(broker.get(&ids[1], None).unwrap_err().code, "not_found");
+    assert!(broker.get(&ids[4], None).is_ok());
     broker.shutdown().await;
 }
 
@@ -185,7 +185,7 @@ async fn admission_waits_only_while_every_held_operation_runs() {
     let running = start(&broker, "long", &long, args, 60_000);
     let refused = broker.start(input("quick", &quick, vec![])).unwrap_err();
     assert_eq!(refused.code, "operation_limit_reached");
-    broker.cancel(&running).unwrap();
+    broker.cancel(&running, None).unwrap();
     settle(&broker, &running).await;
     let admitted = broker.start(input("quick", &quick, vec![])).unwrap();
     settle(&broker, &admitted.operation.operation_id).await;
@@ -213,12 +213,12 @@ async fn owned_descendants_keep_the_operation_running_until_cancelled() {
     let broker = open_broker(&directory, &[&shell]);
     let id = start(&broker, "descendant", &shell, args, 60_000);
     sleep(Duration::from_millis(1500)).await;
-    let view = broker.get(&id).unwrap();
+    let view = broker.get(&id, None).unwrap();
     assert!(
         matches!(view.state, OperationState::Running),
         "a descendant outlived its root: {view:?}"
     );
-    broker.cancel(&id).unwrap();
+    broker.cancel(&id, None).unwrap();
     let view = settle(&broker, &id).await;
     assert!(matches!(view.state, OperationState::Cancelled), "{view:?}");
     assert!(view.cancellation_requested);
@@ -326,7 +326,7 @@ async fn critical_journal_failure_is_visible_and_blocks_new_execution() {
     let start = broker.start(input.clone()).unwrap();
     let deadline = Instant::now() + Duration::from_secs(3);
     loop {
-        let operation = broker.get(&start.operation.operation_id).unwrap();
+        let operation = broker.get(&start.operation.operation_id, None).unwrap();
         if matches!(operation.state, OperationState::Unknown) {
             break;
         }
@@ -340,7 +340,7 @@ async fn critical_journal_failure_is_visible_and_blocks_new_execution() {
     second.idempotency_key = "after-fault".into();
     assert_eq!(broker.start(second).unwrap_err().code, "persistence_error");
     broker.shutdown().await;
-    let operation = broker.get(&start.operation.operation_id).unwrap();
+    let operation = broker.get(&start.operation.operation_id, None).unwrap();
     assert!(matches!(operation.state, OperationState::Unknown));
     assert!(!operation.output_complete);
     assert!(operation.detail.unwrap().contains("persistence"));

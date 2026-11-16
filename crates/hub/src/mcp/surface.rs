@@ -511,7 +511,7 @@ impl Hub {
                         "request_cancelled",
                         "stopped waiting for the broker response; admitted operations are not cancelled",
                     ))),
-                    response = self.send(&route, body) => response.map_err(Json),
+                    response = self.send_hinted(&route, body) => response.map_err(Json),
                 }
             }
             Err(error) => Err(error),
