@@ -220,7 +220,7 @@ impl BridgeAdapter {
 
     #[tool(
         name = "list_directory",
-        description = "List a directory: each entry's relative path, kind (file, dir, symlink), size and modified time, directories first. depth 1 to 3 includes subdirectories.",
+        description = "List a directory: each entry's relative path, kind (file, dir, symlink), size and modified time, directories first. depth 1 to 3 includes subdirectories. When `truncated`, pass `next_cursor` as `cursor` for the rest.",
         title = "List a directory",
         annotations(
             title = "List a directory",

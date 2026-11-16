@@ -68,6 +68,13 @@
           "description": "Whether this page reached the end of the file.",
           "type": "boolean"
         },
+        "identity": {
+          "description": "Which file object was read: device and inode on Unix, volume serial and file ID on\nWindows. It stays through a rename and changes when the file is replaced by another, so\npages read in turn are known to be of one file when it is the same on each.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "modified_ms": {
           "format": "uint64",
           "minimum": 0,
@@ -194,6 +201,10 @@
             "null"
           ]
         },
+        "name_lossy": {
+          "description": "True when the name on disk is not valid Unicode: `path` shows it with U+FFFD in\nplace of what could not be decoded, so it cannot be used to reach the entry.",
+          "type": "boolean"
+        },
         "path": {
           "description": "Path relative to the listed directory, `/`-separated.",
           "type": "string"
@@ -312,6 +323,13 @@
     "FileListInput": {
       "additionalProperties": false,
       "properties": {
+        "cursor": {
+          "description": "Where to go on from: the previous page's `next_cursor`. Absent for the first page.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "depth": {
           "default": 0,
           "description": "How many levels below it to include, 0..=3 (default 0: its own entries).",
@@ -345,6 +363,13 @@
             "$ref": "#/$defs/FileEntry"
           },
           "type": "array"
+        },
+        "next_cursor": {
+          "description": "When it did: pass this as `cursor` for the entries after these, in the same order.",
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "path": {
           "description": "The directory's canonical path.",
