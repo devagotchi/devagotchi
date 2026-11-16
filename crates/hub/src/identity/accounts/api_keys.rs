@@ -10,7 +10,6 @@
 
 use base64::Engine as _;
 use devagotchi_contracts::{BridgeError, BridgeResult};
-use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sqlx::{AnyConnection, Row};
 

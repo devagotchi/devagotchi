@@ -1033,6 +1033,7 @@ dependencies = [
  "ignore",
  "libc",
  "regex",
+ "reqwest",
  "rusqlite",
  "schemars 1.2.3",
  "serde",

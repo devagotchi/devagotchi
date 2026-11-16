@@ -138,11 +138,3 @@ pub struct ProcessKilled {
     /// Whether it was gone within a few seconds.
     pub exited: bool,
 }
-
-/// What each tool says, the same through `devagotchi mcp` and through a hub.
-pub mod describe {
-    pub const GET_CONFIG: &str = "The machine's broker settings and facts: its workspace (where relative paths and jobs start), exec policy (`account` runs what its OS account can; `granted` only allowed_executables), the limits on output kept per job, jobs kept and jobs running at once, which of them set_config_value changes, the OS and account it runs as, its home (what `~` means) and its build.";
-    pub const SET_CONFIG_VALUE: &str = "Change one of the broker's limits while it runs: output_limit_bytes (output kept per job, 1024 to 16777216), max_operations (jobs kept, 1 to 4096) or max_concurrent (jobs running at once, 1 to 64, no more than max_operations). It applies at once and is saved to the broker's broker.json. The workspace, exec policy and executable grants are the machine operator's and change only there.";
-    pub const LIST_PROCESSES: &str = "List the machine's processes, busiest first: PID, parent, name, command line, CPU (100 is one core), memory, start time, account, and the Devagotchi job a process belongs to (`operation_id`). `broker: true` marks Devagotchi's own processes and what the broker runs under. filter narrows by name or command line. Only on a broker that runs what its account can.";
-    pub const KILL_PROCESS: &str = "Stop a process by PID: it is asked to stop (SIGTERM) unless force (SIGKILL); on Windows it is ended at once. Says whether it was gone within 3 seconds. A job's own process stops with operation_cancel instead, and Devagotchi's own processes (the broker, its link, an adapter, and what they run under) are never stopped. Only on a broker that runs what its account can.";
-}

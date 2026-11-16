@@ -1,9 +1,9 @@
-//! The machine beside its files: the broker's settings and the machine's processes, each one
-//! request to this user's broker.
+//! The machine beside its files: the broker's settings, the machine's processes, and a web
+//! address read from the machine, each one request to this user's broker.
 
 use devagotchi_contracts::{
     BridgeError, ConfigGetInput, ConfigSetInput, ConfigView, ProcessKillInput, ProcessKilled,
-    ProcessListInput, ProcessPage, RequestBody, ResponseBody, describe,
+    ProcessListInput, ProcessPage, RequestBody, ResponseBody, UrlContent, UrlReadInput, describe,
 };
 use rmcp::{
     Json, RoleServer, handler::server::wrapper::Parameters, service::RequestContext, tool,
@@ -86,6 +86,23 @@ impl BridgeAdapter {
         {
             ResponseBody::Killed(killed) => Ok(Json(killed)),
             other => Err(Json(unexpected("killed", &other))),
+        }
+    }
+
+    #[tool(
+        name = "read_url",
+        description = describe::READ_URL,
+        title = "Read a web address",
+        annotations(title = "Read a web address", read_only_hint = true, destructive_hint = false, idempotent_hint = true, open_world_hint = true)
+    )]
+    async fn read_url(
+        &self,
+        Parameters(input): Parameters<UrlReadInput>,
+        context: RequestContext<RoleServer>,
+    ) -> Result<Json<UrlContent>, Json<BridgeError>> {
+        match self.request(RequestBody::UrlRead(input), context).await? {
+            ResponseBody::Url(content) => Ok(Json(content)),
+            other => Err(Json(unexpected("url", &other))),
         }
     }
 }

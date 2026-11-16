@@ -3,59 +3,25 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+mod ai;
+pub mod describe;
 mod files;
+mod history;
 mod interactive;
 mod search;
 mod system;
+mod web;
+pub use ai::*;
 pub use files::*;
+pub use history::*;
 pub use interactive::*;
 pub use search::*;
 pub use system::*;
+pub use web::*;
 
 pub const API_VERSION: u32 = 1;
 pub const MAX_FRAME_BYTES: usize = 64 * 1024;
 pub const MAX_OUTPUT_PAGE_BYTES: usize = 16 * 1024;
-
-/// DG-CAPTURE-1. A harness identifies the adapter, not the model vendor.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-#[serde(rename_all = "kebab-case")]
-pub enum AiHarness {
-    ClaudeCode,
-    Codex,
-    Copilot,
-    Manual,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum AiEventKind {
-    SessionStart,
-    SessionEnd,
-    TurnEnd,
-    UserPrompt,
-    ToolBefore,
-    ToolAfter,
-    Error,
-    Checkpoint,
-    TranscriptRecord,
-}
-
-/// Private local archive input, not a hosted-board mutation or a training grant.
-/// Runtime validation additionally enforces bounds and policy consent.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
-#[serde(deny_unknown_fields)]
-pub struct AiCaptureEvent {
-    pub schema_version: u32,
-    /// Stable caller retry key within (harness, session). Changed replay is rejected.
-    pub event_id: String,
-    pub session_id: String,
-    pub harness: AiHarness,
-    pub kind: AiEventKind,
-    pub model: Option<String>,
-    pub issue: Option<String>,
-    /// Native opaque hook/transcript payload. Requires separate content consent.
-    pub content: Option<serde_json::Value>,
-}
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
@@ -343,6 +309,7 @@ pub enum RequestBody {
     ConfigSet(ConfigSetInput),
     ProcessList(ProcessListInput),
     ProcessKill(ProcessKillInput),
+    UrlRead(UrlReadInput),
     OperationInput(SendInput),
     OperationResize(ResizeInput),
 }
@@ -390,6 +357,7 @@ pub enum ResponseBody {
     Config(ConfigView),
     Processes(ProcessPage),
     Killed(ProcessKilled),
+    Url(UrlContent),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

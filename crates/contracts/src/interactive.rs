@@ -217,6 +217,7 @@ impl crate::RequestBody {
             Self::FileSearch(input) => input.path.clone(),
             Self::ConfigSet(input) => input.key.clone(),
             Self::ProcessKill(input) => format!("pid {}", input.pid),
+            Self::UrlRead(input) => input.url.clone(),
             Self::OperationList(_)
             | Self::OperationsChanged(_)
             | Self::ConfigGet(_)
@@ -259,7 +260,8 @@ impl crate::RequestBody {
             | Self::ConfigGet(_)
             | Self::ConfigSet(_)
             | Self::ProcessList(_)
-            | Self::ProcessKill(_) => None,
+            | Self::ProcessKill(_)
+            | Self::UrlRead(_) => None,
         }
     }
 }

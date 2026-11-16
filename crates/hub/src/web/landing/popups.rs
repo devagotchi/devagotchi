@@ -129,6 +129,14 @@ pub const TOOLS: [(&str, &[(&[&str], &str)]); 6] = [
                 "Sees every process on the machine, busiest first, and stops one. Never the broker itself.",
             ),
             (
+                &["read_url"],
+                "Reads a web address as the machine reaches it, its own localhost included.",
+            ),
+            (
+                &["get_recent_tool_calls", "get_usage_stats"],
+                "Your own recent calls and how they went, so an AI picks up where it was. Never anyone else's.",
+            ),
+            (
                 &["get_config", "set_config_value"],
                 "Reads the machine's settings, and changes how much output and how many jobs it keeps. What it may run stays yours to set.",
             ),

@@ -71,7 +71,7 @@ fn readable(text: &str) -> bool {
 
 /// How many leading bytes of `bytes` are readable text: all of them, or all but a
 /// character cut by the end of the page. `None` when they are not text.
-fn text_prefix(bytes: &[u8]) -> Option<usize> {
+pub(crate) fn text_prefix(bytes: &[u8]) -> Option<usize> {
     match std::str::from_utf8(bytes) {
         Ok(text) if readable(text) => Some(bytes.len()),
         Err(error)

@@ -1,10 +1,10 @@
 //! A machine beside its files: its broker's settings (`get_config`, `set_config_value`) and its
-//! processes (`list_processes`, `kill_process`). The broker on the machine decides what each
+//! processes (`list_processes`, `kill_process`), and a web address read from it (`read_url`). The broker on the machine decides what each
 //! may do; the hub only names the machine and passes the request on.
 
 use devagotchi_contracts::{
     BridgeError, ConfigGetInput, ConfigSetInput, ConfigView, ProcessKillInput, ProcessKilled,
-    ProcessListInput, ProcessPage, RequestBody, ResponseBody, describe,
+    ProcessListInput, ProcessPage, RequestBody, ResponseBody, UrlContent, UrlReadInput, describe,
 };
 use rmcp::{
     Json, RoleServer, handler::server::wrapper::Parameters, service::RequestContext, tool,
@@ -55,6 +55,21 @@ pub struct KillProcessInput {
     /// Kill at once (SIGKILL) instead of asking it to stop (SIGTERM).
     #[serde(default)]
     pub force: bool,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct ReadUrlInput {
+    /// The machine, by its name from `machines`.
+    pub machine: String,
+    /// An http or https address, as the machine reaches it (its localhost is its own).
+    pub url: String,
+    /// Where to start in the response body (the previous page's `next_offset`).
+    #[serde(default)]
+    pub offset: u64,
+    /// Bytes to return, 1 to 24576 (default 24576).
+    #[serde(default)]
+    pub max_bytes: Option<usize>,
 }
 
 #[tool_router(router = system_router, vis = "pub(crate)")]
@@ -149,6 +164,28 @@ impl Hub {
         {
             ResponseBody::Killed(killed) => Ok(Json(killed)),
             other => Err(unexpected_response("killed", &other)),
+        }
+    }
+
+    #[tool(
+        name = "read_url",
+        description = describe::READ_URL,
+        title = "Read a web address from a machine",
+        annotations(title = "Read a web address from a machine", read_only_hint = true, destructive_hint = false, idempotent_hint = true, open_world_hint = true)
+    )]
+    async fn read_url(
+        &self,
+        Parameters(input): Parameters<ReadUrlInput>,
+        context: RequestContext<RoleServer>,
+    ) -> Result<Json<UrlContent>, Json<BridgeError>> {
+        let body = RequestBody::UrlRead(UrlReadInput {
+            url: input.url,
+            offset: input.offset,
+            max_bytes: input.max_bytes,
+        });
+        match self.call("read_url", &input.machine, body, context).await? {
+            ResponseBody::Url(content) => Ok(Json(content)),
+            other => Err(unexpected_response("url", &other)),
         }
     }
 }

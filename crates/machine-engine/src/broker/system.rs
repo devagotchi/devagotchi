@@ -1,4 +1,5 @@
-//! The machine beside its files: settings (see `settings`) and processes. `list_processes`
+//! The machine beside its files: settings (see `settings`), processes, and the web as the
+//! machine sees it (see `web`). `list_processes`
 //! and `kill_process` reach every process the broker's OS account can see, so only a broker
 //! that runs what its account can (exec policy `account`) offers them; a `granted` broker's
 //! own jobs are in `operation_list` and stop with `operation_cancel`.
@@ -8,12 +9,16 @@
 //! `operation_cancel`, which stops its whole group and settles its record.
 
 use super::*;
+
+mod web;
 use sysinfo::{
     Pid, ProcessRefreshKind, ProcessStatus, ProcessesToUpdate, Signal, System, UpdateKind, Users,
 };
 
 /// Longest a command line is shown.
 const COMMAND_CHARS: usize = 400;
+/// Why a granted broker lists and stops no process.
+const PROCESSES: &str = "so it does not reach the machine's other processes; its own jobs are in operation_list and stop with operation_cancel";
 /// How long `kill_process` watches for the process to go.
 const EXIT_WATCH: Duration = Duration::from_secs(3);
 
@@ -36,6 +41,13 @@ impl Broker {
                 "kill_process",
                 self.kill(input).await.map(ResponseBody::Killed),
             ),
+            RequestBody::UrlRead(input) => (
+                "read_url",
+                match self.account_only("so it reaches no web address") {
+                    Ok(()) => web::read(input).await.map(ResponseBody::Url),
+                    Err(error) => Err(error),
+                },
+            ),
             _ => (
                 "system request",
                 Err(BridgeError::new("internal_error", "not a system request")),
@@ -47,11 +59,12 @@ impl Broker {
         done
     }
 
-    fn account_only(&self) -> BridgeResult<()> {
+    /// Refused on a broker that runs only granted programs, `so` what it does not do.
+    fn account_only(&self, so: &str) -> BridgeResult<()> {
         if self.shared.config.exec_policy == ExecPolicy::Granted {
             return Err(BridgeError::new(
                 "not_permitted",
-                "This broker runs only granted programs, so it does not reach the machine's other processes; its own jobs are in operation_list and stop with operation_cancel",
+                format!("This broker runs only granted programs, {so}"),
             ));
         }
         Ok(())
@@ -69,7 +82,7 @@ impl Broker {
     }
 
     async fn processes(&self, input: ProcessListInput) -> BridgeResult<ProcessPage> {
-        self.account_only()?;
+        self.account_only(PROCESSES)?;
         if !(1..=MAX_PROCESS_RESULTS).contains(&input.max_results) {
             return Err(invalid(format!(
                 "max_results must be 1..={MAX_PROCESS_RESULTS}"
@@ -84,7 +97,7 @@ impl Broker {
     }
 
     async fn kill(&self, input: ProcessKillInput) -> BridgeResult<ProcessKilled> {
-        self.account_only()?;
+        self.account_only(PROCESSES)?;
         let roots = self.job_roots();
         if let Some(id) = roots.get(&input.pid) {
             return Err(BridgeError::new(

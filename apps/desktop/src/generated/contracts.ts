@@ -57,6 +57,8 @@ export interface BrokerContracts {
   search_page: SearchPage;
   start_input: StartInput;
   start_output: StartOutput;
+  url_content: UrlContent;
+  url_read_input: UrlReadInput;
   wait_input: WaitInput;
 }
 export interface BridgeError {
@@ -769,6 +771,49 @@ export interface InteractiveInput {
 export interface StartOutput {
   operation: OperationView;
   replayed: boolean;
+}
+export interface UrlContent {
+  /**
+   * The raw bytes, base64, when they are not text.
+   */
+  bytes_base64?: string | null;
+  content_type?: string | null;
+  /**
+   * Whether this page reached the end of the body.
+   */
+  eof: boolean;
+  next_offset: number;
+  offset: number;
+  /**
+   * The body's length, when the server said it.
+   */
+  size?: number | null;
+  /**
+   * The HTTP status code.
+   */
+  status: number;
+  /**
+   * The bytes as text, when they are UTF-8 text.
+   */
+  text?: string | null;
+  /**
+   * The address that answered, after redirects.
+   */
+  url: string;
+}
+export interface UrlReadInput {
+  /**
+   * Bytes to return, 1..=24576 (default 24576).
+   */
+  max_bytes?: number | null;
+  /**
+   * Where to start in the response body (the previous page's `next_offset`).
+   */
+  offset?: number;
+  /**
+   * An http or https address.
+   */
+  url: string;
 }
 export interface WaitInput {
   operation_id: string;

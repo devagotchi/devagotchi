@@ -5,7 +5,8 @@ use devagotchi_contracts::{
     FileContent, FileEditInput, FileInfo, FileInfoInput, FileListInput, FileListing, FileMoveInput,
     FileReadInput, FileSearchInput, FileWriteInput, FileWritten, GetInput, ListInput,
     OperationView, OperationsPage, OutputPage, ProcessKillInput, ProcessKilled, ProcessListInput,
-    ProcessPage, ReadInput, Revision, SearchPage, StartInput, StartOutput, WaitInput,
+    ProcessPage, ReadInput, Revision, SearchPage, StartInput, StartOutput, UrlContent,
+    UrlReadInput, WaitInput,
 };
 use schemars::{JsonSchema, generate::SchemaSettings};
 use serde_json::Value;
@@ -49,6 +50,8 @@ struct BrokerContracts {
     process_page: ProcessPage,
     process_kill_input: ProcessKillInput,
     process_killed: ProcessKilled,
+    url_read_input: UrlReadInput,
+    url_content: UrlContent,
     bridge_error: BridgeError,
 }
 

@@ -106,6 +106,7 @@ pub fn response_kind(actual: &ResponseBody) -> &'static str {
         ResponseBody::Config(_) => "config",
         ResponseBody::Processes(_) => "processes",
         ResponseBody::Killed(_) => "killed",
+        ResponseBody::Url(_) => "url",
     }
 }
 
