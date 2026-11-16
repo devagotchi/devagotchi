@@ -22,7 +22,6 @@
 696	crates/hub/src/identity/nomen/mod.rs
 711	crates/hub/src/identity/nomen/tests/mod.rs
 764	crates/hub/src/identity/tests/providers.rs
-1153	crates/hub/src/login/mod.rs
 1142	crates/hub/src/machines/link/mod.rs
 1080	crates/hub/src/mcp/surface.rs
 539	crates/hub/src/notify/mail.rs
