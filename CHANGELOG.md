@@ -20,11 +20,15 @@ create that tag, and a prerelease tag does not move the `:latest` image.
 - `install.sh` follows the release channel (`ghcr.io/devagotchi/devagotchi:latest`) unless
   `--channel main`, `--tag vX.Y.Z`, or `--track IMAGE` says otherwise. `:latest` moves only
   for a stable tag. Until one exists, pin `--tag v0.1.0-alpha.1` or use `--channel main`.
-- Interactive operations in the broker (Linux): an operation started with `interactive` keeps its
+- Interactive operations in the broker (Linux and Windows): an operation started with `interactive` keeps its
   input open on a pseudo-terminal (prompts, REPLs, Ctrl-C) or a pipe, and takes typed text and
   named keys, and a new terminal size, from the account that started it; another conversation of
   that account takes over explicitly, and a keyboard lease keeps two clients from typing at once.
-  Windows refuses them (`unsupported_platform`) until it has a console for them.
+  On Windows a terminal is a pseudo-console (ConPTY) of the operation's own: the root is created
+  on it suspended, assigned to the broker's Job Object, then resumed, as every root is; a program
+  on a pipe there cannot be sent Ctrl-C (`no_terminal`, with what to do instead). A broker made
+  to ignore Ctrl+C by whoever started it (a new process group, some shells) no longer passes that
+  on to the programs on its consoles.
 - `operation_input` and `operation_resize` reach them from an AI, on this machine
   (`devagotchi mcp`) and through a hub, and the hub serves `operation_list`. Who is calling is
   named by the transport, never by the AI: this machine's own account and the adapter process

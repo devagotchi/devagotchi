@@ -83,8 +83,8 @@ pub struct InteractiveView {
 }
 
 /// A named key for `operation_input`. On a terminal each is the bytes a terminal sends;
-/// on a pipe `enter` is a newline, `ctrl_c` and `ctrl_backslash` signal the program, and
-/// `ctrl_d` closes its input.
+/// on a pipe `enter` is a newline, `ctrl_c` and `ctrl_backslash` signal the program (on
+/// Linux; Windows refuses them on a pipe), and `ctrl_d` closes its input.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum Key {

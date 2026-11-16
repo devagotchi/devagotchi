@@ -66,7 +66,7 @@
 647	crates/machine-engine/src/ai/tests.rs
 1402	crates/machine-engine/src/broker.rs
 519	crates/machine-engine/src/execution/platform/linux.rs
-819	crates/machine-engine/src/execution/platform/windows.rs
+630	crates/machine-engine/src/execution/platform/windows.rs
 561	crates/mcp/src/adapter.rs
 802	crates/mcp/src/connect.rs
 523	crates/store/src/lib.rs

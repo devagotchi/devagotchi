@@ -179,10 +179,12 @@ pub(crate) async fn run_job(
             rows,
         }) => {
             let opened =
-                platform::Terminal::open(*cols, *rows).and_then(|(opened, program_side)| {
-                    platform::configure_terminal(&mut command, &program_side)?;
-                    Ok(opened)
-                });
+                platform::Terminal::open(*cols, *rows)
+                    .await
+                    .and_then(|(opened, program_side)| {
+                        platform::configure_terminal(&mut command, &program_side)?;
+                        Ok(opened)
+                    });
             match opened {
                 Ok(opened) => terminal = Some(opened),
                 Err(error) => {
@@ -215,7 +217,7 @@ pub(crate) async fn run_job(
             platform::Scope::Group
         }
     };
-    let spawned = command.spawn();
+    let spawned = platform::spawn(&mut command, terminal.as_ref(), spec.account_environment);
     // The broker's copies of a terminal's program side close here, so its master reads end
     // of file once no program holds that side any more.
     drop(command);
@@ -259,7 +261,9 @@ pub(crate) async fn run_job(
             )),
         ));
     } else {
-        let (Some(stdout), Some(stderr)) = (child.stdout.take(), child.stderr.take()) else {
+        let pipes =
+            platform::piped(&mut child).map(|root| (root.stdout.take(), root.stderr.take()));
+        let Some((Some(stdout), Some(stderr))) = pipes else {
             let termination = tree.terminate().await;
             let _ = timeout(ROOT_WAIT, child.wait()).await;
             shared.finish(&id, OperationState::Unknown, None, false, format!("Piped output handles were missing; attempted owned-group termination: {termination:?}"));
@@ -280,14 +284,20 @@ pub(crate) async fn run_job(
             terminal,
         }),
         (None, Some(InputMode::Pipe)) => Some(InputSink::Pipe {
-            stdin: child.stdin.take(),
+            stdin: platform::piped(&mut child).and_then(|root| root.stdin.take()),
             signals: tree.signaller(),
         }),
         _ => None,
     };
+    // A terminal stays open until the job ends even with nothing to type into it: on
+    // Windows, closing it ends the program's console.
+    let mut unserved = None;
     let mut input_task = match (input, sink) {
         (Some(requests), Some(sink)) => Some(tokio::spawn(serve_input(requests, sink))),
-        _ => None,
+        (_, sink) => {
+            unserved = sink;
+            None
+        }
     };
     let mut reason = None;
     let mut observation_error = None;
@@ -336,6 +346,7 @@ pub(crate) async fn run_job(
         task.abort();
         let _ = task.await;
     }
+    drop(unserved);
     shared.input_closed(&id);
     let termination_error = if reason.is_some() {
         shared.mark_stop(&id);

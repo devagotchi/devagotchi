@@ -197,26 +197,24 @@ if args.account:
     # names is replaced by the adapter's own: were this forged one kept, the input below
     # would be refused as another account's.
     forged = {"account": "hub:intruder", "client": "forged"}
+    # The machine's shell: PowerShell on Windows, sh elsewhere.
+    read_line = ("$line = [Console]::In.ReadLine(); 'got:' + $line" if os.name == "nt"
+                 else "read line; echo got:$line")
     start_reply = rpc("tools/call", {"name": "operation_start", "arguments": {
         "idempotency_key": str(uuid.uuid4()), "executable": "", "args": [],
-        "command": "read line; echo got:$line", "deadline_ms": 30000,
+        "command": read_line, "deadline_ms": 60000,
         "interactive": {"mode": "pipe"}, "caller": forged}})["result"]
     start_text = (start_reply.get("content") or [{}])[0].get("text", "")
-    if os.name == "nt":
-        print("interactive on Windows:", start_reply.get("isError"), start_text[:120])
-        if not start_reply.get("isError") or "unsupported_platform" not in start_text:
-            raise SystemExit("an interactive start on Windows was not refused as unsupported_platform")
-    else:
-        if start_reply.get("isError"):
-            raise SystemExit(f"interactive operation_start failed: {start_text[:300]}")
-        piped = (start_reply.get("structuredContent") or json.loads(start_text))["operation"]["operation_id"]
-        sent = call("operation_input", {"operation_id": piped, "text": "hello", "keys": ["enter"]})
-        settled = call("operation_wait", {"operation_id": piped, "timeout_ms": 30000})
-        page = call("operation_read", {"operation_id": piped, "cursor": 0, "max_bytes": 4096})
-        typed_text = "".join(f.get("text", "") for f in page.get("frames", []))
-        print("interactive:", sent["operation"]["state"], settled["state"], repr(typed_text.strip()))
-        if settled["state"] != "succeeded" or "got:hello" not in typed_text:
-            raise SystemExit("operation_input did not reach the program")
+    if start_reply.get("isError"):
+        raise SystemExit(f"interactive operation_start failed: {start_text[:300]}")
+    piped = (start_reply.get("structuredContent") or json.loads(start_text))["operation"]["operation_id"]
+    sent = call("operation_input", {"operation_id": piped, "text": "hello", "keys": ["enter"]})
+    settled = call("operation_wait", {"operation_id": piped, "timeout_ms": 45000})
+    page = call("operation_read", {"operation_id": piped, "cursor": 0, "max_bytes": 4096})
+    typed_text = "".join(f.get("text", "") for f in page.get("frames", []))
+    print("interactive:", sent["operation"]["state"], settled["state"], repr(typed_text.strip()))
+    if settled["state"] != "succeeded" or "got:hello" not in typed_text:
+        raise SystemExit("operation_input did not reach the program")
     operations = call("operation_list", {})["operations"]
     if ran["operation_id"] not in [op["operation_id"] for op in operations]:
         raise SystemExit("operation_list did not show the run")

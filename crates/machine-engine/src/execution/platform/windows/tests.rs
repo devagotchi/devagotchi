@@ -12,7 +12,7 @@ fn system32(name: &str) -> String {
 }
 
 /// `cmd /d /c <line>`, created suspended as the broker creates every root.
-fn spawn(line: &str) -> Child {
+fn spawn(line: &str) -> Root {
     let mut command = Command::new(system32("cmd.exe"));
     command
         .args(["/d", "/c"])
@@ -21,7 +21,7 @@ fn spawn(line: &str) -> Child {
         .stdout(Stdio::null())
         .stderr(Stdio::null());
     configure(&mut command);
-    command.spawn().unwrap()
+    Root::Piped(command.spawn().unwrap())
 }
 
 fn ping(seconds: u32) -> String {
@@ -144,4 +144,66 @@ async fn termination_ends_every_member_and_verifies_it() {
         .await
         .expect("a job exit notice arrived")
         .unwrap();
+}
+
+/// Processes started detached (`spawn_detached`), which outlive the broker.
+mod detached {
+    use crate::execution::detached::{self, DetachedSpec};
+    use std::{
+        ffi::OsString,
+        path::Path,
+        time::{Duration, Instant},
+    };
+
+    #[test]
+    fn a_detached_process_runs_where_and_with_only_what_it_is_given() {
+        let dir = tempfile::tempdir().unwrap();
+        let log = dir.path().join("out.log");
+        let system_root = std::env::var_os("SystemRoot").unwrap();
+        let cmd = Path::new(&system_root).join("System32").join("cmd.exe");
+        let env = [
+            (OsString::from("SystemRoot"), system_root),
+            (
+                OsString::from("DEVAGOTCHI_PROBE"),
+                OsString::from("kept here"),
+            ),
+        ];
+        let args: [OsString; 3] = ["/d".into(), "/c".into(), "cd & set".into()];
+        let mut child = detached::spawn(&DetachedSpec {
+            program: &cmd,
+            args: &args,
+            env: &env,
+            cwd: dir.path(),
+            log: &log,
+        })
+        .unwrap();
+        let deadline = Instant::now() + Duration::from_secs(20);
+        let code = loop {
+            if let Some(code) = child.try_wait().unwrap() {
+                break code;
+            }
+            assert!(Instant::now() < deadline, "cmd did not finish");
+            std::thread::sleep(Duration::from_millis(50));
+        };
+        let out = std::fs::read_to_string(&log).unwrap();
+        assert_eq!(code, 0, "{out}");
+        let mut lines = out.lines();
+        let cwd = lines.next().unwrap().trim();
+        assert_eq!(
+            std::fs::canonicalize(cwd).unwrap(),
+            std::fs::canonicalize(dir.path()).unwrap(),
+            "{out}"
+        );
+        let vars: Vec<String> = lines.map(|l| l.to_ascii_uppercase()).collect();
+        assert!(
+            vars.contains(&"DEVAGOTCHI_PROBE=KEPT HERE".to_string()),
+            "{out}"
+        );
+        for absent in ["PATH=", "USERPROFILE=", "USERNAME="] {
+            assert!(
+                !vars.iter().any(|v| v.starts_with(absent)),
+                "{absent} reached it: {out}"
+            );
+        }
+    }
 }

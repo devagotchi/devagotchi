@@ -15,6 +15,7 @@ step holds.
 """
 import argparse
 import json
+import os
 import sys
 import time
 import urllib.error
@@ -189,7 +190,7 @@ if args.run_broker:
     def interactive(command, mode):
         return call("operation_start", {"broker": args.run_broker, "input": {
             "idempotency_key": str(uuid.uuid4()), "executable": "", "args": [], "command": command,
-            "deadline_ms": 30000, "interactive": {"mode": mode}, "caller": forged}})
+            "deadline_ms": 120000, "interactive": {"mode": mode}, "caller": forged}})
 
     def typed(operation_id, text, keys, take_over=False):
         return call("operation_input", {"broker": args.run_broker, "input": {
@@ -197,49 +198,52 @@ if args.run_broker:
 
     def output_of(operation_id):
         _, view = call("operation_wait", {"broker": args.run_broker,
-                                          "input": {"operation_id": operation_id, "timeout_ms": 30000}})
+                                          "input": {"operation_id": operation_id, "timeout_ms": 45000}})
         _, page = call("operation_read", {"broker": args.run_broker,
                                           "input": {"operation_id": operation_id, "cursor": 0, "max_bytes": 4096}})
         return view, "".join(f.get("text", "") for f in page.get("frames", []))
 
-    if sys.platform.startswith("linux"):
-        is_error, piped = interactive("read line; echo got:$line", "pipe")
-        check("an interactive start ignores a forged caller", not is_error
-              and (piped.get("operation", {}).get("interactive") or {}).get("mode") == "pipe", json.dumps(piped)[:240])
-        piped_id = piped.get("operation", {}).get("operation_id", "")
-        is_error, other = in_another_session(lambda: typed(piped_id, "from b", ["enter"]))
-        check("another conversation does not type into it", is_error and other.get("code") == "not_your_session",
-              json.dumps(other)[:200])
-        is_error, resized = call("operation_resize", {"broker": args.run_broker, "input": {
-            "operation_id": piped_id, "cols": 100, "rows": 30}})
-        check("a pipe has no terminal to resize", is_error and resized.get("code") == "no_terminal",
-              json.dumps(resized)[:200])
-        is_error, sent = typed(piped_id, "hello", ["enter"])
-        view, text = output_of(piped_id)
-        def listed(scope):
-            _, page = call("operation_list", {"broker": args.run_broker, "input": {"scope": scope}})
-            return [op["operation_id"] for op in page.get("operations", [])]
-        others_mine = in_another_session(lambda: listed("mine"))
-        check("operation_list shows the account's jobs, and `mine` only this conversation's",
-              piped_id in listed("account") and piped_id in listed("mine") and piped_id not in others_mine,
-              f"mine elsewhere: {others_mine}")
-        check("the conversation that started it types into it", not is_error and view.get("state") == "succeeded"
-              and "got:hello" in text, f"{json.dumps(sent)[:120]} state={view.get('state')} output={text[:80]!r}")
-        is_error, shell = interactive("read x; stty size", "terminal")
-        shell_id = shell.get("operation", {}).get("operation_id", "")
-        is_error, taken = in_another_session(lambda: call("operation_resize", {"broker": args.run_broker, "input": {
-            "operation_id": shell_id, "cols": 100, "rows": 30, "take_over": True}}))
-        size = taken.get("interactive") or {}
-        check("its account's other conversation takes over and resizes it", not is_error
-              and (size.get("cols"), size.get("rows")) == (100, 30), json.dumps(taken)[:200])
-        in_another_session(lambda: typed(shell_id, "go", ["enter"], take_over=True))
-        view, text = output_of(shell_id)
-        check("the program sees its new terminal size", view.get("state") == "succeeded" and "30 100" in text,
-              f"state={view.get('state')} output={text[-80:]!r}")
+    # The machine's shell: PowerShell on Windows (where a console may turn a space into a
+    # cursor move, so the size is written with an x), sh elsewhere.
+    if os.name == "nt":
+        read_line = "$line = [Console]::In.ReadLine(); 'got:' + $line"
+        show_size = "$null = [Console]::ReadLine(); '{0}x{1}' -f [Console]::WindowHeight, [Console]::WindowWidth"
+        new_size = "30x100"
     else:
-        is_error, refused = interactive("echo hi", "terminal")
-        check("an interactive start waits for this platform", is_error
-              and refused.get("code") == "unsupported_platform", json.dumps(refused)[:200])
+        read_line, show_size, new_size = "read line; echo got:$line", "read x; stty size", "30 100"
+    is_error, piped = interactive(read_line, "pipe")
+    check("an interactive start ignores a forged caller", not is_error
+          and (piped.get("operation", {}).get("interactive") or {}).get("mode") == "pipe", json.dumps(piped)[:240])
+    piped_id = piped.get("operation", {}).get("operation_id", "")
+    is_error, other = in_another_session(lambda: typed(piped_id, "from b", ["enter"]))
+    check("another conversation does not type into it", is_error and other.get("code") == "not_your_session",
+          json.dumps(other)[:200])
+    is_error, resized = call("operation_resize", {"broker": args.run_broker, "input": {
+        "operation_id": piped_id, "cols": 100, "rows": 30}})
+    check("a pipe has no terminal to resize", is_error and resized.get("code") == "no_terminal",
+          json.dumps(resized)[:200])
+    is_error, sent = typed(piped_id, "hello", ["enter"])
+    view, text = output_of(piped_id)
+    def listed(scope):
+        _, page = call("operation_list", {"broker": args.run_broker, "input": {"scope": scope}})
+        return [op["operation_id"] for op in page.get("operations", [])]
+    others_mine = in_another_session(lambda: listed("mine"))
+    check("operation_list shows the account's jobs, and `mine` only this conversation's",
+          piped_id in listed("account") and piped_id in listed("mine") and piped_id not in others_mine,
+          f"mine elsewhere: {others_mine}")
+    check("the conversation that started it types into it", not is_error and view.get("state") == "succeeded"
+          and "got:hello" in text, f"{json.dumps(sent)[:120]} state={view.get('state')} output={text[:80]!r}")
+    is_error, shell = interactive(show_size, "terminal")
+    shell_id = shell.get("operation", {}).get("operation_id", "")
+    is_error, taken = in_another_session(lambda: call("operation_resize", {"broker": args.run_broker, "input": {
+        "operation_id": shell_id, "cols": 100, "rows": 30, "take_over": True}}))
+    size = taken.get("interactive") or {}
+    check("its account's other conversation takes over and resizes it", not is_error
+          and (size.get("cols"), size.get("rows")) == (100, 30), json.dumps(taken)[:200])
+    in_another_session(lambda: typed(shell_id, "go", ["enter"], take_over=True))
+    view, text = output_of(shell_id)
+    check("the program sees its new terminal size", view.get("state") == "succeeded" and new_size in text,
+          f"state={view.get('state')} output={text[-80:]!r}")
     # A broker that runs only granted programs refuses a command line, in words.
     is_error, refused = call("run", {"machine": args.broker, "command": "echo hi"})
     check("run on a granted-only broker refused", is_error and refused.get("code") == "command_not_allowed",

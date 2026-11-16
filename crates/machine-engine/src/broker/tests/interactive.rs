@@ -1,5 +1,7 @@
-//! Interactive operations: the input rules on every platform; on Linux, programs on a pipe and
-//! on a pseudo-terminal typed into for real, resized, and driven only by their own account.
+//! Interactive operations: the input rules on every platform; programs on a pipe and on a
+//! terminal typed into for real and resized (a pseudo-terminal on Linux, a pseudo-console on
+//! Windows), and on Linux driven only by their own account (the rule is the broker's, not the
+//! platform's).
 
 use super::*;
 
@@ -101,38 +103,15 @@ fn an_interactive_start_needs_a_caller_and_a_sane_size() {
     let mut no_caller = interactive_start("no-caller", &executable, vec![], InputMode::Pipe);
     no_caller.caller = None;
     let refused = broker.start(no_caller).unwrap_err();
-    #[cfg(target_os = "linux")]
     assert_eq!(refused.code, "invalid_request", "{refused:?}");
-    #[cfg(windows)]
-    assert_eq!(refused.code, "unsupported_platform", "{refused:?}");
     let mut huge = interactive_start("huge", &executable, vec![], InputMode::Terminal);
     huge.interactive.as_mut().unwrap().cols = 10_000;
     assert_eq!(broker.start(huge).unwrap_err().code, "invalid_request");
 }
 
-#[cfg(windows)]
-#[test]
-fn windows_refuses_an_interactive_start_until_it_has_a_console_for_it() {
-    let directory = tempfile::tempdir().unwrap();
-    let executable = test_executable();
-    let broker = open_broker(&directory, &[&executable]);
-    for mode in [InputMode::Terminal, InputMode::Pipe] {
-        let refused = broker
-            .start(interactive_start(
-                &format!("{mode:?}"),
-                &executable,
-                vec![],
-                mode,
-            ))
-            .unwrap_err();
-        assert_eq!(refused.code, "unsupported_platform", "{refused:?}");
-    }
-}
-
 /// Wait (bounded) until `id`'s output holds `needle`.
-#[cfg(target_os = "linux")]
 async fn output_holding(broker: &Broker, id: &str, needle: &str) -> String {
-    let deadline = Instant::now() + Duration::from_secs(20);
+    let deadline = Instant::now() + Duration::from_secs(60);
     loop {
         let text = output_text(broker, id);
         if text.contains(needle) {
@@ -144,7 +123,6 @@ async fn output_holding(broker: &Broker, id: &str, needle: &str) -> String {
     }
 }
 
-#[cfg(target_os = "linux")]
 fn typed(id: &str, who: &Caller, text: &str, keys: Vec<Key>, take_over: bool) -> SendInput {
     SendInput {
         operation_id: id.into(),
@@ -310,4 +288,157 @@ async fn only_its_account_drives_it_and_two_clients_never_type_at_once() {
         matches!(settled.state, OperationState::Succeeded),
         "{settled:?}"
     );
+}
+
+/// `text` without the escape sequences a console writes (ConPTY moves the cursor rather than
+/// write runs of spaces).
+#[cfg(windows)]
+fn plain(text: &str) -> String {
+    let mut plain = String::new();
+    let mut chars = text.chars();
+    while let Some(c) = chars.next() {
+        if c != '\u{1b}' {
+            plain.push(c);
+            continue;
+        }
+        match chars.next() {
+            Some('[') => {
+                for c in chars.by_ref() {
+                    if ('@'..='~').contains(&c) {
+                        break;
+                    }
+                }
+            }
+            Some(']') => {
+                for c in chars.by_ref() {
+                    if c == '\u{7}' {
+                        break;
+                    }
+                }
+            }
+            _ => {}
+        }
+        plain.push(' ');
+    }
+    plain
+}
+
+#[cfg(windows)]
+#[tokio::test]
+async fn on_windows_a_pipe_takes_lines_and_an_end_but_no_ctrl_c() {
+    let directory = tempfile::tempdir().unwrap();
+    let sort = system32("sort.exe");
+    let broker = open_broker(&directory, &[&sort]);
+    let id = broker
+        .start(interactive_start("pipe", &sort, vec![], InputMode::Pipe))
+        .unwrap()
+        .operation
+        .operation_id;
+    let owner = caller("local", "conversation-a");
+    broker
+        .input(typed(&id, &owner, "pear\nabove", vec![Key::Enter], false))
+        .await
+        .unwrap();
+    let refused = broker
+        .input(typed(&id, &owner, "", vec![Key::CtrlC], false))
+        .await
+        .unwrap_err();
+    assert_eq!(refused.code, "no_terminal", "{refused:?}");
+    broker
+        .input(typed(&id, &owner, "", vec![Key::CtrlD], false))
+        .await
+        .unwrap();
+    let settled = settle_within(&broker, &id, 60).await;
+    assert!(
+        matches!(settled.state, OperationState::Succeeded),
+        "{settled:?}"
+    );
+    let text = output_text(&broker, &id);
+    let lines: Vec<&str> = text.lines().map(str::trim).collect();
+    assert_eq!(lines, ["above", "pear"], "{text:?}");
+    let late = broker
+        .input(typed(&id, &owner, "late", vec![Key::Enter], false))
+        .await
+        .unwrap_err();
+    assert_eq!(late.code, "input_closed");
+}
+
+#[cfg(windows)]
+#[tokio::test]
+async fn on_windows_a_console_runs_what_is_typed_takes_ctrl_c_and_is_resized() {
+    let directory = tempfile::tempdir().unwrap();
+    let cmd = system32("cmd.exe");
+    let ping = system32("PING.EXE");
+    // Named in full: the environment is cleared, so there is no PATH.
+    let mode = format!("{} con", system32("mode.com").display());
+    let broker = open_broker(&directory, &[&cmd]);
+    let started = broker
+        .start(interactive_start(
+            "console",
+            &cmd,
+            vec!["/d".into()],
+            InputMode::Terminal,
+        ))
+        .unwrap()
+        .operation;
+    let id = started.operation_id;
+    let owner = caller("local", "conversation-a");
+    broker
+        .input(typed(&id, &owner, "set /a 6*7", vec![Key::Enter], false))
+        .await
+        .unwrap();
+    output_holding(&broker, &id, "42").await;
+    let running = broker.get(&id).unwrap();
+    assert!(
+        running
+            .detail
+            .as_deref()
+            .unwrap_or_default()
+            .contains("pseudo-console"),
+        "{:?}",
+        running.detail
+    );
+    // Ctrl-C reaches the console's foreground program, as typed at a real one.
+    let line = format!("{} -t 127.0.0.1", ping.display());
+    broker
+        .input(typed(&id, &owner, &line, vec![Key::Enter], false))
+        .await
+        .unwrap();
+    output_holding(&broker, &id, "127.0.0.1:").await;
+    broker
+        .input(typed(&id, &owner, "", vec![Key::CtrlC], false))
+        .await
+        .unwrap();
+    output_holding(&broker, &id, "Control-C").await;
+    let resized = broker
+        .resize(ResizeInput {
+            operation_id: id.clone(),
+            cols: 120,
+            rows: 40,
+            take_over: false,
+            caller: Some(owner.clone()),
+        })
+        .await
+        .unwrap();
+    let size = resized.interactive.unwrap();
+    assert_eq!((size.cols, size.rows), (120, 40));
+    broker
+        .input(typed(&id, &owner, &mode, vec![Key::Enter], false))
+        .await
+        .unwrap();
+    let shown = output_holding(&broker, &id, "Columns:").await;
+    let after = plain(&shown);
+    let columns = after.rsplit("Columns:").next().unwrap().trim_start();
+    let digits: String = columns.chars().take_while(char::is_ascii_digit).collect();
+    assert_eq!(digits, "120", "{after:?}");
+    broker
+        .input(typed(&id, &owner, "exit", vec![Key::Enter], false))
+        .await
+        .unwrap();
+    let settled = settle_within(&broker, &id, 60).await;
+    assert!(
+        matches!(settled.state, OperationState::Succeeded),
+        "{settled:?}"
+    );
+    assert!(!settled.interactive.unwrap().input_open);
 }
