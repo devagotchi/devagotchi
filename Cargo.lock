@@ -879,6 +879,7 @@ name = "devagotchi"
 version = "0.1.0"
 dependencies = [
  "devagotchi-hub",
+ "devagotchi-kernel",
  "devagotchi-link",
  "devagotchi-machine-engine",
  "devagotchi-mcp",
@@ -997,6 +998,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "devagotchi-kernel"
+version = "0.1.0"
+dependencies = [
+ "devagotchi-contracts",
+ "getrandom 0.4.3",
+ "hex",
+ "rusqlite",
+ "schemars 1.2.3",
+ "serde",
+ "serde_json",
+ "sha2 0.11.1",
+ "tempfile",
+]
+
+[[package]]
 name = "devagotchi-link"
 version = "0.1.0"
 dependencies = [
@@ -1027,7 +1043,6 @@ dependencies = [
  "devagotchi-contracts",
  "devagotchi-ipc",
  "dunce",
- "getrandom 0.4.3",
  "globset",
  "hex",
  "ignore",
@@ -1035,7 +1050,6 @@ dependencies = [
  "regex",
  "reqwest",
  "rusqlite",
- "schemars 1.2.3",
  "serde",
  "serde_json",
  "sha2 0.11.1",

@@ -5,6 +5,7 @@ members = [
     "crates/connectors",
     "crates/ipc",
     "crates/machine-engine",
+    "crates/kernel",
     "crates/mcp",
     "crates/store",
     "crates/agenthub",
@@ -21,6 +22,7 @@ default-members = [
     "crates/connectors",
     "crates/ipc",
     "crates/machine-engine",
+    "crates/kernel",
     "crates/mcp",
     "crates/store",
     "crates/agenthub",
@@ -43,6 +45,7 @@ devagotchi-contracts = { path = "crates/contracts" }
 devagotchi-connectors = { path = "crates/connectors" }
 devagotchi-ipc = { path = "crates/ipc" }
 devagotchi-machine-engine = { path = "crates/machine-engine" }
+devagotchi-kernel = { path = "crates/kernel" }
 devagotchi-store = { path = "crates/store" }
 devagotchi-agenthub = { path = "crates/agenthub" }
 

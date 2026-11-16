@@ -60,8 +60,8 @@
 625	crates/hub/src/workflows/stored/mod.rs
 1766	crates/hub/src/workflows/tests.rs
 516	crates/ipc/src/windows/security.rs
-1017	crates/machine-engine/src/ai/mod.rs
-647	crates/machine-engine/src/ai/tests.rs
+1017	crates/kernel/src/capture/mod.rs
+647	crates/kernel/src/capture/tests.rs
 1202	crates/machine-engine/src/broker.rs
 519	crates/machine-engine/src/execution/platform/linux.rs
 630	crates/machine-engine/src/execution/platform/windows.rs
