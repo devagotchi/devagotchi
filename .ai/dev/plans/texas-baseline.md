@@ -5,7 +5,7 @@
   deployed on the Texas server and fully confirmed there, set up as a real public customer
   would, with the owner account made by the person in one step from a phone; Texas then
   becomes the dev and pre-release environment. Pre-release: no legacy, no compatibility.
-- PR: not_created
+- PR: https://github.com/devagotchi/devagotchi/pull/226
 - Branch / baseline: `increment-175/texas-baseline` from `main` 5104f35
 - Objective: one confirmed install on Texas from the published hub image, claimed from a
   phone, with a machine linked and an AI client connected, and every step it took written
@@ -53,6 +53,6 @@
 
 ## Delivery
 
-Implementation: M1 done. Validation: focused test only. Push: not_verified.
-PR: not_created. Main: not_verified.
+Implementation: M1 done. Validation: focused test only. Push: pushed to increment-175/texas-baseline.
+PR: #226 (draft). Main: not_verified.
 **DELIVERY INCOMPLETE: NOT PUSHED / NOT MERGED TO MAIN**
