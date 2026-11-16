@@ -7,7 +7,12 @@ use super::{Host, Kind, Launch, Os, on_path};
 use crate::execution::platform::git_bash;
 use devagotchi_contracts::BridgeError;
 
-pub(super) fn plan(path: &str, found: &str, os: Os, host: &impl Host) -> Result<Launch, BridgeError> {
+pub(super) fn plan(
+    path: &str,
+    found: &str,
+    os: Os,
+    host: &impl Host,
+) -> Result<Launch, BridgeError> {
     match os {
         Os::Unix => unix(path, found, host),
         Os::Windows => windows(path, found, host),
@@ -31,24 +36,40 @@ fn direct(path: &str, how: String) -> Launch {
 }
 
 fn unix(path: &str, found: &str, host: &impl Host) -> Result<Launch, BridgeError> {
-    let executable = matches!(host.kind(path), Kind::File { executable: true, .. });
+    let executable = matches!(
+        host.kind(path),
+        Kind::File {
+            executable: true,
+            ..
+        }
+    );
     let head = host.head(path);
     if let Some(interpreter) = shebang(&head) {
         if executable {
-            return Ok(direct(path, format!("{path} ({found}) runs itself: it is executable and starts with #!{interpreter}")));
+            return Ok(direct(
+                path,
+                format!(
+                    "{path} ({found}) runs itself: it is executable and starts with #!{interpreter}"
+                ),
+            ));
         }
         let (program, flags) = shebang_program(&interpreter, host)?;
         let mut lead = flags;
         lead.push(path.to_owned());
         return Ok(Launch {
-            how: format!("{program} runs {path} ({found}): the file has no execute permission, so its #! line names the interpreter"),
+            how: format!(
+                "{program} runs {path} ({found}): the file has no execute permission, so its #! line names the interpreter"
+            ),
             program,
             lead,
         });
     }
     let image = head.starts_with(b"\x7fELF") || head.starts_with(&[0xcf, 0xfa, 0xed, 0xfe]);
     if executable && image {
-        return Ok(direct(path, format!("{path} ({found}) runs directly: an executable program")));
+        return Ok(direct(
+            path,
+            format!("{path} ({found}) runs directly: an executable program"),
+        ));
     }
     let extension = extension(path);
     if let Some(names) = unix_interpreters(&extension) {
@@ -59,13 +80,18 @@ fn unix(path: &str, found: &str, host: &impl Host) -> Result<Launch, BridgeError
             )
         })?;
         return Ok(Launch {
-            how: format!("{program} (found on PATH in {dir}) runs {path} ({found}): it ends in .{extension} and has no #! line"),
+            how: format!(
+                "{program} (found on PATH in {dir}) runs {path} ({found}): it ends in .{extension} and has no #! line"
+            ),
             program,
             lead: vec![path.to_owned()],
         });
     }
     if executable {
-        return Ok(direct(path, format!("{path} ({found}) runs directly: it has execute permission")));
+        return Ok(direct(
+            path,
+            format!("{path} ({found}) runs directly: it has execute permission"),
+        ));
     }
     Err(BridgeError::new(
         "not_executable",
@@ -91,13 +117,19 @@ fn unix_interpreters(extension: &str) -> Option<&'static [&'static str]> {
 /// The interpreter of a `#!` line, without the `#!`.
 fn shebang(head: &[u8]) -> Option<String> {
     let rest = head.strip_prefix(b"#!")?;
-    let end = rest.iter().position(|&byte| byte == b'\n').unwrap_or(rest.len());
+    let end = rest
+        .iter()
+        .position(|&byte| byte == b'\n')
+        .unwrap_or(rest.len());
     let line = String::from_utf8_lossy(&rest[..end]).trim().to_owned();
     (!line.is_empty()).then_some(line)
 }
 
 /// `/usr/bin/env python3 -u` names `python3` on PATH; `/usr/bin/python3 -u` names itself.
-fn shebang_program(interpreter: &str, host: &impl Host) -> Result<(String, Vec<String>), BridgeError> {
+fn shebang_program(
+    interpreter: &str,
+    host: &impl Host,
+) -> Result<(String, Vec<String>), BridgeError> {
     let mut words = interpreter.split_whitespace();
     let first = words.next().unwrap_or_default();
     let mut flags: Vec<String> = words.map(str::to_owned).collect();
@@ -106,7 +138,10 @@ fn shebang_program(interpreter: &str, host: &impl Host) -> Result<(String, Vec<S
             flags.remove(0);
         }
         if flags.is_empty() {
-            return Err(BridgeError::new("not_executable", format!("#!{interpreter} names no program after env")));
+            return Err(BridgeError::new(
+                "not_executable",
+                format!("#!{interpreter} names no program after env"),
+            ));
         }
         let name = flags.remove(0);
         let (program, _) = on_path(&name, Os::Unix, host)?;
@@ -121,7 +156,11 @@ fn shebang_program(interpreter: &str, host: &impl Host) -> Result<(String, Vec<S
     }
 }
 
-fn first_on_path(names: &[&str], os: Os, host: &impl Host) -> Result<(String, String), BridgeError> {
+fn first_on_path(
+    names: &[&str],
+    os: Os,
+    host: &impl Host,
+) -> Result<(String, String), BridgeError> {
     let mut last = None;
     for name in names {
         match on_path(name, os, host) {
@@ -135,24 +174,43 @@ fn first_on_path(names: &[&str], os: Os, host: &impl Host) -> Result<(String, St
 fn windows(path: &str, found: &str, host: &impl Host) -> Result<Launch, BridgeError> {
     let extension = extension(path);
     match extension.as_str() {
-        "exe" | "com" => Ok(direct(path, format!("{path} ({found}) runs directly: a Windows program"))),
+        "exe" | "com" => Ok(direct(
+            path,
+            format!("{path} ({found}) runs directly: a Windows program"),
+        )),
         // The standard library runs a batch file through cmd.exe with its own safe quoting
         // (and refuses arguments it cannot quote safely).
-        "bat" | "cmd" => Ok(direct(path, format!("{path} ({found}) runs through cmd.exe: a batch file"))),
+        "bat" | "cmd" => Ok(direct(
+            path,
+            format!("{path} ({found}) runs through cmd.exe: a batch file"),
+        )),
         "ps1" => {
             let shell = powershell(host);
             Ok(Launch {
-                how: format!("Windows PowerShell ({shell}) runs {path} ({found}) with -File: it ends in .ps1"),
+                how: format!(
+                    "Windows PowerShell ({shell}) runs {path} ({found}) with -File: it ends in .ps1"
+                ),
                 program: shell,
-                lead: ["-NoLogo", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", path]
-                    .into_iter()
-                    .map(str::to_owned)
-                    .collect(),
+                lead: [
+                    "-NoLogo",
+                    "-NoProfile",
+                    "-NonInteractive",
+                    "-ExecutionPolicy",
+                    "Bypass",
+                    "-File",
+                    path,
+                ]
+                .into_iter()
+                .map(str::to_owned)
+                .collect(),
             })
         }
         "py" | "pyw" => {
             let (program, how) = windows_python(host).map_err(|error| {
-                BridgeError::new("interpreter_not_found", format!("{path} is a Python script and {}", error.message))
+                BridgeError::new(
+                    "interpreter_not_found",
+                    format!("{path} is a Python script and {}", error.message),
+                )
             })?;
             Ok(Launch {
                 how: format!("{how} runs {path} ({found}): it ends in .{extension}"),
@@ -162,17 +220,25 @@ fn windows(path: &str, found: &str, host: &impl Host) -> Result<Launch, BridgeEr
         }
         "js" | "mjs" | "cjs" => {
             let (program, dir) = on_path("node", Os::Windows, host).map_err(|error| {
-                BridgeError::new("interpreter_not_found", format!("{path} is a JavaScript file and {}", error.message))
+                BridgeError::new(
+                    "interpreter_not_found",
+                    format!("{path} is a JavaScript file and {}", error.message),
+                )
             })?;
             Ok(Launch {
-                how: format!("node ({program}, found on PATH in {dir}) runs {path} ({found}): it ends in .{extension}"),
+                how: format!(
+                    "node ({program}, found on PATH in {dir}) runs {path} ({found}): it ends in .{extension}"
+                ),
                 program,
                 lead: vec![path.to_owned()],
             })
         }
         "sh" | "bash" => {
-            let bash = git_bash::find_bash(|name| host.var(name), |path| matches!(host.kind(path), Kind::File { .. }))
-                .ok_or_else(|| BridgeError::new("shell_unavailable", git_bash::NO_GIT_BASH))?;
+            let bash = git_bash::find_bash(
+                |name| host.var(name),
+                |path| matches!(host.kind(path), Kind::File { .. }),
+            )
+            .ok_or_else(|| BridgeError::new("shell_unavailable", git_bash::NO_GIT_BASH))?;
             Ok(Launch {
                 how: format!("Git Bash ({bash}) runs {path} ({found}): it ends in .{extension}"),
                 program: bash,
@@ -183,7 +249,11 @@ fn windows(path: &str, found: &str, host: &impl Host) -> Result<Launch, BridgeEr
             "not_executable",
             format!(
                 "{path} is not a program Windows runs: .exe and .com run directly, and .py .pyw .ps1 .bat .cmd .js .mjs .cjs .sh run with their interpreter; this file ends in {}. Run its interpreter with the file as an argument.",
-                if extension.is_empty() { "nothing".to_owned() } else { format!(".{extension}") }
+                if extension.is_empty() {
+                    "nothing".to_owned()
+                } else {
+                    format!(".{extension}")
+                }
             ),
         )),
     }
@@ -191,7 +261,9 @@ fn windows(path: &str, found: &str, host: &impl Host) -> Result<Launch, BridgeEr
 
 /// Windows PowerShell from System32, never one found on PATH.
 pub(crate) fn powershell(host: &impl Host) -> String {
-    let root = host.var("SystemRoot").unwrap_or_else(|| "C:\\Windows".to_owned());
+    let root = host
+        .var("SystemRoot")
+        .unwrap_or_else(|| "C:\\Windows".to_owned());
     Os::Windows.join(&root, "System32\\WindowsPowerShell\\v1.0\\powershell.exe")
 }
 
@@ -212,13 +284,22 @@ pub(crate) fn windows_python(host: &impl Host) -> Result<(String, String), Bridg
         }
     }
     if let Ok((program, dir)) = on_path("py", Os::Windows, host) {
-        return Ok((program.clone(), format!("the Python launcher ({program}, found on PATH in {dir})")));
+        return Ok((
+            program.clone(),
+            format!("the Python launcher ({program}, found on PATH in {dir})"),
+        ));
     }
     match on_path("python", Os::Windows, host) {
-        Ok((program, dir)) => Ok((program.clone(), format!("python ({program}, found on PATH in {dir})"))),
+        Ok((program, dir)) => Ok((
+            program.clone(),
+            format!("python ({program}, found on PATH in {dir})"),
+        )),
         Err(error) => Err(BridgeError::new(
             "interpreter_not_found",
-            format!("this machine has no Python: no Python launcher (py.exe) and {}", lowercase_first(&error.message)),
+            format!(
+                "this machine has no Python: no Python launcher (py.exe) and {}",
+                lowercase_first(&error.message)
+            ),
         )),
     }
 }

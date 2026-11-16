@@ -41,7 +41,11 @@ pub(super) fn key_bytes(key: Key) -> &'static [u8] {
 /// rest (Ctrl-C becomes SIGINT for the foreground job). On a pipe there is no terminal:
 /// Enter is a newline, Ctrl-C and Ctrl-\\ are signals, Ctrl-D closes the input, and
 /// Ctrl-Z, which would stop a program nothing can continue, is refused.
-pub(super) fn input_steps(mode: InputMode, text: &str, keys: &[Key]) -> BridgeResult<Vec<InputStep>> {
+pub(super) fn input_steps(
+    mode: InputMode,
+    text: &str,
+    keys: &[Key],
+) -> BridgeResult<Vec<InputStep>> {
     let mut steps = Vec::new();
     let mut bytes = text.as_bytes().to_vec();
     for &key in keys {
@@ -87,7 +91,10 @@ pub(super) fn input_steps(mode: InputMode, text: &str, keys: &[Key]) -> BridgeRe
 }
 
 /// Hand steps to the running job and wait (bounded) until the program has them.
-pub(super) async fn deliver(sender: &mpsc::Sender<InputRequest>, steps: Vec<InputStep>) -> BridgeResult<()> {
+pub(super) async fn deliver(
+    sender: &mpsc::Sender<InputRequest>,
+    steps: Vec<InputStep>,
+) -> BridgeResult<()> {
     let (reply, answer) = oneshot::channel();
     match sender.try_send(InputRequest { steps, reply }) {
         Ok(()) => {}

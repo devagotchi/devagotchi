@@ -64,10 +64,10 @@ machines for the account; Desktop Commander's devices Gus and dabo are offline).
 ### Missing
 
 - Search: file names and file contents (start_search, get_more_search_results, stop_search,
-  list_searches).
-- Processes the broker did not start: list_processes, kill_process.
-- Settings over MCP: get_config, set_config_value (broker.json is edited by hand).
-- write_pdf; read_file from a URL; usage stats and recent tool calls.
+  list_searches). (Built in P7.)
+- Processes the broker did not start: list_processes, kill_process. (Built in P8.)
+- Settings over MCP: get_config, set_config_value (broker.json is edited by hand). (Built in P8.)
+- write_pdf; read_file from a URL; usage stats and recent tool calls. (P9.)
 
 ### Dead code
 
@@ -88,7 +88,8 @@ libraries): 19 never-used items in `devagotchi-hub` (for example `store::open`,
 | P5 | Long jobs: the deadline cap is a day; `run` defaults to an hour | a job past five minutes | done: `deadline_ms` 3600000 accepted, 90000000 refused naming the day cap; a 330 s `run` (see receipts) |
 | P6 | Paths: `~` and relative paths in every file tool and `cwd` (one rule, `files/given.rs`); edits that match the file's own line endings; `run` keeps the tail from a whole line | probes | done: `read_file ~/tilde.txt`, `write_file p9/rel.txt` (under the workspace), `cwd: "~"` and `cwd: "p9"` ran there, `~bob/x` refused with the reason; `alpha\nbeta` edited a CRLF file and kept `\r\n`; the 3000-line tail starts at `line-1788` |
 | P7 | Search: names and contents, paged, through the broker (`search_files`, `files/search.rs`; gitignore-aware walk, binary and >8 MiB files skipped, stateless cursor, 5 s per page) | probes | done: names skip hidden and gitignored unless `include_ignored`; contents with `glob: *.rs` and one line of context; case-sensitive and regex finds; 34 matches over 4 pages of 10 with none lost or repeated; a bad regex, a missing directory and a forged cursor each refused with the reason, and broker.log traces each as `refused search_files` |
-| P8 | Processes and settings: list and stop processes; read and change broker settings | probes | not started |
+| P8 | Processes and settings (`get_config`, `set_config_value`, `list_processes`, `kill_process`; `broker/settings.rs`, `broker/system.rs`). The workspace, exec policy and grants stay the operator's; the three limits change live and are saved to broker.json; processes only on an `account` broker; never Devagotchi's own processes; a job's root goes to `operation_cancel` | probes | done: get_config named the file, policy, account (`root`, from the OS, not `USER`) and home; `max_concurrent` 4 to 6 applied, was written to broker.json and survived a broker restart; `workspace`, `colour` and 99 refused with the reason; lowering `max_operations` to 5 retired 36 kept jobs to 5 at once; list_processes tagged a job's `bash` and both `sleep`s with its `operation_id`; kill_process refused the job's root (pointing to operation_cancel), the broker and the adapter, stopped a job's child with SIGKILL and an outside `sleep` with SIGTERM (exit -15), and said `process_not_found` for a missing PID; a granted broker refused list_processes; broker.log traces each change, stop and refusal |
+| P9 | The rest of the map: `write_pdf`, `read_file` from a URL, usage stats and recent tool calls | probes | not started |
 
 ## Verification receipts
 
@@ -111,11 +112,23 @@ Fix P7 (2026-11-16, Linux): machine-engine 122, mcp 26, hub 435 unit tests and t
 ratchet passed; the P7 probes ran through `devagotchi mcp`; `tests/e2e.py` passed with a new hub
 check that `search_files` finds a line with its context on an enrolled machine. An older machine
 refuses `file_search` as an unknown request, and the hub names `machine_update` for that.
+
+Fix P8 (2026-11-16, Linux): machine-engine 125, mcp 26, hub 435 unit tests and the layout
+ratchet passed (broker restart recovery moved to `broker/recover.rs`, API key scopes to
+`api_keys/scope.rs`, the hub's machine routers composed in `machines`); the P8 probes ran
+through `devagotchi mcp`; `tests/e2e.py` passed with hub checks for get_config, set_config_value,
+list_processes and kill_process on an enrolled machine, and a granted broker's refusal. The
+execution identity no longer includes the limits (they change live), so a retry key from before
+this build is refused as `idempotency_conflict` once. rustfmt now runs on everything P1 to P8
+touched, and the generated contract schema and desktop types are current
+(`node scripts/generate-contracts.cjs --check`).
+
 Seen once: right after the broker was killed, `devagotchi mcp` reported "your broker is running
 but did not answer within 20 s" while the old one was still shutting down; the next start worked.
 
 ## Delivery
 
-Implementation: map, and fixes P1 to P7. Validation: run here, Linux. Push: branch. PR: not_created.
-Main: not_verified.
-**DELIVERY INCOMPLETE: NOT MERGED TO MAIN**
+Implementation: map, and fixes P1 to P8. Validation: run here, Linux; Windows not run.
+Push: increment-179/desktop-commander-parity, and main fast-forwarded to it after each fix.
+PR: none (no PR ceremony, by the user's instruction). Main: each fix is on main.
+**DELIVERY INCOMPLETE: P9 and step 3 remain**

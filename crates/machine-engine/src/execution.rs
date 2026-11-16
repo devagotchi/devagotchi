@@ -55,7 +55,6 @@ pub(crate) enum StopReason {
     ObservationFailure,
 }
 
-
 pub(crate) async fn run_job(
     shared: Arc<Shared>,
     id: String,
@@ -174,6 +173,7 @@ pub(crate) async fn run_job(
             return;
         }
     };
+    let pid = child.id();
     let tree = match platform::OwnedTree::adopt(&mut child, scope).await {
         Ok(tree) => tree,
         Err(failure) => {
@@ -187,7 +187,7 @@ pub(crate) async fn run_job(
             return;
         }
     };
-    shared.running(&id);
+    shared.running(&id, pid);
     let mut readers: Vec<(&'static str, JoinHandle<PipeResult>)> = Vec::new();
     if let Some(terminal) = &terminal {
         // A terminal merges what the program writes to stdout and stderr: one stream.

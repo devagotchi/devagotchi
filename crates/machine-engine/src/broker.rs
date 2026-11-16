@@ -84,6 +84,8 @@ struct Operation {
     writer: Option<(String, u64)>,
     /// How the program was chosen (see `launch`), kept at the front of the final detail.
     launch: Option<String>,
+    /// The root process, while it runs (not journaled: a recovered PID is never trusted).
+    pid: Option<u32>,
 }
 
 struct State {
@@ -93,10 +95,14 @@ struct State {
     active_count: usize,
     closing: bool,
     persistence_fault: Option<BridgeError>,
+    /// The limits `set_config_value` changes while the broker runs.
+    limits: Limits,
 }
 
 pub(crate) struct Shared {
     config: BrokerConfig,
+    /// The broker.json this broker was started from, where a changed limit is saved.
+    config_file: Option<PathBuf>,
     workspace: PathBuf,
     executables: HashSet<PathBuf>,
     config_identity: String,
@@ -138,7 +144,12 @@ fn invalid(message: impl Into<String>) -> BridgeError {
 
 /// `value` resolved: `~` is this account's home; a relative path is under `base` when there is
 /// one (the workspace, for a `cwd`) and refused otherwise (a setting in broker.json).
-fn canonical_existing(value: &str, base: Option<&Path>, kind: &str, code: &str) -> BridgeResult<PathBuf> {
+fn canonical_existing(
+    value: &str,
+    base: Option<&Path>,
+    kind: &str,
+    code: &str,
+) -> BridgeResult<PathBuf> {
     let path = crate::files::given::absolute(value, base)
         .map_err(|error| BridgeError::new(code, format!("{kind}: {}", error.message)))?;
     // Windows canonical paths drop the verbatim prefix when that is lossless, so
@@ -167,15 +178,20 @@ pub const EXECUTABLE_RULE: &str = platform::EXECUTABLE_RULE;
 
 impl Broker {
     pub fn open(config: BrokerConfig, state_dir: &Path) -> BridgeResult<Arc<Self>> {
-        if !(1024..=16 * 1024 * 1024).contains(&config.output_limit_bytes)
-            || !(1..=4096).contains(&config.max_operations)
-            || !(1..=64).contains(&config.max_concurrent)
-            || config.max_concurrent > config.max_operations
-            || config.allowed_executables.len() > 128
-        {
+        Self::open_at(config, state_dir, None)
+    }
+
+    /// `open`, for a broker started from `config_file`: `set_config_value` saves there.
+    pub fn open_at(
+        config: BrokerConfig,
+        state_dir: &Path,
+        config_file: Option<PathBuf>,
+    ) -> BridgeResult<Arc<Self>> {
+        let limits = Limits::from_config(&config)?;
+        if config.allowed_executables.len() > 128 {
             return Err(BridgeError::new(
                 "invalid_config",
-                "output_limit_bytes must be 1024..=16777216, max_operations 1..=4096, max_concurrent 1..=64 and no greater than max_operations; at most 128 executable grants",
+                "At most 128 executable grants",
             ));
         }
         let workspace = canonical_existing(&config.workspace, None, "workspace", "invalid_config")?;
@@ -207,63 +223,21 @@ impl Broker {
             .map(|path| path_string(path))
             .collect::<BridgeResult<Vec<_>>>()?;
         grants.sort();
+        // What decides how a request runs: where, what may run, and as whom. The limits are
+        // left out: they change while the broker runs and never change what a job does.
         let identity_bytes = serde_json::to_vec(&(
-            "desktop-bridge-execution-v1",
+            "desktop-bridge-execution-v2",
             path_string(&workspace)?,
             grants,
             config.exec_policy,
-            config.output_limit_bytes,
-            config.max_operations,
-            config.max_concurrent,
         ))
         .map_err(|error| BridgeError::new("invalid_config", error.to_string()))?;
         let config_identity = hex::encode(Sha256::digest(identity_bytes));
-        let mut journal = Journal::open(state_dir)?;
-        let recovered = journal.load()?;
-        let mut operations = HashMap::new();
-        let mut keys = HashMap::new();
-        for mut record in recovered {
-            if let Some(interactive) = &mut record.view.interactive {
-                interactive.input_open = false;
-                interactive.writer_until_ms = None;
-            }
-            if !record.view.state.terminal() {
-                record.view.state = OperationState::Unknown;
-                record.view.updated_at_ms = now_ms();
-                record.view.output_complete = false;
-                record.view.detail = Some("Broker restarted before settlement. Execution effects and process/resource status are unknown; processes may still be running. Admission does not prove whether spawning occurred. This operation will never be replayed automatically, and no recovered PID will be signalled.".into());
-                journal.update(&record.view)?;
-            }
-            let mut retained_bytes: usize =
-                record.frames.iter().map(|frame| frame.bytes.len()).sum();
-            while retained_bytes > config.output_limit_bytes || record.frames.len() > MAX_FRAMES {
-                if let Some(frame) = record.frames.pop_front() {
-                    retained_bytes -= frame.bytes.len();
-                }
-            }
-            let earliest = record
-                .frames
-                .front()
-                .map_or(record.latest_sequence + 1, |frame| frame.sequence);
-            journal.prune(&record.view.operation_id, earliest)?;
-            keys.insert(record.key.clone(), record.view.operation_id.clone());
-            operations.insert(
-                record.view.operation_id.clone(),
-                Operation {
-                    record,
-                    retained_bytes,
-                    active: false,
-                    control: None,
-                    persistence_fault: None,
-                    input: None,
-                    writer: None,
-                    launch: None,
-                },
-            );
-        }
+        let (journal, operations, keys) = recover::recover(state_dir, limits.output_limit_bytes)?;
         Ok(Arc::new(Self {
             shared: Arc::new(Shared {
                 config,
+                config_file,
                 workspace,
                 executables,
                 config_identity,
@@ -274,6 +248,7 @@ impl Broker {
                     active_count: 0,
                     closing: false,
                     persistence_fault: None,
+                    limits,
                 }),
                 settlement: Notify::new(),
                 changes: watch::channel(0).0,
@@ -336,6 +311,10 @@ impl Broker {
             | RequestBody::FileMkdir(_)
             | RequestBody::FileMove(_)
             | RequestBody::FileSearch(_)) => self.on_files(request).await,
+            request @ (RequestBody::ConfigGet(_)
+            | RequestBody::ConfigSet(_)
+            | RequestBody::ProcessList(_)
+            | RequestBody::ProcessKill(_)) => self.on_system(request).await,
         }
     }
 
@@ -352,11 +331,15 @@ impl Broker {
             ));
         }
         if !(1..=MAX_DEADLINE_MS).contains(&input.deadline_ms) {
-            return Err(invalid(format!("deadline_ms must be 1..={MAX_DEADLINE_MS} (a day)")));
+            return Err(invalid(format!(
+                "deadline_ms must be 1..={MAX_DEADLINE_MS} (a day)"
+            )));
         }
         let account = self.shared.config.exec_policy == ExecPolicy::Account;
         let cwd = match &input.cwd {
-            Some(cwd) => canonical_existing(cwd, Some(&self.shared.workspace), "cwd", "invalid_request")?,
+            Some(cwd) => {
+                canonical_existing(cwd, Some(&self.shared.workspace), "cwd", "invalid_request")?
+            }
             None => self.shared.workspace.clone(),
         };
         if !cwd.is_dir() {
@@ -393,7 +376,8 @@ impl Broker {
                 (shell.clone(), shell, args, launch)
             }
             None => {
-                let found = launch::resolve(&input.executable, &cwd_text, Os::HERE, &launch::Machine)?;
+                let found =
+                    launch::resolve(&input.executable, &cwd_text, Os::HERE, &launch::Machine)?;
                 let canonical =
                     canonical_existing(&found.program, None, "executable", "invalid_request")?;
                 if !account && !self.shared.executables.contains(&canonical) {
@@ -411,7 +395,12 @@ impl Broker {
                 if args.len() > 136 {
                     return Err(invalid("args must contain at most 128 entries"));
                 }
-                (PathBuf::from(found.program), canonical, args, Some(found.how))
+                (
+                    PathBuf::from(found.program),
+                    canonical,
+                    args,
+                    Some(found.how),
+                )
             }
         };
         if !account && !cwd.starts_with(&self.shared.workspace) {
@@ -502,12 +491,12 @@ impl Broker {
                 "Broker admission is closed",
             ));
         }
-        if state.operations.len() >= self.shared.config.max_operations {
+        if state.operations.len() >= state.limits.max_operations {
             // History is bounded, not a lifetime quota: the oldest finished operation makes
             // room. Only when every retained operation is still running is admission refused.
             state.retire_oldest_finished()?;
         }
-        if state.active_count >= self.shared.config.max_concurrent {
+        if state.active_count >= state.limits.max_concurrent {
             return Err(BridgeError::new(
                 "concurrency_limit_reached",
                 "The active operation limit has been reached",
@@ -587,6 +576,7 @@ impl Broker {
                 input: input_sender,
                 writer: None,
                 launch: spec.launch.clone(),
+                pid: None,
             },
         );
         state.active_count += 1;
@@ -1097,11 +1087,12 @@ impl Shared {
             .send_modify(|revision| *revision = revision.wrapping_add(1));
     }
 
-    pub(crate) fn running(&self, id: &str) {
+    pub(crate) fn running(&self, id: &str, pid: Option<u32>) {
         let mut state = self.lock();
         let Some(operation) = state.operations.get_mut(id) else {
             return;
         };
+        operation.pid = pid;
         if operation.persistence_fault.is_some() {
             return;
         }
@@ -1147,6 +1138,7 @@ impl Shared {
             return;
         }
         let mut state = self.lock();
+        let output_limit = state.limits.output_limit_bytes;
         let Some(operation) = state.operations.get_mut(id) else {
             return;
         };
@@ -1160,8 +1152,7 @@ impl Shared {
         operation.record.latest_sequence = sequence;
         operation.retained_bytes += frame.bytes.len();
         operation.record.frames.push_back(frame.clone());
-        while operation.retained_bytes > self.config.output_limit_bytes
-            || operation.record.frames.len() > MAX_FRAMES
+        while operation.retained_bytes > output_limit || operation.record.frames.len() > MAX_FRAMES
         {
             if let Some(dropped) = operation.record.frames.pop_front() {
                 operation.retained_bytes -= dropped.bytes.len();
@@ -1222,7 +1213,8 @@ impl Shared {
             &format!(
                 "{:?} exit {}: {}",
                 view.state,
-                view.exit_code.map_or_else(|| "none".to_owned(), |code| code.to_string()),
+                view.exit_code
+                    .map_or_else(|| "none".to_owned(), |code| code.to_string()),
                 view.detail.as_deref().unwrap_or_default()
             ),
         );
@@ -1237,6 +1229,7 @@ impl Shared {
         operation.control = None;
         operation.input = None;
         operation.writer = None;
+        operation.pid = None;
         state.active_count = state.active_count.saturating_sub(1);
         drop(state);
         self.settlement.notify_waiters();
@@ -1250,4 +1243,8 @@ mod tests;
 mod access;
 mod files;
 mod input;
+mod recover;
+mod settings;
+mod system;
 use input::{deliver, input_closed, input_steps};
+use settings::Limits;

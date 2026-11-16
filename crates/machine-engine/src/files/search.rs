@@ -46,7 +46,10 @@ impl Cursor {
             "a" => Done::All,
             line => Done::Lines(line.parse().map_err(|_| bad())?),
         };
-        Ok(Self { entry: PathBuf::from(entry), done })
+        Ok(Self {
+            entry: PathBuf::from(entry),
+            done,
+        })
     }
 
     fn after(entry: &str) -> String {
@@ -63,15 +66,23 @@ impl Scope<'_> {
         self.search_for(input, PAGE_TIME)
     }
 
-    pub(super) fn search_for(&self, input: FileSearchInput, budget: Duration) -> BridgeResult<SearchPage> {
+    pub(super) fn search_for(
+        &self,
+        input: FileSearchInput,
+        budget: Duration,
+    ) -> BridgeResult<SearchPage> {
         if input.pattern.is_empty() {
             return Err(invalid("pattern must not be empty"));
         }
         if !(1..=MAX_SEARCH_RESULTS).contains(&input.max_results) {
-            return Err(invalid(format!("max_results must be 1..={MAX_SEARCH_RESULTS}")));
+            return Err(invalid(format!(
+                "max_results must be 1..={MAX_SEARCH_RESULTS}"
+            )));
         }
         if input.context_lines > MAX_SEARCH_CONTEXT {
-            return Err(invalid(format!("context_lines must be 0..={MAX_SEARCH_CONTEXT}")));
+            return Err(invalid(format!(
+                "context_lines must be 0..={MAX_SEARCH_CONTEXT}"
+            )));
         }
         let matcher = matcher(&input)?;
         let glob = match &input.glob {
@@ -85,7 +96,10 @@ impl Scope<'_> {
         let cursor = input.cursor.as_deref().map(Cursor::parse).transpose()?;
         let root = self.resolve(&input.path)?;
         if !root.is_dir() {
-            return Err(BridgeError::new("not_a_directory", format!("{} is not a directory", display(&root)?)));
+            return Err(BridgeError::new(
+                "not_a_directory",
+                format!("{} is not a directory", display(&root)?),
+            ));
         }
         let mut page = SearchPage {
             path: display(&root)?,
@@ -106,11 +120,15 @@ impl Scope<'_> {
             if entry.depth() == 0 {
                 continue;
             }
-            let Ok(relative) = entry.path().strip_prefix(&root) else { continue };
+            let Ok(relative) = entry.path().strip_prefix(&root) else {
+                continue;
+            };
             let mut after_line = 0;
             if let Some(cursor) = &cursor {
                 match (relative.cmp(&cursor.entry), cursor.done) {
-                    (std::cmp::Ordering::Less, _) | (std::cmp::Ordering::Equal, Done::All) => continue,
+                    (std::cmp::Ordering::Less, _) | (std::cmp::Ordering::Equal, Done::All) => {
+                        continue;
+                    }
                     (std::cmp::Ordering::Equal, Done::Lines(line)) => after_line = line,
                     (std::cmp::Ordering::Greater, _) => {}
                 }
@@ -131,7 +149,9 @@ impl Scope<'_> {
                     "file"
                 }
             });
-            let wanted = glob.as_ref().is_none_or(|glob| kind != "dir" && glob.is_match(glob_target(relative, &input)));
+            let wanted = glob
+                .as_ref()
+                .is_none_or(|glob| kind != "dir" && glob.is_match(glob_target(relative, &input)));
             if !wanted {
                 continue;
             }
@@ -171,11 +191,21 @@ impl Scope<'_> {
                             kind: None,
                             line: Some(number),
                             text: Some(cut(line)),
-                            before: lines[index.saturating_sub(context)..index].iter().map(|l| cut(l)).collect(),
-                            after: lines[index + 1..(index + 1 + context).min(lines.len())].iter().map(|l| cut(l)).collect(),
+                            before: lines[index.saturating_sub(context)..index]
+                                .iter()
+                                .map(|l| cut(l))
+                                .collect(),
+                            after: lines[index + 1..(index + 1 + context).min(lines.len())]
+                                .iter()
+                                .map(|l| cut(l))
+                                .collect(),
                         });
                         if page.matches.len() as u32 == input.max_results {
-                            let next = if index + 1 == lines.len() { Cursor::after(&shown) } else { Cursor::at(&shown, number) };
+                            let next = if index + 1 == lines.len() {
+                                Cursor::after(&shown)
+                            } else {
+                                Cursor::at(&shown, number)
+                            };
                             stop(&mut page, "max_results", next);
                             return Ok(page);
                         }
@@ -209,12 +239,20 @@ fn glob_target<'a>(relative: &'a Path, input: &FileSearchInput) -> &'a Path {
 }
 
 fn matcher(input: &FileSearchInput) -> BridgeResult<Regex> {
-    let pattern = if input.regex { input.pattern.clone() } else { regex::escape(&input.pattern) };
+    let pattern = if input.regex {
+        input.pattern.clone()
+    } else {
+        regex::escape(&input.pattern)
+    };
     RegexBuilder::new(&pattern)
         .case_insensitive(!input.case_sensitive)
         .size_limit(1 << 20)
         .build()
-        .map_err(|error| invalid(format!("pattern is not a regular expression this search reads: {error}")))
+        .map_err(|error| {
+            invalid(format!(
+                "pattern is not a regular expression this search reads: {error}"
+            ))
+        })
 }
 
 /// The walk, in path order, skipping whole directories that a cursor has already passed.
@@ -228,8 +266,12 @@ fn walker(root: &Path, input: &FileSearchInput, after: Option<PathBuf>) -> ignor
     if let Some(after) = after {
         let root = root.to_path_buf();
         builder.filter_entry(move |entry| {
-            let Ok(relative) = entry.path().strip_prefix(&root) else { return true };
-            !(entry.file_type().is_some_and(|kind| kind.is_dir()) && relative < after.as_path() && !after.starts_with(relative))
+            let Ok(relative) = entry.path().strip_prefix(&root) else {
+                return true;
+            };
+            !(entry.file_type().is_some_and(|kind| kind.is_dir())
+                && relative < after.as_path()
+                && !after.starts_with(relative))
         });
     }
     builder.build()
@@ -266,7 +308,10 @@ mod tests {
         let root = dunce::canonicalize(directory.path()).unwrap();
         for (path, text) in [
             ("a.txt", "nothing here\n"),
-            ("src/Match.rs", "fn one() {}\n// match me\nfn two() {}\n// MATCH again\n"),
+            (
+                "src/Match.rs",
+                "fn one() {}\n// match me\nfn two() {}\n// MATCH again\n",
+            ),
             ("src/deep/match.md", "match\n"),
             (".hidden/match.txt", "match\n"),
             ("build/match.txt", "match\n"),
@@ -308,8 +353,13 @@ mod tests {
     #[test]
     fn names_skip_hidden_and_gitignored_unless_asked() {
         let (_directory, root) = tree();
-        let scope = Scope { workspace: &root, policy: ExecPolicy::Granted };
-        let page = scope.search(input(&root, "match", SearchTarget::Names)).unwrap();
+        let scope = Scope {
+            workspace: &root,
+            policy: ExecPolicy::Granted,
+        };
+        let page = scope
+            .search(input(&root, "match", SearchTarget::Names))
+            .unwrap();
         assert_eq!(found(&page), ["src/Match.rs", "src/deep/match.md"]);
         assert!(page.complete);
         let mut all = input(&root, "match", SearchTarget::Names);
@@ -317,18 +367,29 @@ mod tests {
         let page = scope.search(all).unwrap();
         assert_eq!(
             found(&page),
-            [".hidden/match.txt", "build/match.txt", "src/Match.rs", "src/deep/match.md"]
+            [
+                ".hidden/match.txt",
+                "build/match.txt",
+                "src/Match.rs",
+                "src/deep/match.md"
+            ]
         );
     }
 
     #[test]
     fn contents_give_lines_with_context_and_skip_binary_files() {
         let (_directory, root) = tree();
-        let scope = Scope { workspace: &root, policy: ExecPolicy::Granted };
+        let scope = Scope {
+            workspace: &root,
+            policy: ExecPolicy::Granted,
+        };
         let mut asked = input(&root, "match", SearchTarget::Contents);
         asked.context_lines = 1;
         let page = scope.search(asked).unwrap();
-        assert_eq!(found(&page), ["src/Match.rs:2", "src/Match.rs:4", "src/deep/match.md:1"]);
+        assert_eq!(
+            found(&page),
+            ["src/Match.rs:2", "src/Match.rs:4", "src/deep/match.md:1"]
+        );
         assert_eq!(page.matches[0].before, ["fn one() {}"]);
         assert_eq!(page.matches[0].after, ["fn two() {}"]);
         assert_eq!(page.files_skipped, 1, "blob.bin is binary");
@@ -338,7 +399,10 @@ mod tests {
         assert_eq!(found(&scope.search(exact).unwrap()), ["src/Match.rs:4"]);
         let mut pattern = input(&root, r"fn \w+\(\)", SearchTarget::Contents);
         pattern.regex = true;
-        assert_eq!(found(&scope.search(pattern).unwrap()), ["src/Match.rs:1", "src/Match.rs:3"]);
+        assert_eq!(
+            found(&scope.search(pattern).unwrap()),
+            ["src/Match.rs:1", "src/Match.rs:3"]
+        );
     }
 
     /// Paging one match at a time, or stopping on the time budget at every entry, finds the
@@ -346,7 +410,10 @@ mod tests {
     #[test]
     fn pages_go_on_from_their_cursor_without_losing_or_repeating() {
         let (_directory, root) = tree();
-        let scope = Scope { workspace: &root, policy: ExecPolicy::Granted };
+        let scope = Scope {
+            workspace: &root,
+            policy: ExecPolicy::Granted,
+        };
         for target in [SearchTarget::Names, SearchTarget::Contents] {
             let whole = found(&scope.search(input(&root, "match", target)).unwrap());
             for (max_results, budget) in [(1, PAGE_TIME), (100, Duration::ZERO)] {
@@ -369,12 +436,24 @@ mod tests {
     #[test]
     fn a_search_that_cannot_run_says_why() {
         let (_directory, root) = tree();
-        let scope = Scope { workspace: &root.join("src"), policy: ExecPolicy::Granted };
+        let scope = Scope {
+            workspace: &root.join("src"),
+            policy: ExecPolicy::Granted,
+        };
         let mut bad = input(&root, "(", SearchTarget::Contents);
         bad.regex = true;
-        assert!(scope.search(bad).unwrap_err().message.contains("regular expression"));
+        assert!(
+            scope
+                .search(bad)
+                .unwrap_err()
+                .message
+                .contains("regular expression")
+        );
         assert_eq!(
-            scope.search(input(&root, "x", SearchTarget::Names)).unwrap_err().code,
+            scope
+                .search(input(&root, "x", SearchTarget::Names))
+                .unwrap_err()
+                .code,
             "path_outside_workspace"
         );
         let mut cursor = input(&root.join("src"), "x", SearchTarget::Names);

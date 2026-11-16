@@ -37,6 +37,8 @@ dunce = { workspace = true }
 globset = "0.4"
 ignore = "0.4"
 regex = "1"
+# list_processes and kill_process: one process table on Linux and Windows.
+sysinfo = { version = "0.40", default-features = false, features = ["system", "user"] }
 uuid = { workspace = true }
 
 [target.'cfg(windows)'.dependencies]

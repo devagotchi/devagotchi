@@ -88,7 +88,10 @@ impl BridgeAdapter {
         Parameters(input): Parameters<FileSearchInput>,
         context: RequestContext<RoleServer>,
     ) -> Result<Json<SearchPage>, Json<BridgeError>> {
-        match self.request(RequestBody::FileSearch(input), context).await? {
+        match self
+            .request(RequestBody::FileSearch(input), context)
+            .await?
+        {
             ResponseBody::Search(page) => Ok(Json(page)),
             other => Err(Json(unexpected("search", &other))),
         }
@@ -265,5 +268,4 @@ impl BridgeAdapter {
             other => Err(Json(unexpected("info", &other))),
         }
     }
-
 }

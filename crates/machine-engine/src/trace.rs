@@ -8,13 +8,19 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 /// One line: `devagotchi broker: 2026-11-16T18:52:01.123Z <subject> <text>`.
 pub(crate) fn line(subject: &str, text: &str) {
-    let text: String = text.chars().map(|c| if c == '\n' || c == '\r' { ' ' } else { c }).collect();
+    let text: String = text
+        .chars()
+        .map(|c| if c == '\n' || c == '\r' { ' ' } else { c })
+        .collect();
     eprintln!("devagotchi broker: {} {subject} {text}", stamp());
 }
 
 /// A refused request, with what was asked.
 pub(crate) fn refused(what: &str, error: &BridgeError) {
-    line("refused", &format!("{what}: {}: {}", error.code, error.message));
+    line(
+        "refused",
+        &format!("{what}: {}: {}", error.code, error.message),
+    );
 }
 
 /// What an operation was asked to run, short enough for one log line.
@@ -23,7 +29,11 @@ pub(crate) fn asked(input: &StartInput) -> String {
         Some(command) => format!("command {command:?}"),
         None => format!("executable {:?} args {:?}", input.executable, input.args),
     };
-    let cwd = input.cwd.as_deref().map(|cwd| format!(" in {cwd}")).unwrap_or_default();
+    let cwd = input
+        .cwd
+        .as_deref()
+        .map(|cwd| format!(" in {cwd}"))
+        .unwrap_or_default();
     shorten(format!("{asked}{cwd}"), 400)
 }
 
@@ -41,7 +51,9 @@ pub(crate) fn shorten(mut text: String, most: usize) -> String {
 
 /// UTC, to the millisecond, without a date library.
 fn stamp() -> String {
-    let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default();
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default();
     let seconds = now.as_secs();
     let (days, rest) = (seconds / 86_400, seconds % 86_400);
     let (year, month, day) = civil(days as i64);

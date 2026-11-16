@@ -517,9 +517,7 @@ impl Hub {
     /// Every tool this hub serves: its own, and each domain's router added to them.
     pub(crate) fn router() -> rmcp::handler::server::router::tool::ToolRouter<Self> {
         Self::tool_router()
-            + Self::run_router()
-            + Self::files_router()
-            + Self::search_router()
+            + Self::machine_router()
             + Self::callers_router()
             + Self::board_router()
             + Self::workflow_router()

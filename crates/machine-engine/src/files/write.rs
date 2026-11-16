@@ -347,7 +347,10 @@ mod tests {
         let windows = workspace.join("crlf.txt");
         fs::write(&windows, "one\r\ntwo\r\nthree\r\n").unwrap();
         edit(&windows, "one\ntwo", "one\nTWO\nmore").unwrap();
-        assert_eq!(fs::read_to_string(&windows).unwrap(), "one\r\nTWO\r\nmore\r\nthree\r\n");
+        assert_eq!(
+            fs::read_to_string(&windows).unwrap(),
+            "one\r\nTWO\r\nmore\r\nthree\r\n"
+        );
         let unix = workspace.join("lf.txt");
         fs::write(&unix, "one\ntwo\n").unwrap();
         edit(&unix, "one\r\ntwo", "1\r\n2").unwrap();

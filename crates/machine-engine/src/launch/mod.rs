@@ -82,7 +82,10 @@ pub(crate) enum Kind {
     /// A regular file (after following links); `executable` is the Unix execute bit,
     /// always false on Windows. `size` lets the resolver spot Windows' zero-byte app
     /// execution aliases.
-    File { executable: bool, size: u64 },
+    File {
+        executable: bool,
+        size: u64,
+    },
 }
 
 /// The program the broker spawns and the arguments that go before the caller's own.
@@ -99,40 +102,72 @@ pub(crate) struct Launch {
 
 /// Resolve what `operation_start` was given as `executable` (a name, a relative or absolute
 /// path, a script) in `cwd`.
-pub(crate) fn resolve(requested: &str, cwd: &str, os: Os, host: &impl Host) -> Result<Launch, BridgeError> {
+pub(crate) fn resolve(
+    requested: &str,
+    cwd: &str,
+    os: Os,
+    host: &impl Host,
+) -> Result<Launch, BridgeError> {
     if requested.trim().is_empty() || requested.contains('\0') {
-        return Err(invalid("executable must name a program: a name on PATH, or a path"));
+        return Err(invalid(
+            "executable must name a program: a name on PATH, or a path",
+        ));
     }
     let (path, found) = find(requested, cwd, os, host)?;
     script::plan(&path, &found, os, host)
 }
 
 /// Where a requested program is: `(path, how it was found)`.
-fn find(requested: &str, cwd: &str, os: Os, host: &impl Host) -> Result<(String, String), BridgeError> {
+fn find(
+    requested: &str,
+    cwd: &str,
+    os: Os,
+    host: &impl Host,
+) -> Result<(String, String), BridgeError> {
     let path = if os.is_absolute(requested) {
         requested.to_owned()
     } else if os.has_separator(requested) {
-        let relative = requested.strip_prefix("./").or_else(|| requested.strip_prefix(".\\")).unwrap_or(requested);
+        let relative = requested
+            .strip_prefix("./")
+            .or_else(|| requested.strip_prefix(".\\"))
+            .unwrap_or(requested);
         os.join(cwd, relative)
     } else {
-        return on_path(requested, os, host).map(|(path, dir)| (path, format!("found on PATH in {dir}")));
+        return on_path(requested, os, host)
+            .map(|(path, dir)| (path, format!("found on PATH in {dir}")));
     };
     match host.kind(&path) {
         Kind::File { .. } => Ok((path, "as given".to_owned())),
-        Kind::Directory => Err(BridgeError::new("invalid_request", format!("{path} is a directory, not a program"))),
-        Kind::Missing => Err(BridgeError::new("path_not_found", format!("{path} does not exist"))),
+        Kind::Directory => Err(BridgeError::new(
+            "invalid_request",
+            format!("{path} is a directory, not a program"),
+        )),
+        Kind::Missing => Err(BridgeError::new(
+            "path_not_found",
+            format!("{path} does not exist"),
+        )),
     }
 }
 
 /// The first `name` on PATH (with each PATHEXT extension on Windows when `name` has none),
 /// skipping Windows' Microsoft Store aliases for Python, which open the Store instead of
 /// running anything.
-pub(crate) fn on_path(name: &str, os: Os, host: &impl Host) -> Result<(String, String), BridgeError> {
-    let path = host.var("PATH").or_else(|| host.var("Path")).unwrap_or_default();
+pub(crate) fn on_path(
+    name: &str,
+    os: Os,
+    host: &impl Host,
+) -> Result<(String, String), BridgeError> {
+    let path = host
+        .var("PATH")
+        .or_else(|| host.var("Path"))
+        .unwrap_or_default();
     let names = candidates(name, os, host);
     let mut skipped = None;
     let mut searched = 0;
-    for dir in path.split(os.path_list_separator()).filter(|dir| !dir.trim().is_empty()) {
+    for dir in path
+        .split(os.path_list_separator())
+        .filter(|dir| !dir.trim().is_empty())
+    {
         searched += 1;
         for candidate in &names {
             let full = os.join(dir, candidate);
@@ -156,7 +191,9 @@ pub(crate) fn on_path(name: &str, os: Os, host: &impl Host) -> Result<(String, S
     };
     Err(BridgeError::new(
         "program_not_found",
-        format!("`{name}` is not on this machine's PATH ({searched} directories searched).{alias} Give its absolute path, or install it."),
+        format!(
+            "`{name}` is not on this machine's PATH ({searched} directories searched).{alias} Give its absolute path, or install it."
+        ),
     ))
 }
 
@@ -164,10 +201,15 @@ fn candidates(name: &str, os: Os, host: &impl Host) -> Vec<String> {
     if os == Os::Unix {
         return vec![name.to_owned()];
     }
-    let extensions = host.var("PATHEXT").unwrap_or_else(|| ".COM;.EXE;.BAT;.CMD".to_owned());
-    let has_extension = extensions
-        .split(';')
-        .any(|extension| !extension.is_empty() && name.to_ascii_lowercase().ends_with(&extension.to_ascii_lowercase()));
+    let extensions = host
+        .var("PATHEXT")
+        .unwrap_or_else(|| ".COM;.EXE;.BAT;.CMD".to_owned());
+    let has_extension = extensions.split(';').any(|extension| {
+        !extension.is_empty()
+            && name
+                .to_ascii_lowercase()
+                .ends_with(&extension.to_ascii_lowercase())
+    });
     if has_extension {
         return vec![name.to_owned()];
     }
@@ -210,7 +252,10 @@ impl Host for Machine {
             },
             Ok(_) | Err(_) => match std::fs::symlink_metadata(path) {
                 // A Windows app execution alias is a reparse point that does not follow.
-                Ok(metadata) if !metadata.is_dir() => Kind::File { executable: false, size: 0 },
+                Ok(metadata) if !metadata.is_dir() => Kind::File {
+                    executable: false,
+                    size: 0,
+                },
                 _ => Kind::Missing,
             },
         }

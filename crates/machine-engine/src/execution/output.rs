@@ -104,7 +104,11 @@ pub(super) fn one_pipe() -> std::io::Result<(std::io::PipeReader, Stdio, Stdio)>
 /// Drain the one pipe of a combined operation. On Linux it is read asynchronously; on
 /// Windows an anonymous pipe cannot be, so a blocking thread reads it.
 #[cfg(unix)]
-pub(super) async fn drain_combined(shared: Arc<Shared>, id: String, reader: std::io::PipeReader) -> PipeResult {
+pub(super) async fn drain_combined(
+    shared: Arc<Shared>,
+    id: String,
+    reader: std::io::PipeReader,
+) -> PipeResult {
     use std::os::fd::OwnedFd;
     match tokio::net::unix::pipe::Receiver::from_owned_fd(OwnedFd::from(reader)) {
         Ok(pipe) => drain_pipe(shared, id, "stdout", pipe).await,
@@ -116,7 +120,11 @@ pub(super) async fn drain_combined(shared: Arc<Shared>, id: String, reader: std:
 }
 
 #[cfg(windows)]
-pub(super) async fn drain_combined(shared: Arc<Shared>, id: String, mut reader: std::io::PipeReader) -> PipeResult {
+pub(super) async fn drain_combined(
+    shared: Arc<Shared>,
+    id: String,
+    mut reader: std::io::PipeReader,
+) -> PipeResult {
     use std::io::Read as _;
     let read = tokio::task::spawn_blocking(move || {
         let mut decoder = Utf8Decoder::default();
@@ -125,7 +133,10 @@ pub(super) async fn drain_combined(shared: Arc<Shared>, id: String, mut reader: 
             match reader.read(&mut buffer) {
                 Ok(0) => {
                     shared.output(&id, "stdout", Vec::new(), decoder.push(&[], true));
-                    return PipeResult { complete: true, error: None };
+                    return PipeResult {
+                        complete: true,
+                        error: None,
+                    };
                 }
                 Ok(length) => {
                     let bytes = buffer[..length].to_vec();
@@ -135,7 +146,10 @@ pub(super) async fn drain_combined(shared: Arc<Shared>, id: String, mut reader: 
                 // A closed pipe on Windows reads as broken, not as end of file.
                 Err(error) if error.kind() == std::io::ErrorKind::BrokenPipe => {
                     shared.output(&id, "stdout", Vec::new(), decoder.push(&[], true));
-                    return PipeResult { complete: true, error: None };
+                    return PipeResult {
+                        complete: true,
+                        error: None,
+                    };
                 }
                 Err(error) => {
                     return PipeResult {

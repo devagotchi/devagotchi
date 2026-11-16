@@ -124,6 +124,14 @@ pub const TOOLS: [(&str, &[(&[&str], &str)]); 6] = [
                 &["operation_cancel"],
                 "Stops a job. Disconnecting never does.",
             ),
+            (
+                &["list_processes", "kill_process"],
+                "Sees every process on the machine, busiest first, and stops one. Never the broker itself.",
+            ),
+            (
+                &["get_config", "set_config_value"],
+                "Reads the machine's settings, and changes how much output and how many jobs it keeps. What it may run stays yours to set.",
+            ),
         ],
     ),
     (

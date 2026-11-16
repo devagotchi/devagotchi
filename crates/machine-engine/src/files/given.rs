@@ -38,7 +38,11 @@ fn absolute_with(
         let home = home().ok_or_else(|| {
             BridgeError::new("invalid_request", format!("{path}: this broker's account has no home directory, so ~ means nothing here; give the full path"))
         })?;
-        return Ok(if rest.is_empty() { home } else { home.join(rest) });
+        return Ok(if rest.is_empty() {
+            home
+        } else {
+            home.join(rest)
+        });
     }
     let given = Path::new(path);
     if given.is_absolute() {
@@ -46,7 +50,9 @@ fn absolute_with(
     }
     match base {
         Some(base) => Ok(base.join(given)),
-        None => Err(invalid(format!("{path} must be an absolute path (or start with ~)"))),
+        None => Err(invalid(format!(
+            "{path} must be an absolute path (or start with ~)"
+        ))),
     }
 }
 

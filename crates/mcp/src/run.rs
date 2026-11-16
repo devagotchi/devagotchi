@@ -10,8 +10,8 @@ use std::{
 };
 
 use devagotchi_contracts::{
-    BridgeError, Caller, MAX_OUTPUT_PAGE_BYTES, OperationState, ReadInput, RequestBody, ResponseBody,
-    StartInput, WaitInput,
+    BridgeError, Caller, MAX_OUTPUT_PAGE_BYTES, OperationState, ReadInput, RequestBody,
+    ResponseBody, StartInput, WaitInput,
 };
 
 use crate::unexpected;
@@ -43,7 +43,13 @@ pub fn unique(prefix: &str) -> String {
 
 /// The start request of one `run`: a shell line, stdout and stderr on one pipe so the output
 /// keeps the order it was written, stopped after `timeout_s` seconds.
-pub fn start(idempotency_key: String, command: String, cwd: Option<String>, timeout_s: u64, caller: Caller) -> StartInput {
+pub fn start(
+    idempotency_key: String,
+    command: String,
+    cwd: Option<String>,
+    timeout_s: u64,
+    caller: Caller,
+) -> StartInput {
     StartInput {
         idempotency_key,
         executable: String::new(),

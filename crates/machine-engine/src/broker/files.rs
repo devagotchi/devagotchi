@@ -29,13 +29,29 @@ impl Broker {
 fn answer(files: &Scope<'_>, request: RequestBody) -> (&'static str, BridgeResult<ResponseBody>) {
     match request {
         RequestBody::FileRead(input) => ("read_file", files.read(input).map(ResponseBody::File)),
-        RequestBody::FileList(input) => ("list_directory", files.list(input).map(ResponseBody::Listing)),
-        RequestBody::FileWrite(input) => ("write_file", files.write(input).map(ResponseBody::Written)),
+        RequestBody::FileList(input) => (
+            "list_directory",
+            files.list(input).map(ResponseBody::Listing),
+        ),
+        RequestBody::FileWrite(input) => {
+            ("write_file", files.write(input).map(ResponseBody::Written))
+        }
         RequestBody::FileEdit(input) => ("edit_file", files.edit(input).map(ResponseBody::Written)),
-        RequestBody::FileInfo(input) => ("get_file_info", files.info(input).map(ResponseBody::Info)),
-        RequestBody::FileMkdir(input) => ("create_directory", files.mkdir(input).map(ResponseBody::Info)),
+        RequestBody::FileInfo(input) => {
+            ("get_file_info", files.info(input).map(ResponseBody::Info))
+        }
+        RequestBody::FileMkdir(input) => (
+            "create_directory",
+            files.mkdir(input).map(ResponseBody::Info),
+        ),
         RequestBody::FileMove(input) => ("move_file", files.moved(input).map(ResponseBody::Info)),
-        RequestBody::FileSearch(input) => ("search_files", files.search(input).map(ResponseBody::Search)),
-        _ => ("file request", Err(BridgeError::new("internal_error", "not a file request"))),
+        RequestBody::FileSearch(input) => (
+            "search_files",
+            files.search(input).map(ResponseBody::Search),
+        ),
+        _ => (
+            "file request",
+            Err(BridgeError::new("internal_error", "not a file request")),
+        ),
     }
 }

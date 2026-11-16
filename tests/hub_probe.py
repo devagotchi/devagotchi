@@ -16,6 +16,7 @@ step holds.
 import argparse
 import json
 import os
+import subprocess
 import sys
 import time
 import urllib.error
@@ -134,9 +135,9 @@ unannotated = [t["name"] for t in listed if not t.get("title") or not (
     "readOnlyHint" in t.get("annotations", {}) and "openWorldHint" in t.get("annotations", {})
     and (t["annotations"]["readOnlyHint"] or "destructiveHint" in t["annotations"]))]
 check("every tool has a title and annotations", not unannotated, ", ".join(unannotated))
-broker_tools = ["approval_request", "approval_wait", "connection_call", "connections", "create_directory", "edit_file", "get_file_info",
-                "list_directory", "machine_add", "machine_update", "machines", "move_file", "operation_cancel", "operation_get", "operation_input",
-                "operation_list", "operation_read", "operation_resize", "operation_start", "operation_wait", "read_file", "read_image", "read_multiple_files", "run", "search_files", "whoami",
+broker_tools = ["approval_request", "approval_wait", "connection_call", "connections", "create_directory", "edit_file", "get_config", "get_file_info",
+                "kill_process", "list_directory", "list_processes", "machine_add", "machine_update", "machines", "move_file", "operation_cancel", "operation_get", "operation_input",
+                "operation_list", "operation_read", "operation_resize", "operation_start", "operation_wait", "read_file", "read_image", "read_multiple_files", "run", "search_files", "set_config_value", "whoami",
                 "workflow_cancel", "workflow_list", "workflow_start", "workflow_status", "workflow_wait",
                 "write_file"]
 board_tools = [t for t in tools if t.startswith("board_")]
@@ -317,6 +318,24 @@ if args.run_broker and args.run_dir:
     check("search_files finds a line with its context", found.get("complete") is True
           and any(h.get("line") == 2 and h.get("text") == "gamma" and h.get("before") == ["alpha"] for h in hits),
           json.dumps(found)[:300])
+    # The machine itself: its settings, and its processes.
+    is_error, config = call("get_config", {"machine": args.run_broker})
+    check("get_config reads the broker's settings", not is_error and config.get("exec_policy") == "account"
+          and "max_concurrent" in config.get("changeable", []), json.dumps(config)[:240])
+    is_error, kept = call("set_config_value", {"machine": args.run_broker, "key": "exec_policy", "value": 1})
+    check("set_config_value leaves what an agent may run to the operator",
+          is_error and kept.get("code") == "setting_not_changeable", json.dumps(kept)[:200])
+    outsider = subprocess.Popen(["sleep", "77"])
+    is_error, listed = call("list_processes", {"machine": args.run_broker, "filter": "sleep 77"})
+    check("list_processes finds a process", not is_error
+          and any(p.get("pid") == outsider.pid for p in listed.get("processes", [])), json.dumps(listed)[:240])
+    is_error, stopped = call("kill_process", {"machine": args.run_broker, "pid": outsider.pid})
+    outsider.wait(timeout=5)
+    check("kill_process stops it", not is_error and stopped.get("exited") is True
+          and outsider.returncode == -15, json.dumps(stopped)[:200])
+    is_error, granted = call("list_processes", {"machine": args.broker})
+    check("a broker that runs only granted programs keeps to its own jobs",
+          is_error and granted.get("code") == "not_permitted", json.dumps(granted)[:200])
     is_error, both = call("read_multiple_files", {"machine": args.run_broker,
                                                   "paths": [moved_file, os.path.join(args.run_dir, "missing.txt")]})
     files = both.get("files", []) if not is_error else []

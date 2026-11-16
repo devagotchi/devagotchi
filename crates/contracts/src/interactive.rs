@@ -215,7 +215,12 @@ impl crate::RequestBody {
             Self::FileMkdir(input) => input.path.clone(),
             Self::FileMove(input) => format!("{} -> {}", input.source, input.destination),
             Self::FileSearch(input) => input.path.clone(),
-            Self::OperationList(_) | Self::OperationsChanged(_) => String::new(),
+            Self::ConfigSet(input) => input.key.clone(),
+            Self::ProcessKill(input) => format!("pid {}", input.pid),
+            Self::OperationList(_)
+            | Self::OperationsChanged(_)
+            | Self::ConfigGet(_)
+            | Self::ProcessList(_) => String::new(),
         }
     }
 
@@ -250,7 +255,11 @@ impl crate::RequestBody {
             | Self::FileInfo(_)
             | Self::FileMkdir(_)
             | Self::FileMove(_)
-            | Self::FileSearch(_) => None,
+            | Self::FileSearch(_)
+            | Self::ConfigGet(_)
+            | Self::ConfigSet(_)
+            | Self::ProcessList(_)
+            | Self::ProcessKill(_) => None,
         }
     }
 }

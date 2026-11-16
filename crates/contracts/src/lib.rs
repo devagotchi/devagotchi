@@ -6,9 +6,11 @@ use serde::{Deserialize, Serialize};
 mod files;
 mod interactive;
 mod search;
+mod system;
 pub use files::*;
 pub use interactive::*;
 pub use search::*;
+pub use system::*;
 
 pub const API_VERSION: u32 = 1;
 pub const MAX_FRAME_BYTES: usize = 64 * 1024;
@@ -337,6 +339,10 @@ pub enum RequestBody {
     FileMkdir(DirectoryInput),
     FileMove(FileMoveInput),
     FileSearch(FileSearchInput),
+    ConfigGet(ConfigGetInput),
+    ConfigSet(ConfigSetInput),
+    ProcessList(ProcessListInput),
+    ProcessKill(ProcessKillInput),
     OperationInput(SendInput),
     OperationResize(ResizeInput),
 }
@@ -381,6 +387,9 @@ pub enum ResponseBody {
     Info(FileInfo),
     InputSent(InputSent),
     Search(SearchPage),
+    Config(ConfigView),
+    Processes(ProcessPage),
+    Killed(ProcessKilled),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
