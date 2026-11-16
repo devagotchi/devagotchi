@@ -1,4 +1,4 @@
-use super::*;
+use super::{passkey::Asserted, *};
 use crate::store::testing::{self, TestStore};
 
 /// The accounts on a new database of the test Postgres (none without one, as when
