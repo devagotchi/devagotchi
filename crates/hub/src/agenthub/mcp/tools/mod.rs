@@ -1,6 +1,6 @@
 //! The board's tools on the hub's `/mcp`, one per protocol verb, grouped by what they do
 //! to a board. Each file has its own router; [`Hub::board_router`] joins them for the MCP
-//! surface (`mcp/surface.rs`), which lists tools by name.
+//! surface (`mcp/tools/mod.rs`), which lists tools by name.
 
 use rmcp::handler::server::tool::ToolRouter;
 
