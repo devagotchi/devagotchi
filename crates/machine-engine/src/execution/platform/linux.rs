@@ -14,13 +14,20 @@ use crate::execution::GROUP_SETTLE;
 use devagotchi_contracts::{BridgeError, BridgeResult, OperationState};
 use std::fs::Metadata;
 use std::io;
-use std::os::fd::{FromRawFd, OwnedFd};
+use std::io::{Read as _, Write as _};
+use std::os::fd::{AsRawFd, FromRawFd, OwnedFd};
+use std::os::unix::ffi::OsStrExt;
 use std::os::unix::fs::PermissionsExt;
 use std::os::unix::process::CommandExt;
 use std::path::Path;
+use std::pin::Pin;
+use std::process::Stdio;
+use std::sync::Arc;
+use std::task::{Context, Poll, ready};
 use std::time::Duration;
 use tokio::io::Interest;
 use tokio::io::unix::AsyncFd;
+use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
 use tokio::process::{Child, Command};
 use tokio::time::{sleep, timeout};
 
@@ -36,6 +43,9 @@ const NO_PIDFD_INTERVAL: Duration = Duration::from_millis(20);
 const MEMBERSHIP_RECHECK: Duration = Duration::from_millis(100);
 
 pub(crate) const SCOPE: &str = "Linux root process and inherited process group; excludes processes that leave the group. This is not OS containment.";
+/// An operation on a pseudo-terminal: its root leads a new session, and job control may put
+/// its children in process groups of their own, so the session is what is owned.
+pub(crate) const SCOPE_TERMINAL: &str = "Linux root process and the session it leads on a broker-owned pseudo-terminal, every process group in it included; excludes processes that start a session of their own. This is not OS containment.";
 pub(crate) const RUNNING_DETAIL: &str = "Root spawned with exact argv, cleared environment, null stdin, and a new Linux process group. Executable behavior is not sandboxed.";
 pub(crate) const TERMINATION_VERIFIED_DETAIL: &str = " SIGTERM then SIGKILL were issued while the root PID was still owned; no executing members remained in its inherited process group.";
 pub(crate) const OBSERVATION_FAILED_DETAIL: &str =
@@ -43,6 +53,34 @@ pub(crate) const OBSERVATION_FAILED_DETAIL: &str =
 pub(crate) const TERMINATION_UNVERIFIED_DETAIL: &str = " Group termination was not verified";
 pub(crate) const PIPE_TIMEOUT_DETAIL: &str = " Output pipes did not close within one second of root settlement; a descendant may still hold them open. Reading was stopped, output is incomplete, and processes outside the owned group are not tracked or terminated.";
 pub(crate) const RUNNING_DETAIL_ACCOUNT: &str = "Root spawned as the broker's account with its environment, null stdin, and a new Linux process group. Executable behavior is not sandboxed.";
+
+/// Both input modes are available on Linux.
+pub(crate) fn supports_interactive(_mode: devagotchi_contracts::InputMode) -> bool {
+    true
+}
+
+/// What a running operation's detail says: who it runs as, and where its input comes from.
+pub(crate) fn running_detail(
+    account: bool,
+    mode: Option<devagotchi_contracts::InputMode>,
+) -> String {
+    use devagotchi_contracts::InputMode;
+    let who = if account {
+        "as the broker's account with its environment"
+    } else {
+        "with exact argv and a cleared environment"
+    };
+    match mode {
+        None if account => RUNNING_DETAIL_ACCOUNT.into(),
+        None => RUNNING_DETAIL.into(),
+        Some(InputMode::Pipe) => format!(
+            "Root spawned {who}, stdin a broker-held pipe for operation_input, and a new Linux process group. Executable behavior is not sandboxed."
+        ),
+        Some(InputMode::Terminal) => format!(
+            "Root spawned {who} plus TERM=xterm-256color, leading a new session whose controlling terminal is a broker-owned pseudo-terminal (stdin, stdout and stderr). Executable behavior is not sandboxed."
+        ),
+    }
+}
 pub(crate) const EXECUTABLE_RULE: &str = "";
 
 /// The shell a `command` line runs in: the account's `$SHELL` when it is one of the
@@ -75,6 +113,14 @@ pub(crate) fn configure(command: &mut Command) {
     command.as_std_mut().process_group(0);
 }
 
+/// What an owned tree is: the root's process group, or (on a pseudo-terminal) the session
+/// it leads.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Scope {
+    Group,
+    Session,
+}
+
 /// Why a spawned root could not be taken into ownership.
 pub(crate) struct AdoptFailure {
     pub(crate) state: OperationState,
@@ -87,10 +133,11 @@ pub(crate) struct AdoptFailure {
 pub(crate) struct OwnedTree {
     pid: u32,
     root: Option<AsyncFd<OwnedFd>>,
+    scope: Scope,
 }
 
 impl OwnedTree {
-    pub(crate) async fn adopt(child: &mut Child) -> Result<Self, AdoptFailure> {
+    pub(crate) async fn adopt(child: &mut Child, scope: Scope) -> Result<Self, AdoptFailure> {
         let Some(pid) = child.id() else {
             return Err(AdoptFailure {
                 state: OperationState::Unknown,
@@ -111,7 +158,13 @@ impl OwnedTree {
                 });
             }
         };
-        Ok(Self { pid, root })
+        Ok(Self { pid, root, scope })
+    }
+
+    /// Signals the root's process group on the operation's behalf (Ctrl-C on a pipe). Only
+    /// while the root is unreaped, which the job guarantees by stopping input first.
+    pub(crate) fn signaller(&self) -> Signaller {
+        Signaller(self.pid)
     }
 
     /// Returns when the root has exited, without reaping it.
@@ -136,7 +189,7 @@ impl OwnedTree {
     /// another before it ended.
     pub(crate) async fn members_settled(&self) -> BridgeResult<()> {
         loop {
-            let members = group_members(self.pid)?;
+            let members = members(self.pid, self.scope)?;
             if members.is_empty() {
                 return Ok(());
             }
@@ -150,7 +203,7 @@ impl OwnedTree {
                     continue;
                 };
                 // Opened by number: keep it only if that number still names a member.
-                if member_state(member, self.pid)? {
+                if member_state(member, self.pid, self.scope)? {
                     watched.push(fd);
                 }
             }
@@ -169,9 +222,9 @@ impl OwnedTree {
     /// SIGTERM, up to a short grace for the group to leave, SIGKILL, then verified
     /// settlement of the group.
     pub(crate) async fn terminate(&self) -> BridgeResult<()> {
-        let term_error = signal_group(self.pid, libc::SIGTERM).err();
+        let term_error = self.signal_all(libc::SIGTERM).err();
         let _ = timeout(TERM_GRACE, self.members_settled()).await;
-        let kill_error = signal_group(self.pid, libc::SIGKILL).err();
+        let kill_error = self.signal_all(libc::SIGKILL).err();
         if let Some(error) = term_error.or(kill_error) {
             return Err(error);
         }
@@ -182,6 +235,67 @@ impl OwnedTree {
                 "Executing members remained in the owned process group after SIGKILL",
             )),
         }
+    }
+
+    /// Every owned member: the group with one call, a session member by member (job control
+    /// gives a terminal's pipelines groups of their own). A member is signalled through a
+    /// pidfd opened and then checked to be a member, so a number reused in between is never
+    /// signalled; without pidfds, by number right after the check.
+    fn signal_all(&self, signal: i32) -> BridgeResult<()> {
+        if self.scope == Scope::Group {
+            return signal_group(self.pid, signal);
+        }
+        for member in members(self.pid, self.scope)? {
+            match pidfd(member) {
+                Ok(Some(fd)) => {
+                    if !member_state(member, self.pid, self.scope)? {
+                        continue;
+                    }
+                    // SAFETY: the pidfd is open and names exactly that process.
+                    let sent = unsafe {
+                        libc::syscall(
+                            libc::SYS_pidfd_send_signal,
+                            fd.get_ref().as_raw_fd(),
+                            signal,
+                            std::ptr::null::<libc::siginfo_t>(),
+                            0u32,
+                        )
+                    };
+                    if sent == -1 {
+                        let error = io::Error::last_os_error();
+                        if error.raw_os_error() != Some(libc::ESRCH) {
+                            return Err(BridgeError::new(
+                                "process_signal_error",
+                                format!("Cannot signal an owned session member: {error}"),
+                            ));
+                        }
+                    }
+                }
+                Ok(None) => {}
+                Err(error) if pidfd_unsupported(&error) => {
+                    if member_state(member, self.pid, self.scope)? {
+                        // SAFETY: plain kill(2) of a member just checked to be one.
+                        unsafe { libc::kill(member as libc::pid_t, signal) };
+                    }
+                }
+                Err(error) => return Err(observation(error)),
+            }
+        }
+        Ok(())
+    }
+}
+
+/// Signals an operation's root group for its input (Ctrl-C and Ctrl-\\ on a pipe).
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct Signaller(u32);
+
+impl Signaller {
+    pub(crate) fn interrupt(&self) -> BridgeResult<()> {
+        signal_group(self.0, libc::SIGINT)
+    }
+
+    pub(crate) fn quit(&self) -> BridgeResult<()> {
+        signal_group(self.0, libc::SIGQUIT)
     }
 }
 
@@ -267,7 +381,14 @@ fn signal_group(pid: u32, signal: i32) -> BridgeResult<()> {
 
 /// The executing members of the owned group, read from /proc while the root remains
 /// unreaped. Zombies have ended execution and cannot run or create more processes.
+#[cfg(test)]
 fn group_members(group: u32) -> BridgeResult<Vec<u32>> {
+    members(group, Scope::Group)
+}
+
+/// The executing members of the root's group or session, read from /proc while the root
+/// remains unreaped.
+fn members(root: u32, scope: Scope) -> BridgeResult<Vec<u32>> {
     let entries = std::fs::read_dir("/proc")
         .map_err(|error| BridgeError::new("process_observation_error", error.to_string()))?;
     let mut members = Vec::new();
@@ -281,15 +402,16 @@ fn group_members(group: u32) -> BridgeResult<Vec<u32>> {
         else {
             continue;
         };
-        if member_state(pid, group)? {
+        if member_state(pid, root, scope)? {
             members.push(pid);
         }
     }
     Ok(members)
 }
 
-/// Whether `pid` is an executing member of `group` now; a process that is gone is not.
-fn member_state(pid: u32, group: u32) -> BridgeResult<bool> {
+/// Whether `pid` is an executing member of the root's group (or session) now; a process
+/// that is gone is not.
+fn member_state(pid: u32, root: u32, scope: Scope) -> BridgeResult<bool> {
     let stat = match std::fs::read_to_string(format!("/proc/{pid}/stat")) {
         Ok(stat) => stat,
         Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(false),
@@ -308,145 +430,26 @@ fn member_state(pid: u32, group: u32) -> BridgeResult<bool> {
             "Malformed /proc process stat",
         ));
     };
-    let fields: Vec<_> = stat[end + 1..].split_whitespace().take(3).collect();
-    if fields.len() != 3 {
+    // state, ppid, pgrp, session
+    let fields: Vec<_> = stat[end + 1..].split_whitespace().take(4).collect();
+    if fields.len() != 4 {
         return Err(BridgeError::new(
             "process_observation_error",
             "Incomplete /proc process stat",
         ));
     }
-    Ok(fields[2].parse::<u32>().ok() == Some(group) && fields[0] != "Z" && fields[0] != "X")
+    let owner = match scope {
+        Scope::Group => fields[2],
+        Scope::Session => fields[3],
+    };
+    Ok(owner.parse::<u32>().ok() == Some(root) && fields[0] != "Z" && fields[0] != "X")
 }
+
+mod terminal;
+pub(crate) use terminal::{Terminal, TerminalIo, configure_terminal};
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use std::process::Stdio;
-    use tokio::time::Instant;
-
-    fn spawn(script: &str) -> Child {
-        let mut command = Command::new("/bin/sh");
-        command
-            .args(["-c", script])
-            .stdin(Stdio::null())
-            .stdout(Stdio::null())
-            .stderr(Stdio::null());
-        configure(&mut command);
-        command.spawn().unwrap()
-    }
-
-    async fn owned(child: &mut Child) -> OwnedTree {
-        let tree = OwnedTree::adopt(child).await.ok().unwrap();
-        assert!(
-            tree.root.is_some(),
-            "this kernel should offer pidfd_open (Linux 5.3+)"
-        );
-        tree
-    }
-
-    #[tokio::test]
-    async fn a_pidfd_is_readable_when_the_root_exits_and_not_before() {
-        let mut child = spawn("sleep 0.5");
-        let tree = owned(&mut child).await;
-        let root = tree.root.as_ref().unwrap();
-        assert!(
-            timeout(Duration::from_millis(100), root.readable())
-                .await
-                .is_err(),
-            "readable while the root still runs"
-        );
-        let began = Instant::now();
-        tree.root_exit(&mut child).await.unwrap();
-        assert!(began.elapsed() < Duration::from_secs(10));
-        // Observed without reaping: the status is still there to collect.
-        assert!(root_exited_without_reaping(tree.pid).unwrap());
-        assert!(child.wait().await.unwrap().success());
-    }
-
-    #[tokio::test]
-    async fn members_that_outlive_the_root_are_waited_for_by_their_exits() {
-        // More members than are watched at once: they are watched in turns.
-        let mut child = spawn("i=0; while [ $i -lt 100 ]; do sleep 0.4 & i=$((i+1)); done; exit 0");
-        let tree = owned(&mut child).await;
-        tree.root_exit(&mut child).await.unwrap();
-        assert!(
-            !group_members(tree.pid).unwrap().is_empty(),
-            "members outlive the root"
-        );
-        let began = Instant::now();
-        timeout(Duration::from_secs(20), tree.members_settled())
-            .await
-            .expect("settled")
-            .unwrap();
-        assert!(group_members(tree.pid).unwrap().is_empty());
-        assert!(began.elapsed() < Duration::from_secs(20));
-        child.wait().await.unwrap();
-    }
-
-    #[tokio::test]
-    async fn termination_ends_root_and_members_and_verifies_it() {
-        let mut child = spawn("sleep 30 & sleep 30");
-        let tree = owned(&mut child).await;
-        while group_members(tree.pid).unwrap().len() < 2 {
-            sleep(Duration::from_millis(10)).await;
-        }
-        tree.terminate().await.unwrap();
-        assert!(group_members(tree.pid).unwrap().is_empty());
-        assert!(!child.wait().await.unwrap().success());
-    }
-
-    #[tokio::test]
-    async fn a_member_that_ignores_sigterm_is_killed_after_the_grace() {
-        let mut child = spawn("trap '' TERM; sleep 30 & wait");
-        let tree = owned(&mut child).await;
-        while group_members(tree.pid).unwrap().len() < 2 {
-            sleep(Duration::from_millis(10)).await;
-        }
-        let began = Instant::now();
-        tree.terminate().await.unwrap();
-        // The root ignored SIGTERM, so the grace ran out before SIGKILL ended it.
-        assert!(began.elapsed() >= TERM_GRACE, "{:?}", began.elapsed());
-        assert!(group_members(tree.pid).unwrap().is_empty());
-        child.wait().await.unwrap();
-    }
-
-    #[tokio::test]
-    async fn a_descendant_that_leaves_the_group_does_not_hold_settlement() {
-        // setsid starts a new session: outside the owned group, as SCOPE says.
-        let mut child = spawn("setsid sleep 3 & sleep 0.2; exit 0");
-        let tree = owned(&mut child).await;
-        tree.root_exit(&mut child).await.unwrap();
-        let began = Instant::now();
-        tree.members_settled().await.unwrap();
-        assert!(
-            began.elapsed() < Duration::from_secs(2),
-            "{:?}",
-            began.elapsed()
-        );
-        child.wait().await.unwrap();
-    }
-
-    #[tokio::test]
-    async fn a_member_that_leaves_after_it_is_watched_does_not_hold_settlement() {
-        // In the group when settlement starts watching it, then out of it by setsid without
-        // exiting: settlement ends when it leaves, not when it exits three seconds later.
-        let mut child = spawn("(sleep 0.3; exec setsid sleep 3) & exit 0");
-        let tree = owned(&mut child).await;
-        tree.root_exit(&mut child).await.unwrap();
-        assert!(
-            !group_members(tree.pid).unwrap().is_empty(),
-            "still a member"
-        );
-        let began = Instant::now();
-        tree.members_settled().await.unwrap();
-        assert!(
-            began.elapsed() < Duration::from_secs(2),
-            "{:?}",
-            began.elapsed()
-        );
-        child.wait().await.unwrap();
-    }
-}
+mod tests;
 
 /// A process started by [`spawn_detached`].
 pub(crate) struct DetachedChild(std::process::Child);
@@ -513,65 +516,4 @@ pub(crate) fn spawn_detached(
         });
     }
     command.spawn().map(DetachedChild)
-}
-
-#[cfg(test)]
-mod detached_tests {
-    use super::*;
-    use crate::execution::detached::DetachedSpec;
-    use std::{ffi::OsString, os::fd::AsRawFd};
-
-    #[test]
-    fn a_detached_process_holds_nothing_of_its_callers_and_has_a_session_of_its_own() {
-        let dir = tempfile::tempdir().unwrap();
-        // A descriptor the caller left inheritable, as an AI client's pipe to it may be.
-        let extra = std::fs::File::open("/dev/null").unwrap();
-        let fd = extra.as_raw_fd();
-        // SAFETY: clears close-on-exec on a descriptor this test owns.
-        assert_eq!(unsafe { libc::fcntl(fd, libc::F_SETFD, 0) }, 0);
-        let log = dir.path().join("log");
-        let script = format!(
-            "[ -e /proc/self/fd/{fd} ] && echo leaked || echo closed; cut -d' ' -f6 /proc/$$/stat; echo \"secret=${{SECRET:-none}}\"; pwd"
-        );
-        let env = vec![(
-            OsString::from("PATH"),
-            std::env::var_os("PATH").unwrap_or_default(),
-        )];
-        let args = [OsString::from("-c"), OsString::from(script)];
-        let mut child = spawn_detached(&DetachedSpec {
-            program: Path::new("/bin/sh"),
-            args: &args,
-            env: &env,
-            cwd: dir.path(),
-            log: &log,
-        })
-        .unwrap();
-        let began = std::time::Instant::now();
-        while child.try_wait().unwrap().is_none() {
-            assert!(began.elapsed() < Duration::from_secs(10), "never exited");
-            std::thread::sleep(Duration::from_millis(20));
-        }
-        let out = std::fs::read_to_string(&log).unwrap();
-        let lines: Vec<&str> = out.lines().map(str::trim).collect();
-        assert_eq!(lines.len(), 4, "{out}");
-        assert_eq!(
-            lines[0], "closed",
-            "the caller's descriptor reached it: {out}"
-        );
-        // SAFETY: getsid(0) reads this process's own session id.
-        let ours = unsafe { libc::getsid(0) };
-        assert_ne!(
-            lines[1],
-            ours.to_string(),
-            "it shares the caller's session: {out}"
-        );
-        assert_eq!(lines[2], "secret=none", "only the given environment: {out}");
-        assert_eq!(
-            lines[3],
-            std::fs::canonicalize(dir.path()).unwrap().to_str().unwrap()
-        );
-        let mode = std::fs::metadata(&log).unwrap().permissions().mode();
-        assert_eq!(mode & 0o777, 0o600);
-        drop(extra);
-    }
 }

@@ -99,6 +99,7 @@ pub fn response_kind(actual: &ResponseBody) -> &'static str {
         ResponseBody::Written(_) => "written",
         ResponseBody::Revision(_) => "revision",
         ResponseBody::Info(_) => "info",
+        ResponseBody::InputSent(_) => "input_sent",
     }
 }
 

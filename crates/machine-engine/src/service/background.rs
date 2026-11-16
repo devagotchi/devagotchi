@@ -46,6 +46,8 @@ pub fn answering(state: &Path) -> Option<PathBuf> {
     let body = RequestBody::OperationList(ListInput {
         offset: 0,
         limit: 1,
+        scope: None,
+        caller: None,
     });
     let answered = runtime.block_on(async {
         matches!(

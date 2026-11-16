@@ -6,6 +6,11 @@
  * Broker validation enforces domain bounds beyond these structural types.
  */
 
+export type ListScope = "mine" | "account";
+/**
+ * How an interactive operation takes input.
+ */
+export type InputMode = "terminal" | "pipe";
 export type OperationState =
   | "accepted"
   | "running"
@@ -342,6 +347,12 @@ export interface GetInput {
 export interface ListInput {
   limit?: number;
   offset?: number;
+  /**
+   * With a caller: `mine` (the default) lists what this conversation or client started;
+   * `account` lists what any of its account's conversations started (and, for this
+   * machine's own account, everything here). Without a caller (the inspector): everything.
+   */
+  scope?: ListScope | null;
 }
 export interface OperationView {
   args: string[];
@@ -352,6 +363,10 @@ export interface OperationView {
   detail?: string | null;
   executable: string;
   exit_code?: number | null;
+  /**
+   * Present for an interactive operation: how it takes input and whether it still can.
+   */
+  interactive?: InteractiveView | null;
   operation_id: string;
   output_complete: boolean;
   /**
@@ -360,6 +375,26 @@ export interface OperationView {
   ownership_scope: string;
   state: OperationState;
   updated_at_ms: number;
+}
+/**
+ * An interactive operation's input, as it stands.
+ */
+export interface InteractiveView {
+  /**
+   * The terminal's current size (terminal mode).
+   */
+  cols: number;
+  /**
+   * Whether `operation_input` can still reach the program.
+   */
+  input_open: boolean;
+  mode: InputMode;
+  rows: number;
+  /**
+   * Until when (milliseconds since the Unix epoch) one client holds the keyboard; others
+   * wait or take it over. Absent when nobody holds it.
+   */
+  writer_until_ms?: number | null;
 }
 export interface OperationsPage {
   next_offset?: number | null;
@@ -371,6 +406,10 @@ export interface OperationSummary {
    * Bounded display preview only. Execute only the exact argv from the canonical request.
    */
   display_command: string;
+  /**
+   * How an interactive operation takes input; absent for one that takes none.
+   */
+  interactive?: InputMode | null;
   operation_id: string;
   state: OperationState;
   updated_at_ms: number;
@@ -446,6 +485,26 @@ export interface StartInput {
    * A caller-created retry key. The same key and inputs return the same operation.
    */
   idempotency_key: string;
+  /**
+   * Keep the program's input open for `operation_input`: on a pseudo-terminal (`terminal`,
+   * the default: prompts, REPLs, sign-ins, Ctrl-C) or on a plain pipe (`pipe`). Absent:
+   * the program reads nothing (its stdin is the null device), as before.
+   */
+  interactive?: InteractiveInput | null;
+}
+export interface InteractiveInput {
+  /**
+   * Terminal width, 2..=500 columns (default 80).
+   */
+  cols?: number;
+  /**
+   * How an interactive operation takes input.
+   */
+  mode?: "terminal" | "pipe";
+  /**
+   * Terminal height, 1..=200 rows (default 24).
+   */
+  rows?: number;
 }
 export interface StartOutput {
   operation: OperationView;

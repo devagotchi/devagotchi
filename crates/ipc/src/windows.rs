@@ -389,6 +389,8 @@ mod tests {
             RequestBody::OperationList(ListInput {
                 offset: 0,
                 limit: 1,
+                caller: None,
+                scope: None,
             }),
         )
         .await

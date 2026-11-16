@@ -11,7 +11,8 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio::io::{AsyncRead, AsyncReadExt};
 use tokio::process::Command;
-use tokio::sync::watch;
+use tokio::sync::{mpsc, watch};
+use tokio::task::JoinHandle;
 use tokio::time::{Instant, sleep_until, timeout};
 
 const FRAME_BYTES: usize = 1024;
@@ -20,7 +21,11 @@ const ROOT_WAIT: Duration = Duration::from_millis(2000);
 const PIPE_DRAIN: Duration = Duration::from_millis(1000);
 
 pub mod detached;
+mod input;
 pub(crate) mod platform;
+
+pub(crate) use input::{InputRequest, InputStep};
+use input::{InputSink, serve_input};
 
 /// The canonical, validated inputs of one admitted process.
 #[derive(Clone)]
@@ -32,6 +37,8 @@ pub(crate) struct ExecutionSpec {
     /// Run with the broker account's own environment (the `account` policy) rather than a
     /// cleared one.
     pub(crate) account_environment: bool,
+    /// Keep input open, on a pseudo-terminal or a pipe.
+    pub(crate) interactive: Option<InteractiveInput>,
 }
 
 /// Why the broker asked an operation's process tree to stop.
@@ -135,6 +142,7 @@ pub(crate) async fn run_job(
     spec: ExecutionSpec,
     mut control: watch::Receiver<Option<StopReason>>,
     deadline: Instant,
+    input: Option<mpsc::Receiver<InputRequest>>,
 ) {
     let early_stop = *control.borrow();
     if early_stop.is_some() || Instant::now() >= deadline {
@@ -159,15 +167,59 @@ pub(crate) async fn run_job(
     if !spec.account_environment {
         command.env_clear();
     }
-    command
-        .stdin(Stdio::null())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped());
-    // All destructive signalling is explicit while the owned root identity is
-    // held. Unexpected task/runtime failure remains Unknown; a drop handler must
-    // not turn a lost-ownership condition into an unverified PID-based kill.
-    platform::configure(&mut command);
-    let mut child = match command.spawn() {
+    let mode = spec
+        .interactive
+        .as_ref()
+        .map(|interactive| interactive.mode);
+    let mut terminal = None;
+    let scope = match &spec.interactive {
+        Some(InteractiveInput {
+            mode: InputMode::Terminal,
+            cols,
+            rows,
+        }) => {
+            let opened =
+                platform::Terminal::open(*cols, *rows).and_then(|(opened, program_side)| {
+                    platform::configure_terminal(&mut command, &program_side)?;
+                    Ok(opened)
+                });
+            match opened {
+                Ok(opened) => terminal = Some(opened),
+                Err(error) => {
+                    shared.finish(
+                        &id,
+                        OperationState::Failed,
+                        None,
+                        true,
+                        format!("The pseudo-terminal could not be set up; no process was launched: {error}"),
+                    );
+                    return;
+                }
+            }
+            command.env("TERM", "xterm-256color");
+            platform::Scope::Session
+        }
+        _ => {
+            command
+                .stdin(if mode == Some(InputMode::Pipe) {
+                    Stdio::piped()
+                } else {
+                    Stdio::null()
+                })
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped());
+            // All destructive signalling is explicit while the owned root identity is
+            // held. Unexpected task/runtime failure remains Unknown; a drop handler must
+            // not turn a lost-ownership condition into an unverified PID-based kill.
+            platform::configure(&mut command);
+            platform::Scope::Group
+        }
+    };
+    let spawned = command.spawn();
+    // The broker's copies of a terminal's program side close here, so its master reads end
+    // of file once no program holds that side any more.
+    drop(command);
+    let mut child = match spawned {
         Ok(child) => child,
         Err(error) => {
             shared.finish(
@@ -180,7 +232,7 @@ pub(crate) async fn run_job(
             return;
         }
     };
-    let tree = match platform::OwnedTree::adopt(&mut child).await {
+    let tree = match platform::OwnedTree::adopt(&mut child, scope).await {
         Ok(tree) => tree,
         Err(failure) => {
             shared.finish(
@@ -194,14 +246,49 @@ pub(crate) async fn run_job(
         }
     };
     shared.running(&id);
-    let (Some(stdout), Some(stderr)) = (child.stdout.take(), child.stderr.take()) else {
-        let termination = tree.terminate().await;
-        let _ = timeout(ROOT_WAIT, child.wait()).await;
-        shared.finish(&id, OperationState::Unknown, None, false, format!("Piped output handles were missing; attempted owned-group termination: {termination:?}"));
-        return;
+    let mut readers: Vec<(&'static str, JoinHandle<PipeResult>)> = Vec::new();
+    if let Some(terminal) = &terminal {
+        // A terminal merges what the program writes to stdout and stderr: one stream.
+        readers.push((
+            "terminal",
+            tokio::spawn(drain_pipe(
+                shared.clone(),
+                id.clone(),
+                "stdout",
+                terminal.io(),
+            )),
+        ));
+    } else {
+        let (Some(stdout), Some(stderr)) = (child.stdout.take(), child.stderr.take()) else {
+            let termination = tree.terminate().await;
+            let _ = timeout(ROOT_WAIT, child.wait()).await;
+            shared.finish(&id, OperationState::Unknown, None, false, format!("Piped output handles were missing; attempted owned-group termination: {termination:?}"));
+            return;
+        };
+        readers.push((
+            "stdout",
+            tokio::spawn(drain_pipe(shared.clone(), id.clone(), "stdout", stdout)),
+        ));
+        readers.push((
+            "stderr",
+            tokio::spawn(drain_pipe(shared.clone(), id.clone(), "stderr", stderr)),
+        ));
+    }
+    let sink = match (terminal, mode) {
+        (Some(terminal), _) => Some(InputSink::Terminal {
+            io: terminal.io(),
+            terminal,
+        }),
+        (None, Some(InputMode::Pipe)) => Some(InputSink::Pipe {
+            stdin: child.stdin.take(),
+            signals: tree.signaller(),
+        }),
+        _ => None,
     };
-    let mut stdout_task = tokio::spawn(drain_pipe(shared.clone(), id.clone(), "stdout", stdout));
-    let mut stderr_task = tokio::spawn(drain_pipe(shared.clone(), id.clone(), "stderr", stderr));
+    let mut input_task = match (input, sink) {
+        (Some(requests), Some(sink)) => Some(tokio::spawn(serve_input(requests, sink))),
+        _ => None,
+    };
     let mut reason = None;
     let mut observation_error = None;
     // Sleep until something happens: a stop request, the deadline, the root's exit, then
@@ -243,6 +330,13 @@ pub(crate) async fn run_job(
             }
         }
     }
+    // Input ends here, before the root is released: a pipe's Ctrl-C signals the root's
+    // group, which names it only while it is unreaped.
+    if let Some(task) = input_task.take() {
+        task.abort();
+        let _ = task.await;
+    }
+    shared.input_closed(&id);
     let termination_error = if reason.is_some() {
         shared.mark_stop(&id);
         tree.terminate().await.err().map(|error| error.to_string())
@@ -264,26 +358,39 @@ pub(crate) async fn run_job(
         }
     };
     let mut pipe_detail = String::new();
-    let output_complete = match timeout(PIPE_DRAIN, async {
-        tokio::join!(&mut stdout_task, &mut stderr_task)
-    })
-    .await
-    {
-        Ok((Ok(stdout), Ok(stderr))) => {
-            for error in [stdout.error, stderr.error].into_iter().flatten() {
-                pipe_detail.push_str(&format!(" {error}."));
-            }
-            stdout.complete && stderr.complete
+    let drained = timeout(PIPE_DRAIN, async {
+        let mut results = Vec::new();
+        for (name, reader) in &mut readers {
+            results.push((*name, reader.await));
         }
-        Ok((stdout, stderr)) => {
-            pipe_detail = format!(
-                " Output reader did not settle normally: stdout={stdout:?}, stderr={stderr:?}."
-            );
-            false
+        results
+    })
+    .await;
+    let output_complete = match drained {
+        Ok(results) => {
+            let mut complete = true;
+            for (name, result) in results {
+                match result {
+                    Ok(result) => {
+                        if let Some(error) = result.error {
+                            pipe_detail.push_str(&format!(" {error}."));
+                        }
+                        complete &= result.complete;
+                    }
+                    Err(error) => {
+                        pipe_detail.push_str(&format!(
+                            " Output reader did not settle normally: {name}={error:?}."
+                        ));
+                        complete = false;
+                    }
+                }
+            }
+            complete
         }
         Err(_) => {
-            stdout_task.abort();
-            stderr_task.abort();
+            for (_, reader) in &readers {
+                reader.abort();
+            }
             pipe_detail = platform::PIPE_TIMEOUT_DETAIL.into();
             false
         }

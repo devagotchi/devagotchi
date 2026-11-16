@@ -34,7 +34,12 @@ where
 pub(crate) async fn busy_operations(broker: PathBuf) -> Result<usize, String> {
     let (mut offset, mut busy) = (0, 0);
     loop {
-        let body = RequestBody::OperationList(ListInput { offset, limit: 64 });
+        let body = RequestBody::OperationList(ListInput {
+            offset,
+            limit: 64,
+            caller: None,
+            scope: None,
+        });
         match devagotchi_ipc::request(&broker, body).await {
             Ok(ResponseBody::Operations(page)) => {
                 busy += page

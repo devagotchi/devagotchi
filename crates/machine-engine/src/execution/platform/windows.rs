@@ -57,6 +57,122 @@ pub(crate) const TERMINATION_UNVERIFIED_DETAIL: &str = " Job Object termination 
 pub(crate) const PIPE_TIMEOUT_DETAIL: &str = " Output pipes did not close within one second of root settlement; a process holding them may have received them outside the job. Reading was stopped, output is incomplete, and processes outside the owned Job Object are not tracked or terminated.";
 pub(crate) const RUNNING_DETAIL_ACCOUNT: &str = "Root created suspended as the broker's account with its environment, null stdin, and no console window, then assigned to a broker-owned Job Object before it ran. Executable behavior is not sandboxed.";
 
+/// The Job Object owns every member however it groups itself; there is one scope.
+pub(crate) const SCOPE_TERMINAL: &str = SCOPE;
+
+/// What a running operation's detail says.
+pub(crate) fn running_detail(
+    account: bool,
+    _mode: Option<devagotchi_contracts::InputMode>,
+) -> String {
+    if account {
+        RUNNING_DETAIL_ACCOUNT
+    } else {
+        RUNNING_DETAIL
+    }
+    .into()
+}
+
+/// Interactive operations reach Windows with ConPTY (increment 55); until then the broker
+/// refuses them before admission, so nothing below is reached.
+pub(crate) fn supports_interactive(_mode: devagotchi_contracts::InputMode) -> bool {
+    false
+}
+
+fn not_yet() -> io::Error {
+    io::Error::new(
+        io::ErrorKind::Unsupported,
+        "interactive operations are not available on Windows yet",
+    )
+}
+
+/// How an owned tree is scoped; on Windows the Job Object is the one scope.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Scope {
+    Group,
+    Session,
+}
+
+/// Not available on Windows yet (see `supports_interactive`).
+pub(crate) struct Terminal;
+
+impl Terminal {
+    pub(crate) fn open(
+        _cols: u16,
+        _rows: u16,
+    ) -> io::Result<(Self, std::os::windows::io::OwnedHandle)> {
+        Err(not_yet())
+    }
+
+    pub(crate) fn io(&self) -> TerminalIo {
+        TerminalIo
+    }
+
+    pub(crate) fn resize(&self, _cols: u16, _rows: u16) -> io::Result<()> {
+        Err(not_yet())
+    }
+}
+
+pub(crate) struct TerminalIo;
+
+impl tokio::io::AsyncRead for TerminalIo {
+    fn poll_read(
+        self: std::pin::Pin<&mut Self>,
+        _context: &mut std::task::Context<'_>,
+        _buffer: &mut tokio::io::ReadBuf<'_>,
+    ) -> std::task::Poll<io::Result<()>> {
+        std::task::Poll::Ready(Err(not_yet()))
+    }
+}
+
+impl tokio::io::AsyncWrite for TerminalIo {
+    fn poll_write(
+        self: std::pin::Pin<&mut Self>,
+        _context: &mut std::task::Context<'_>,
+        _bytes: &[u8],
+    ) -> std::task::Poll<io::Result<usize>> {
+        std::task::Poll::Ready(Err(not_yet()))
+    }
+
+    fn poll_flush(
+        self: std::pin::Pin<&mut Self>,
+        _context: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<io::Result<()>> {
+        std::task::Poll::Ready(Ok(()))
+    }
+
+    fn poll_shutdown(
+        self: std::pin::Pin<&mut Self>,
+        _context: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<io::Result<()>> {
+        std::task::Poll::Ready(Ok(()))
+    }
+}
+
+pub(crate) fn configure_terminal(
+    _command: &mut Command,
+    _program_side: &std::os::windows::io::OwnedHandle,
+) -> io::Result<()> {
+    Err(not_yet())
+}
+
+/// Not available on Windows yet (see `supports_interactive`).
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct Signaller;
+
+impl Signaller {
+    pub(crate) fn interrupt(&self) -> BridgeResult<()> {
+        Err(BridgeError::new(
+            "unsupported_platform",
+            not_yet().to_string(),
+        ))
+    }
+
+    pub(crate) fn quit(&self) -> BridgeResult<()> {
+        self.interrupt()
+    }
+}
+
 /// The shell a `command` line runs in. A line that runs a shell script (see
 /// [`super::git_bash`]) runs in Git for Windows' bash.exe as `-c <line>`, and fails here,
 /// before anything is spawned, when this machine has no Git Bash. Every other line runs
@@ -150,7 +266,7 @@ pub(crate) struct OwnedTree {
 }
 
 impl OwnedTree {
-    pub(crate) async fn adopt(child: &mut Child) -> Result<Self, AdoptFailure> {
+    pub(crate) async fn adopt(child: &mut Child, _scope: Scope) -> Result<Self, AdoptFailure> {
         let (Some(process), Some(pid)) = (child.raw_handle(), child.id()) else {
             return Err(AdoptFailure {
                 state: OperationState::Unknown,
@@ -215,6 +331,10 @@ impl OwnedTree {
     /// Returns when the root has exited: the wait on its process handle, which the
     /// runtime registers with the system thread pool. The job, not this handle, owns the
     /// tree, so nothing after this needs the root's handle.
+    pub(crate) fn signaller(&self) -> Signaller {
+        Signaller
+    }
+
     pub(crate) async fn root_exit(&self, child: &mut Child) -> BridgeResult<()> {
         child
             .wait()
@@ -439,146 +559,7 @@ fn resume_threads(pid: u32) -> io::Result<()> {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use std::process::Stdio;
-    use tokio::time::Instant;
-
-    fn system32(name: &str) -> String {
-        let root = std::env::var_os("SystemRoot").expect("SystemRoot is set on Windows");
-        Path::new(&root)
-            .join("System32")
-            .join(name)
-            .display()
-            .to_string()
-    }
-
-    /// `cmd /d /c <line>`, created suspended as the broker creates every root.
-    fn spawn(line: &str) -> Child {
-        let mut command = Command::new(system32("cmd.exe"));
-        command
-            .args(["/d", "/c"])
-            .raw_arg(line)
-            .stdin(Stdio::null())
-            .stdout(Stdio::null())
-            .stderr(Stdio::null());
-        configure(&mut command);
-        command.spawn().unwrap()
-    }
-
-    fn ping(seconds: u32) -> String {
-        format!("{} -n {} 127.0.0.1 >nul", system32("PING.EXE"), seconds + 1)
-    }
-
-    #[test]
-    fn a_command_line_prints_its_output_and_no_progress_records() {
-        let (shell, args) = shell_command("Write-Progress -Activity x -Status y; 'ok'").unwrap();
-        let out = std::process::Command::new(shell)
-            .args(args)
-            .stdin(Stdio::null())
-            .output()
-            .unwrap();
-        let (stdout, stderr) = (
-            String::from_utf8_lossy(&out.stdout),
-            String::from_utf8_lossy(&out.stderr),
-        );
-        assert!(out.status.success(), "{stdout}\n{stderr}");
-        assert_eq!(stdout.trim(), "ok", "{stderr}");
-        assert!(!stderr.contains("#< CLIXML"), "{stderr}");
-    }
-
-    /// A `.sh` line runs in Git Bash. GitHub's Windows runners have Git for Windows; a
-    /// machine without it fails here, never skips.
-    #[test]
-    fn a_shell_script_runs_in_git_bash() {
-        let dir = std::env::temp_dir().join(format!("dvg-git-bash-{}", std::process::id()));
-        std::fs::create_dir_all(&dir).unwrap();
-        let script = dir.join("ok.sh");
-        std::fs::write(&script, "echo ok\n").unwrap();
-        let (shell, args) = shell_command(&script.display().to_string()).unwrap_or_else(|error| {
-            panic!("Git for Windows is required on this machine for this test: {error}")
-        });
-        assert!(
-            !shell
-                .display()
-                .to_string()
-                .to_ascii_lowercase()
-                .contains("system32")
-        );
-        let out = std::process::Command::new(&shell)
-            .args(args)
-            .stdin(Stdio::null())
-            .output()
-            .unwrap();
-        let _ = std::fs::remove_dir_all(&dir);
-        let (stdout, stderr) = (
-            String::from_utf8_lossy(&out.stdout),
-            String::from_utf8_lossy(&out.stderr),
-        );
-        assert!(
-            out.status.success(),
-            "{}: {stdout}\n{stderr}",
-            shell.display()
-        );
-        assert_eq!(stdout.trim(), "ok", "{stderr}");
-    }
-
-    #[tokio::test]
-    async fn the_root_exit_is_the_wait_on_its_handle() {
-        let mut child = spawn(&ping(1));
-        let tree = OwnedTree::adopt(&mut child).await.ok().unwrap();
-        let began = Instant::now();
-        tree.root_exit(&mut child).await.unwrap();
-        assert!(
-            began.elapsed() >= Duration::from_millis(500),
-            "{:?}",
-            began.elapsed()
-        );
-        tree.members_settled().await.unwrap();
-        assert!(!tree.has_executing_members().unwrap());
-    }
-
-    #[tokio::test]
-    async fn the_job_reports_members_that_outlive_the_root() {
-        // `start /b` runs ping inside the job, after the root has already exited.
-        let mut child = spawn(&format!("start \"\" /b {} & exit 0", ping(2)));
-        let tree = OwnedTree::adopt(&mut child).await.ok().unwrap();
-        tree.root_exit(&mut child).await.unwrap();
-        assert!(
-            tree.has_executing_members().unwrap(),
-            "a member outlives the root"
-        );
-        timeout(Duration::from_secs(30), tree.members_settled())
-            .await
-            .expect("settled")
-            .unwrap();
-        assert!(!tree.has_executing_members().unwrap());
-        // The member's exit was reported through the job's completion port.
-        let mut exits = tree.notices.exits.clone();
-        timeout(Duration::from_secs(10), exits.wait_for(|count| *count > 0))
-            .await
-            .expect("a job exit notice arrived")
-            .unwrap();
-    }
-
-    #[tokio::test]
-    async fn termination_ends_every_member_and_verifies_it() {
-        let mut child = spawn(&format!("start \"\" /b {} & {}", ping(30), ping(30)));
-        let tree = OwnedTree::adopt(&mut child).await.ok().unwrap();
-        tokio::time::sleep(Duration::from_millis(300)).await;
-        let began = Instant::now();
-        tree.terminate().await.unwrap();
-        assert!(began.elapsed() < GROUP_SETTLE, "{:?}", began.elapsed());
-        assert!(!tree.has_executing_members().unwrap());
-        // TerminateJobObject can empty the job before its listener has read the notices
-        // (the first query already finds no member); they still arrive.
-        let mut exits = tree.notices.exits.clone();
-        timeout(Duration::from_secs(10), exits.wait_for(|count| *count > 0))
-            .await
-            .expect("a job exit notice arrived")
-            .unwrap();
-    }
-}
+mod tests;
 
 /// A process started by [`spawn_detached`]: its process handle, closed on drop (which
 /// neither stops nor waits for the process).
