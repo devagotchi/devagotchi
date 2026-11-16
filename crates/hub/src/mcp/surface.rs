@@ -295,7 +295,7 @@ impl Hub {
                 Some(socket) => Machine {
                     name: broker.name.clone(),
                     kind: "local",
-                    status: if crate::reachable(socket).await {
+                    status: if crate::ops::health::reachable(socket).await {
                         "online"
                     } else {
                         "offline"

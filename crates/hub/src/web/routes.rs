@@ -235,12 +235,12 @@ async fn nomen_who(state: &AppState, web: &WebLogin, headers: &HeaderMap) -> Who
     match state.verifier.verify(&token).await {
         Ok(subject) => Who::Person(subject),
         Err(AuthError::Invalid(why)) => {
-            crate::log_refusal(why);
+            crate::identity::bearer::log_refusal(why);
             web.end_session(headers).await;
             Who::SignedOut
         }
         Err(AuthError::Unavailable(why)) => {
-            crate::log_unavailable(&why);
+            crate::identity::bearer::log_unavailable(&why);
             Who::Unavailable
         }
     }
@@ -393,14 +393,14 @@ async fn callback(
         Ok(tokens) => tokens,
         Err(Exchange::Refused) => return stale,
         Err(Exchange::Unavailable(why)) => {
-            crate::log_unavailable(&why);
+            crate::identity::bearer::log_unavailable(&why);
             return unavailable();
         }
     };
     match state.verifier.verify(&tokens.access_token).await {
         Ok(_) => {}
         Err(AuthError::Invalid(why)) => {
-            crate::log_refusal(why);
+            crate::identity::bearer::log_refusal(why);
             return pages::message(
                 StatusCode::FORBIDDEN,
                 "This sign-in is not accepted here",
@@ -412,7 +412,7 @@ async fn callback(
             );
         }
         Err(AuthError::Unavailable(why)) => {
-            crate::log_unavailable(&why);
+            crate::identity::bearer::log_unavailable(&why);
             return unavailable();
         }
     }
@@ -560,7 +560,7 @@ async fn me(State(state): State<AppState>, headers: HeaderMap) -> Response {
         Some(token) => match state.verifier.verify(token).await {
             Ok(subject) => subject,
             Err(AuthError::Invalid(why)) => {
-                crate::log_refusal(why);
+                crate::identity::bearer::log_refusal(why);
                 return json_error(StatusCode::UNAUTHORIZED, "invalid_token");
             }
             Err(AuthError::Unavailable(_)) => {

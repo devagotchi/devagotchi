@@ -12,19 +12,24 @@ use devagotchi_contracts::{BridgeError, BridgeResult};
 use serde::Deserialize;
 
 pub(crate) mod analytics;
+mod file;
 pub(crate) mod github;
 pub(crate) mod machines;
 pub(crate) mod providers;
 pub(crate) mod shippin;
 pub(crate) mod tenancy;
+mod urls;
 pub(crate) mod workflows;
 pub use analytics::AnalyticsConfig;
+pub(crate) use file::{prepare_state_dir, read};
 pub use github::GithubConfig;
 pub use machines::MachinesConfig;
 pub use providers::{EmailConfig, ProviderConfig, ProviderKind};
 pub use shippin::ShippinConfig;
 use tenancy::check_operator;
 pub use tenancy::{OPERATORS_ENV, TENANCY_ENV, TenancyConfig, TenancyMode, is_operator};
+pub(crate) use urls::url_host;
+use urls::{check_rp_id, loopback_http};
 pub use workflows::WorkflowsConfig;
 
 #[derive(Debug, Clone, Deserialize)]
@@ -1123,47 +1128,6 @@ impl NomenRef<'_> {
         }
         Ok(())
     }
-}
-
-/// The host of an absolute URL, lowercased, without port or brackets.
-pub(crate) fn url_host(url: &str) -> Option<String> {
-    let uri = url.parse::<http::Uri>().ok()?;
-    let host = uri.host()?.trim_start_matches('[').trim_end_matches(']');
-    (!host.is_empty()).then(|| host.to_ascii_lowercase())
-}
-
-/// A passkey relying party is the hub's host or a parent domain of it (WebAuthn §5.1.3):
-/// lowercase DNS labels, and never a bare top-level domain.
-fn check_rp_id(rp_id: &str, host: &str) -> Result<(), String> {
-    let well_formed = !rp_id.is_empty()
-        && rp_id.len() <= 253
-        && !rp_id.starts_with('.')
-        && !rp_id.ends_with('.')
-        && !rp_id.contains("..")
-        && rp_id
-            .bytes()
-            .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-' || b == b'.');
-    let covers = host == rp_id || host.ends_with(&format!(".{rp_id}"));
-    if well_formed && covers && (rp_id.contains('.') || rp_id == host) {
-        Ok(())
-    } else {
-        Err(format!(
-            "auth.rp_id {rp_id:?} must be the hub's host {host} or a parent domain of it, in lowercase"
-        ))
-    }
-}
-
-/// `http://` to this machine's loopback only, where no network carries the traffic.
-fn loopback_http(url: &str) -> bool {
-    let Ok(uri) = url.parse::<http::Uri>() else {
-        return false;
-    };
-    uri.scheme_str() == Some("http")
-        && uri.authority().is_some_and(|a| !a.as_str().contains('@'))
-        && matches!(
-            uri.host(),
-            Some("127.0.0.1" | "localhost" | "[::1]" | "::1")
-        )
 }
 
 pub(crate) use devagotchi_agenthub::valid_name;

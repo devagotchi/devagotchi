@@ -34,8 +34,11 @@ pub mod downloads;
 pub mod files;
 pub mod join;
 pub mod link;
+mod routes;
 pub mod run;
 pub mod update;
+
+pub(crate) use routes::routes;
 
 /// The hub's clock in Unix seconds and its random bytes, used well beyond machines; they
 /// live here until a domain of their own takes them.

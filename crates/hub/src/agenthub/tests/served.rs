@@ -99,7 +99,7 @@ mod bound {
             web: None,
             passkeys: None,
         };
-        let app = crate::app(state);
+        let app = crate::serve::app(state);
         tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
         Some(url)
     }

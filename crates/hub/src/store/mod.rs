@@ -43,9 +43,9 @@ pub(crate) fn postgres_url(configured: Option<&str>) -> BridgeResult<String> {
 /// `connect-nomen` …): the storage `config` names, or `DEVAGOTCHI_HUB_STORAGE_URL`. The hub
 /// keeps nothing in files but its keys, so there is no other place to look.
 pub(crate) async fn for_command(state_dir: &Path, config: Option<&Path>) -> BridgeResult<Store> {
-    crate::prepare_state_dir(state_dir)?;
+    crate::config::prepare_state_dir(state_dir)?;
     let storage = match config {
-        Some(path) => crate::read_config(path)?.storage,
+        Some(path) => crate::config::read(path)?.storage,
         None => None,
     };
     let url = postgres_url(storage.as_ref().and_then(|s| s.url.as_deref())).map_err(|_| {

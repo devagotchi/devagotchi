@@ -8,8 +8,8 @@ use std::{net::SocketAddr, sync::Arc};
 use axum::http::header;
 use serde_json::{Value, json};
 
-use crate::identity::accounts::oauth::s256;
-use crate::*;
+use crate::identity::{self, accounts::oauth::s256, auth::Verifier};
+use crate::{AppState, agenthub, config::HubConfig, machines, mcp::Hub, ops, serve, store, web};
 
 pub(crate) struct Hosted {
     pub(crate) url: String,
@@ -101,7 +101,7 @@ pub(crate) async fn hosted_with_ingress(
     let audit = crate::ops::audit::test_audit().await?;
     let changes = Arc::new(tokio::sync::Notify::new());
     let links = Arc::new(
-        Links::new(config.clone(), devices.clone(), audit.clone())
+        machines::link::Links::new(config.clone(), devices.clone(), audit.clone())
             .gated(accounts.enroll_gate())
             .counting(analytics.clone())
             .signalling(changes.clone()),
@@ -158,7 +158,7 @@ pub(crate) async fn hosted_with_ingress(
             .map(Arc::new),
     };
     let hub = state.hub.clone();
-    let app = app(state);
+    let app = serve::app(state);
     tokio::spawn(async move {
         axum::serve(
             listener,

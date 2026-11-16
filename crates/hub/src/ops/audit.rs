@@ -263,6 +263,30 @@ fn now_rfc3339() -> String {
 }
 
 /// A chain on a new database of the test server, or `None` without one.
+/// Record an operator command on the hub's audit chain: who ran it and what it did.
+pub(crate) async fn operator_event(
+    audit: &Audit,
+    tool: &str,
+    device: &str,
+    outcome: &str,
+) -> BridgeResult<()> {
+    let user = std::env::var("USER")
+        .or_else(|_| std::env::var("USERNAME"))
+        .unwrap_or_else(|_| "unknown".into());
+    let subject = format!("operator:{user}");
+    audit
+        .record(&AuditEntry {
+            subject: &subject,
+            via: "cli",
+            tool,
+            broker: device,
+            operation_id: "",
+            outcome,
+        })
+        .await?;
+    Ok(())
+}
+
 #[cfg(test)]
 pub(crate) async fn test_audit() -> Option<std::sync::Arc<Audit>> {
     let test = crate::store::testing::postgres().await?;

@@ -7,7 +7,11 @@ use std::path::Path;
 use devagotchi_contracts::{BridgeError, BridgeResult};
 
 use super::devices::Devices;
-use crate::{config, operator_event, ops::audit::Audit, store};
+use crate::{
+    config,
+    ops::audit::{Audit, operator_event},
+    store,
+};
 
 /// A one-time code that binds one machine's key to `device`, printed once.
 pub(crate) fn enroll(state: &Path, config: Option<&Path>, device: &str) -> BridgeResult<()> {
