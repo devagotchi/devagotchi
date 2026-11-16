@@ -78,7 +78,7 @@ pub struct HubConfig {
     /// "Add a machine" shows the installer lines instead.
     #[serde(default)]
     pub downloads: Option<String>,
-    /// The hub's Postgres (`store.rs`): its URL and the schema its tables live in. A
+    /// The hub's Postgres (`store/mod.rs`): its URL and the schema its tables live in. A
     /// password never goes here: `DEVAGOTCHI_HUB_STORAGE_URL`, set from the secret store, names the store
     /// instead and overrides this (`DEVAGOTCHI_HUB_STORAGE_SCHEMA` the schema).
     #[serde(default)]

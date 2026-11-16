@@ -451,7 +451,7 @@ A linked broker that is not connected answers `broker_offline`; one that never e
 ## Authentication
 
 The hub has one account system, `auth.mode` `hub` (below): accounts in the hub's Postgres
-(`src/store.rs`), the hub's own OAuth 2.1 server for AI clients at `/oauth/*` (32b), and the
+(`src/store/mod.rs`), the hub's own OAuth 2.1 server for AI clients at `/oauth/*` (32b), and the
 browser claim of a new hub (`/claim`, 16c). This is the mode `deploy/compose/` runs. The other
 modes check tokens another issuer made and keep no accounts. Overview:
 [docs/auth.md](../../docs/auth.md).
@@ -989,7 +989,7 @@ is the owner, and the brokers it may use. `operation_start`, `operation_list`, `
 `operation_get`, `operation_read`, `operation_cancel`, `operation_input` and `operation_resize`
 take `{ "broker": "<name>", "input": {…} }` where `input` is exactly the broker's own contract,
 less who is calling: the hub names that (`hub:<subject>`, this MCP session) over anything an
-input says (`mcp/callers.rs`). A subject without a grant for that
+input says (`mcp/callers/mod.rs`). A subject without a grant for that
 broker gets `not_granted`; an unknown name gets `unknown_broker`; the broker's own refusals
 (`executable_not_allowed`, …) pass through unchanged.
 

@@ -272,7 +272,7 @@ async fn owner_in(connection: &mut AnyConnection) -> Result<Option<Account>, sql
 
 impl Accounts {
     /// Scope this transaction to the tenant `lookup` leads to, and say which; `None` (and
-    /// nothing visible) when no row has that key (`store.rs`, row-level security).
+    /// nothing visible) when no row has that key (`store/mod.rs`, row-level security).
     pub(crate) async fn enter(
         &self,
         connection: &mut AnyConnection,

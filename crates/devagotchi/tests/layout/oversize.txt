@@ -13,12 +13,12 @@
 626	crates/hub/src/agenthub/issue_lifecycle/tests.rs
 2998	crates/hub/src/agenthub/mcp/mod.rs
 592	crates/hub/src/agenthub/tests/served.rs
-1544	crates/hub/src/config.rs
-567	crates/hub/src/identity/accounts/api_keys.rs
+1544	crates/hub/src/config/mod.rs
+567	crates/hub/src/identity/accounts/api_keys/mod.rs
 1263	crates/hub/src/identity/accounts/mod.rs
-647	crates/hub/src/identity/accounts/oauth.rs
+647	crates/hub/src/identity/accounts/oauth/mod.rs
 683	crates/hub/src/identity/accounts/oauth/tests.rs
-544	crates/hub/src/identity/accounts/tenants.rs
+544	crates/hub/src/identity/accounts/tenants/mod.rs
 768	crates/hub/src/identity/accounts/tenants/tests.rs
 919	crates/hub/src/identity/accounts/tests.rs
 686	crates/hub/src/identity/auth.rs

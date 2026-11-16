@@ -290,7 +290,7 @@ fn read_config(path: &std::path::Path) -> BridgeResult<HubConfig> {
 }
 
 /// The accounts of a hub whose state is in `state_dir`: in the Postgres `storage` names (see
-/// `store.rs`: the environment's URL, else the config's).
+/// `store/mod.rs`: the environment's URL, else the config's).
 async fn accounts_at(
     state_dir: &std::path::Path,
     config: &HubConfig,
@@ -648,7 +648,7 @@ async fn run(
         hub.reload_providers().await?;
     }
     // A one-owner hub whose config names neither its owner nor its operators may be claimed
-    // from the browser (`identity/accounts/claim.rs`); its code is issued once the hub listens, below.
+    // from the browser (`identity/accounts/claim/mod.rs`); its code is issued once the hub listens, below.
     // A hosted hub (`tenancy.mode multi`) is never claimed.
     let claimable = match (&passkeys, &accounts) {
         (Some(_), Some(accounts)) if config.claim_allowed() => Some(accounts.clone()),
