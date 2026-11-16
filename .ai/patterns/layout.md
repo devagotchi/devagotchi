@@ -30,8 +30,9 @@ it one step at a time; until a step lands, the code it covers stays where it is.
 8. **Tables carry their domain.** Every table in the hub's Postgres schema `devagotchi` starts
    with its domain's prefix: identity `auth_` `oauth_`; tenancy `tenancy_` `org_` `project_`;
    AgentHub `board_`; hub settings and secrets `hub_`; machines `machine_`; notify `push_`
-   `mail_` `signal_`; ops `audit_` `analytics_`; connectors `connector_`. Postgres only: no
-   SQLite twin (ADR 0001). A new domain adds its prefix here and in the test.
+   `mail_` `signal_`; ops `audit_` `analytics_`; connectors `connector_`; kernel (Devagotchi's
+   own AI: the lexicon) `kernel_`. Postgres only: no SQLite twin (ADR 0001). A new domain adds
+   its prefix here and in the test.
 
 ## The table prefixes
 

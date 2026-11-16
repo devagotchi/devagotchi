@@ -3,63 +3,37 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+mod ai;
+pub mod describe;
 mod files;
+mod history;
 mod interactive;
+mod search;
+mod system;
+mod web;
+pub use ai::*;
 pub use files::*;
+pub use history::*;
 pub use interactive::*;
+pub use search::*;
+pub use system::*;
+pub use web::*;
 
 pub const API_VERSION: u32 = 1;
 pub const MAX_FRAME_BYTES: usize = 64 * 1024;
 pub const MAX_OUTPUT_PAGE_BYTES: usize = 16 * 1024;
-
-/// DG-CAPTURE-1. A harness identifies the adapter, not the model vendor.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-#[serde(rename_all = "kebab-case")]
-pub enum AiHarness {
-    ClaudeCode,
-    Codex,
-    Copilot,
-    Manual,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum AiEventKind {
-    SessionStart,
-    SessionEnd,
-    TurnEnd,
-    UserPrompt,
-    ToolBefore,
-    ToolAfter,
-    Error,
-    Checkpoint,
-    TranscriptRecord,
-}
-
-/// Private local archive input, not a hosted-board mutation or a training grant.
-/// Runtime validation additionally enforces bounds and policy consent.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
-#[serde(deny_unknown_fields)]
-pub struct AiCaptureEvent {
-    pub schema_version: u32,
-    /// Stable caller retry key within (harness, session). Changed replay is rejected.
-    pub event_id: String,
-    pub session_id: String,
-    pub harness: AiHarness,
-    pub kind: AiEventKind,
-    pub model: Option<String>,
-    pub issue: Option<String>,
-    /// Native opaque hook/transcript payload. Requires separate content consent.
-    pub content: Option<serde_json::Value>,
-}
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct StartInput {
     /// A caller-created retry key. The same key and inputs return the same operation.
     pub idempotency_key: String,
-    /// Absolute path of the program to run, with `args`. On a broker that runs only
-    /// operator-granted programs it must be granted. Leave empty when `command` is given.
+    /// The program to run, with `args`: a name on PATH (`python3`, `cargo`), or a path,
+    /// absolute or relative to `cwd`. A script runs with its interpreter (its `#!` line, or
+    /// its extension: `.py` with Python, `.ps1` with PowerShell, `.sh` with bash, `.js` with
+    /// node), never through a file association; the operation's detail says what ran and why.
+    /// On a broker that runs only operator-granted programs the program must be granted.
+    /// Leave empty when `command` is given.
     #[serde(default)]
     pub executable: String,
     /// Exact argument vector. No shell parsing, interpolation, or added command text.
@@ -70,16 +44,22 @@ pub struct StartInput {
     /// this or `executable` with `args`, not both.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub command: Option<String>,
-    /// Absolute working directory; defaults to the workspace. A broker that runs only
+    /// Working directory (absolute, `~/...`, or relative to the workspace); defaults to the
+    /// workspace. A broker that runs only
     /// granted programs keeps it within the workspace.
     pub cwd: Option<String>,
-    /// Execution deadline, not a client wait timeout. 1..=300000 milliseconds.
+    /// Execution deadline, not a client wait timeout. 1..=[`MAX_DEADLINE_MS`] milliseconds.
     pub deadline_ms: u64,
     /// Keep the program's input open for `operation_input`: on a pseudo-terminal (`terminal`,
     /// the default: prompts, REPLs, sign-ins, Ctrl-C) or on a plain pipe (`pipe`). Absent:
     /// the program reads nothing (its stdin is the null device), as before.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub interactive: Option<InteractiveInput>,
+    /// One pipe for stdout and stderr, so the output keeps the order the program wrote it
+    /// (as a terminal shows it); every frame is then `stdout`. `run` sets it. Ignored for an
+    /// interactive operation, whose terminal already merges them.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub combined_output: bool,
     /// Who is starting it, set by the transport that carried the request (this machine's
     /// adapter, a hub), never by an AI: whatever arrives here from a tool call is replaced.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -96,6 +76,10 @@ pub struct GetInput {
     #[schemars(skip)]
     pub caller: Option<Caller>,
 }
+
+/// Longest an operation may run: a day. Long builds and test runs fit; a job that should
+/// outlive a day is a service, not an operation.
+pub const MAX_DEADLINE_MS: u64 = 24 * 60 * 60 * 1000;
 
 /// Longest a broker holds one wait open. MCP clients give up on a call after about a
 /// minute, so a wait ends well before that and the caller waits again.
@@ -320,6 +304,12 @@ pub enum RequestBody {
     FileInfo(FileInfoInput),
     FileMkdir(DirectoryInput),
     FileMove(FileMoveInput),
+    FileSearch(FileSearchInput),
+    ConfigGet(ConfigGetInput),
+    ConfigSet(ConfigSetInput),
+    ProcessList(ProcessListInput),
+    ProcessKill(ProcessKillInput),
+    UrlRead(UrlReadInput),
     OperationInput(SendInput),
     OperationResize(ResizeInput),
 }
@@ -363,6 +353,11 @@ pub enum ResponseBody {
     Revision(Revision),
     Info(FileInfo),
     InputSent(InputSent),
+    Search(SearchPage),
+    Config(ConfigView),
+    Processes(ProcessPage),
+    Killed(ProcessKilled),
+    Url(UrlContent),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

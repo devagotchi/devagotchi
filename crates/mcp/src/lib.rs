@@ -102,6 +102,11 @@ pub fn response_kind(actual: &ResponseBody) -> &'static str {
         ResponseBody::Revision(_) => "revision",
         ResponseBody::Info(_) => "info",
         ResponseBody::InputSent(_) => "input_sent",
+        ResponseBody::Search(_) => "search",
+        ResponseBody::Config(_) => "config",
+        ResponseBody::Processes(_) => "processes",
+        ResponseBody::Killed(_) => "killed",
+        ResponseBody::Url(_) => "url",
     }
 }
 

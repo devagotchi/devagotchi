@@ -12,5 +12,5 @@ Start with the [roadmap](roadmap.md): AgentHub ([factory](agenthub-factory.md)),
 Active: [AI development contracts and local capture](ai-development-capture.md);
 [Make alpha = pre-release obvious](alpha-stage-obvious.md);
 [The landing page: layman interactives from the real product](landing.md);
-[Structure cleanup](structure-cleanup.md).
+[Structure cleanup](structure-cleanup.md); [The kernel](kernel.md).
 Broader product delivery remains in the [canonical release plan](../../../docs/implementation-and-release-plan.md).

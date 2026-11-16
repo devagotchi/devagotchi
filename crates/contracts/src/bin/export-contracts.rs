@@ -1,10 +1,12 @@
 //! Export canonical Rust DTO schemas without opening a broker or journal.
 
 use devagotchi_contracts::{
-    BridgeError, ChangesInput, DirectoryInput, FileContent, FileEditInput, FileInfo, FileInfoInput,
-    FileListInput, FileListing, FileMoveInput, FileReadInput, FileWriteInput, FileWritten,
-    GetInput, ListInput, OperationView, OperationsPage, OutputPage, ReadInput, Revision,
-    StartInput, StartOutput, WaitInput,
+    BridgeError, ChangesInput, ConfigGetInput, ConfigSetInput, ConfigView, DirectoryInput,
+    FileContent, FileEditInput, FileInfo, FileInfoInput, FileListInput, FileListing, FileMoveInput,
+    FileReadInput, FileSearchInput, FileWriteInput, FileWritten, GetInput, ListInput,
+    OperationView, OperationsPage, OutputPage, ProcessKillInput, ProcessKilled, ProcessListInput,
+    ProcessPage, ReadInput, Revision, SearchPage, StartInput, StartOutput, UrlContent,
+    UrlReadInput, WaitInput,
 };
 use schemars::{JsonSchema, generate::SchemaSettings};
 use serde_json::Value;
@@ -39,6 +41,17 @@ struct BrokerContracts {
     directory_input: DirectoryInput,
     file_move_input: FileMoveInput,
     file_info: FileInfo,
+    file_search_input: FileSearchInput,
+    search_page: SearchPage,
+    config_get_input: ConfigGetInput,
+    config_set_input: ConfigSetInput,
+    config_view: ConfigView,
+    process_list_input: ProcessListInput,
+    process_page: ProcessPage,
+    process_kill_input: ProcessKillInput,
+    process_killed: ProcessKilled,
+    url_read_input: UrlReadInput,
+    url_content: UrlContent,
     bridge_error: BridgeError,
 }
 
