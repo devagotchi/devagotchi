@@ -136,14 +136,11 @@ fn invalid(message: impl Into<String>) -> BridgeError {
     BridgeError::new("invalid_request", message)
 }
 
-fn canonical_existing(value: &str, kind: &str, code: &str) -> BridgeResult<PathBuf> {
-    let path = Path::new(value);
-    if !path.is_absolute() || value.as_bytes().contains(&0) {
-        return Err(BridgeError::new(
-            code,
-            format!("{kind} must be an absolute path without NUL bytes"),
-        ));
-    }
+/// `value` resolved: `~` is this account's home; a relative path is under `base` when there is
+/// one (the workspace, for a `cwd`) and refused otherwise (a setting in broker.json).
+fn canonical_existing(value: &str, base: Option<&Path>, kind: &str, code: &str) -> BridgeResult<PathBuf> {
+    let path = crate::files::given::absolute(value, base)
+        .map_err(|error| BridgeError::new(code, format!("{kind}: {}", error.message)))?;
     // Windows canonical paths drop the verbatim prefix when that is lossless, so
     // child working directories and displayed paths stay ordinary drive paths.
     dunce::canonicalize(path)
@@ -181,7 +178,7 @@ impl Broker {
                 "output_limit_bytes must be 1024..=16777216, max_operations 1..=4096, max_concurrent 1..=64 and no greater than max_operations; at most 128 executable grants",
             ));
         }
-        let workspace = canonical_existing(&config.workspace, "workspace", "invalid_config")?;
+        let workspace = canonical_existing(&config.workspace, None, "workspace", "invalid_config")?;
         if !workspace.is_dir() {
             return Err(BridgeError::new(
                 "invalid_config",
@@ -190,7 +187,7 @@ impl Broker {
         }
         let mut executables = HashSet::new();
         for grant in &config.allowed_executables {
-            let executable = canonical_existing(grant, "executable grant", "invalid_config")?;
+            let executable = canonical_existing(grant, None, "executable grant", "invalid_config")?;
             let metadata = executable
                 .metadata()
                 .map_err(|error| BridgeError::new("invalid_config", error.to_string()))?;
@@ -401,7 +398,7 @@ impl Broker {
         }
         let account = self.shared.config.exec_policy == ExecPolicy::Account;
         let cwd = match &input.cwd {
-            Some(cwd) => canonical_existing(cwd, "cwd", "invalid_request")?,
+            Some(cwd) => canonical_existing(cwd, Some(&self.shared.workspace), "cwd", "invalid_request")?,
             None => self.shared.workspace.clone(),
         };
         if !cwd.is_dir() {
@@ -440,7 +437,7 @@ impl Broker {
             None => {
                 let found = launch::resolve(&input.executable, &cwd_text, Os::HERE, &launch::Machine)?;
                 let canonical =
-                    canonical_existing(&found.program, "executable", "invalid_request")?;
+                    canonical_existing(&found.program, None, "executable", "invalid_request")?;
                 if !account && !self.shared.executables.contains(&canonical) {
                     return Err(BridgeError::new(
                         "executable_not_allowed",

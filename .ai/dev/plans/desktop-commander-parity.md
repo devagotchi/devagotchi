@@ -57,9 +57,9 @@ machines for the account; Desktop Commander's devices Gus and dabo are offline).
 
 - `edit_file` on a CRLF file: `a\nb` does not match `a\r\nb`; Desktop Commander normalises.
 - `~` and relative paths are refused by every file tool and `cwd`; Desktop Commander resolves both.
-- `run` cuts long output mid-line.
+- `run` cuts long output mid-line. (Fixed in P6.)
 - `devagotchi hub serve --help` says it routes "run and operation_start/get/read/cancel"; it
-  serves every file tool too.
+  serves every file tool too. (Fixed in P6.)
 
 ### Missing
 
@@ -86,7 +86,7 @@ libraries): 19 never-used items in `devagotchi-hub` (for example `store::open`,
 | P3 | Keep the program's own name: spawn the path as found after checking the canonical target, so `cargo` runs cargo | `cargo --version` prints cargo | done: prints `cargo 1.97.0` |
 | P4 | `run` in order: one pipe for stdout and stderr | the 1 2 3 4 probe | done: `1\n2\n3\n4\n` |
 | P5 | Long jobs: the deadline cap is a day; `run` defaults to an hour | a job past five minutes | done: `deadline_ms` 3600000 accepted, 90000000 refused naming the day cap; a 330 s `run` (see receipts) |
-| P6 | Paths: `~` and CRLF-aware edits | probes | not started |
+| P6 | Paths: `~` and relative paths in every file tool and `cwd` (one rule, `files/given.rs`); edits that match the file's own line endings; `run` keeps the tail from a whole line | probes | done: `read_file ~/tilde.txt`, `write_file p9/rel.txt` (under the workspace), `cwd: "~"` and `cwd: "p9"` ran there, `~bob/x` refused with the reason; `alpha\nbeta` edited a CRLF file and kept `\r\n`; the 3000-line tail starts at `line-1788` |
 | P7 | Search: names and contents, paged, through the broker | probes | not started |
 | P8 | Processes and settings: list and stop processes; read and change broker settings | probes | not started |
 
@@ -104,8 +104,13 @@ and `data.xyz` were refused with `program_not_found` and `not_executable`; `run`
 `1 2 3 4` in order and ran `./hello.py x` through python3. `tests/e2e.py` (hub on Postgres,
 link) passed again on this code. Windows: not run (no Windows machine reachable).
 
+Fix P6 (2026-11-16, Linux): machine-engine 118, mcp 26, hub 435 unit tests and the layout
+ratchet passed; the P6 probes above ran through `devagotchi mcp`; `tests/e2e.py` passed again.
+Seen once: right after the broker was killed, `devagotchi mcp` reported "your broker is running
+but did not answer within 20 s" while the old one was still shutting down; the next start worked.
+
 ## Delivery
 
-Implementation: map, and fixes P1 to P5. Validation: run here, Linux. Push: branch. PR: not_created.
+Implementation: map, and fixes P1 to P6. Validation: run here, Linux. Push: branch. PR: not_created.
 Main: not_verified.
 **DELIVERY INCOMPLETE: NOT MERGED TO MAIN**

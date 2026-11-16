@@ -97,7 +97,8 @@ pub fn bounded(value: Option<u64>, default: u64, max: u64, name: &str) -> Result
     }
 }
 
-/// Keep the last `limit` bytes of `text`, cut at a character boundary.
+/// Keep the last `limit` bytes of `text`, starting at a whole line when one begins in the
+/// first half of what is kept, else at a character boundary.
 pub fn tail(text: String, limit: usize) -> (String, bool) {
     if text.len() <= limit {
         return (text, false);
@@ -105,6 +106,11 @@ pub fn tail(text: String, limit: usize) -> (String, bool) {
     let mut start = text.len() - limit;
     while !text.is_char_boundary(start) {
         start += 1;
+    }
+    if let Some(newline) = text[start..].find('\n')
+        && newline < limit / 2
+    {
+        start += newline + 1;
     }
     (text[start..].to_owned(), true)
 }

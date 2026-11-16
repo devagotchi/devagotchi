@@ -59,10 +59,7 @@ impl Scope<'_> {
     /// Where a write lands: an existing file resolves through any links; a new one is its
     /// canonical parent directory joined with its name.
     fn target(&self, path: &str, create_dirs: bool) -> BridgeResult<(PathBuf, bool)> {
-        if !Path::new(path).is_absolute() || path.as_bytes().contains(&0) {
-            return Err(invalid("path must be an absolute path without NUL bytes"));
-        }
-        let given = Path::new(path);
+        let given = &self.given(path)?;
         let (canonical, exists) = match dunce::canonicalize(given) {
             Ok(canonical) => (canonical, true),
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
@@ -188,7 +185,18 @@ impl Scope<'_> {
         let current = fs::read(&target).map_err(|e| io_error(&shown, e))?;
         let text = String::from_utf8(current)
             .map_err(|_| invalid(format!("{shown} is not UTF-8 text; use write_file")))?;
-        let found = text.matches(&input.old_text).count() as u32;
+        let mut found = text.matches(&input.old_text).count() as u32;
+        let (mut old_text, mut new_text) = (input.old_text, input.new_text);
+        if found != input.expected_replacements
+            && let Some((old, new)) = in_line_endings_of(&text, &old_text, &new_text)
+        {
+            // The text was sent with the other line ending (an agent writes \n; the file
+            // has \r\n, or the reverse). Match it as the file has it and keep the file's.
+            let again = text.matches(&old).count() as u32;
+            if again == input.expected_replacements {
+                (found, old_text, new_text) = (again, old, new);
+            }
+        }
         if found != input.expected_replacements {
             return Err(BridgeError::new(
                 "edit_mismatch",
@@ -198,7 +206,7 @@ impl Scope<'_> {
                 ),
             ));
         }
-        let changed = text.replace(&input.old_text, &input.new_text);
+        let changed = text.replace(&old_text, &new_text);
         replace(&target, changed.as_bytes()).map_err(|e| io_error(&shown, e))?;
         Ok(FileWritten {
             path: shown,
@@ -207,6 +215,22 @@ impl Scope<'_> {
             created: false,
             replacements: Some(found),
         })
+    }
+}
+
+/// `old` and `new` rewritten in the line ending `text` uses, when they use the other one:
+/// `None` when the file mixes both, or the edit already matches its ending.
+fn in_line_endings_of(text: &str, old: &str, new: &str) -> Option<(String, String)> {
+    let crlf = text.matches("\r\n").count();
+    let lf = text.matches('\n').count() - crlf;
+    let lf_only = |s: &str| s.replace("\r\n", "\n");
+    match (crlf, lf) {
+        (1.., 0) if old.contains('\n') && lf_only(old).len() == old.len() => {
+            let to_crlf = |s: &str| lf_only(s).replace('\n', "\r\n");
+            Some((to_crlf(old), to_crlf(new)))
+        }
+        (0, 1..) if old.contains("\r\n") => Some((lf_only(old), lf_only(new))),
+        _ => None,
     }
 }
 
@@ -302,6 +326,36 @@ mod tests {
             fs::read_to_string(&file).unwrap(),
             "let a = 3;\nlet b = 2;\n"
         );
+    }
+
+    #[test]
+    fn an_edit_matches_and_keeps_the_files_own_line_endings() {
+        let directory = tempfile::tempdir().unwrap();
+        let workspace = dunce::canonicalize(directory.path()).unwrap();
+        let scope = Scope {
+            workspace: &workspace,
+            policy: ExecPolicy::Granted,
+        };
+        let edit = |file: &Path, old: &str, new: &str| {
+            scope.edit(FileEditInput {
+                path: file.display().to_string(),
+                old_text: old.into(),
+                new_text: new.into(),
+                expected_replacements: 1,
+            })
+        };
+        let windows = workspace.join("crlf.txt");
+        fs::write(&windows, "one\r\ntwo\r\nthree\r\n").unwrap();
+        edit(&windows, "one\ntwo", "one\nTWO\nmore").unwrap();
+        assert_eq!(fs::read_to_string(&windows).unwrap(), "one\r\nTWO\r\nmore\r\nthree\r\n");
+        let unix = workspace.join("lf.txt");
+        fs::write(&unix, "one\ntwo\n").unwrap();
+        edit(&unix, "one\r\ntwo", "1\r\n2").unwrap();
+        assert_eq!(fs::read_to_string(&unix).unwrap(), "1\n2\n");
+        // A file with both endings is matched only exactly.
+        let mixed = workspace.join("mixed.txt");
+        fs::write(&mixed, "a\r\nb\nc\n").unwrap();
+        assert_eq!(edit(&mixed, "a\nb", "x").unwrap_err().code, "edit_mismatch");
     }
 
     #[test]

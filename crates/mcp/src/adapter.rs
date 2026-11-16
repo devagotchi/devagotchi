@@ -35,7 +35,7 @@ pub struct RunInput {
     /// The command line, as you would type it in a terminal here: bash or sh on Linux,
     /// PowerShell on Windows.
     pub command: String,
-    /// Absolute directory to run in; defaults to the workspace (your home directory unless
+    /// Directory to run in (absolute, `~/...`, or relative to the workspace); defaults to the workspace (your home directory unless
     /// set otherwise).
     #[serde(default)]
     pub cwd: Option<String>,
@@ -68,7 +68,7 @@ pub struct RunOutput {
 #[derive(Debug, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ReadFilesInput {
-    /// Absolute paths of the files, 1 to 20.
+    /// Paths (absolute, `~/...`, or relative to the workspace) of the files, 1 to 20.
     pub paths: Vec<String>,
     /// Bytes to read from the start of each, 1 to 24576 (default 24576). Read on from a
     /// file's `next_offset` with read_file.
@@ -79,7 +79,7 @@ pub struct ReadFilesInput {
 #[derive(Debug, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ImageInput {
-    /// Absolute path of a PNG, JPEG, GIF or WebP image, up to 3.75 MB.
+    /// Path (absolute, `~/...`, or relative to the workspace) of a PNG, JPEG, GIF or WebP image, up to 3.75 MB.
     pub path: String,
 }
 

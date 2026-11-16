@@ -22,7 +22,7 @@ pub struct RunInput {
     /// The command line, as you would type it in a terminal on that machine: bash or sh on
     /// Linux, PowerShell on Windows.
     pub command: String,
-    /// Absolute directory to run in; defaults to the machine's workspace.
+    /// Directory to run in (absolute, `~/...`, or relative to the workspace); defaults to the machine's workspace.
     #[serde(default)]
     pub cwd: Option<String>,
     /// Seconds to wait for the result, 1 to 50 (default 30). A command still running then

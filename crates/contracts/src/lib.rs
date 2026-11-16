@@ -58,8 +58,12 @@ pub struct AiCaptureEvent {
 pub struct StartInput {
     /// A caller-created retry key. The same key and inputs return the same operation.
     pub idempotency_key: String,
-    /// Absolute path of the program to run, with `args`. On a broker that runs only
-    /// operator-granted programs it must be granted. Leave empty when `command` is given.
+    /// The program to run, with `args`: a name on PATH (`python3`, `cargo`), or a path,
+    /// absolute or relative to `cwd`. A script runs with its interpreter (its `#!` line, or
+    /// its extension: `.py` with Python, `.ps1` with PowerShell, `.sh` with bash, `.js` with
+    /// node), never through a file association; the operation's detail says what ran and why.
+    /// On a broker that runs only operator-granted programs the program must be granted.
+    /// Leave empty when `command` is given.
     #[serde(default)]
     pub executable: String,
     /// Exact argument vector. No shell parsing, interpolation, or added command text.
@@ -70,7 +74,8 @@ pub struct StartInput {
     /// this or `executable` with `args`, not both.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub command: Option<String>,
-    /// Absolute working directory; defaults to the workspace. A broker that runs only
+    /// Working directory (absolute, `~/...`, or relative to the workspace); defaults to the
+    /// workspace. A broker that runs only
     /// granted programs keeps it within the workspace.
     pub cwd: Option<String>,
     /// Execution deadline, not a client wait timeout. 1..=[`MAX_DEADLINE_MS`] milliseconds.
