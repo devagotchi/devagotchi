@@ -15,7 +15,7 @@
 //!   content/workflows.json the step-by-step setups an AI hands its person as one link
 //!   content/docs.md, privacy.md, terms.md, support.md   the public pages
 //!   content/llms.md        what an AI reads at /llms.txt (`discovery.rs`)
-//!   assets/                logo, icon, diagram, video, poster, fonts (served from 'self')
+//!   assets/                logo, icon, diagram, preview, fonts (served from 'self')
 //! ```
 //!
 //! `site.dir` in the hub's config (or `DEVAGOTCHI_SITE_DIR`) names the directory. Only
@@ -38,6 +38,7 @@ mod style;
 #[cfg(test)]
 pub(crate) mod tests;
 pub(crate) mod text;
+pub mod walkthrough;
 mod watch;
 pub(crate) mod workflows;
 
@@ -140,8 +141,7 @@ fn builtin_files() -> Files {
         "icon.svg",
         "pet.svg",
         "diagram.svg",
-        "turnkey.mp4",
-        "turnkey-poster.png",
+        "preview.png"
     );
     Files {
         text: text
@@ -280,8 +280,7 @@ impl Site {
             &names.icon,
             &names.mascot,
             &names.diagram,
-            &names.video,
-            &names.poster,
+            &names.preview,
         ]
         .into_iter()
         .flatten()
@@ -474,10 +473,9 @@ impl Site {
             ("mascot", &names.mascot, &["svg"][..], true),
             ("diagram", &names.diagram, &["svg"][..], true),
             ("icon", &names.icon, &["svg", "png"][..], false),
-            ("video", &names.video, &["mp4", "webm"][..], false),
             (
-                "poster",
-                &names.poster,
+                "preview",
+                &names.preview,
                 &["png", "jpg", "jpeg", "webp"][..],
                 false,
             ),
@@ -497,9 +495,6 @@ impl Site {
                 assets::check_inline_svg(&asset.text())
                     .map_err(|why| format!("assets/{name} ({what}, drawn inline): {why}"))?;
             }
-        }
-        if names.poster.is_some() && names.video.is_none() {
-            return Err("site.json assets.poster is for the video; name assets.video too".into());
         }
         Ok(())
     }
