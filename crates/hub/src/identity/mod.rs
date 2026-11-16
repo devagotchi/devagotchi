@@ -35,6 +35,7 @@
 
 pub mod accounts;
 pub mod auth;
+pub(crate) mod cli;
 pub mod connect;
 pub mod nomen;
 pub mod preferences;

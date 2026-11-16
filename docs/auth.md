@@ -22,7 +22,9 @@ Email-link recovery is available only when `auth.email` has a working mail serve
 and the person can receive mail at that address. Google, GitHub, Nomen and email-link sign-in
 are not enabled automatically: the hub operator must configure provider credentials and mail
 delivery. If locked out of a self-hosted hub without working email recovery, its host operator
-can issue a replacement owner link with `devagotchi hub owner --replace`.
+can issue a replacement owner link with `devagotchi hub owner --replace`, or set the password of
+an existing account with `devagotchi hub set-password … --password-stdin` (the password on
+stdin, never an argument; the account's browser sessions end; audited without the password).
 
 ## A minimal hub.json
 

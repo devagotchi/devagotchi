@@ -5,6 +5,9 @@
 //! address answer the same after the same work; ten failures per address in 15 minutes
 //! and it waits. Neither the password nor its hash is ever logged.
 
+#[cfg(test)]
+mod tests;
+
 use super::{email::normalize_email, identities::Proven, *};
 use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
 
@@ -236,6 +239,27 @@ impl Accounts {
         email: &str,
         password: &str,
     ) -> BridgeResult<()> {
+        self.write_password(account, email, password, false).await
+    }
+
+    /// The hub operator's recovery of an existing account (`devagotchi hub set-password`): the
+    /// same credential, and the account's browser sessions end in the same transaction.
+    pub async fn reset_password_for_email(
+        &self,
+        account: &str,
+        email: &str,
+        password: &str,
+    ) -> BridgeResult<()> {
+        self.write_password(account, email, password, true).await
+    }
+
+    async fn write_password(
+        &self,
+        account: &str,
+        email: &str,
+        password: &str,
+        end_sessions: bool,
+    ) -> BridgeResult<()> {
         let email = normalize_email(email)
             .ok_or_else(|| BridgeError::new("invalid_email", "not an email address"))?;
         checked(password)?;
@@ -282,6 +306,12 @@ impl Accounts {
                  ON CONFLICT (account_id) DO UPDATE SET email = excluded.email, hash = excluded.hash, updated_at = excluded.updated_at")
             .bind(&holder.id).bind(&holder.tenant).bind(&email).bind(&hash).bind(secs(now))
             .execute(&mut *connection).await?;
+            if end_sessions {
+                sqlx::query("DELETE FROM auth_sessions WHERE account = $1")
+                    .bind(&holder.id)
+                    .execute(&mut *connection)
+                    .await?;
+            }
             Ok(())
         })
     }

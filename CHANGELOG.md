@@ -20,6 +20,9 @@ create that tag, and a prerelease tag does not move the `:latest` image.
 - `install.sh` follows the release channel (`ghcr.io/devagotchi/devagotchi:latest`) unless
   `--channel main`, `--tag vX.Y.Z`, or `--track IMAGE` says otherwise. `:latest` moves only
   for a stable tag. Until one exists, pin `--tag v0.1.0-alpha.1` or use `--channel main`.
+- `devagotchi hub set-password … --password-stdin` sets the password of an existing account from
+  the hub's host (the password on stdin, never an argument or a terminal); the account's browser
+  sessions end, its passkeys and sign-ins stay, and it is audited without the password.
 - A new install's deploy files (`compose.yaml`, `update.sh`, `backup.sh`) come from the release its
   image comes from, not from `main`: the newest release's tag, the `--tag`, or `main` for
   `--channel main`. `install.sh --print-ref` shows it; `hub-up.sh` pushes the same files.
