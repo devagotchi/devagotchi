@@ -51,7 +51,7 @@ pub(crate) const TERMINATION_VERIFIED_DETAIL: &str = " SIGTERM then SIGKILL were
 pub(crate) const OBSERVATION_FAILED_DETAIL: &str =
     "Process-group observation failed and requested cancellation. ";
 pub(crate) const TERMINATION_UNVERIFIED_DETAIL: &str = " Group termination was not verified";
-pub(crate) const PIPE_TIMEOUT_DETAIL: &str = " Output pipes did not close within one second of root settlement; a descendant may still hold them open. Reading was stopped, output is incomplete, and processes outside the owned group are not tracked or terminated.";
+pub(crate) const PIPE_TIMEOUT_DETAIL: &str = " Output pipes did not close within three seconds of root settlement; a descendant may still hold them open. Reading was stopped, output is incomplete, and processes outside the owned group are not tracked or terminated.";
 pub(crate) const RUNNING_DETAIL_ACCOUNT: &str = "Root spawned as the broker's account with its environment, null stdin, and a new Linux process group. Executable behavior is not sandboxed.";
 
 /// Both input modes are available on Linux.

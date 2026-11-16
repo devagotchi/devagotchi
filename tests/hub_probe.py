@@ -210,10 +210,10 @@ if args.run_broker:
     # cursor move, so the size is written with an x), sh elsewhere.
     if os.name == "nt":
         read_line = "$line = [Console]::In.ReadLine(); 'got:' + $line"
-        show_size = "$null = [Console]::ReadLine(); '{0}x{1}' -f [Console]::WindowHeight, [Console]::WindowWidth"
+        show_size = "'ready'; $null = [Console]::ReadLine(); '{0}x{1}' -f [Console]::WindowHeight, [Console]::WindowWidth"
         new_size = "30x100"
     else:
-        read_line, show_size, new_size = "read line; echo got:$line", "read x; stty size", "30 100"
+        read_line, show_size, new_size = "read line; echo got:$line", "echo ready; read x; stty size", "30 100"
     is_error, piped = interactive(read_line, "pipe")
     check("an interactive start ignores a forged caller", not is_error
           and (piped.get("operation", {}).get("interactive") or {}).get("mode") == "pipe", json.dumps(piped)[:240])
@@ -238,6 +238,17 @@ if args.run_broker:
           and "got:hello" in text, f"{json.dumps(sent)[:120]} state={view.get('state')} output={text[:80]!r}")
     is_error, shell = interactive(show_size, "terminal")
     shell_id = shell.get("operation", {}).get("operation_id", "")
+    # Resize only once the program is up: a shell starting up (Windows PowerShell on a slow
+    # machine) sets its console's size itself, over one that came before it was ready.
+    shown = ""
+    for _ in range(90):
+        _, page = call("operation_read", {"broker": args.run_broker, "input": {
+            "operation_id": shell_id, "cursor": 0, "max_bytes": 4096}})
+        shown = "".join(f.get("text", "") for f in page.get("frames", []))
+        if "ready" in shown:
+            break
+        time.sleep(0.5)
+    check("the program on its terminal is up", "ready" in shown, repr(shown[-120:]))
     is_error, taken = in_another_session(lambda: call("operation_resize", {"broker": args.run_broker, "input": {
         "operation_id": shell_id, "cols": 100, "rows": 30, "take_over": True}}))
     size = taken.get("interactive") or {}

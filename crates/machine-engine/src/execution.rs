@@ -16,7 +16,10 @@ use tokio::time::{Instant, sleep_until, timeout};
 
 const GROUP_SETTLE: Duration = Duration::from_millis(1000);
 const ROOT_WAIT: Duration = Duration::from_millis(2000);
-const PIPE_DRAIN: Duration = Duration::from_millis(1000);
+/// How long settlement waits for the output pipes to close once the root and its tree are
+/// done. They close at once unless something outside the owned tree holds them; on a loaded
+/// machine a terminated tree's teardown can take more than a second.
+const PIPE_DRAIN: Duration = Duration::from_secs(3);
 
 pub mod detached;
 mod input;
