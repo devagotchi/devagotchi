@@ -35,7 +35,7 @@ edition = "2024"
 # sqlx 0.9 sets the floor; the pinned toolchain in rust-toolchain.toml is what builds.
 rust-version = "1.94"
 publish = false
-license = "BUSL-1.1"
+license = "FSL-1.1-ALv2"
 repository = "https://github.com/devagotchi/devagotchi"
 
 [workspace.dependencies]
