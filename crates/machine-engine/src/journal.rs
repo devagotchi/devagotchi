@@ -1,7 +1,7 @@
 //! Durable broker records. Every mutation commits with SQLite synchronous=FULL.
 //! OS process identifiers are deliberately never persisted or recovered.
 
-use devagotchi_contracts::{BridgeError, BridgeResult, OperationView};
+use devagotchi_contracts::{BridgeError, BridgeResult, Caller, InteractiveView, OperationView};
 use rusqlite::{Connection, params};
 use std::collections::VecDeque;
 #[cfg(unix)]
@@ -24,6 +24,8 @@ pub(crate) struct JournalOperation {
     pub key: String,
     pub request_digest: String,
     pub config_identity: String,
+    /// Who started it, as the transport said; absent for an operation started without one.
+    pub owner: Option<Caller>,
     pub view: OperationView,
     pub latest_sequence: u64,
     pub frames: VecDeque<JournalFrame>,
@@ -151,6 +153,23 @@ impl Journal {
              );",
             )
             .map_err(persistence)?;
+        // Added with interactive operations (increment 54). Kept out of view_json, so a broker
+        // from before reads a newer journal as it always did.
+        let columns: Vec<String> = connection
+            .prepare("SELECT name FROM pragma_table_info('operations')")
+            .and_then(|mut statement| {
+                statement
+                    .query_map([], |row| row.get::<_, String>(0))?
+                    .collect()
+            })
+            .map_err(persistence)?;
+        for column in ["owner_json", "interactive_json"] {
+            if !columns.iter().any(|name| name == column) {
+                connection
+                    .execute_batch(&format!("ALTER TABLE operations ADD COLUMN {column} TEXT"))
+                    .map_err(persistence)?;
+            }
+        }
         let synchronous: i64 = connection
             .query_row("PRAGMA synchronous", [], |row| row.get(0))
             .map_err(persistence)?;
@@ -171,25 +190,42 @@ impl Journal {
             ));
         }
         let mut statement = self.connection.prepare(
-            "SELECT operation_id, idempotency_key, request_digest, config_identity, view_json, latest_sequence FROM operations ORDER BY rowid"
+            "SELECT operation_id, idempotency_key, request_digest, config_identity, view_json, latest_sequence, owner_json, interactive_json FROM operations ORDER BY rowid"
         ).map_err(persistence)?;
         let rows = statement
             .query_map([], |row| {
                 Ok((
-                    row.get::<_, String>(0)?,
-                    row.get::<_, String>(1)?,
-                    row.get::<_, String>(2)?,
-                    row.get::<_, String>(3)?,
+                    (
+                        row.get::<_, String>(0)?,
+                        row.get::<_, String>(1)?,
+                        row.get::<_, String>(2)?,
+                        row.get::<_, String>(3)?,
+                    ),
                     row.get::<_, String>(4)?,
                     row.get::<_, u64>(5)?,
+                    row.get::<_, Option<String>>(6)?,
+                    row.get::<_, Option<String>>(7)?,
                 ))
             })
             .map_err(persistence)?;
         let mut operations = Vec::new();
         for row in rows {
-            let (id, key, request_digest, config_identity, view_json, latest_sequence) =
-                row.map_err(persistence)?;
-            let view: OperationView = serde_json::from_str(&view_json).map_err(persistence)?;
+            let (
+                (id, key, request_digest, config_identity),
+                view_json,
+                latest_sequence,
+                owner,
+                interactive,
+            ) = row.map_err(persistence)?;
+            let mut view: OperationView = serde_json::from_str(&view_json).map_err(persistence)?;
+            let owner: Option<Caller> = owner
+                .map(|json| serde_json::from_str(&json))
+                .transpose()
+                .map_err(persistence)?;
+            view.interactive = interactive
+                .map(|json| serde_json::from_str::<InteractiveView>(&json))
+                .transpose()
+                .map_err(persistence)?;
             if view.operation_id != id || uuid::Uuid::parse_str(&id).is_err() {
                 return Err(persistence("operation identity in the journal is invalid"));
             }
@@ -234,6 +270,7 @@ impl Journal {
                 key,
                 request_digest,
                 config_identity,
+                owner,
                 view,
                 latest_sequence,
                 frames,
@@ -243,22 +280,28 @@ impl Journal {
     }
 
     pub(crate) fn insert(&mut self, operation: &JournalOperation) -> BridgeResult<()> {
-        let view = serde_json::to_string(&operation.view).map_err(persistence)?;
+        let (view, interactive) = stored(&operation.view)?;
+        let owner = operation
+            .owner
+            .as_ref()
+            .map(serde_json::to_string)
+            .transpose()
+            .map_err(persistence)?;
         let transaction = self.connection.transaction().map_err(persistence)?;
         transaction.execute(
-            "INSERT INTO operations(operation_id,idempotency_key,request_digest,config_identity,view_json,latest_sequence) VALUES(?1,?2,?3,?4,?5,0)",
-            params![operation.view.operation_id, operation.key, operation.request_digest, operation.config_identity, view]
+            "INSERT INTO operations(operation_id,idempotency_key,request_digest,config_identity,view_json,latest_sequence,owner_json,interactive_json) VALUES(?1,?2,?3,?4,?5,0,?6,?7)",
+            params![operation.view.operation_id, operation.key, operation.request_digest, operation.config_identity, view, owner, interactive]
         ).map_err(persistence)?;
         transaction.commit().map_err(persistence)
     }
 
     pub(crate) fn update(&mut self, view: &OperationView) -> BridgeResult<()> {
-        let json = serde_json::to_string(view).map_err(persistence)?;
+        let (json, interactive) = stored(view)?;
         let changed = self
             .connection
             .execute(
-                "UPDATE operations SET view_json=?1 WHERE operation_id=?2",
-                params![json, view.operation_id],
+                "UPDATE operations SET view_json=?1, interactive_json=?2 WHERE operation_id=?3",
+                params![json, interactive, view.operation_id],
             )
             .map_err(persistence)?;
         if changed != 1 {
@@ -365,97 +408,22 @@ impl Journal {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use devagotchi_contracts::OperationState;
-
-    #[test]
-    fn journal_reopens_exact_bytes_and_idempotency_evidence() {
-        let directory = tempfile::tempdir().unwrap();
-        let state = devagotchi_ipc::private_test_state(directory.path());
-        let id = uuid::Uuid::new_v4().to_string();
-        {
-            let mut journal = Journal::open(&state).unwrap();
-            journal
-                .insert(&JournalOperation {
-                    key: "retry-key".into(),
-                    request_digest: "request-digest".into(),
-                    config_identity: "configuration-digest".into(),
-                    view: OperationView {
-                        operation_id: id.clone(),
-                        executable: "/usr/bin/test".into(),
-                        args: vec![],
-                        cwd: "/tmp".into(),
-                        deadline_ms: 1000,
-                        state: OperationState::Accepted,
-                        created_at_ms: 1,
-                        updated_at_ms: 1,
-                        exit_code: None,
-                        detail: None,
-                        ownership_scope: "test".into(),
-                        cancellation_requested: false,
-                        output_complete: false,
-                    },
-                    latest_sequence: 0,
-                    frames: VecDeque::new(),
-                })
-                .unwrap();
-            journal
-                .append(
-                    &id,
-                    &JournalFrame {
-                        sequence: 1,
-                        stream: "stdout".into(),
-                        bytes: vec![0, 255, 128],
-                        text: "\0��".into(),
-                    },
-                    1,
-                )
-                .unwrap();
-        }
-        let journal = Journal::open(&state).unwrap();
-        let loaded = journal.load().unwrap();
-        assert_eq!(loaded[0].key, "retry-key");
-        assert_eq!(loaded[0].config_identity, "configuration-digest");
-        assert_eq!(loaded[0].frames[0].bytes, [0, 255, 128]);
-        assert_eq!(loaded[0].latest_sequence, 1);
-        assert!(matches!(loaded[0].view.state, OperationState::Accepted));
-    }
-
-    #[cfg(unix)]
-    #[test]
-    fn journal_rejects_hardlinks_and_sidecar_collisions_without_mutation() {
-        let directory = tempfile::tempdir().unwrap();
-        let target = directory.path().join("unrelated");
-        std::fs::write(&target, b"keep this exact content").unwrap();
-        std::fs::set_permissions(&target, std::fs::Permissions::from_mode(0o600)).unwrap();
-        let state = directory.path().join("state");
-        std::fs::create_dir(&state).unwrap();
-        std::fs::hard_link(&target, state.join("operations.sqlite3")).unwrap();
-        assert!(Journal::open(&state).is_err());
-        assert_eq!(std::fs::read(&target).unwrap(), b"keep this exact content");
-        std::fs::remove_file(state.join("operations.sqlite3")).unwrap();
-        std::os::unix::fs::symlink(&target, state.join("operations.sqlite3-wal")).unwrap();
-        assert!(Journal::open(&state).is_err());
-        assert!(!state.join("operations.sqlite3").exists());
-        assert_eq!(std::fs::read(&target).unwrap(), b"keep this exact content");
-    }
-
-    #[cfg(windows)]
-    #[test]
-    fn journal_rejects_hardlinks_and_sidecar_collisions_without_mutation() {
-        let directory = tempfile::tempdir().unwrap();
-        let target = directory.path().join("unrelated");
-        std::fs::write(&target, b"keep this exact content").unwrap();
-        let state = devagotchi_ipc::private_test_state(directory.path());
-        std::fs::hard_link(&target, state.join("operations.sqlite3")).unwrap();
-        assert!(Journal::open(&state).is_err());
-        assert_eq!(std::fs::read(&target).unwrap(), b"keep this exact content");
-        std::fs::remove_file(state.join("operations.sqlite3")).unwrap();
-        std::fs::hard_link(&target, state.join("operations.sqlite3-wal")).unwrap();
-        assert!(Journal::open(&state).is_err());
-        assert!(!state.join("operations.sqlite3").exists());
-        assert_eq!(std::fs::read(&target).unwrap(), b"keep this exact content");
-    }
+/// A view as the journal stores it: everything but `interactive` in view_json, which an
+/// older broker reads unchanged, and `interactive` beside it.
+fn stored(view: &OperationView) -> BridgeResult<(String, Option<String>)> {
+    let interactive = view
+        .interactive
+        .as_ref()
+        .map(serde_json::to_string)
+        .transpose()
+        .map_err(persistence)?;
+    let mut plain = view.clone();
+    plain.interactive = None;
+    Ok((
+        serde_json::to_string(&plain).map_err(persistence)?,
+        interactive,
+    ))
 }
+
+#[cfg(test)]
+mod tests;

@@ -1362,6 +1362,8 @@ async fn reachable(socket: &str) -> bool {
     let body = devagotchi_contracts::RequestBody::OperationList(devagotchi_contracts::ListInput {
         offset: 0,
         limit: 1,
+        caller: None,
+        scope: None,
     });
     matches!(
         tokio::time::timeout(

@@ -547,6 +547,89 @@
       ],
       "type": "object"
     },
+    "InputMode": {
+      "description": "How an interactive operation takes input.",
+      "oneOf": [
+        {
+          "const": "terminal",
+          "description": "A pseudo-terminal: the program sees a terminal of `cols` by `rows`, echoes what is\ntyped, and Ctrl-C interrupts it. Output is one stream, `terminal`.",
+          "type": "string"
+        },
+        {
+          "const": "pipe",
+          "description": "A plain pipe on stdin; stdout and stderr stay separate. Ctrl-C signals the program.",
+          "type": "string"
+        }
+      ]
+    },
+    "InteractiveInput": {
+      "additionalProperties": false,
+      "properties": {
+        "cols": {
+          "default": 80,
+          "description": "Terminal width, 2..=500 columns (default 80).",
+          "format": "uint16",
+          "maximum": 65535,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "mode": {
+          "$ref": "#/$defs/InputMode",
+          "default": "terminal"
+        },
+        "rows": {
+          "default": 24,
+          "description": "Terminal height, 1..=200 rows (default 24).",
+          "format": "uint16",
+          "maximum": 65535,
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "InteractiveView": {
+      "additionalProperties": false,
+      "description": "An interactive operation's input, as it stands.",
+      "properties": {
+        "cols": {
+          "description": "The terminal's current size (terminal mode).",
+          "format": "uint16",
+          "maximum": 65535,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "input_open": {
+          "description": "Whether `operation_input` can still reach the program.",
+          "type": "boolean"
+        },
+        "mode": {
+          "$ref": "#/$defs/InputMode"
+        },
+        "rows": {
+          "format": "uint16",
+          "maximum": 65535,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "writer_until_ms": {
+          "description": "Until when (milliseconds since the Unix epoch) one client holds the keyboard; others\nwait or take it over. Absent when nobody holds it.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "mode",
+        "cols",
+        "rows",
+        "input_open"
+      ],
+      "type": "object"
+    },
     "ListInput": {
       "additionalProperties": false,
       "properties": {
@@ -561,9 +644,27 @@
           "format": "uint64",
           "minimum": 0,
           "type": "integer"
+        },
+        "scope": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ListScope"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "With a caller: `mine` (the default) lists what this conversation or client started;\n`account` lists what any of its account's conversations started (and, for this\nmachine's own account, everything here). Without a caller (the inspector): everything."
         }
       },
       "type": "object"
+    },
+    "ListScope": {
+      "enum": [
+        "mine",
+        "account"
+      ],
+      "type": "string"
     },
     "OperationState": {
       "enum": [
@@ -589,6 +690,17 @@
         "display_command": {
           "description": "Bounded display preview only. Execute only the exact argv from the canonical request.",
           "type": "string"
+        },
+        "interactive": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/InputMode"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "How an interactive operation takes input; absent for one that takes none."
         },
         "operation_id": {
           "type": "string"
@@ -651,6 +763,17 @@
             "integer",
             "null"
           ]
+        },
+        "interactive": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/InteractiveView"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Present for an interactive operation: how it takes input and whether it still can."
         },
         "operation_id": {
           "type": "string"
@@ -867,6 +990,17 @@
         "idempotency_key": {
           "description": "A caller-created retry key. The same key and inputs return the same operation.",
           "type": "string"
+        },
+        "interactive": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/InteractiveInput"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Keep the program's input open for `operation_input`: on a pseudo-terminal (`terminal`,\nthe default: prompts, REPLs, sign-ins, Ctrl-C) or on a plain pipe (`pipe`). Absent:\nthe program reads nothing (its stdin is the null device), as before."
         }
       },
       "required": [

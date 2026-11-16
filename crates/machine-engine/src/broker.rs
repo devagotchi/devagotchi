@@ -3,8 +3,8 @@
 //! bounded shutdown, and restart recovery. Each admitted operation's process
 //! is run by `crate::execution`. Executable grants are not a sandbox.
 
-use crate::execution::platform::{self, SCOPE};
-use crate::execution::{ExecutionSpec, StopReason, run_job};
+use crate::execution::platform::{self, SCOPE, SCOPE_TERMINAL};
+use crate::execution::{ExecutionSpec, InputRequest, InputStep, StopReason, run_job};
 use crate::journal::{Journal, JournalFrame, JournalOperation};
 use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
 use devagotchi_contracts::*;
@@ -14,7 +14,7 @@ use std::collections::{HashMap, HashSet, VecDeque};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
-use tokio::sync::{Notify, Semaphore, watch};
+use tokio::sync::{Notify, Semaphore, mpsc, oneshot, watch};
 use tokio::time::{Instant, timeout};
 
 const MAX_FRAMES: usize = 1024;
@@ -22,6 +22,14 @@ const MAX_FRAMES: usize = 1024;
 /// are capped well under the broker's 32 connections; ordinary requests always get through.
 const MAX_WAITERS: usize = 16;
 const MAX_PAGE_FRAMES: usize = 64;
+/// How long one client holds the keyboard of an interactive operation after its last input;
+/// another client of the account waits it out or takes over.
+const WRITER_LEASE_MS: u64 = 60_000;
+/// Longest the broker waits for the program to take one input before answering
+/// `input_blocked` (the program is not reading; the input stays queued).
+const INPUT_WAIT: Duration = Duration::from_secs(5);
+/// Input requests queued for one operation at once.
+const INPUT_QUEUE: usize = 8;
 
 fn default_output_limit() -> usize {
     262_144
@@ -67,6 +75,10 @@ struct Operation {
     active: bool,
     control: Option<watch::Sender<Option<StopReason>>>,
     persistence_fault: Option<String>,
+    /// The running job's input, while an interactive operation can still take it.
+    input: Option<mpsc::Sender<InputRequest>>,
+    /// The client holding the keyboard, and until when (ms since the epoch).
+    writer: Option<(String, u64)>,
 }
 
 struct State {
@@ -209,6 +221,10 @@ impl Broker {
         let mut operations = HashMap::new();
         let mut keys = HashMap::new();
         for mut record in recovered {
+            if let Some(interactive) = &mut record.view.interactive {
+                interactive.input_open = false;
+                interactive.writer_until_ms = None;
+            }
             if !record.view.state.terminal() {
                 record.view.state = OperationState::Unknown;
                 record.view.updated_at_ms = now_ms();
@@ -237,6 +253,8 @@ impl Broker {
                     active: false,
                     control: None,
                     persistence_fault: None,
+                    input: None,
+                    writer: None,
                 },
             );
         }
@@ -280,6 +298,12 @@ impl Broker {
                 .operations_changed(input)
                 .await
                 .map(ResponseBody::Revision),
+            RequestBody::OperationInput(input) => {
+                self.input(input).await.map(ResponseBody::InputSent)
+            }
+            RequestBody::OperationResize(input) => {
+                self.resize(input).await.map(ResponseBody::Operation)
+            }
             RequestBody::FileRead(input) => {
                 self.on_files(move |files| files.read(input).map(ResponseBody::File))
                     .await
@@ -400,13 +424,33 @@ impl Broker {
                 "The canonical cwd is outside the configured workspace",
             ));
         }
-        let bytes = serde_json::to_vec(&(
+        if let Some(interactive) = &input.interactive {
+            check_size(interactive.cols, interactive.rows)?;
+            if !platform::supports_interactive(interactive.mode) {
+                return Err(BridgeError::new(
+                    "unsupported_platform",
+                    "Interactive operations are not available on this machine's platform yet",
+                ));
+            }
+            if input.caller.is_none() {
+                return Err(invalid(
+                    "An interactive operation needs a caller to own it: start it through devagotchi mcp or a hub",
+                ));
+            }
+        }
+        let canonical = (
             &self.shared.config_identity,
             path_string(&executable)?,
             &args,
             path_string(&cwd)?,
             input.deadline_ms,
-        ))
+        );
+        // An interactive start is another request than the same command without input; a
+        // plain one keeps the digest it always had.
+        let bytes = match &input.interactive {
+            None => serde_json::to_vec(&canonical),
+            Some(interactive) => serde_json::to_vec(&(canonical, interactive)),
+        }
         .map_err(|error| invalid(error.to_string()))?;
         Ok((
             ExecutionSpec {
@@ -415,6 +459,7 @@ impl Broker {
                 cwd,
                 deadline_ms: input.deadline_ms,
                 account_environment: account,
+                interactive: input.interactive.clone(),
             },
             hex::encode(Sha256::digest(bytes)),
         ))
@@ -482,14 +527,32 @@ impl Broker {
             } else {
                 "Admission committed; the independent broker job owns execution. Executable grants and cwd checks do not sandbox the executable.".into()
             }),
-            ownership_scope: SCOPE.into(),
+            ownership_scope: match &spec.interactive {
+                Some(InteractiveInput {
+                    mode: InputMode::Terminal,
+                    ..
+                }) => SCOPE_TERMINAL,
+                _ => SCOPE,
+            }
+            .into(),
             cancellation_requested: false,
             output_complete: false,
+            interactive: spec
+                .interactive
+                .as_ref()
+                .map(|interactive| InteractiveView {
+                    mode: interactive.mode,
+                    cols: interactive.cols,
+                    rows: interactive.rows,
+                    input_open: true,
+                    writer_until_ms: None,
+                }),
         };
         let record = JournalOperation {
             key: input.idempotency_key.clone(),
             request_digest,
             config_identity: self.shared.config_identity.clone(),
+            owner: input.caller.clone(),
             view: view.clone(),
             latest_sequence: 0,
             frames: VecDeque::new(),
@@ -499,6 +562,13 @@ impl Broker {
             return Err(error);
         }
         let (control, receiver) = watch::channel(None);
+        let (input_sender, input_receiver) = match spec.interactive {
+            Some(_) => {
+                let (sender, receiver) = mpsc::channel(INPUT_QUEUE);
+                (Some(sender), Some(receiver))
+            }
+            None => (None, None),
+        };
         state.keys.insert(input.idempotency_key, id.clone());
         state.operations.insert(
             id.clone(),
@@ -508,6 +578,8 @@ impl Broker {
                 active: true,
                 control: Some(control),
                 persistence_fault: None,
+                input: input_sender,
+                writer: None,
             },
         );
         state.active_count += 1;
@@ -519,7 +591,7 @@ impl Broker {
         let job_id = id.clone();
         let job_shared = shared.clone();
         let job = tokio::spawn(async move {
-            run_job(job_shared, job_id, spec, receiver, deadline).await;
+            run_job(job_shared, job_id, spec, receiver, deadline, input_receiver).await;
         });
         // A panic in a job cannot silently strand an active registry entry.
         tokio::spawn(async move {
@@ -611,10 +683,18 @@ impl Broker {
         if !(1..=64).contains(&input.limit) {
             return Err(invalid("limit must be 1..=64"));
         }
+        let scope = input.scope.unwrap_or_default();
         let state = self.shared.lock();
         let mut operations: Vec<_> = state
             .operations
             .values()
+            .filter(|operation| {
+                visible(
+                    operation.record.owner.as_ref(),
+                    input.caller.as_ref(),
+                    scope,
+                )
+            })
             .map(|operation| &operation.record.view)
             .collect();
         operations.sort_by(|left, right| {
@@ -653,6 +733,10 @@ impl Broker {
                     created_at_ms: operation.created_at_ms,
                     updated_at_ms: operation.updated_at_ms,
                     display_command: display,
+                    interactive: operation
+                        .interactive
+                        .as_ref()
+                        .map(|interactive| interactive.mode),
                 }
             })
             .collect();
@@ -660,6 +744,81 @@ impl Broker {
             operations: summaries,
             next_offset: (end < operations.len()).then_some(end as u64),
         })
+    }
+
+    /// Type into an interactive operation: text, then named keys, delivered in order once
+    /// the caller holds the keyboard (see `claim_writer`).
+    async fn input(&self, input: SendInput) -> BridgeResult<InputSent> {
+        let id = validate_id(&input.operation_id)?;
+        let text = input.text.unwrap_or_default();
+        if text.len() > MAX_INPUT_TEXT_BYTES || input.keys.len() > MAX_INPUT_KEYS {
+            return Err(invalid(format!(
+                "text is at most {MAX_INPUT_TEXT_BYTES} bytes and keys at most {MAX_INPUT_KEYS}"
+            )));
+        }
+        if text.is_empty() && input.keys.is_empty() {
+            return Err(invalid("Give text, keys, or both"));
+        }
+        let caller = input.caller.ok_or_else(no_caller)?;
+        let (sender, steps, cursor) = {
+            let mut state = self.shared.lock();
+            let operation = state.operations.get_mut(&id).ok_or_else(not_found)?;
+            let mode = claim_writer(operation, &caller, input.take_over)?;
+            let steps = input_steps(mode, &text, &input.keys)?;
+            let sender = operation.input.clone().ok_or_else(input_closed)?;
+            (sender, steps, operation.record.latest_sequence)
+        };
+        self.shared.output_changed();
+        let closes = steps.contains(&InputStep::Close);
+        deliver(&sender, steps).await?;
+        if closes {
+            self.shared.input_closed(&id);
+        }
+        Ok(InputSent {
+            operation: self.get(&id)?,
+            cursor,
+        })
+    }
+
+    /// Resize an interactive operation's terminal; its program gets SIGWINCH.
+    async fn resize(&self, input: ResizeInput) -> BridgeResult<OperationView> {
+        let id = validate_id(&input.operation_id)?;
+        check_size(input.cols, input.rows)?;
+        let caller = input.caller.ok_or_else(no_caller)?;
+        let sender = {
+            let mut state = self.shared.lock();
+            let operation = state.operations.get_mut(&id).ok_or_else(not_found)?;
+            if claim_writer(operation, &caller, input.take_over)? != InputMode::Terminal {
+                return Err(BridgeError::new(
+                    "no_terminal",
+                    "This operation reads a pipe, not a terminal; there is nothing to resize",
+                ));
+            }
+            operation.input.clone().ok_or_else(input_closed)?
+        };
+        deliver(
+            &sender,
+            vec![InputStep::Resize {
+                cols: input.cols,
+                rows: input.rows,
+            }],
+        )
+        .await?;
+        let mut state = self.shared.lock();
+        let operation = state.operations.get_mut(&id).ok_or_else(not_found)?;
+        if let Some(interactive) = &mut operation.record.view.interactive {
+            interactive.cols = input.cols;
+            interactive.rows = input.rows;
+        }
+        operation.record.view.updated_at_ms = now_ms();
+        let view = operation.record.view.clone();
+        if let Err(error) = state.journal.update(&view) {
+            state.fault(error.clone());
+            return Err(error);
+        }
+        drop(state);
+        self.shared.output_changed();
+        Ok(view)
     }
 
     fn cancel(&self, id: &str) -> BridgeResult<OperationView> {
@@ -809,6 +968,192 @@ fn validate_id(id: &str) -> BridgeResult<String> {
         .map_err(|_| invalid("operation_id must be a valid UUID"))
 }
 
+fn check_size(cols: u16, rows: u16) -> BridgeResult<()> {
+    if !(2..=500).contains(&cols) || !(1..=200).contains(&rows) {
+        return Err(invalid("cols must be 2..=500 and rows 1..=200"));
+    }
+    Ok(())
+}
+
+fn no_caller() -> BridgeError {
+    invalid("Input needs a caller: send it through devagotchi mcp or a hub")
+}
+
+fn input_closed() -> BridgeError {
+    BridgeError::new(
+        "input_closed",
+        "This operation no longer takes input: it ended, or its input was closed",
+    )
+}
+
+/// Whether a list for `caller` in `scope` shows an operation `owner` started. Without a
+/// caller (the inspector, an older client) everything shows. An operation started without
+/// an owner belongs to this machine's own account.
+fn visible(owner: Option<&Caller>, caller: Option<&Caller>, scope: ListScope) -> bool {
+    let Some(caller) = caller else {
+        return true;
+    };
+    match (owner, scope) {
+        (Some(owner), ListScope::Mine) => owner == caller,
+        (Some(owner), ListScope::Account) => owner.account == caller.account,
+        (None, ListScope::Mine) => false,
+        (None, ListScope::Account) => caller.account == LOCAL_ACCOUNT,
+    }
+}
+
+/// Give `caller` the keyboard of an interactive operation, or say why not. Only its own
+/// account ever drives it; another conversation or client of that account asks explicitly
+/// (`take_over`); and while one client holds the keyboard (its last input within the lease)
+/// no other types into it unless it takes over, so keystrokes never interleave.
+fn claim_writer(
+    operation: &mut Operation,
+    caller: &Caller,
+    take_over: bool,
+) -> BridgeResult<InputMode> {
+    let Some(interactive) = &operation.record.view.interactive else {
+        return Err(BridgeError::new(
+            "not_interactive",
+            "This operation takes no input; start it with interactive to type into it",
+        ));
+    };
+    let Some(owner) = &operation.record.owner else {
+        return Err(input_closed());
+    };
+    if owner.account != caller.account {
+        return Err(BridgeError::new(
+            "not_your_operation",
+            "This operation belongs to another account; only that account can drive it",
+        ));
+    }
+    if !interactive.input_open || operation.input.is_none() {
+        return Err(input_closed());
+    }
+    if owner.client != caller.client && !take_over {
+        return Err(BridgeError::new(
+            "not_your_session",
+            "Another conversation or client of your account started this operation. To drive it anyway, call again with take_over: true",
+        ));
+    }
+    let now = now_ms();
+    if let Some((holder, until)) = &operation.writer
+        && holder != &caller.client
+        && *until > now
+        && !take_over
+    {
+        return Err(BridgeError::new(
+            "writer_busy",
+            format!(
+                "Another client of your account is typing into this operation; its hold ends in {} s. Wait, or call again with take_over: true",
+                (until - now).div_ceil(1000)
+            ),
+        ));
+    }
+    let mode = interactive.mode;
+    operation.writer = Some((caller.client.clone(), now + WRITER_LEASE_MS));
+    if let Some(interactive) = &mut operation.record.view.interactive {
+        interactive.writer_until_ms = Some(now + WRITER_LEASE_MS);
+    }
+    Ok(mode)
+}
+
+/// What a key sends on a terminal (an xterm in its normal cursor mode).
+fn key_bytes(key: Key) -> &'static [u8] {
+    match key {
+        Key::Enter => b"\r",
+        Key::Tab => b"\t",
+        Key::Backspace => b"\x7f",
+        Key::Escape => b"\x1b",
+        Key::Up => b"\x1b[A",
+        Key::Down => b"\x1b[B",
+        Key::Right => b"\x1b[C",
+        Key::Left => b"\x1b[D",
+        Key::Home => b"\x1b[H",
+        Key::End => b"\x1b[F",
+        Key::PageUp => b"\x1b[5~",
+        Key::PageDown => b"\x1b[6~",
+        Key::Delete => b"\x1b[3~",
+        Key::Space => b" ",
+        Key::CtrlC => b"\x03",
+        Key::CtrlD => b"\x04",
+        Key::CtrlZ => b"\x1a",
+        Key::CtrlL => b"\x0c",
+        Key::CtrlU => b"\x15",
+        Key::CtrlBackslash => b"\x1c",
+    }
+}
+
+/// The steps one input takes. On a terminal everything is bytes and the terminal does the
+/// rest (Ctrl-C becomes SIGINT for the foreground job). On a pipe there is no terminal:
+/// Enter is a newline, Ctrl-C and Ctrl-\\ are signals, Ctrl-D closes the input, and
+/// Ctrl-Z, which would stop a program nothing can continue, is refused.
+fn input_steps(mode: InputMode, text: &str, keys: &[Key]) -> BridgeResult<Vec<InputStep>> {
+    let mut steps = Vec::new();
+    let mut bytes = text.as_bytes().to_vec();
+    for &key in keys {
+        let step = match (mode, key) {
+            (InputMode::Terminal, key) => {
+                bytes.extend_from_slice(key_bytes(key));
+                continue;
+            }
+            (InputMode::Pipe, Key::Enter) => {
+                bytes.push(b'\n');
+                continue;
+            }
+            (InputMode::Pipe, Key::CtrlC) => InputStep::Interrupt,
+            (InputMode::Pipe, Key::CtrlBackslash) => InputStep::Quit,
+            (InputMode::Pipe, Key::CtrlD) => InputStep::Close,
+            (InputMode::Pipe, Key::CtrlZ) => {
+                return Err(BridgeError::new(
+                    "no_terminal",
+                    "ctrl_z needs a terminal: on a pipe it would stop the program with nothing to continue it",
+                ));
+            }
+            (InputMode::Pipe, key) => {
+                bytes.extend_from_slice(key_bytes(key));
+                continue;
+            }
+        };
+        if !bytes.is_empty() {
+            steps.push(InputStep::Bytes(std::mem::take(&mut bytes)));
+        }
+        steps.push(step);
+    }
+    if !bytes.is_empty() {
+        steps.push(InputStep::Bytes(bytes));
+    }
+    if let Some(position) = steps.iter().position(|step| *step == InputStep::Close)
+        && position + 1 != steps.len()
+    {
+        return Err(invalid(
+            "Nothing can follow ctrl_d on a pipe: it closes the input",
+        ));
+    }
+    Ok(steps)
+}
+
+/// Hand steps to the running job and wait (bounded) until the program has them.
+async fn deliver(sender: &mpsc::Sender<InputRequest>, steps: Vec<InputStep>) -> BridgeResult<()> {
+    let (reply, answer) = oneshot::channel();
+    match sender.try_send(InputRequest { steps, reply }) {
+        Ok(()) => {}
+        Err(mpsc::error::TrySendError::Full(_)) => {
+            return Err(BridgeError::new(
+                "input_busy",
+                "Earlier input to this operation is still waiting for the program to read it",
+            ));
+        }
+        Err(mpsc::error::TrySendError::Closed(_)) => return Err(input_closed()),
+    }
+    match timeout(INPUT_WAIT, answer).await {
+        Ok(Ok(result)) => result,
+        Ok(Err(_)) => Err(input_closed()),
+        Err(_) => Err(BridgeError::new(
+            "input_blocked",
+            "The program has not read its input for five seconds; it stays queued and is delivered when it reads",
+        )),
+    }
+}
+
 impl State {
     /// Make room for one admission by retiring the operation that finished longest ago.
     /// A retired operation's ID is no longer found and its key is never run again.
@@ -885,6 +1230,31 @@ impl Shared {
             .send_modify(|revision| *revision = revision.wrapping_add(1));
     }
 
+    /// An interactive operation takes no more input: it is ending, or its pipe was closed.
+    pub(crate) fn input_closed(&self, id: &str) {
+        let mut state = self.lock();
+        let Some(operation) = state.operations.get_mut(id) else {
+            return;
+        };
+        operation.input = None;
+        operation.writer = None;
+        let Some(interactive) = &mut operation.record.view.interactive else {
+            return;
+        };
+        if !interactive.input_open {
+            return;
+        }
+        interactive.input_open = false;
+        interactive.writer_until_ms = None;
+        operation.record.view.updated_at_ms = now_ms();
+        let view = operation.record.view.clone();
+        if let Err(error) = state.journal.update(&view) {
+            state.fault(error);
+        }
+        drop(state);
+        self.output_changed();
+    }
+
     /// An operation has new output.
     fn output_changed(&self) {
         self.changes
@@ -901,14 +1271,15 @@ impl Shared {
         }
         operation.record.view.state = OperationState::Running;
         operation.record.view.updated_at_ms = now_ms();
-        operation.record.view.detail = Some(
-            if self.config.exec_policy == ExecPolicy::Account {
-                platform::RUNNING_DETAIL_ACCOUNT
-            } else {
-                platform::RUNNING_DETAIL
-            }
-            .into(),
-        );
+        operation.record.view.detail = Some(platform::running_detail(
+            self.config.exec_policy == ExecPolicy::Account,
+            operation
+                .record
+                .view
+                .interactive
+                .as_ref()
+                .map(|interactive| interactive.mode),
+        ));
         let view = operation.record.view.clone();
         if let Err(error) = state.journal.update(&view) {
             state.fault(error);
@@ -998,6 +1369,10 @@ impl Shared {
         operation.record.view.exit_code = exit_code;
         operation.record.view.output_complete =
             output_complete && operation.persistence_fault.is_none();
+        if let Some(interactive) = &mut operation.record.view.interactive {
+            interactive.input_open = false;
+            interactive.writer_until_ms = None;
+        }
         operation.record.view.detail = Some(match &operation.persistence_fault {
             Some(error) => format!(
                 "{detail} Critical persistence failure remains visible: {error}; durable completion cannot be certified."
@@ -1014,6 +1389,8 @@ impl Shared {
             .expect("Operation remains in this locked registry");
         operation.active = false;
         operation.control = None;
+        operation.input = None;
+        operation.writer = None;
         state.active_count = state.active_count.saturating_sub(1);
         drop(state);
         self.settlement.notify_waiters();
@@ -1022,691 +1399,4 @@ impl Shared {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use tokio::time::sleep;
-
-    /// An executable that exits successfully without arguments or input.
-    fn test_executable() -> PathBuf {
-        #[cfg(unix)]
-        let executable = dunce::canonicalize("/usr/bin/true").unwrap();
-        #[cfg(windows)]
-        let executable = system32("hostname.exe");
-        executable
-    }
-
-    #[cfg(windows)]
-    fn system32(name: &str) -> PathBuf {
-        let root = std::env::var_os("SystemRoot").expect("SystemRoot is set on Windows");
-        dunce::canonicalize(Path::new(&root).join("System32").join(name)).unwrap()
-    }
-
-    /// The platform shell and the argv that makes it run `script`.
-    fn shell(script: &[&str]) -> (PathBuf, Vec<String>) {
-        #[cfg(unix)]
-        let (shell, mut args) = (
-            dunce::canonicalize("/bin/sh").unwrap(),
-            vec!["-c".to_owned()],
-        );
-        #[cfg(windows)]
-        let (shell, mut args) = (system32("cmd.exe"), vec!["/d".to_owned(), "/c".to_owned()]);
-        #[cfg(unix)]
-        args.push(script.join(" "));
-        #[cfg(windows)]
-        args.extend(script.iter().map(|part| (*part).to_owned()));
-        (shell, args)
-    }
-
-    fn open_broker(directory: &tempfile::TempDir, grants: &[&Path]) -> Arc<Broker> {
-        let config = BrokerConfig {
-            workspace: directory.path().display().to_string(),
-            allowed_executables: grants
-                .iter()
-                .map(|grant| grant.display().to_string())
-                .collect(),
-            output_limit_bytes: 65_536,
-            max_operations: 8,
-            max_concurrent: 4,
-            exec_policy: ExecPolicy::Granted,
-        };
-        Broker::open(
-            config,
-            &devagotchi_ipc::private_test_state(directory.path()),
-        )
-        .unwrap()
-    }
-
-    fn start(
-        broker: &Broker,
-        key: &str,
-        executable: &Path,
-        args: Vec<String>,
-        deadline_ms: u64,
-    ) -> String {
-        broker
-            .start(StartInput {
-                idempotency_key: key.into(),
-                executable: executable.display().to_string(),
-                args,
-                command: None,
-                cwd: None,
-                deadline_ms,
-            })
-            .unwrap()
-            .operation
-            .operation_id
-    }
-
-    async fn settle(broker: &Broker, id: &str) -> OperationView {
-        settle_within(broker, id, 20).await
-    }
-
-    /// Windows PowerShell's first start on a fresh CI image can take tens of seconds.
-    /// Every test that settles an operation does it with the broker's own wait.
-    async fn settle_within(broker: &Broker, id: &str, seconds: u64) -> OperationView {
-        let deadline = Instant::now() + Duration::from_secs(seconds);
-        loop {
-            let left = deadline
-                .saturating_duration_since(Instant::now())
-                .as_millis() as u64;
-            let view = broker
-                .wait(WaitInput {
-                    operation_id: id.into(),
-                    output_after: None,
-                    timeout_ms: left.clamp(1, MAX_WAIT_MS),
-                })
-                .await
-                .unwrap();
-            if view.state.terminal() {
-                return view;
-            }
-            assert!(
-                Instant::now() < deadline,
-                "operation did not settle: {view:?}"
-            );
-        }
-    }
-
-    fn wait_for(id: &str, output_after: Option<u64>, timeout_ms: u64) -> WaitInput {
-        WaitInput {
-            operation_id: id.into(),
-            output_after,
-            timeout_ms,
-        }
-    }
-
-    /// A shell line that prints `first`, pauses about three seconds, then prints `second`.
-    fn pause_between_lines() -> (PathBuf, Vec<String>) {
-        #[cfg(unix)]
-        return shell(&["echo first;", "sleep 3;", "echo second"]);
-        // By full path: the operation's environment is cleared, so cmd.exe has no PATH.
-        #[cfg(windows)]
-        return shell(&[
-            "echo",
-            "first&",
-            &system32("PING.EXE").display().to_string(),
-            "-n",
-            "4",
-            "127.0.0.1",
-            ">nul&",
-            "echo",
-            "second",
-        ]);
-    }
-
-    #[tokio::test]
-    async fn a_wait_answers_when_the_operation_settles() {
-        let directory = tempfile::tempdir().unwrap();
-        let (shell, args) = pause_between_lines();
-        let broker = open_broker(&directory, &[&shell]);
-        let id = start(&broker, "settles", &shell, args, 20_000);
-        let began = Instant::now();
-        let view = broker.wait(wait_for(&id, None, MAX_WAIT_MS)).await.unwrap();
-        assert!(matches!(view.state, OperationState::Succeeded), "{view:?}");
-        // Answered when the work ended, not at the end of the 50 s wait.
-        assert!(
-            began.elapsed() < Duration::from_secs(30),
-            "{:?}",
-            began.elapsed()
-        );
-        assert!(output_text(&broker, &id).contains("second"));
-        broker.shutdown().await;
-    }
-
-    #[tokio::test]
-    async fn a_wait_with_output_after_wakes_on_new_output() {
-        let directory = tempfile::tempdir().unwrap();
-        let (shell, args) = pause_between_lines();
-        let broker = open_broker(&directory, &[&shell]);
-        let id = start(&broker, "output", &shell, args, 20_000);
-        let first = broker
-            .wait(wait_for(&id, Some(0), MAX_WAIT_MS))
-            .await
-            .unwrap();
-        // Woken by `first`, while the command still pauses before `second`.
-        assert!(!first.state.terminal(), "{first:?}");
-        assert!(output_text(&broker, &id).contains("first"));
-        let view = settle(&broker, &id).await;
-        assert!(matches!(view.state, OperationState::Succeeded), "{view:?}");
-        broker.shutdown().await;
-    }
-
-    #[tokio::test]
-    async fn a_wait_that_times_out_returns_the_operation_unchanged() {
-        let directory = tempfile::tempdir().unwrap();
-        let (shell, args) = pause_between_lines();
-        let broker = open_broker(&directory, &[&shell]);
-        let id = start(&broker, "times-out", &shell, args, 20_000);
-        let began = Instant::now();
-        let view = broker.wait(wait_for(&id, None, 300)).await.unwrap();
-        assert!(!view.state.terminal(), "{view:?}");
-        assert!(began.elapsed() >= Duration::from_millis(300));
-        for bad in [0, MAX_WAIT_MS + 1] {
-            let error = broker.wait(wait_for(&id, None, bad)).await.unwrap_err();
-            assert_eq!(error.code, "invalid_request", "{error:?}");
-        }
-        let unknown = uuid::Uuid::new_v4().to_string();
-        let missing = broker
-            .wait(wait_for(&unknown, None, 300))
-            .await
-            .unwrap_err();
-        assert_eq!(missing.code, "not_found", "{missing:?}");
-        settle(&broker, &id).await;
-        broker.shutdown().await;
-    }
-
-    #[tokio::test]
-    async fn the_operations_revision_moves_on_admission_and_state_not_on_output() {
-        let directory = tempfile::tempdir().unwrap();
-        let (shell, args) = pause_between_lines();
-        let broker = open_broker(&directory, &[&shell]);
-        let changes = |after: Option<u64>, timeout_ms: u64| {
-            let broker = Arc::clone(&broker);
-            async move {
-                broker
-                    .operations_changed(ChangesInput {
-                        after_revision: after,
-                        timeout_ms,
-                    })
-                    .await
-                    .unwrap()
-                    .revision
-            }
-        };
-        let quiet = changes(None, 1).await;
-        let began = Instant::now();
-        assert_eq!(changes(Some(quiet), 300).await, quiet, "nothing happened");
-        assert!(began.elapsed() >= Duration::from_millis(300));
-        let id = start(&broker, "roster", &shell, args, 20_000);
-        let admitted = changes(Some(quiet), MAX_WAIT_MS).await;
-        assert_ne!(admitted, quiet, "an admission changes the list");
-        // Woken by `first`; the command then pauses without changing state.
-        broker
-            .wait(wait_for(&id, Some(0), MAX_WAIT_MS))
-            .await
-            .unwrap();
-        let printing = changes(None, 1).await;
-        assert_eq!(
-            changes(Some(printing), 1_000).await,
-            printing,
-            "output alone is not a change"
-        );
-        settle(&broker, &id).await;
-        assert_ne!(
-            changes(Some(printing), MAX_WAIT_MS).await,
-            printing,
-            "settling is a change"
-        );
-        // A restarted broker counts from zero again: a stale revision answers at once.
-        let began = Instant::now();
-        changes(Some(u64::MAX), MAX_WAIT_MS).await;
-        assert!(began.elapsed() < Duration::from_secs(5));
-        broker.shutdown().await;
-    }
-
-    #[tokio::test]
-    async fn waits_are_capped_and_a_cancellation_wakes_every_waiter() {
-        let directory = tempfile::tempdir().unwrap();
-        let (shell, args) = pause_between_lines();
-        let broker = open_broker(&directory, &[&shell]);
-        let id = start(&broker, "many-waiters", &shell, args, 20_000);
-        let mut waiters = tokio::task::JoinSet::new();
-        for _ in 0..MAX_WAITERS {
-            let (broker, id) = (Arc::clone(&broker), id.clone());
-            waiters.spawn(async move { broker.wait(wait_for(&id, None, MAX_WAIT_MS)).await });
-        }
-        while broker.shared.waiters.available_permits() > 0 {
-            sleep(Duration::from_millis(10)).await;
-        }
-        let busy = broker.wait(wait_for(&id, None, 1_000)).await.unwrap_err();
-        assert_eq!(busy.code, "wait_busy");
-        let began = Instant::now();
-        broker.cancel(&id).unwrap();
-        while let Some(answer) = waiters.join_next().await {
-            let view = answer.unwrap().unwrap();
-            assert!(matches!(view.state, OperationState::Cancelled), "{view:?}");
-        }
-        assert!(
-            began.elapsed() < Duration::from_secs(20),
-            "{:?}",
-            began.elapsed()
-        );
-        broker.shutdown().await;
-    }
-
-    fn output_text(broker: &Broker, id: &str) -> String {
-        let page = broker
-            .read(ReadInput {
-                operation_id: id.into(),
-                cursor: 0,
-                max_bytes: MAX_OUTPUT_PAGE_BYTES,
-            })
-            .unwrap();
-        page.frames
-            .iter()
-            .map(|frame| frame.text.as_str())
-            .collect()
-    }
-
-    #[tokio::test]
-    async fn exit_status_and_output_are_recorded() {
-        let directory = tempfile::tempdir().unwrap();
-        #[cfg(unix)]
-        let (shell, args) = shell(&["echo devagotchi;", "exit 3"]);
-        #[cfg(windows)]
-        let (shell, args) = shell(&["echo", "devagotchi&", "exit", "3"]);
-        let broker = open_broker(&directory, &[&shell]);
-        let id = start(&broker, "exit-status", &shell, args, 20_000);
-        let view = settle(&broker, &id).await;
-        assert!(matches!(view.state, OperationState::Failed), "{view:?}");
-        assert_eq!(view.exit_code, Some(3));
-        assert!(view.output_complete);
-        assert_eq!(view.ownership_scope, SCOPE);
-        assert!(output_text(&broker, &id).contains("devagotchi"));
-        broker.shutdown().await;
-    }
-
-    fn account_broker(directory: &tempfile::TempDir) -> Arc<Broker> {
-        let config = BrokerConfig {
-            workspace: directory.path().display().to_string(),
-            allowed_executables: vec![],
-            exec_policy: ExecPolicy::Account,
-            output_limit_bytes: 65_536,
-            max_operations: 8,
-            max_concurrent: 4,
-        };
-        Broker::open(
-            config,
-            &devagotchi_ipc::private_test_state(directory.path()),
-        )
-        .unwrap()
-    }
-
-    fn command_line(key: &str, line: &str, cwd: Option<String>) -> StartInput {
-        StartInput {
-            idempotency_key: key.into(),
-            executable: String::new(),
-            args: vec![],
-            command: Some(line.into()),
-            cwd,
-            deadline_ms: 120_000,
-        }
-    }
-
-    fn limited_config(directory: &tempfile::TempDir, grants: &[&Path], max: usize) -> BrokerConfig {
-        BrokerConfig {
-            workspace: directory.path().display().to_string(),
-            allowed_executables: grants.iter().map(|g| g.display().to_string()).collect(),
-            output_limit_bytes: 8192,
-            max_operations: max,
-            max_concurrent: 1,
-            exec_policy: ExecPolicy::Granted,
-        }
-    }
-
-    fn input(key: &str, executable: &Path, args: Vec<String>) -> StartInput {
-        StartInput {
-            idempotency_key: key.into(),
-            executable: executable.display().to_string(),
-            args,
-            command: None,
-            cwd: None,
-            deadline_ms: 5_000,
-        }
-    }
-
-    #[tokio::test]
-    async fn the_account_policy_runs_a_command_line_in_the_machines_shell() {
-        let directory = tempfile::tempdir().unwrap();
-        let broker = account_broker(&directory);
-        #[cfg(unix)]
-        let line = "echo $((6*7)); test -n \"$HOME\" && echo home-set; exit 3";
-        #[cfg(windows)]
-        let line = "Write-Output (6*7); if ($env:PATHEXT) { Write-Output 'pathext-set' }; exit 3";
-        // Outside the workspace: the account's own permissions are the boundary.
-        let elsewhere = tempfile::tempdir().unwrap();
-        let id = broker
-            .start(command_line(
-                "line",
-                line,
-                Some(elsewhere.path().display().to_string()),
-            ))
-            .unwrap()
-            .operation
-            .operation_id;
-        let view = settle_within(&broker, &id, 120).await;
-        assert_eq!(view.exit_code, Some(3), "{view:?}");
-        let output = output_text(&broker, &id);
-        assert!(output.contains("42"), "{output}");
-        // The account's environment reaches the command (a cleared one would not).
-        #[cfg(unix)]
-        assert!(output.contains("home-set"), "{output}");
-        #[cfg(windows)]
-        assert!(output.contains("pathext-set"), "{output}");
-        // A program nobody granted runs too.
-        let program = start(&broker, "program", &test_executable(), vec![], 20_000);
-        let view = settle(&broker, &program).await;
-        assert!(matches!(view.state, OperationState::Succeeded), "{view:?}");
-        broker.shutdown().await;
-    }
-
-    #[tokio::test]
-    async fn finished_operations_are_retired_so_admission_never_runs_out() {
-        let directory = tempfile::tempdir().unwrap();
-        let executable = test_executable();
-        let config = limited_config(&directory, &[&executable], 2);
-        let state = devagotchi_ipc::private_test_state(directory.path());
-        let broker = Broker::open(config.clone(), &state).unwrap();
-        // More operations than the history holds: every one is admitted.
-        let mut ids = Vec::new();
-        for n in 0..5 {
-            let id = start(&broker, &format!("key-{n}"), &executable, vec![], 5_000);
-            settle(&broker, &id).await;
-            ids.push(id);
-        }
-        // The two newest remain; the older ones are retired and no longer found.
-        assert_eq!(broker.get(&ids[0]).unwrap_err().code, "not_found");
-        assert!(broker.get(&ids[3]).is_ok() && broker.get(&ids[4]).is_ok());
-        // A retired key is refused, never run again; a held key still replays.
-        let retired = broker
-            .start(input("key-0", &executable, vec![]))
-            .unwrap_err();
-        assert_eq!(retired.code, "idempotency_key_retired");
-        let replay = broker.start(input("key-4", &executable, vec![])).unwrap();
-        assert!(replay.replayed);
-        broker.shutdown().await;
-        // Both survive a restart.
-        let broker = Broker::open(config, &state).unwrap();
-        let retired = broker
-            .start(input("key-1", &executable, vec![]))
-            .unwrap_err();
-        assert_eq!(retired.code, "idempotency_key_retired");
-        assert_eq!(broker.get(&ids[1]).unwrap_err().code, "not_found");
-        assert!(broker.get(&ids[4]).is_ok());
-        broker.shutdown().await;
-    }
-
-    #[tokio::test]
-    async fn only_the_account_policy_takes_a_command_line_and_never_with_a_program() {
-        let directory = tempfile::tempdir().unwrap();
-        let granted = open_broker(&directory, &[&test_executable()]);
-        let refused = granted
-            .start(command_line("line", "echo hi", None))
-            .unwrap_err();
-        assert_eq!(refused.code, "command_not_allowed");
-        granted.shutdown().await;
-        let other = tempfile::tempdir().unwrap();
-        let account = account_broker(&other);
-        let mut both = command_line("both", "echo hi", None);
-        both.executable = test_executable().display().to_string();
-        assert_eq!(account.start(both).unwrap_err().code, "invalid_request");
-        let blank = account
-            .start(command_line("blank", "  ", None))
-            .unwrap_err();
-        assert_eq!(blank.code, "invalid_request");
-        account.shutdown().await;
-    }
-
-    #[tokio::test]
-    async fn admission_waits_only_while_every_held_operation_runs() {
-        let directory = tempfile::tempdir().unwrap();
-        #[cfg(unix)]
-        let (long, args) = shell(&["/bin/sleep 30"]);
-        #[cfg(windows)]
-        let (long, args) = (
-            system32("PING.EXE"),
-            vec!["-n".to_owned(), "30".to_owned(), "127.0.0.1".to_owned()],
-        );
-        let quick = test_executable();
-        let broker = Broker::open(
-            limited_config(&directory, &[&long, &quick], 1),
-            &devagotchi_ipc::private_test_state(directory.path()),
-        )
-        .unwrap();
-        let running = start(&broker, "long", &long, args, 60_000);
-        let refused = broker.start(input("quick", &quick, vec![])).unwrap_err();
-        assert_eq!(refused.code, "operation_limit_reached");
-        broker.cancel(&running).unwrap();
-        settle(&broker, &running).await;
-        let admitted = broker.start(input("quick", &quick, vec![])).unwrap();
-        settle(&broker, &admitted.operation.operation_id).await;
-        broker.shutdown().await;
-    }
-
-    #[tokio::test]
-    async fn owned_descendants_keep_the_operation_running_until_cancelled() {
-        let directory = tempfile::tempdir().unwrap();
-        // The root exits at once and leaves one descendant running.
-        #[cfg(unix)]
-        let (shell, args) = shell(&["/bin/sleep 30 &", "exit 0"]);
-        #[cfg(windows)]
-        let ping = system32("PING.EXE");
-        #[cfg(windows)]
-        let (shell, args) = shell(&[
-            "start",
-            "/b",
-            "",
-            ping.to_str().unwrap(),
-            "-n",
-            "30",
-            "127.0.0.1",
-        ]);
-        let broker = open_broker(&directory, &[&shell]);
-        let id = start(&broker, "descendant", &shell, args, 60_000);
-        sleep(Duration::from_millis(1500)).await;
-        let view = broker.get(&id).unwrap();
-        assert!(
-            matches!(view.state, OperationState::Running),
-            "a descendant outlived its root: {view:?}"
-        );
-        broker.cancel(&id).unwrap();
-        let view = settle(&broker, &id).await;
-        assert!(matches!(view.state, OperationState::Cancelled), "{view:?}");
-        assert!(view.cancellation_requested);
-        assert!(view.output_complete, "{view:?}");
-        assert!(
-            view.detail
-                .unwrap()
-                .contains(platform::TERMINATION_VERIFIED_DETAIL)
-        );
-        broker.shutdown().await;
-    }
-
-    #[tokio::test]
-    async fn the_deadline_ends_the_owned_tree() {
-        let directory = tempfile::tempdir().unwrap();
-        #[cfg(unix)]
-        let (shell, args) = shell(&["/bin/sleep 30"]);
-        #[cfg(windows)]
-        let (shell, args) = (
-            system32("PING.EXE"),
-            vec!["-n".to_owned(), "30".to_owned(), "127.0.0.1".to_owned()],
-        );
-        let broker = open_broker(&directory, &[&shell]);
-        let id = start(&broker, "deadline", &shell, args, 500);
-        let view = settle(&broker, &id).await;
-        assert!(matches!(view.state, OperationState::TimedOut), "{view:?}");
-        assert!(
-            view.detail
-                .unwrap()
-                .contains(platform::TERMINATION_VERIFIED_DETAIL)
-        );
-        broker.shutdown().await;
-    }
-
-    #[cfg(windows)]
-    #[test]
-    fn batch_files_are_not_executable_grants() {
-        let directory = tempfile::tempdir().unwrap();
-        let script = directory.path().join("grant.cmd");
-        std::fs::write(&script, b"@echo off\r\n").unwrap();
-        let config = BrokerConfig {
-            workspace: directory.path().display().to_string(),
-            allowed_executables: vec![script.display().to_string()],
-            output_limit_bytes: 8192,
-            max_operations: 1,
-            max_concurrent: 1,
-            exec_policy: ExecPolicy::Granted,
-        };
-        let error = Broker::open(
-            config,
-            &devagotchi_ipc::private_test_state(directory.path()),
-        )
-        .err()
-        .unwrap();
-        assert_eq!(error.code, "invalid_config");
-        assert!(error.message.contains("cmd.exe"));
-    }
-
-    #[test]
-    fn unknown_config_fields_and_unsafe_limits_fail_closed() {
-        assert!(
-            serde_json::from_str::<BrokerConfig>(
-                r#"{"workspace":"/tmp","allowed_executables":[],"unexpected":true}"#
-            )
-            .is_err()
-        );
-        let directory = tempfile::tempdir().unwrap();
-        let config = BrokerConfig {
-            workspace: directory.path().display().to_string(),
-            allowed_executables: vec![],
-            output_limit_bytes: 8192,
-            max_operations: 1,
-            max_concurrent: 2,
-            exec_policy: ExecPolicy::Granted,
-        };
-        assert!(Broker::open(config, directory.path()).is_err());
-    }
-
-    #[tokio::test]
-    async fn critical_journal_failure_is_visible_and_blocks_new_execution() {
-        let directory = tempfile::tempdir().unwrap();
-        let executable = test_executable();
-        let config = BrokerConfig {
-            workspace: directory.path().display().to_string(),
-            allowed_executables: vec![executable.display().to_string()],
-            output_limit_bytes: 8192,
-            max_operations: 4,
-            max_concurrent: 2,
-            exec_policy: ExecPolicy::Granted,
-        };
-        let state = devagotchi_ipc::private_test_state(directory.path());
-        let broker = Broker::open(config, &state).unwrap();
-        let injection = rusqlite::Connection::open(state.join("operations.sqlite3")).unwrap();
-        injection.execute_batch("CREATE TRIGGER injected_failure BEFORE UPDATE ON operations BEGIN SELECT RAISE(FAIL, 'test persistence failure'); END;").unwrap();
-        let input = StartInput {
-            idempotency_key: "before-fault".into(),
-            executable: executable.display().to_string(),
-            args: vec![],
-            command: None,
-            cwd: None,
-            deadline_ms: 3000,
-        };
-        let start = broker.start(input.clone()).unwrap();
-        let deadline = Instant::now() + Duration::from_secs(3);
-        loop {
-            let operation = broker.get(&start.operation.operation_id).unwrap();
-            if matches!(operation.state, OperationState::Unknown) {
-                break;
-            }
-            assert!(
-                Instant::now() < deadline,
-                "Persistence failure must become visible"
-            );
-            sleep(Duration::from_millis(10)).await;
-        }
-        let mut second = input;
-        second.idempotency_key = "after-fault".into();
-        assert_eq!(broker.start(second).unwrap_err().code, "persistence_error");
-        broker.shutdown().await;
-        let operation = broker.get(&start.operation.operation_id).unwrap();
-        assert!(matches!(operation.state, OperationState::Unknown));
-        assert!(!operation.output_complete);
-        assert!(operation.detail.unwrap().contains("persistence"));
-    }
-
-    #[tokio::test]
-    async fn recovery_never_replays_unsettled_admissions() {
-        let directory = tempfile::tempdir().unwrap();
-        let executable = test_executable();
-        let config = BrokerConfig {
-            workspace: directory.path().display().to_string(),
-            allowed_executables: vec![executable.display().to_string()],
-            output_limit_bytes: 8192,
-            max_operations: 4,
-            max_concurrent: 2,
-            exec_policy: ExecPolicy::Granted,
-        };
-        let input = StartInput {
-            idempotency_key: "survives-restart".into(),
-            executable: executable.display().to_string(),
-            args: vec![],
-            command: None,
-            cwd: None,
-            deadline_ms: 1000,
-        };
-        let id = uuid::Uuid::new_v4().to_string();
-        let state = devagotchi_ipc::private_test_state(directory.path());
-        {
-            let broker = Broker::open(config.clone(), &state).unwrap();
-            let (spec, digest) = broker.normalize(&input).unwrap();
-            let record = JournalOperation {
-                key: input.idempotency_key.clone(),
-                request_digest: digest,
-                config_identity: broker.shared.config_identity.clone(),
-                view: OperationView {
-                    operation_id: id.clone(),
-                    executable: path_string(&spec.executable).unwrap(),
-                    args: spec.args,
-                    cwd: path_string(&spec.cwd).unwrap(),
-                    deadline_ms: spec.deadline_ms,
-                    state: OperationState::Running,
-                    created_at_ms: 1,
-                    updated_at_ms: 2,
-                    exit_code: None,
-                    detail: None,
-                    ownership_scope: SCOPE.into(),
-                    cancellation_requested: false,
-                    output_complete: false,
-                },
-                latest_sequence: 0,
-                frames: VecDeque::new(),
-            };
-            broker.shared.lock().journal.insert(&record).unwrap();
-        }
-        let broker = Broker::open(config, &state).unwrap();
-        let replay = broker.start(input).unwrap();
-        assert!(replay.replayed);
-        assert_eq!(replay.operation.operation_id, id);
-        assert!(matches!(replay.operation.state, OperationState::Unknown));
-        assert!(
-            replay
-                .operation
-                .detail
-                .unwrap()
-                .contains("processes may still be running")
-        );
-        assert_eq!(broker.shared.lock().active_count, 0);
-        broker.shutdown().await;
-    }
-}
+mod tests;

@@ -331,6 +331,8 @@ async fn calls_to_a_device_without_a_link_say_why() {
         RequestBody::OperationList(devagotchi_contracts::ListInput {
             offset: 0,
             limit: 1,
+            caller: None,
+            scope: None,
         })
     };
     assert_eq!(
@@ -373,6 +375,8 @@ async fn a_full_queue_answers_busy_and_leaves_no_waiters() {
             request: RequestBody::OperationList(devagotchi_contracts::ListInput {
                 offset: 0,
                 limit: 1,
+                caller: None,
+                scope: None,
             }),
         };
         calls.try_send((u64::MAX - i, request)).unwrap();
@@ -390,6 +394,8 @@ async fn a_full_queue_answers_busy_and_leaves_no_waiters() {
     let body = RequestBody::OperationList(devagotchi_contracts::ListInput {
         offset: 0,
         limit: 1,
+        caller: None,
+        scope: None,
     });
     assert_eq!(links.call("gus", body).await.unwrap_err().code, "link_busy");
     assert!(

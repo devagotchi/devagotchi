@@ -55,6 +55,7 @@ fn view(state: OperationState, exit_code: Option<i32>) -> OperationView {
         ownership_scope: "process_group".into(),
         cancellation_requested: false,
         output_complete: true,
+        interactive: None,
     }
 }
 
@@ -109,6 +110,8 @@ fn start_input() -> StartInput {
         command: Some("echo hi".into()),
         cwd: None,
         deadline_ms: 300_000,
+        caller: None,
+        interactive: None,
     }
 }
 
