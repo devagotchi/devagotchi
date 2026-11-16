@@ -296,11 +296,13 @@ The current engine uses pipes, not a PTY. It clears inherited environment variab
 
 ## License
 
-Devagotchi is source-available under the [Business Source License 1.1](LICENSE), held by
-AngryVibes LLC. You may run it in production for yourself and your organization, self-hosted,
-at no cost. You may not offer it to others as a hosted or managed service. Each version
-becomes available under the GNU Affero General Public License v3.0 four years after it is
-published.
+Devagotchi is source-available under the [Functional Source License, Version 1.1, ALv2 Future
+License](LICENSE) (FSL-1.1-ALv2), held by AngryVibes LLC. You may use, change and run it for
+your own and your organization's use, self-hosted, at no cost, and for non-commercial education
+and research, and you may provide professional services to someone who uses it. You may not
+make it available to others in a commercial product or service that substitutes for it or for
+a product or service AngryVibes LLC offers with it. Each version becomes available under the
+Apache License 2.0 two years after it is published.
 
 ## Source and release status
 
