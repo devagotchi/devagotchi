@@ -15,7 +15,6 @@ use sqlx::{AnyConnection, Row};
 
 use super::{Accounts, account_columns_a, account_row, hash, now_secs, secs, tenants};
 use crate::{
-    config::valid_name,
     identity::auth::Subject,
     store::{Failed, transaction},
 };
@@ -463,12 +462,4 @@ impl Accounts {
             (subject, limits)
         }))
     }
-}
-
-/// The seat a key's calls run as when the request names none: a key is never the person.
-pub const KEY_SEAT: &str = "ai";
-
-/// Whether `name` could be an allow-listed project or machine typed by hand.
-pub fn plausible_name(name: &str) -> bool {
-    valid_name(name) || name.contains('/')
 }

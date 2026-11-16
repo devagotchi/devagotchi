@@ -208,6 +208,7 @@ impl Audit {
     }
 
     /// The last entry's seq (0 for none): how far a signal sink can be behind.
+    #[cfg(test)]
     pub async fn last_seq(&self) -> BridgeResult<u64> {
         let mut connection = self.store.read().await?;
         let seq: i64 = sqlx::query_scalar("SELECT COALESCE(MAX(seq), 0) FROM audit_entries")
@@ -255,18 +256,6 @@ impl Audit {
             ok,
             head: prev,
         })
-    }
-
-    #[cfg(test)]
-    pub(crate) async fn recorded(&self) -> Vec<(String, String, String)> {
-        let mut connection = self.store.read().await.expect("audit read");
-        sqlx::query("SELECT subject, tool, outcome FROM audit_entries ORDER BY seq")
-            .fetch_all(&mut *connection)
-            .await
-            .expect("audit rows")
-            .iter()
-            .map(|row| (row.get(0), row.get(1), row.get(2)))
-            .collect()
     }
 }
 
