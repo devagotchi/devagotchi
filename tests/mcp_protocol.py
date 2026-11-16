@@ -29,7 +29,7 @@ UNSUPPORTED_VERSION = "2099-01-01"
 CLIENT_INFO = {"name": "desktop-bridge-raw-protocol-probe", "version": "0.1.0"}
 TOOL_SCHEMAS = {
     "operation_start": (
-        {"idempotency_key", "executable", "args", "command", "cwd", "deadline_ms"},
+        {"idempotency_key", "executable", "args", "command", "cwd", "deadline_ms", "interactive"},
         {"operation", "replayed"},
     ),
     "operation_get": ({"operation_id"}, {"operation_id", "state", "detail"}),
@@ -39,7 +39,9 @@ TOOL_SCHEMAS = {
     ),
     "operation_cancel": ({"operation_id"}, {"operation_id", "state", "detail"}),
     "operation_wait": ({"operation_id", "output_after", "timeout_ms"}, {"operation_id", "state", "detail"}),
-    "operation_list": ({"offset", "limit"}, {"operations"}),
+    "operation_list": ({"offset", "limit", "scope"}, {"operations"}),
+    "operation_input": ({"operation_id", "text", "keys", "take_over"}, {"operation", "cursor"}),
+    "operation_resize": ({"operation_id", "cols", "rows", "take_over"}, {"operation_id", "state", "detail"}),
     "run": (
         {"command", "cwd", "wait_seconds", "timeout_seconds"},
         {"operation_id", "state", "exit_code", "output", "truncated"},

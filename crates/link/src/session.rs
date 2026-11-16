@@ -4,8 +4,8 @@
 use std::{sync::Arc, time::Duration};
 
 use devagotchi_contracts::{
-    API_VERSION, BridgeError, HubFrame, LINK_PROTOCOL_VERSION, LinkFrame, MAX_LINK_MESSAGE_BYTES,
-    WireRequest, WireResponse, link_signing_message,
+    API_VERSION, BridgeError, HUB_ACCOUNT_PREFIX, HubFrame, LINK_PROTOCOL_VERSION, LinkFrame,
+    MAX_LINK_MESSAGE_BYTES, RequestBody, WireRequest, WireResponse, link_signing_message,
 };
 use ed25519_dalek::{Signer, SigningKey};
 use futures_util::{SinkExt, StreamExt};
@@ -217,8 +217,12 @@ fn refusal(code: String, message: String) -> Ended {
 }
 
 /// Hand one request to the local broker. The broker's own validation and executable
-/// grants decide; the link adds nothing and removes nothing.
+/// grants decide; the link adds nothing and removes nothing. It only refuses a request
+/// that claims a caller no hub can be (see `from_a_hub`).
 async fn handle(broker: &std::path::Path, request: WireRequest) -> WireResponse {
+    if let Err(error) = from_a_hub(&request.request) {
+        return WireResponse::Error(error);
+    }
     if request.api_version != API_VERSION {
         return WireResponse::Error(BridgeError::new(
             "api_version",
@@ -231,6 +235,19 @@ async fn handle(broker: &std::path::Path, request: WireRequest) -> WireResponse 
     match devagotchi_ipc::request(broker, request.request).await {
         Ok(body) => WireResponse::Ok(body),
         Err(error) => WireResponse::Error(error),
+    }
+}
+
+/// A hub speaks only for the accounts it signs in (`hub:<subject>`): never for this
+/// machine's own user, who owns everything its broker runs. A request naming any other
+/// caller came from a hub that is wrong or not ours, and reaches nothing.
+fn from_a_hub(request: &RequestBody) -> Result<(), BridgeError> {
+    match request.caller() {
+        Some(caller) if !caller.account.starts_with(HUB_ACCOUNT_PREFIX) => Err(BridgeError::new(
+            "not_your_operation",
+            "This machine takes requests from a hub only for the hub's own accounts",
+        )),
+        _ => Ok(()),
     }
 }
 
@@ -261,3 +278,6 @@ where
         .await
         .map_err(|e| format!("link write: {e}"))
 }
+
+#[cfg(test)]
+mod tests;

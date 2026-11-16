@@ -86,6 +86,8 @@ pub async fn serve(socket: PathBuf) -> BridgeResult<()> {
 }
 
 mod adapter;
+/// What every surface says about typing into a job and resizing its terminal.
+pub use adapter::terminal::{INPUT_DESCRIPTION, RESIZE_DESCRIPTION};
 
 /// The kind of broker answer `actual` is, by name.
 pub fn response_kind(actual: &ResponseBody) -> &'static str {

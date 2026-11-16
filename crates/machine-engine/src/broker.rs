@@ -987,17 +987,17 @@ fn input_closed() -> BridgeError {
 }
 
 /// Whether a list for `caller` in `scope` shows an operation `owner` started. Without a
-/// caller (the inspector, an older client) everything shows. An operation started without
-/// an owner belongs to this machine's own account.
+/// caller (the inspector, an older client) everything shows. This machine's own account
+/// owns everything its broker runs, an operation started without an owner included.
 fn visible(owner: Option<&Caller>, caller: Option<&Caller>, scope: ListScope) -> bool {
     let Some(caller) = caller else {
         return true;
     };
     match (owner, scope) {
         (Some(owner), ListScope::Mine) => owner == caller,
+        (_, ListScope::Account) if caller.account == LOCAL_ACCOUNT => true,
         (Some(owner), ListScope::Account) => owner.account == caller.account,
-        (None, ListScope::Mine) => false,
-        (None, ListScope::Account) => caller.account == LOCAL_ACCOUNT,
+        (None, _) => false,
     }
 }
 

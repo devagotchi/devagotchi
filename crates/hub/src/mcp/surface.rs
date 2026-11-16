@@ -475,14 +475,16 @@ impl Hub {
         }
     }
 
+    /// One audited broker request for this session's subject, as its caller.
     pub(crate) async fn call(
         &self,
         tool: &str,
         broker: &str,
-        body: RequestBody,
+        mut body: RequestBody,
         context: RequestContext<RoleServer>,
     ) -> Result<ResponseBody, Json<BridgeError>> {
         let subject = self.subject(&context)?;
+        body.set_caller(&Self::caller(&subject, &context));
         let operation_id = match &body {
             RequestBody::OperationStart(input) => input.idempotency_key.clone(),
             RequestBody::OperationGet(input) | RequestBody::OperationCancel(input) => {
@@ -490,6 +492,8 @@ impl Hub {
             }
             RequestBody::OperationRead(input) => input.operation_id.clone(),
             RequestBody::OperationWait(input) => input.operation_id.clone(),
+            RequestBody::OperationInput(input) => input.operation_id.clone(),
+            RequestBody::OperationResize(input) => input.operation_id.clone(),
             RequestBody::FileRead(input) => input.path.clone(),
             RequestBody::FileList(input) => input.path.clone(),
             RequestBody::FileWrite(input) => input.path.clone(),
@@ -523,6 +527,20 @@ impl Hub {
         self.record(&subject, tool, broker, &recorded_id, &outcome)
             .await?;
         result
+    }
+}
+
+impl Hub {
+    /// Every tool this hub serves: its own, and each domain's router added to them.
+    pub(crate) fn router() -> rmcp::handler::server::router::tool::ToolRouter<Self> {
+        Self::tool_router()
+            + Self::run_router()
+            + Self::files_router()
+            + Self::callers_router()
+            + Self::board_router()
+            + Self::workflow_router()
+            + Self::offers_router()
+            + Self::connections_router()
     }
 }
 
@@ -872,7 +890,7 @@ pub(crate) fn unexpected_response(expected: &str, actual: &ResponseBody) -> Json
 }
 
 #[tool_handler(
-    router = (Self::tool_router() + Self::run_router() + Self::files_router() + Self::board_router() + Self::workflow_router() + Self::offers_router() + Self::connections_router())
+    router = Self::router()
 )]
 impl ServerHandler for Hub {
     /// Every tool call, unless the caller's tenant waits to be let in (early access): then
@@ -921,15 +939,7 @@ impl ServerHandler for Hub {
             return Ok(answer.into());
         }
         let call = rmcp::handler::server::tool::ToolCallContext::new(self, request, context);
-        let answer = (Self::tool_router()
-            + Self::run_router()
-            + Self::files_router()
-            + Self::board_router()
-            + Self::workflow_router()
-            + Self::offers_router()
-            + Self::connections_router())
-        .call(call)
-        .await;
+        let answer = Self::router().call(call).await;
         // Notes left for this caller ride the answer to whatever it just called.
         let mut answer = answer;
         if delivers
@@ -963,17 +973,11 @@ impl ServerHandler for Hub {
             .is_some_and(|version| version >= rmcp::model::ProtocolVersion::V_2026_07_28);
         let offered = self.offered();
         let mut listed = rmcp::model::ListToolsResult::with_all_items(
-            (Self::tool_router()
-                + Self::run_router()
-                + Self::files_router()
-                + Self::board_router()
-                + Self::workflow_router()
-                + Self::offers_router()
-                + Self::connections_router())
-            .list_all()
-            .into_iter()
-            .filter(|tool| offered || !crate::offers::TOOLS.contains(&tool.name.as_ref()))
-            .collect(),
+            Self::router()
+                .list_all()
+                .into_iter()
+                .filter(|tool| offered || !crate::offers::TOOLS.contains(&tool.name.as_ref()))
+                .collect(),
         );
         listed.ttl_ms = supports_cache_hints.then_some(0);
         listed.cache_scope = supports_cache_hints.then_some(rmcp::model::CacheScope::Public);
@@ -984,15 +988,7 @@ impl ServerHandler for Hub {
         if !self.offered() && crate::offers::TOOLS.contains(&name) {
             return None;
         }
-        (Self::tool_router()
-            + Self::run_router()
-            + Self::files_router()
-            + Self::board_router()
-            + Self::workflow_router()
-            + Self::offers_router()
-            + Self::connections_router())
-        .get(name)
-        .cloned()
+        Self::router().get(name).cloned()
     }
 
     /// The MCP server's name and instructions are the site's (`site.json` `mcp`), so every
@@ -1020,14 +1016,7 @@ impl ServerHandler for Hub {
 /// Every tool the hub serves, as `tools/list` describes it.
 #[cfg(test)]
 pub(crate) fn tools() -> Vec<rmcp::model::Tool> {
-    (Hub::tool_router()
-        + Hub::run_router()
-        + Hub::files_router()
-        + Hub::board_router()
-        + Hub::workflow_router()
-        + Hub::offers_router()
-        + Hub::connections_router())
-    .list_all()
+    Hub::router().list_all()
 }
 
 /// The names of every tool the hub serves, for tests that hold a page's list to them.
@@ -1048,17 +1037,11 @@ mod schema_tests {
     /// one missing through the MCP TypeScript SDK, which checks).
     #[test]
     fn whoami_output_has_every_required_property() {
-        let tool = (Hub::tool_router()
-            + Hub::run_router()
-            + Hub::files_router()
-            + Hub::board_router()
-            + Hub::workflow_router()
-            + Hub::offers_router()
-            + Hub::connections_router())
-        .list_all()
-        .into_iter()
-        .find(|tool| tool.name == "whoami")
-        .expect("whoami is served");
+        let tool = Hub::router()
+            .list_all()
+            .into_iter()
+            .find(|tool| tool.name == "whoami")
+            .expect("whoami is served");
         let schema = tool.output_schema.expect("whoami has an output schema");
         let written = serde_json::to_value(WhoAmI {
             subject: "300000000000000001".into(),

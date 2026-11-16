@@ -654,17 +654,24 @@
               "type": "null"
             }
           ],
-          "description": "With a caller: `mine` (the default) lists what this conversation or client started;\n`account` lists what any of its account's conversations started (and, for this\nmachine's own account, everything here). Without a caller (the inspector): everything."
+          "description": "With a caller: `account` (the default) lists what any of its account's conversations\nstarted, also before a restart (for this machine's own account, everything here);\n`mine` only what this conversation or client started. Without a caller: everything."
         }
       },
       "type": "object"
     },
     "ListScope": {
-      "enum": [
-        "mine",
-        "account"
-      ],
-      "type": "string"
+      "oneOf": [
+        {
+          "const": "mine",
+          "description": "What this conversation or client started.",
+          "type": "string"
+        },
+        {
+          "const": "account",
+          "description": "What any conversation of its account started, also before a restart; for this\nmachine's own account, everything here.",
+          "type": "string"
+        }
+      ]
     },
     "OperationState": {
       "enum": [

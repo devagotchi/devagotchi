@@ -83,6 +83,14 @@ fn a_list_shows_a_caller_its_own_and_with_account_scope_its_accounts() {
     let local = caller(LOCAL_ACCOUNT, "adapter-1");
     assert!(visible(None, Some(&local), ListScope::Account));
     assert!(!visible(None, Some(&mine), ListScope::Account));
+    // This machine's own user sees what a hub's accounts started here too.
+    assert!(visible(owned, Some(&local), ListScope::Account));
+    assert!(!visible(owned, Some(&local), ListScope::Mine));
+    assert_eq!(
+        ListScope::default(),
+        ListScope::Account,
+        "a restarted client sees its jobs"
+    );
 }
 
 #[test]

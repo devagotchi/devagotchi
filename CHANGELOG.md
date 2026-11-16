@@ -24,8 +24,15 @@ create that tag, and a prerelease tag does not move the `:latest` image.
   input open on a pseudo-terminal (prompts, REPLs, Ctrl-C) or a pipe, and takes typed text and
   named keys, and a new terminal size, from the account that started it; another conversation of
   that account takes over explicitly, and a keyboard lease keeps two clients from typing at once.
-  Windows refuses them (`unsupported_platform`) until it has a console for them. The MCP tools
-  that reach them come next.
+  Windows refuses them (`unsupported_platform`) until it has a console for them.
+- `operation_input` and `operation_resize` reach them from an AI, on this machine
+  (`devagotchi mcp`) and through a hub, and the hub serves `operation_list`. Who is calling is
+  named by the transport, never by the AI: this machine's own account and the adapter process
+  locally, `hub:<subject>` and the MCP session through a hub; a `caller` in a tool call is
+  replaced. A machine's link refuses a hub request that claims any caller but a hub account.
+  `operation_list` shows the caller's account's jobs by default (this machine's own account sees
+  everything here), `scope: "mine"` only this conversation's. A hub newer than a machine's
+  broker names callers that broker does not know: update the machine (`machine_update`).
 - `list_directory` goes on past `max_entries`: a truncated listing names `next_cursor`, passed back
   as `cursor` for the entries after it in the same order (a vanished cursor is refused,
   `cursor_not_found`). An entry whose name is not valid Unicode is marked `name_lossy`.

@@ -168,7 +168,7 @@ def main():
             c = client()
             catalog = c.rpc('tools/list', {})['tools']
             assert {t['name'] for t in catalog} == {'operation_start', 'operation_get', 'operation_read', 'operation_cancel', 'operation_wait',
-                                                  'operation_list', 'run', 'read_file', 'list_directory', 'write_file', 'edit_file',
+                                                  'operation_list', 'operation_input', 'operation_resize', 'run', 'read_file', 'list_directory', 'write_file', 'edit_file',
                                                   'read_multiple_files', 'get_file_info', 'create_directory', 'move_file', 'read_image'}
             assert all(t.get('outputSchema') for t in catalog if t['name'] != 'read_image'), catalog
             passed('stdio_initialize_and_typed_tool_catalog', protocol='2025-11-25', tools=len(catalog))

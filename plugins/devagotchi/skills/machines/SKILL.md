@@ -20,7 +20,11 @@ and jobs belong to the machine's broker, so they outlive this conversation.
 - **`run`** starts a command, waits, and returns its output. Use it for anything short.
 - **Long jobs** (builds, deploys, anything over a minute): `operation_start`, keep its
   operation id, then `operation_wait`. Read output with `operation_read`; stop it with
-  `operation_cancel`. Never call `operation_get` in a loop.
+  `operation_cancel`. Never call `operation_get` in a loop. `operation_list` shows the
+  account's jobs on a machine, also from before a restart.
+- **Programs that ask for input** (a prompt, a REPL, a sign-in): `operation_start` with
+  `interactive`, then `operation_input` (text, then keys such as `enter` or `ctrl_c`) and
+  `operation_wait` from the cursor it returns. Never type a secret for the person: ask them.
 - **Files**: `read_file`, `read_multiple_files`, `read_image`, `list_directory`,
   `get_file_info`, `write_file`, `edit_file`, `create_directory`, `move_file`.
 

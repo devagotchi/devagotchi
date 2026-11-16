@@ -113,8 +113,12 @@ pub const TOOLS: [(&str, &[(&[&str], &str)]); 6] = [
                 "Waits until a job finishes or prints something new.",
             ),
             (
-                &["operation_get", "operation_read"],
-                "A job's state, and its output after a cursor.",
+                &["operation_list", "operation_get", "operation_read"],
+                "Your jobs on a machine, also from before a restart; a job's state, and its output after a cursor.",
+            ),
+            (
+                &["operation_input", "operation_resize"],
+                "Types into a job that asks for input (a prompt, a REPL, a sign-in) and resizes its terminal. Only the conversation that started it types there.",
             ),
             (
                 &["operation_cancel"],

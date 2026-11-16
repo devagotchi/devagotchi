@@ -3,7 +3,11 @@
 //! a machine). It is the broker's own operation underneath, so a command that outlasts the
 //! wait keeps running and stays observable with the operation tools; nothing here owns a job.
 
-use std::future::Future;
+use std::{
+    future::Future,
+    sync::atomic::{AtomicU64, Ordering},
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 use devagotchi_contracts::{
     BridgeError, MAX_OUTPUT_PAGE_BYTES, OperationState, ReadInput, RequestBody, ResponseBody,
@@ -21,6 +25,20 @@ pub const DEFAULT_TIMEOUT_S: u64 = 300;
 pub const MAX_TIMEOUT_S: u64 = 300;
 /// Output handed back in one answer: the end of it, which is where results and errors are.
 pub const OUTPUT_LIMIT: usize = 32 * 1024;
+
+/// An id no other in this process, or in another process, has used: a run's retry key, an
+/// adapter's client name.
+pub fn unique(prefix: &str) -> String {
+    static COUNT: AtomicU64 = AtomicU64::new(0);
+    let nanos = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_or(0, |d| d.as_nanos());
+    format!(
+        "{prefix}-{}-{nanos}-{}",
+        std::process::id(),
+        COUNT.fetch_add(1, Ordering::Relaxed)
+    )
+}
 
 /// What a run came to.
 #[derive(Debug)]
