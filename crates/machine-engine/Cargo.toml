@@ -33,6 +33,10 @@ libc = { workspace = true }
 [target.'cfg(any(target_os = "linux", windows))'.dependencies]
 base64 = { workspace = true }
 dunce = { workspace = true }
+# search_files: ripgrep's walker (honours .gitignore and hidden files) and its regex engine.
+globset = "0.4"
+ignore = "0.4"
+regex = "1"
 uuid = { workspace = true }
 
 [target.'cfg(windows)'.dependencies]

@@ -136,7 +136,7 @@ unannotated = [t["name"] for t in listed if not t.get("title") or not (
 check("every tool has a title and annotations", not unannotated, ", ".join(unannotated))
 broker_tools = ["approval_request", "approval_wait", "connection_call", "connections", "create_directory", "edit_file", "get_file_info",
                 "list_directory", "machine_add", "machine_update", "machines", "move_file", "operation_cancel", "operation_get", "operation_input",
-                "operation_list", "operation_read", "operation_resize", "operation_start", "operation_wait", "read_file", "read_image", "read_multiple_files", "run", "whoami",
+                "operation_list", "operation_read", "operation_resize", "operation_start", "operation_wait", "read_file", "read_image", "read_multiple_files", "run", "search_files", "whoami",
                 "workflow_cancel", "workflow_list", "workflow_start", "workflow_status", "workflow_wait",
                 "write_file"]
 board_tools = [t for t in tools if t.startswith("board_")]
@@ -311,6 +311,12 @@ if args.run_broker and args.run_dir:
     is_error, info = call("get_file_info", {"machine": args.run_broker, "path": moved_file})
     check("get_file_info counts lines", not is_error and info.get("kind") == "file" and info.get("lines") == 2,
           json.dumps(info)[:200])
+    is_error, found = call("search_files", {"machine": args.run_broker, "path": args.run_dir,
+                                            "pattern": "GAMMA", "target": "contents", "context_lines": 1})
+    hits = found.get("matches", []) if not is_error else []
+    check("search_files finds a line with its context", found.get("complete") is True
+          and any(h.get("line") == 2 and h.get("text") == "gamma" and h.get("before") == ["alpha"] for h in hits),
+          json.dumps(found)[:300])
     is_error, both = call("read_multiple_files", {"machine": args.run_broker,
                                                   "paths": [moved_file, os.path.join(args.run_dir, "missing.txt")]})
     files = both.get("files", []) if not is_error else []

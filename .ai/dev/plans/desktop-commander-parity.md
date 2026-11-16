@@ -87,7 +87,7 @@ libraries): 19 never-used items in `devagotchi-hub` (for example `store::open`,
 | P4 | `run` in order: one pipe for stdout and stderr | the 1 2 3 4 probe | done: `1\n2\n3\n4\n` |
 | P5 | Long jobs: the deadline cap is a day; `run` defaults to an hour | a job past five minutes | done: `deadline_ms` 3600000 accepted, 90000000 refused naming the day cap; a 330 s `run` (see receipts) |
 | P6 | Paths: `~` and relative paths in every file tool and `cwd` (one rule, `files/given.rs`); edits that match the file's own line endings; `run` keeps the tail from a whole line | probes | done: `read_file ~/tilde.txt`, `write_file p9/rel.txt` (under the workspace), `cwd: "~"` and `cwd: "p9"` ran there, `~bob/x` refused with the reason; `alpha\nbeta` edited a CRLF file and kept `\r\n`; the 3000-line tail starts at `line-1788` |
-| P7 | Search: names and contents, paged, through the broker | probes | not started |
+| P7 | Search: names and contents, paged, through the broker (`search_files`, `files/search.rs`; gitignore-aware walk, binary and >8 MiB files skipped, stateless cursor, 5 s per page) | probes | done: names skip hidden and gitignored unless `include_ignored`; contents with `glob: *.rs` and one line of context; case-sensitive and regex finds; 34 matches over 4 pages of 10 with none lost or repeated; a bad regex, a missing directory and a forged cursor each refused with the reason, and broker.log traces each as `refused search_files` |
 | P8 | Processes and settings: list and stop processes; read and change broker settings | probes | not started |
 
 ## Verification receipts
@@ -106,11 +106,16 @@ link) passed again on this code. Windows: not run (no Windows machine reachable)
 
 Fix P6 (2026-11-16, Linux): machine-engine 118, mcp 26, hub 435 unit tests and the layout
 ratchet passed; the P6 probes above ran through `devagotchi mcp`; `tests/e2e.py` passed again.
+
+Fix P7 (2026-11-16, Linux): machine-engine 122, mcp 26, hub 435 unit tests and the layout
+ratchet passed; the P7 probes ran through `devagotchi mcp`; `tests/e2e.py` passed with a new hub
+check that `search_files` finds a line with its context on an enrolled machine. An older machine
+refuses `file_search` as an unknown request, and the hub names `machine_update` for that.
 Seen once: right after the broker was killed, `devagotchi mcp` reported "your broker is running
 but did not answer within 20 s" while the old one was still shutting down; the next start worked.
 
 ## Delivery
 
-Implementation: map, and fixes P1 to P6. Validation: run here, Linux. Push: branch. PR: not_created.
+Implementation: map, and fixes P1 to P7. Validation: run here, Linux. Push: branch. PR: not_created.
 Main: not_verified.
 **DELIVERY INCOMPLETE: NOT MERGED TO MAIN**

@@ -21,6 +21,7 @@ use crate::execution::platform::file_identity::file_identity;
 pub(crate) mod given;
 mod lines;
 mod manage;
+mod search;
 mod write;
 
 const MAX_ENTRIES: u32 = 1000;

@@ -35,6 +35,7 @@ pub mod files;
 pub mod join;
 pub mod link;
 pub mod run;
+pub mod search;
 pub mod update;
 
 /// The hub's clock in Unix seconds and its random bytes, used well beyond machines; they

@@ -2,7 +2,8 @@
 
 use devagotchi_contracts::{
     BridgeError, ChangesInput, DirectoryInput, FileContent, FileEditInput, FileInfo, FileInfoInput,
-    FileListInput, FileListing, FileMoveInput, FileReadInput, FileWriteInput, FileWritten,
+    FileListInput, FileListing, FileMoveInput, FileReadInput, FileSearchInput, FileWriteInput,
+    FileWritten, SearchPage,
     GetInput, ListInput, OperationView, OperationsPage, OutputPage, ReadInput, Revision,
     StartInput, StartOutput, WaitInput,
 };
@@ -39,6 +40,8 @@ struct BrokerContracts {
     directory_input: DirectoryInput,
     file_move_input: FileMoveInput,
     file_info: FileInfo,
+    file_search_input: FileSearchInput,
+    search_page: SearchPage,
     bridge_error: BridgeError,
 }
 

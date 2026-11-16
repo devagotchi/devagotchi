@@ -5,8 +5,10 @@ use serde::{Deserialize, Serialize};
 
 mod files;
 mod interactive;
+mod search;
 pub use files::*;
 pub use interactive::*;
+pub use search::*;
 
 pub const API_VERSION: u32 = 1;
 pub const MAX_FRAME_BYTES: usize = 64 * 1024;
@@ -334,6 +336,7 @@ pub enum RequestBody {
     FileInfo(FileInfoInput),
     FileMkdir(DirectoryInput),
     FileMove(FileMoveInput),
+    FileSearch(FileSearchInput),
     OperationInput(SendInput),
     OperationResize(ResizeInput),
 }
@@ -377,6 +380,7 @@ pub enum ResponseBody {
     Revision(Revision),
     Info(FileInfo),
     InputSent(InputSent),
+    Search(SearchPage),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

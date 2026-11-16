@@ -328,57 +328,15 @@ impl Broker {
             RequestBody::OperationResize(input) => {
                 self.resize(input).await.map(ResponseBody::Operation)
             }
-            RequestBody::FileRead(input) => {
-                self.on_files(move |files| files.read(input).map(ResponseBody::File))
-                    .await
-            }
-            RequestBody::FileList(input) => {
-                self.on_files(move |files| files.list(input).map(ResponseBody::Listing))
-                    .await
-            }
-            RequestBody::FileWrite(input) => {
-                self.on_files(move |files| files.write(input).map(ResponseBody::Written))
-                    .await
-            }
-            RequestBody::FileEdit(input) => {
-                self.on_files(move |files| files.edit(input).map(ResponseBody::Written))
-                    .await
-            }
-            RequestBody::FileInfo(input) => {
-                self.on_files(move |files| files.info(input).map(ResponseBody::Info))
-                    .await
-            }
-            RequestBody::FileMkdir(input) => {
-                self.on_files(move |files| files.mkdir(input).map(ResponseBody::Info))
-                    .await
-            }
-            RequestBody::FileMove(input) => {
-                self.on_files(move |files| files.moved(input).map(ResponseBody::Info))
-                    .await
-            }
+            request @ (RequestBody::FileRead(_)
+            | RequestBody::FileList(_)
+            | RequestBody::FileWrite(_)
+            | RequestBody::FileEdit(_)
+            | RequestBody::FileInfo(_)
+            | RequestBody::FileMkdir(_)
+            | RequestBody::FileMove(_)
+            | RequestBody::FileSearch(_)) => self.on_files(request).await,
         }
-    }
-
-    /// File work, where file requests may reach (the same policy as execution), on the
-    /// blocking pool: a large file never stalls the broker's jobs, waits or other callers.
-    async fn on_files<F>(&self, work: F) -> BridgeResult<ResponseBody>
-    where
-        F: FnOnce(crate::files::Scope<'_>) -> BridgeResult<ResponseBody> + Send + 'static,
-    {
-        let workspace = self.shared.workspace.clone();
-        let policy = self.shared.config.exec_policy;
-        let done = tokio::task::spawn_blocking(move || {
-            work(crate::files::Scope {
-                workspace: &workspace,
-                policy,
-            })
-        })
-        .await
-        .map_err(|error| BridgeError::new("internal_error", error.to_string()))?;
-        if let Err(error) = &done {
-            trace::refused("file request", error);
-        }
-        done
     }
 
     fn normalize(&self, input: &StartInput) -> BridgeResult<(ExecutionSpec, String)> {
@@ -1290,5 +1248,6 @@ impl Shared {
 mod tests;
 
 mod access;
+mod files;
 mod input;
 use input::{deliver, input_closed, input_steps};

@@ -139,6 +139,10 @@ pub const TOOLS: [(&str, &[(&[&str], &str)]); 6] = [
                 "Lists a folder, or says what a path is without reading it.",
             ),
             (
+                &["search_files"],
+                "Finds files by name, or lines inside them, as ripgrep would.",
+            ),
+            (
                 &["write_file", "edit_file"],
                 "Writes a file whole, never half-written, or replaces exact text in one.",
             ),

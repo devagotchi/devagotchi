@@ -485,24 +485,7 @@ impl Hub {
     ) -> Result<ResponseBody, Json<BridgeError>> {
         let subject = self.subject(&context)?;
         body.set_caller(&Self::caller(&subject, &context));
-        let operation_id = match &body {
-            RequestBody::OperationStart(input) => input.idempotency_key.clone(),
-            RequestBody::OperationGet(input) | RequestBody::OperationCancel(input) => {
-                input.operation_id.clone()
-            }
-            RequestBody::OperationRead(input) => input.operation_id.clone(),
-            RequestBody::OperationWait(input) => input.operation_id.clone(),
-            RequestBody::OperationInput(input) => input.operation_id.clone(),
-            RequestBody::OperationResize(input) => input.operation_id.clone(),
-            RequestBody::FileRead(input) => input.path.clone(),
-            RequestBody::FileList(input) => input.path.clone(),
-            RequestBody::FileWrite(input) => input.path.clone(),
-            RequestBody::FileEdit(input) => input.path.clone(),
-            RequestBody::FileInfo(input) => input.path.clone(),
-            RequestBody::FileMkdir(input) => input.path.clone(),
-            RequestBody::FileMove(input) => format!("{} -> {}", input.source, input.destination),
-            _ => String::new(),
-        };
+        let operation_id = body.target();
         let result = match self.route(&subject, broker).await {
             Ok(route) => {
                 tokio::select! {
@@ -536,6 +519,7 @@ impl Hub {
         Self::tool_router()
             + Self::run_router()
             + Self::files_router()
+            + Self::search_router()
             + Self::callers_router()
             + Self::board_router()
             + Self::workflow_router()

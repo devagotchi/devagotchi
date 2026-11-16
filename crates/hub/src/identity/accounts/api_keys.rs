@@ -119,7 +119,7 @@ pub fn scope_for(tool: &str) -> Option<Scope> {
         "machine_add" | "machine_update" | "workflow_list" | "workflow_start"
         | "workflow_status" | "workflow_wait" | "workflow_cancel" => Scope::MachinesManage,
         "read_file" | "read_multiple_files" | "read_image" => Scope::FilesRead,
-        "list_directory" | "get_file_info" => Scope::FilesRead,
+        "list_directory" | "get_file_info" | "search_files" => Scope::FilesRead,
         "write_file" | "edit_file" | "create_directory" | "move_file" => Scope::FilesWrite,
         "approval_request" | "approval_wait" => Scope::ApprovalsRequest,
         "board_settings" | "board_wake" => Scope::BoardsAdmin,
