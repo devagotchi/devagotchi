@@ -63,8 +63,18 @@ pub(crate) const SCOPE_TERMINAL: &str = SCOPE;
 /// What a running operation's detail says.
 pub(crate) fn running_detail(
     account: bool,
-    _mode: Option<devagotchi_contracts::InputMode>,
+    mode: Option<devagotchi_contracts::InputMode>,
 ) -> String {
+    if mode == Some(devagotchi_contracts::InputMode::Terminal) {
+        let who = if account {
+            "as the broker's account with its environment"
+        } else {
+            "with an environment cleared except SystemRoot"
+        };
+        return format!(
+            "Root created suspended {who}, attached to a broker-owned pseudo-console (ConPTY) as its stdin, stdout and stderr, then assigned to a broker-owned Job Object before it ran. Executable behavior is not sandboxed."
+        );
+    }
     if account {
         RUNNING_DETAIL_ACCOUNT
     } else {
@@ -73,17 +83,10 @@ pub(crate) fn running_detail(
     .into()
 }
 
-/// Interactive operations reach Windows with ConPTY (increment 55); until then the broker
-/// refuses them before admission, so nothing below is reached.
+/// Both kinds of interactive operation run on Windows: a terminal on a pseudo-console of
+/// its own (`terminal.rs`), a pipe as stdin.
 pub(crate) fn supports_interactive(_mode: devagotchi_contracts::InputMode) -> bool {
-    false
-}
-
-fn not_yet() -> io::Error {
-    io::Error::new(
-        io::ErrorKind::Unsupported,
-        "interactive operations are not available on Windows yet",
-    )
+    true
 }
 
 /// How an owned tree is scoped; on Windows the Job Object is the one scope.
@@ -91,86 +94,6 @@ fn not_yet() -> io::Error {
 pub(crate) enum Scope {
     Group,
     Session,
-}
-
-/// Not available on Windows yet (see `supports_interactive`).
-pub(crate) struct Terminal;
-
-impl Terminal {
-    pub(crate) fn open(
-        _cols: u16,
-        _rows: u16,
-    ) -> io::Result<(Self, std::os::windows::io::OwnedHandle)> {
-        Err(not_yet())
-    }
-
-    pub(crate) fn io(&self) -> TerminalIo {
-        TerminalIo
-    }
-
-    pub(crate) fn resize(&self, _cols: u16, _rows: u16) -> io::Result<()> {
-        Err(not_yet())
-    }
-}
-
-pub(crate) struct TerminalIo;
-
-impl tokio::io::AsyncRead for TerminalIo {
-    fn poll_read(
-        self: std::pin::Pin<&mut Self>,
-        _context: &mut std::task::Context<'_>,
-        _buffer: &mut tokio::io::ReadBuf<'_>,
-    ) -> std::task::Poll<io::Result<()>> {
-        std::task::Poll::Ready(Err(not_yet()))
-    }
-}
-
-impl tokio::io::AsyncWrite for TerminalIo {
-    fn poll_write(
-        self: std::pin::Pin<&mut Self>,
-        _context: &mut std::task::Context<'_>,
-        _bytes: &[u8],
-    ) -> std::task::Poll<io::Result<usize>> {
-        std::task::Poll::Ready(Err(not_yet()))
-    }
-
-    fn poll_flush(
-        self: std::pin::Pin<&mut Self>,
-        _context: &mut std::task::Context<'_>,
-    ) -> std::task::Poll<io::Result<()>> {
-        std::task::Poll::Ready(Ok(()))
-    }
-
-    fn poll_shutdown(
-        self: std::pin::Pin<&mut Self>,
-        _context: &mut std::task::Context<'_>,
-    ) -> std::task::Poll<io::Result<()>> {
-        std::task::Poll::Ready(Ok(()))
-    }
-}
-
-pub(crate) fn configure_terminal(
-    _command: &mut Command,
-    _program_side: &std::os::windows::io::OwnedHandle,
-) -> io::Result<()> {
-    Err(not_yet())
-}
-
-/// Not available on Windows yet (see `supports_interactive`).
-#[derive(Debug, Clone, Copy)]
-pub(crate) struct Signaller;
-
-impl Signaller {
-    pub(crate) fn interrupt(&self) -> BridgeResult<()> {
-        Err(BridgeError::new(
-            "unsupported_platform",
-            not_yet().to_string(),
-        ))
-    }
-
-    pub(crate) fn quit(&self) -> BridgeResult<()> {
-        self.interrupt()
-    }
 }
 
 /// The shell a `command` line runs in. A line that runs a shell script (see
@@ -266,7 +189,7 @@ pub(crate) struct OwnedTree {
 }
 
 impl OwnedTree {
-    pub(crate) async fn adopt(child: &mut Child, _scope: Scope) -> Result<Self, AdoptFailure> {
+    pub(crate) async fn adopt(child: &mut Root, _scope: Scope) -> Result<Self, AdoptFailure> {
         let (Some(process), Some(pid)) = (child.raw_handle(), child.id()) else {
             return Err(AdoptFailure {
                 state: OperationState::Unknown,
@@ -335,7 +258,7 @@ impl OwnedTree {
         Signaller
     }
 
-    pub(crate) async fn root_exit(&self, child: &mut Child) -> BridgeResult<()> {
+    pub(crate) async fn root_exit(&self, child: &mut Root) -> BridgeResult<()> {
         child
             .wait()
             .await
@@ -558,6 +481,11 @@ fn resume_threads(pid: u32) -> io::Result<()> {
     Ok(())
 }
 
+mod process;
+mod terminal;
+pub(crate) use process::{Root, piped};
+pub(crate) use terminal::{Signaller, Terminal, TerminalIo, configure_terminal, spawn};
+
 #[cfg(test)]
 mod tests;
 
@@ -600,21 +528,16 @@ impl DetachedChild {
 pub(crate) fn spawn_detached(
     spec: &crate::execution::detached::DetachedSpec<'_>,
 ) -> io::Result<DetachedChild> {
-    use std::os::windows::ffi::OsStrExt;
+    use process::{AttributeList, command_line, environment_block, terminated};
     use windows_sys::Win32::Foundation::{
         ERROR_ACCESS_DENIED, HANDLE, HANDLE_FLAG_INHERIT, SetHandleInformation,
     };
     use windows_sys::Win32::System::Threading::{
         CREATE_BREAKAWAY_FROM_JOB, CREATE_NEW_PROCESS_GROUP, CREATE_UNICODE_ENVIRONMENT,
-        CreateProcessW, DETACHED_PROCESS, DeleteProcThreadAttributeList,
-        EXTENDED_STARTUPINFO_PRESENT, InitializeProcThreadAttributeList,
-        LPPROC_THREAD_ATTRIBUTE_LIST, PROC_THREAD_ATTRIBUTE_HANDLE_LIST, PROCESS_INFORMATION,
-        STARTF_USESTDHANDLES, STARTUPINFOEXW, STARTUPINFOW, UpdateProcThreadAttribute,
+        CreateProcessW, DETACHED_PROCESS, EXTENDED_STARTUPINFO_PRESENT,
+        PROC_THREAD_ATTRIBUTE_HANDLE_LIST, PROCESS_INFORMATION, STARTF_USESTDHANDLES,
+        STARTUPINFOEXW, STARTUPINFOW,
     };
-
-    let wide = |text: &OsStr| -> Vec<u16> { text.encode_wide().collect() };
-    let terminated =
-        |text: &OsStr| -> Vec<u16> { text.encode_wide().chain(std::iter::once(0)).collect() };
 
     let stdin = std::fs::OpenOptions::new().read(true).open("NUL")?;
     let log = std::fs::OpenOptions::new()
@@ -632,70 +555,20 @@ pub(crate) fn spawn_detached(
         }
     }
 
-    // The program, quoted (a Windows path cannot hold a quote), then each argument.
-    let mut command_line = vec![b'"' as u16];
-    command_line.extend(wide(spec.program.as_os_str()));
-    command_line.push(b'"' as u16);
-    for argument in spec.args {
-        command_line.push(b' ' as u16);
-        crate::execution::detached::append_windows_argument(&mut command_line, &wide(argument));
-    }
-    command_line.push(0);
-
-    // The environment block, sorted by name as Windows keeps it.
-    let mut variables: Vec<(Vec<u16>, Vec<u16>)> = spec
-        .env
-        .iter()
-        .map(|(name, value)| (wide(name), wide(value)))
-        .collect();
-    variables.sort_by_key(|(name, _)| String::from_utf16_lossy(name).to_uppercase());
-    let mut environment = Vec::new();
-    for (name, value) in variables {
-        environment.extend(name);
-        environment.push(b'=' as u16);
-        environment.extend(value);
-        environment.push(0);
-    }
-    if environment.is_empty() {
-        environment.push(0);
-    }
-    environment.push(0);
-
+    let command_line = command_line(spec.program.as_os_str(), spec.args);
+    let environment = environment_block(spec.env.iter().cloned());
     let program = terminated(spec.program.as_os_str());
     let cwd = terminated(spec.cwd.as_os_str());
 
     // An attribute list naming the only handles the process may inherit.
-    let mut size = 0usize;
-    // SAFETY: a size query; the call fails with ERROR_INSUFFICIENT_BUFFER by design.
-    unsafe { InitializeProcThreadAttributeList(null_mut(), 1, 0, &mut size) };
-    let mut storage = vec![0usize; size.div_ceil(std::mem::size_of::<usize>()).max(1)];
-    let list = storage.as_mut_ptr() as LPPROC_THREAD_ATTRIBUTE_LIST;
-    // SAFETY: `storage` is at least `size` bytes, pointer-aligned, and outlives `list`.
-    if unsafe { InitializeProcThreadAttributeList(list, 1, 0, &mut size) } == 0 {
-        return Err(io::Error::last_os_error());
-    }
-    struct AttributeList(LPPROC_THREAD_ATTRIBUTE_LIST);
-    impl Drop for AttributeList {
-        fn drop(&mut self) {
-            // SAFETY: initialized above, deleted once.
-            unsafe { DeleteProcThreadAttributeList(self.0) };
-        }
-    }
-    let _list = AttributeList(list);
+    let mut list = AttributeList::new(1)?;
     // SAFETY: `inherited` outlives the CreateProcessW calls below, which read it.
-    if unsafe {
-        UpdateProcThreadAttribute(
-            list,
-            0,
-            PROC_THREAD_ATTRIBUTE_HANDLE_LIST as usize,
+    unsafe {
+        list.set(
+            PROC_THREAD_ATTRIBUTE_HANDLE_LIST,
             inherited.as_ptr().cast(),
             std::mem::size_of_val(&inherited),
-            null_mut(),
-            null(),
-        )
-    } == 0
-    {
-        return Err(io::Error::last_os_error());
+        )?;
     }
 
     let mut startup = STARTUPINFOEXW::default();
@@ -704,7 +577,7 @@ pub(crate) fn spawn_detached(
     startup.StartupInfo.hStdInput = inherited[0];
     startup.StartupInfo.hStdOutput = inherited[1];
     startup.StartupInfo.hStdError = inherited[1];
-    startup.lpAttributeList = list;
+    startup.lpAttributeList = list.as_ptr();
 
     let base = EXTENDED_STARTUPINFO_PRESENT
         | CREATE_UNICODE_ENVIRONMENT
@@ -753,67 +626,5 @@ pub(crate) fn spawn_detached(
         Ok(DetachedChild(OwnedHandle::from_raw_handle(
             info.hProcess as RawHandle,
         )))
-    }
-}
-
-#[cfg(test)]
-mod detached_tests {
-    use crate::execution::detached::{self, DetachedSpec};
-    use std::{
-        ffi::OsString,
-        path::Path,
-        time::{Duration, Instant},
-    };
-
-    #[test]
-    fn a_detached_process_runs_where_and_with_only_what_it_is_given() {
-        let dir = tempfile::tempdir().unwrap();
-        let log = dir.path().join("out.log");
-        let system_root = std::env::var_os("SystemRoot").unwrap();
-        let cmd = Path::new(&system_root).join("System32").join("cmd.exe");
-        let env = [
-            (OsString::from("SystemRoot"), system_root),
-            (
-                OsString::from("DEVAGOTCHI_PROBE"),
-                OsString::from("kept here"),
-            ),
-        ];
-        let args: [OsString; 3] = ["/d".into(), "/c".into(), "cd & set".into()];
-        let mut child = detached::spawn(&DetachedSpec {
-            program: &cmd,
-            args: &args,
-            env: &env,
-            cwd: dir.path(),
-            log: &log,
-        })
-        .unwrap();
-        let deadline = Instant::now() + Duration::from_secs(20);
-        let code = loop {
-            if let Some(code) = child.try_wait().unwrap() {
-                break code;
-            }
-            assert!(Instant::now() < deadline, "cmd did not finish");
-            std::thread::sleep(Duration::from_millis(50));
-        };
-        let out = std::fs::read_to_string(&log).unwrap();
-        assert_eq!(code, 0, "{out}");
-        let mut lines = out.lines();
-        let cwd = lines.next().unwrap().trim();
-        assert_eq!(
-            std::fs::canonicalize(cwd).unwrap(),
-            std::fs::canonicalize(dir.path()).unwrap(),
-            "{out}"
-        );
-        let vars: Vec<String> = lines.map(|l| l.to_ascii_uppercase()).collect();
-        assert!(
-            vars.contains(&"DEVAGOTCHI_PROBE=KEPT HERE".to_string()),
-            "{out}"
-        );
-        for absent in ["PATH=", "USERPROFILE=", "USERNAME="] {
-            assert!(
-                !vars.iter().any(|v| v.starts_with(absent)),
-                "{absent} reached it: {out}"
-            );
-        }
     }
 }

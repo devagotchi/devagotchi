@@ -10,7 +10,7 @@ pub(crate) struct Terminal {
 
 impl Terminal {
     /// A new pseudo-terminal of `cols` by `rows`, and its program side for the root.
-    pub(crate) fn open(cols: u16, rows: u16) -> io::Result<(Self, OwnedFd)> {
+    pub(crate) async fn open(cols: u16, rows: u16) -> io::Result<(Self, OwnedFd)> {
         use std::os::unix::fs::OpenOptionsExt;
         // std opens with O_CLOEXEC: no program inherits the master.
         let master = std::fs::OpenOptions::new()
@@ -158,4 +158,23 @@ pub(crate) fn configure_terminal(command: &mut Command, program_side: &OwnedFd) 
         });
     }
     Ok(())
+}
+
+/// The root as the broker holds it. On Linux every root is a spawned child, a terminal's too:
+/// the program side of its pseudo-terminal is the child's stdio.
+pub(crate) type Root = Child;
+
+/// Spawn the root `command` describes; on Linux a terminal is already in `command`
+/// (`configure_terminal`).
+pub(crate) fn spawn(
+    command: &mut Command,
+    _terminal: Option<&Terminal>,
+    _account_environment: bool,
+) -> io::Result<Root> {
+    command.spawn()
+}
+
+/// The root's piped stdio, where it has any.
+pub(crate) fn piped(root: &mut Root) -> Option<&mut Child> {
+    Some(root)
 }
