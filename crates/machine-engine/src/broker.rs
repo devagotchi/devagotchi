@@ -6,6 +6,7 @@
 use crate::execution::platform::{self, SCOPE, SCOPE_TERMINAL};
 use crate::execution::{ExecutionSpec, InputRequest, InputStep, StopReason, run_job};
 use crate::journal::{Journal, JournalFrame, JournalOperation};
+use access::{claim_writer, reach, reach_mut, visible};
 use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
 use devagotchi_contracts::*;
 use serde::{Deserialize, Serialize};
@@ -283,12 +284,12 @@ impl Broker {
     pub async fn handle(&self, request: RequestBody) -> BridgeResult<ResponseBody> {
         match request {
             RequestBody::OperationStart(input) => self.start(input).map(ResponseBody::Start),
-            RequestBody::OperationGet(input) => {
-                self.get(&input.operation_id).map(ResponseBody::Operation)
-            }
+            RequestBody::OperationGet(input) => self
+                .get(&input.operation_id, input.caller.as_ref())
+                .map(ResponseBody::Operation),
             RequestBody::OperationRead(input) => self.read(input).map(ResponseBody::Output),
             RequestBody::OperationCancel(input) => self
-                .cancel(&input.operation_id)
+                .cancel(&input.operation_id, input.caller.as_ref())
                 .map(ResponseBody::Operation),
             RequestBody::OperationList(input) => self.list(input).map(ResponseBody::Operations),
             RequestBody::OperationWait(input) => {
@@ -473,6 +474,11 @@ impl Broker {
             let operation = &state.operations[id];
             if operation.record.request_digest != request_digest
                 || operation.record.config_identity != self.shared.config_identity
+                || !visible(
+                    operation.record.owner.as_ref(),
+                    input.caller.as_ref(),
+                    ListScope::Account,
+                )
             {
                 return Err(BridgeError::new(
                     "idempotency_conflict",
@@ -628,7 +634,7 @@ impl Broker {
             changes.borrow_and_update();
             {
                 let state = self.shared.lock();
-                let operation = state.operations.get(&id).ok_or_else(not_found)?;
+                let operation = reach(&state.operations, &id, input.caller.as_ref())?;
                 let record = &operation.record;
                 let settled = record.view.state.terminal() && !operation.active;
                 let output = input
@@ -641,7 +647,7 @@ impl Broker {
             match tokio::time::timeout_at(until, changes.changed()).await {
                 Ok(Ok(())) => {}
                 // The deadline, or a broker going away: answer with what is there now.
-                _ => return self.get(&id),
+                _ => return self.get(&id, input.caller.as_ref()),
             }
         }
     }
@@ -669,14 +675,10 @@ impl Broker {
         })
     }
 
-    fn get(&self, id: &str) -> BridgeResult<OperationView> {
+    fn get(&self, id: &str, caller: Option<&Caller>) -> BridgeResult<OperationView> {
         let id = validate_id(id)?;
-        self.shared
-            .lock()
-            .operations
-            .get(&id)
-            .map(|operation| operation.record.view.clone())
-            .ok_or_else(|| not_found())
+        let state = self.shared.lock();
+        Ok(reach(&state.operations, &id, caller)?.record.view.clone())
     }
 
     fn list(&self, input: ListInput) -> BridgeResult<OperationsPage> {
@@ -762,7 +764,7 @@ impl Broker {
         let caller = input.caller.ok_or_else(no_caller)?;
         let (sender, steps, cursor) = {
             let mut state = self.shared.lock();
-            let operation = state.operations.get_mut(&id).ok_or_else(not_found)?;
+            let operation = reach_mut(&mut state.operations, &id, Some(&caller))?;
             let mode = claim_writer(operation, &caller, input.take_over)?;
             let steps = input_steps(mode, &text, &input.keys)?;
             let sender = operation.input.clone().ok_or_else(input_closed)?;
@@ -775,7 +777,7 @@ impl Broker {
             self.shared.input_closed(&id);
         }
         Ok(InputSent {
-            operation: self.get(&id)?,
+            operation: self.get(&id, Some(&caller))?,
             cursor,
         })
     }
@@ -787,7 +789,7 @@ impl Broker {
         let caller = input.caller.ok_or_else(no_caller)?;
         let sender = {
             let mut state = self.shared.lock();
-            let operation = state.operations.get_mut(&id).ok_or_else(not_found)?;
+            let operation = reach_mut(&mut state.operations, &id, Some(&caller))?;
             if claim_writer(operation, &caller, input.take_over)? != InputMode::Terminal {
                 return Err(BridgeError::new(
                     "no_terminal",
@@ -805,7 +807,7 @@ impl Broker {
         )
         .await?;
         let mut state = self.shared.lock();
-        let operation = state.operations.get_mut(&id).ok_or_else(not_found)?;
+        let operation = reach_mut(&mut state.operations, &id, Some(&caller))?;
         if let Some(interactive) = &mut operation.record.view.interactive {
             interactive.cols = input.cols;
             interactive.rows = input.rows;
@@ -821,10 +823,10 @@ impl Broker {
         Ok(view)
     }
 
-    fn cancel(&self, id: &str) -> BridgeResult<OperationView> {
+    fn cancel(&self, id: &str, caller: Option<&Caller>) -> BridgeResult<OperationView> {
         let id = validate_id(id)?;
         let mut state = self.shared.lock();
-        let operation = state.operations.get_mut(&id).ok_or_else(|| not_found())?;
+        let operation = reach_mut(&mut state.operations, &id, caller)?;
         if !operation.active {
             return Ok(operation.record.view.clone());
         }
@@ -850,7 +852,7 @@ impl Broker {
             return Err(invalid("max_bytes must be 1024..=16384"));
         }
         let state = self.shared.lock();
-        let operation = state.operations.get(&id).ok_or_else(|| not_found())?;
+        let operation = reach(&state.operations, &id, input.caller.as_ref())?;
         let record = &operation.record;
         if input.cursor > record.latest_sequence {
             return Err(invalid(
@@ -984,76 +986,6 @@ fn input_closed() -> BridgeError {
         "input_closed",
         "This operation no longer takes input: it ended, or its input was closed",
     )
-}
-
-/// Whether a list for `caller` in `scope` shows an operation `owner` started. Without a
-/// caller (the inspector, an older client) everything shows. This machine's own account
-/// owns everything its broker runs, an operation started without an owner included.
-fn visible(owner: Option<&Caller>, caller: Option<&Caller>, scope: ListScope) -> bool {
-    let Some(caller) = caller else {
-        return true;
-    };
-    match (owner, scope) {
-        (Some(owner), ListScope::Mine) => owner == caller,
-        (_, ListScope::Account) if caller.account == LOCAL_ACCOUNT => true,
-        (Some(owner), ListScope::Account) => owner.account == caller.account,
-        (None, _) => false,
-    }
-}
-
-/// Give `caller` the keyboard of an interactive operation, or say why not. Only its own
-/// account ever drives it; another conversation or client of that account asks explicitly
-/// (`take_over`); and while one client holds the keyboard (its last input within the lease)
-/// no other types into it unless it takes over, so keystrokes never interleave.
-fn claim_writer(
-    operation: &mut Operation,
-    caller: &Caller,
-    take_over: bool,
-) -> BridgeResult<InputMode> {
-    let Some(interactive) = &operation.record.view.interactive else {
-        return Err(BridgeError::new(
-            "not_interactive",
-            "This operation takes no input; start it with interactive to type into it",
-        ));
-    };
-    let Some(owner) = &operation.record.owner else {
-        return Err(input_closed());
-    };
-    if owner.account != caller.account {
-        return Err(BridgeError::new(
-            "not_your_operation",
-            "This operation belongs to another account; only that account can drive it",
-        ));
-    }
-    if !interactive.input_open || operation.input.is_none() {
-        return Err(input_closed());
-    }
-    if owner.client != caller.client && !take_over {
-        return Err(BridgeError::new(
-            "not_your_session",
-            "Another conversation or client of your account started this operation. To drive it anyway, call again with take_over: true",
-        ));
-    }
-    let now = now_ms();
-    if let Some((holder, until)) = &operation.writer
-        && holder != &caller.client
-        && *until > now
-        && !take_over
-    {
-        return Err(BridgeError::new(
-            "writer_busy",
-            format!(
-                "Another client of your account is typing into this operation; its hold ends in {} s. Wait, or call again with take_over: true",
-                (until - now).div_ceil(1000)
-            ),
-        ));
-    }
-    let mode = interactive.mode;
-    operation.writer = Some((caller.client.clone(), now + WRITER_LEASE_MS));
-    if let Some(interactive) = &mut operation.record.view.interactive {
-        interactive.writer_until_ms = Some(now + WRITER_LEASE_MS);
-    }
-    Ok(mode)
 }
 
 /// What a key sends on a terminal (an xterm in its normal cursor mode).
@@ -1400,3 +1332,5 @@ impl Shared {
 
 #[cfg(test)]
 mod tests;
+
+mod access;

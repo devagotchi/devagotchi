@@ -30,6 +30,7 @@ fn a_hub_speaks_only_for_its_own_accounts_never_for_this_machines_user() {
     assert!(from_a_hub(&input_from(None)).is_ok());
     let get = RequestBody::OperationGet(GetInput {
         operation_id: "op".into(),
+        caller: None,
     });
     assert!(from_a_hub(&get).is_ok());
 }

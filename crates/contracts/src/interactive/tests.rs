@@ -39,6 +39,23 @@ fn a_caller_in_a_tool_call_is_not_offered_and_a_transport_replaces_it() {
             serde_json::json!({"operation_id": "o", "cols": 80, "rows": 24,
             "caller": smuggled()}),
         ),
+        // Observing and stopping an operation is its account's alone too.
+        (
+            "operation_get",
+            serde_json::json!({"operation_id": "o", "caller": smuggled()}),
+        ),
+        (
+            "operation_cancel",
+            serde_json::json!({"operation_id": "o", "caller": smuggled()}),
+        ),
+        (
+            "operation_read",
+            serde_json::json!({"operation_id": "o", "caller": smuggled()}),
+        ),
+        (
+            "operation_wait",
+            serde_json::json!({"operation_id": "o", "timeout_ms": 1, "caller": smuggled()}),
+        ),
     ];
     for (method, params) in requests {
         let request = serde_json::json!({"method": method, "params": params});
@@ -47,8 +64,8 @@ fn a_caller_in_a_tool_call_is_not_offered_and_a_transport_replaces_it() {
         body.set_caller(&hub);
         assert_eq!(body.caller(), Some(&hub));
     }
-    let get = serde_json::json!({"method": "operation_get", "params": {"operation_id": "o"}});
-    let mut read: RequestBody = serde_json::from_value(get).unwrap();
+    let file = serde_json::json!({"method": "file_info", "params": {"path": "/x"}});
+    let mut read: RequestBody = serde_json::from_value(file).unwrap();
     read.set_caller(&hub);
     assert_eq!(
         read.caller(),

@@ -9,7 +9,6 @@
 736	crates/agenthub/src/hosted/operations.rs
 527	crates/agenthub/src/lease.rs
 2270	crates/agenthub/src/lib.rs
-519	crates/contracts/src/lib.rs
 1148	crates/devagotchi/tests/one_binary.rs
 626	crates/hub/src/agenthub/issue_lifecycle/tests.rs
 2998	crates/hub/src/agenthub/mcp/mod.rs
@@ -64,7 +63,7 @@
 516	crates/ipc/src/windows/security.rs
 1017	crates/machine-engine/src/ai/mod.rs
 647	crates/machine-engine/src/ai/tests.rs
-1402	crates/machine-engine/src/broker.rs
+1336	crates/machine-engine/src/broker.rs
 519	crates/machine-engine/src/execution/platform/linux.rs
 630	crates/machine-engine/src/execution/platform/windows.rs
 561	crates/mcp/src/adapter.rs

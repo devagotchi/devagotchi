@@ -36,7 +36,15 @@ create that tag, and a prerelease tag does not move the `:latest` image.
   replaced. A machine's link refuses a hub request that claims any caller but a hub account.
   `operation_list` shows the caller's account's jobs by default (this machine's own account sees
   everything here), `scope: "mine"` only this conversation's. A hub newer than a machine's
-  broker names callers that broker does not know: update the machine (`machine_update`).
+  broker names callers that broker does not know: update the machine (`machine_update`). When a
+  call to a machine fails and its build differs from the one the hub hands out, the error now
+  says so and names `machine_update` (an older link drops a request it cannot read, which
+  otherwise reads as the machine going offline).
+- An operation is its account's alone: `operation_get`, `operation_read`, `operation_wait` and
+  `operation_cancel` (and typing into it) reach only operations the caller's account started,
+  any for this machine's own account and the local inspector. Another account's answers
+  `not_found`, so it does not learn the operation exists, and its retry key is a conflict, never
+  a replay. Before, any account a shared machine was granted to reached any job by its ID.
 - `list_directory` goes on past `max_entries`: a truncated listing names `next_cursor`, passed back
   as `cursor` for the entries after it in the same order (a vanished cursor is refused,
   `cursor_not_found`). An entry whose name is not valid Unicode is marked `name_lossy`.

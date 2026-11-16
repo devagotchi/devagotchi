@@ -91,6 +91,10 @@ pub struct StartInput {
 #[serde(deny_unknown_fields)]
 pub struct GetInput {
     pub operation_id: String,
+    /// Set by the transport, never by an AI (see `StartInput::caller`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(skip)]
+    pub caller: Option<Caller>,
 }
 
 /// Longest a broker holds one wait open. MCP clients give up on a call after about a
@@ -129,6 +133,10 @@ pub struct WaitInput {
     /// Longest to wait, 1..=50000 milliseconds. The answer comes as soon as the operation
     /// changes as asked, without polling; at the limit it comes back unchanged.
     pub timeout_ms: u64,
+    /// Set by the transport, never by an AI (see `StartInput::caller`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(skip)]
+    pub caller: Option<Caller>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -183,6 +191,10 @@ pub struct ReadInput {
     /// Maximum raw bytes to return, 1024..=16384. Frames are at most 1024 bytes.
     #[serde(default = "default_page_bytes")]
     pub max_bytes: usize,
+    /// Set by the transport, never by an AI (see `StartInput::caller`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(skip)]
+    pub caller: Option<Caller>,
 }
 
 fn default_page_bytes() -> usize {
@@ -453,67 +465,4 @@ pub fn link_signing_message(hub: &str, device: &str, nonce: &str) -> Vec<u8> {
 }
 
 #[cfg(test)]
-mod link_frame_tests {
-    use super::*;
-
-    #[test]
-    fn hello_carries_its_build_and_an_old_hello_without_one_still_parses() {
-        let hello = LinkFrame::Hello {
-            version: LINK_PROTOCOL_VERSION,
-            device: "dabo".into(),
-            public_key: "ab".into(),
-            signature: "cd".into(),
-            enroll_code: None,
-            build: Some("main-abc1234".into()),
-        };
-        let text = serde_json::to_string(&hello).unwrap();
-        assert!(text.contains(r#""build":"main-abc1234""#), "{text}");
-        let back: LinkFrame = serde_json::from_str(&text).unwrap();
-        assert!(matches!(back, LinkFrame::Hello { build: Some(ref b), .. } if b == "main-abc1234"));
-        // What a device from before builds had a name sends.
-        let old =
-            r#"{"type":"hello","version":1,"device":"dabo","public_key":"ab","signature":"cd"}"#;
-        let parsed: LinkFrame = serde_json::from_str(old).unwrap();
-        assert!(matches!(
-            parsed,
-            LinkFrame::Hello {
-                build: None,
-                enroll_code: None,
-                ..
-            }
-        ));
-    }
-
-    #[test]
-    fn update_and_update_status_round_trip() {
-        let update = HubFrame::Update {
-            version: "main-abc1234".into(),
-            force: true,
-        };
-        let text = serde_json::to_string(&update).unwrap();
-        assert_eq!(
-            text,
-            r#"{"type":"update","version":"main-abc1234","force":true}"#
-        );
-        let back: HubFrame = serde_json::from_str(&text).unwrap();
-        assert!(
-            matches!(back, HubFrame::Update { ref version, force: true } if version == "main-abc1234")
-        );
-        for state in UPDATE_STATES {
-            let detail = (state == "failed").then(|| "busy".to_string());
-            let status = LinkFrame::UpdateStatus {
-                state: state.into(),
-                detail: detail.clone(),
-            };
-            let text = serde_json::to_string(&status).unwrap();
-            let back: LinkFrame = serde_json::from_str(&text).unwrap();
-            assert!(
-                matches!(back, LinkFrame::UpdateStatus { state: ref s, detail: ref d } if s == state && *d == detail),
-                "{text}"
-            );
-        }
-        let bare: LinkFrame =
-            serde_json::from_str(r#"{"type":"update_status","state":"downloading"}"#).unwrap();
-        assert!(matches!(bare, LinkFrame::UpdateStatus { detail: None, .. }));
-    }
-}
+mod link_frame_tests;

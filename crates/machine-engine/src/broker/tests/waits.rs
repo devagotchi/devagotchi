@@ -129,7 +129,7 @@ async fn waits_are_capped_and_a_cancellation_wakes_every_waiter() {
     let busy = broker.wait(wait_for(&id, None, 1_000)).await.unwrap_err();
     assert_eq!(busy.code, "wait_busy");
     let began = Instant::now();
-    broker.cancel(&id).unwrap();
+    broker.cancel(&id, None).unwrap();
     while let Some(answer) = waiters.join_next().await {
         let view = answer.unwrap().unwrap();
         assert!(matches!(view.state, OperationState::Cancelled), "{view:?}");

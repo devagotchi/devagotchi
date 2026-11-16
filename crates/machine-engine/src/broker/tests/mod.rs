@@ -91,6 +91,7 @@ async fn settle_within(broker: &Broker, id: &str, seconds: u64) -> OperationView
                 operation_id: id.into(),
                 output_after: None,
                 timeout_ms: left.clamp(1, MAX_WAIT_MS),
+                caller: None,
             })
             .await
             .unwrap();
@@ -109,6 +110,7 @@ fn wait_for(id: &str, output_after: Option<u64>, timeout_ms: u64) -> WaitInput {
         operation_id: id.into(),
         output_after,
         timeout_ms,
+        caller: None,
     }
 }
 
@@ -137,6 +139,7 @@ fn output_text(broker: &Broker, id: &str) -> String {
             operation_id: id.into(),
             cursor: 0,
             max_bytes: MAX_OUTPUT_PAGE_BYTES,
+            caller: None,
         })
         .unwrap();
     page.frames
@@ -145,6 +148,7 @@ fn output_text(broker: &Broker, id: &str) -> String {
         .collect()
 }
 
+mod access;
 mod interactive;
 mod lifecycle;
 mod waits;

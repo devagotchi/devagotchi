@@ -235,8 +235,8 @@ async fn only_its_account_drives_it_and_two_clients_never_type_at_once() {
                 .await
                 .unwrap_err()
         ),
-        "not_your_operation",
-        "take_over never reaches another account"
+        "not_found",
+        "take_over never reaches another account, which does not learn it exists"
     );
     assert_eq!(
         refused(
@@ -388,7 +388,7 @@ async fn on_windows_a_console_runs_what_is_typed_takes_ctrl_c_and_is_resized() {
         .await
         .unwrap();
     output_holding(&broker, &id, "42").await;
-    let running = broker.get(&id).unwrap();
+    let running = broker.get(&id, None).unwrap();
     assert!(
         running
             .detail
