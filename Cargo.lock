@@ -955,6 +955,7 @@ dependencies = [
  "devagotchi-connectors",
  "devagotchi-contracts",
  "devagotchi-ipc",
+ "devagotchi-kernel",
  "devagotchi-mcp",
  "devagotchi-store",
  "ed25519-dalek",

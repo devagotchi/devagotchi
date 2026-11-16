@@ -592,19 +592,19 @@ async fn isolation(hub: Hosted) {
             // `offers` and `offers_accept` name no machine, board or workflow: they read
             // and keep the caller's own tenant's yes, never another's. `connections` lists the
             // caller's own tenant's connections only (`connection_call` with B's name is
-            // refused below like every other tool). `get_recent_tool_calls` and
-            // `get_usage_stats` read the caller's own audit, whatever machine it names.
-            if !matches!(
-                name,
-                "whoami"
-                    | "machines"
-                    | "workflow_list"
-                    | "offers"
-                    | "offers_accept"
-                    | "connections"
-                    | "get_recent_tool_calls"
-                    | "get_usage_stats"
-            ) {
+            // refused below like every other tool). `get_recent_tool_calls`, `get_usage_stats`
+            // and the lexicon's tools read the caller's own audit or words, whatever it names.
+            const OWN: [&str; 8] = [
+                "whoami",
+                "machines",
+                "workflow_list",
+                "offers",
+                "offers_accept",
+                "connections",
+                "get_recent_tool_calls",
+                "get_usage_stats",
+            ];
+            if !OWN.contains(&name) && !crate::kernel::TOOLS.contains(&name) {
                 // Every other tool names a machine, a board or a workflow of B's here:
                 // refused by the tool itself, never for want of arguments it could read.
                 assert!(

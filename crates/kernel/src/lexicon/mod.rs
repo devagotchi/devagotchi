@@ -13,6 +13,7 @@ pub mod store;
 #[cfg(test)]
 mod tests;
 
+pub(crate) use apply::check_id;
 pub use model::*;
 pub use resolve::{Found, Origin, Outcome, Resolution};
 pub use store::{MemoryStore, Receipt, Store, Write};

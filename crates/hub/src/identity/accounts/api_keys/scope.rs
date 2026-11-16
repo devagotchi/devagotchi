@@ -24,10 +24,14 @@ pub enum Scope {
     BoardsAdmin,
     #[serde(rename = "approvals.request")]
     ApprovalsRequest,
+    #[serde(rename = "words.read")]
+    WordsRead,
+    #[serde(rename = "words.write")]
+    WordsWrite,
 }
 
 impl Scope {
-    pub const ALL: [Scope; 9] = [
+    pub const ALL: [Scope; 11] = [
         Scope::MachinesRead,
         Scope::MachinesRun,
         Scope::MachinesManage,
@@ -37,6 +41,8 @@ impl Scope {
         Scope::BoardsWrite,
         Scope::BoardsAdmin,
         Scope::ApprovalsRequest,
+        Scope::WordsRead,
+        Scope::WordsWrite,
     ];
 
     pub fn as_str(self) -> &'static str {
@@ -50,6 +56,8 @@ impl Scope {
             Scope::BoardsWrite => "boards.write",
             Scope::BoardsAdmin => "boards.admin",
             Scope::ApprovalsRequest => "approvals.request",
+            Scope::WordsRead => "words.read",
+            Scope::WordsWrite => "words.write",
         }
     }
 
@@ -65,6 +73,8 @@ impl Scope {
             Scope::BoardsWrite => "Work tickets and leave notes",
             Scope::BoardsAdmin => "Change board settings and webhooks",
             Scope::ApprovalsRequest => "Ask you for approvals",
+            Scope::WordsRead => "Look up your words and the dictionary",
+            Scope::WordsWrite => "Add and review your words",
         }
     }
 
@@ -90,6 +100,8 @@ pub fn scope_for(tool: &str) -> Option<Scope> {
         "list_directory" | "get_file_info" | "search_files" => Scope::FilesRead,
         "write_file" | "edit_file" | "create_directory" | "move_file" => Scope::FilesWrite,
         "approval_request" | "approval_wait" => Scope::ApprovalsRequest,
+        "dictionary_get" | "lexicon_resolve" => Scope::WordsRead,
+        "lexicon_propose" | "lexicon_review" => Scope::WordsWrite,
         "board_settings" | "board_wake" => Scope::BoardsAdmin,
         "board_attach" | "board_issue_context" | "board_prime" => Scope::BoardsRead,
         "board_ready" | "board_list" | "board_get" | "board_events" => Scope::BoardsRead,

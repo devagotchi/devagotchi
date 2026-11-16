@@ -217,7 +217,7 @@ async fn a_store_a_newer_hub_migrated_still_opens() {
 }
 
 /// Each domain's table prefixes (`.ai/patterns/layout.md`, "Tables carry their domain").
-const DOMAIN_PREFIXES: [(&str, &[&str]); 8] = [
+const DOMAIN_PREFIXES: [(&str, &[&str]); 9] = [
     ("identity", &["auth_", "oauth_"]),
     ("tenancy", &["tenancy_", "org_", "project_"]),
     ("agenthub", &["board_"]),
@@ -226,6 +226,7 @@ const DOMAIN_PREFIXES: [(&str, &[&str]); 8] = [
     ("notify", &["push_", "mail_", "signal_"]),
     ("ops", &["audit_", "analytics_"]),
     ("connectors", &["connector_"]),
+    ("kernel", &["kernel_"]),
 ];
 
 #[tokio::test]

@@ -82,6 +82,11 @@ impl Audit {
         Self { store }
     }
 
+    /// The store the chain is kept in: the hub's Postgres, which the lexicon shares.
+    pub fn store(&self) -> &Store {
+        &self.store
+    }
+
     pub async fn record(&self, entry: &AuditEntry<'_>) -> BridgeResult<u64> {
         let at = now_rfc3339();
         transaction!(&self.store, |connection| {

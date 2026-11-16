@@ -48,8 +48,7 @@ pub struct Hub {
     pub routed: Arc<Mutex<Routed>>,
 }
 
-/// The distinct machines one MCP session routed calls to, as the caller named them. Two
-/// are enough to know there was more than one.
+/// The distinct machines one MCP session routed calls to, as named: two say there were more.
 #[derive(Debug, Default)]
 pub struct Routed(Vec<String>);
 
@@ -523,6 +522,7 @@ impl Hub {
             + Self::workflow_router()
             + Self::offers_router()
             + Self::connections_router()
+            + Self::lexicon_router()
     }
 }
 
