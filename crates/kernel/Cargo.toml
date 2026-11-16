@@ -1,6 +1,6 @@
 [package]
 name = "devagotchi-kernel"
-description = "The Devagotchi kernel: every piece of Devagotchi's own AI-specific code, one domain per folder (capture: the `devagotchi ai` command's policy, harness hooks and private evidence journal)"
+description = "The Devagotchi kernel: Devagotchi's own AI code, one domain per folder: capture (the `devagotchi ai` command), the dictionary of concepts it routes to, and the lexicon of a person's and their projects' own phrases"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

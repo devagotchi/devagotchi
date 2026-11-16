@@ -25,8 +25,11 @@
 crates/kernel/src/
   lib.rs          wiring only
   capture/        `devagotchi ai`: policy, harness hooks, capture journal, delivery status
-  dictionary/     concepts: canonical label, definition, source, retired names, links
-  lexicon/        phrases a person or project uses, their senses, scopes, states, resolver
+  dictionary/     concepts: canonical label, aliases, informal and retired names, terms,
+                  stack markers, disambiguation rules; the shipped seed (seed.json)
+  lexicon/        phrases a person or project uses, their concepts, scopes, states,
+                  revisions, events and receipts; the `Store` trait; the resolver and scanner
+  words.rs        normalization and word splitting both share
   handoff/        the Clyffy bundle, merge, and the authority state with its epoch fence
 ```
 
@@ -40,9 +43,25 @@ same trait on its own database. That keeps the kernel public and host-neutral.
 | Milestone | Task | Dependencies | Acceptance evidence | State |
 |---|---|---|---|---|
 | K1 | Move machine-engine `src/ai/` to `crates/kernel/src/capture/`; `devagotchi ai` unchanged; ratchet entries move with their files | none | `git diff -M` renames; kernel 18 tests, `ai_workflow`, `one_binary`, `layout` green | done |
-| K2 | `dictionary` and `lexicon` domains: model, scopes, states (proposed, confirmed, dismissed, retired, inconclusive), CAS revisions, events, resolver, shipped seed; in-memory `Store` | K1 | resolver tests on the seed and the disambiguation rows | in progress |
+| K2 | `dictionary` and `lexicon` domains: model, scopes, states (proposed, confirmed, dismissed, retired, inconclusive), CAS revisions, events, resolver, shipped seed; in-memory `Store` | K1 | resolver tests on the seed and the disambiguation rows | done |
 | K3 | Hub hosting: `kernel_` tables, Postgres `Store`, MCP tools `lexicon_resolve`, `lexicon_propose`, `lexicon_review`, `dictionary_get` | K2 | store tests on Postgres; tool tests | not started |
 | K4 | `handoff`: `LexiconBundleV1` in contracts, merge engine, authority (devagotchi, handing_over, clyffy, restoring) with an epoch fence, restore from the mirror | K2 | property tests: merge order-independent for non-conflicts; confirmed-vs-confirmed differences become conflicts; an old epoch's write is refused | not started |
+
+## K2 decisions
+
+- States: `proposed`, `confirmed`, `inconclusive` (parked, meaning may be empty until revised),
+  `dismissed`, `retired` (still resolves, marked, after everything else), `deleted` (words
+  erased from the entry, its events and its receipts). One live entry (proposed, confirmed,
+  inconclusive) per normalized phrase per scope.
+- Operations: propose, define (confirmed at once: the person's own words), park, revise,
+  confirm, dismiss, retire, delete. Clyffy's create_proposal and create_confirmed map to
+  propose and define in the handoff.
+- Resolution order: project confirmed, personal confirmed, dictionary rule (cued, then the
+  phrase's default), dictionary names by strength, retired entry, unknown. Ties between
+  concepts go to the one the surrounding words name most, else ambiguous.
+- Owner ids are any 1 to 128 of `[A-Za-z0-9_-.:@/]`, so a hub subject and a Clyffy UUID both fit.
+- `Store` uses `impl Future` methods (no async-trait dependency); `MemoryStore` is the
+  reference the Postgres store will be tested against.
 
 ## Research behind the model
 
@@ -74,11 +93,16 @@ same trait on its own database. That keeps the kernel public and host-neutral.
 - K1, 2026-11-16, local: `cargo check -p devagotchi-kernel -p devagotchi-machine-engine -p
   devagotchi` clean; `cargo test -p devagotchi-kernel` 18 passed; `cargo test -p devagotchi
   --test layout --test ai_workflow --test one_binary` 7, 3 and 11 passed.
+- K2, 2026-11-16, local: kernel 40 passed (18 capture, 22 dictionary, lexicon, words):
+  seed load and refusals, stack markers with yields, state machine and refusals, CAS,
+  receipts, owner isolation, delete erasing words from events and receipts, project over
+  personal, every seed disambiguation row, context picking, retired fallback, text scanning
+  with exact-case names. `layout` 7 passed.
 - K1 on main after P9, 2026-11-16, local: kernel 18 passed, machine-engine 107 (its 18 `ai`
   tests now live in the kernel), `layout`, `ai_workflow`, `one_binary` 7, 3 and 11 passed.
 
 ## Delivery
 
-Implementation: K1 done, K2 next. Validation: local receipts above (no CI by request).
+Implementation: K1 and K2 done, K3 next. Validation: local receipts above (no CI by request).
 Push: increment-179/desktop-commander-parity. PR: none. Main: K1 landed.
-**DELIVERY INCOMPLETE: K2 to K4 remain**
+**DELIVERY INCOMPLETE: K3 and K4 remain**
