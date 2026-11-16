@@ -17,6 +17,9 @@ pub(crate) fn enroll(state: &Path, config: Option<&Path>, device: &str) -> Bridg
             "device must be [a-z0-9][a-z0-9-]{0,62}, the broker name in the hub config",
         ));
     }
+    if let Some(path) = config {
+        named_link(&crate::read_config(path)?, device)?;
+    }
     let code = store::block_on(async {
         let store = store::for_command(state, config).await?;
         let code = Devices::new(store.clone())
@@ -33,6 +36,28 @@ pub(crate) fn enroll(state: &Path, config: Option<&Path>, device: &str) -> Bridg
         super::devices::CODE_TTL_SECS / 60
     );
     Ok(())
+}
+
+/// A code is only worth issuing for a device the hub will take: one its config names as a
+/// linked broker. Any other name is refused at the link (`devices::enroll`), after the code
+/// was printed and copied to the machine, so it is refused here instead, before a code exists.
+/// A machine an account adds from the hub's pages takes no operator code at all.
+fn named_link(config: &crate::config::HubConfig, device: &str) -> BridgeResult<()> {
+    match config.brokers.iter().find(|broker| broker.name == device) {
+        Some(broker) if broker.link => Ok(()),
+        Some(_) => Err(BridgeError::new(
+            "invalid_cli",
+            format!(
+                "{device} is a broker on this hub's host, not a linked machine: it needs no code"
+            ),
+        )),
+        None => Err(BridgeError::new(
+            "not_configured",
+            format!(
+                "the hub's config does not name {device}, so the hub would refuse its link: add {{\"name\": \"{device}\", \"link\": true}} to its brokers and restart the hub, or add the machine from the hub's Machines page"
+            ),
+        )),
+    }
 }
 
 /// Revoke `device` and cancel its unused codes; its link closes within seconds.
@@ -71,4 +96,39 @@ pub(crate) fn devices(state: &Path, config: Option<&Path>) -> BridgeResult<()> {
         serde_json::to_string_pretty(&list).unwrap_or_default()
     );
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::named_link;
+    use crate::config::HubConfig;
+
+    fn config(brokers: &str) -> HubConfig {
+        HubConfig::parse_with(
+            &format!(
+                r#"{{"listen": "127.0.0.1:8787", "public_url": "http://127.0.0.1:8787",
+                    "auth": {{"mode": "hub", "rp_id": "127.0.0.1"}}, "brokers": {brokers}, "grants": []}}"#
+            ),
+            |_| None,
+        )
+        .expect("config")
+    }
+
+    #[test]
+    fn a_code_is_issued_only_for_a_device_the_config_names_as_a_link() {
+        let hub = config(
+            r#"[{"name": "box1", "link": true}, {"name": "here", "socket": "/run/b.sock"}]"#,
+        );
+        assert!(named_link(&hub, "box1").is_ok());
+        assert_eq!(named_link(&hub, "here").unwrap_err().code, "invalid_cli");
+        let missing = named_link(&hub, "box2").unwrap_err();
+        assert_eq!(missing.code, "not_configured");
+        assert!(
+            missing
+                .message
+                .contains(r#"{"name": "box2", "link": true}"#),
+            "{}",
+            missing.message
+        );
+    }
 }
