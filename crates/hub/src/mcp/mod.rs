@@ -23,6 +23,7 @@
 //! `crate::ops` (audit, milestones), `crate::agenthub`, `crate::workflows`, `crate::offers`,
 //! `crate::connections` (their tools), `crate::config`.
 
+mod callers;
 mod surface;
 
 /// What the rest of the hub uses of the router.

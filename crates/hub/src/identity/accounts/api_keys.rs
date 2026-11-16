@@ -112,26 +112,20 @@ impl Scope {
 /// The scope a tool needs. `None` means no key may call it.
 pub fn scope_for(tool: &str) -> Option<Scope> {
     Some(match tool {
-        "machines" | "operation_get" | "operation_read" | "operation_wait" => Scope::MachinesRead,
+        "machines" | "operation_get" | "operation_read" => Scope::MachinesRead,
+        "operation_wait" | "operation_list" => Scope::MachinesRead,
         "run" | "operation_start" | "operation_cancel" => Scope::MachinesRun,
+        "operation_input" | "operation_resize" => Scope::MachinesRun,
         "machine_add" | "machine_update" | "workflow_list" | "workflow_start"
         | "workflow_status" | "workflow_wait" | "workflow_cancel" => Scope::MachinesManage,
-        "read_file" | "read_multiple_files" | "read_image" | "list_directory" | "get_file_info" => {
-            Scope::FilesRead
-        }
+        "read_file" | "read_multiple_files" | "read_image" => Scope::FilesRead,
+        "list_directory" | "get_file_info" => Scope::FilesRead,
         "write_file" | "edit_file" | "create_directory" | "move_file" => Scope::FilesWrite,
         "approval_request" | "approval_wait" => Scope::ApprovalsRequest,
         "board_settings" | "board_wake" => Scope::BoardsAdmin,
-        "board_attach"
-        | "board_issue_context"
-        | "board_prime"
-        | "board_ready"
-        | "board_list"
-        | "board_get"
-        | "board_events"
-        | "board_wait"
-        | "board_inbox"
-        | "board_verify" => Scope::BoardsRead,
+        "board_attach" | "board_issue_context" | "board_prime" => Scope::BoardsRead,
+        "board_ready" | "board_list" | "board_get" | "board_events" => Scope::BoardsRead,
+        "board_wait" | "board_inbox" | "board_verify" => Scope::BoardsRead,
         tool if tool.starts_with("board_") => Scope::BoardsWrite,
         _ => return None,
     })

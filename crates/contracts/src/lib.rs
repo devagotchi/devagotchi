@@ -138,9 +138,9 @@ pub struct ListInput {
     pub offset: u64,
     #[serde(default = "default_list_limit")]
     pub limit: u32,
-    /// With a caller: `mine` (the default) lists what this conversation or client started;
-    /// `account` lists what any of its account's conversations started (and, for this
-    /// machine's own account, everything here). Without a caller (the inspector): everything.
+    /// With a caller: `account` (the default) lists what any of its account's conversations
+    /// started, also before a restart (for this machine's own account, everything here);
+    /// `mine` only what this conversation or client started. Without a caller: everything.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub scope: Option<ListScope>,
     /// Set by the transport, never by an AI (see `StartInput::caller`).

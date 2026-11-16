@@ -113,7 +113,7 @@ impl Hub {
             command: Some(input.command),
             cwd: input.cwd,
             deadline_ms: timeout * 1000,
-            caller: None,
+            caller: Some(Self::caller(&subject, &context)),
             interactive: None,
         };
         let ran = shared::run(

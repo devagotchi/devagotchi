@@ -236,8 +236,10 @@ Those are historical local-adapter results. The separate Site reference MCP targ
 | `operation_get` | Read the job's observed state and exact request |
 | `operation_read` | Read retained output after a caller-owned cursor |
 | `operation_cancel` | Explicitly request cancellation of an admitted job |
+| `operation_input` | Type into a job started with `interactive` (a prompt, a REPL, a sign-in): text, then named keys |
+| `operation_resize` | Resize an interactive job's terminal |
 
-The hub serves the same tools for every linked machine, each with the machine's name, except `operation_list`: a broker the hub shares between people would list everyone's jobs, so it waits until the list is filtered to the caller's own.
+The hub serves the same tools for every linked machine, each with the machine's name. Every request names who is calling, set by the transport and never by the AI: this machine's own account and the adapter process locally, `hub:<subject>` and the MCP session through a hub. So `operation_list` shows a hub account only its own jobs (`scope: "mine"`, only this conversation's), only the conversation that started an interactive job types into it (another of the same account takes over with `take_over`), and a machine's link refuses a hub that claims to be anyone but its own accounts. Interactive jobs run on Linux today; Windows refuses them as `unsupported_platform` until it has a console for them.
 
 Stopping an MCP request only stops waiting for that response. Once admission is committed, reuse the same retry key and request to reconcile a lost reply. A different retry key can start new work.
 

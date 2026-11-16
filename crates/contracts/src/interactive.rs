@@ -166,7 +166,69 @@ pub struct InputSent {
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ListScope {
-    #[default]
+    /// What this conversation or client started.
     Mine,
+    /// What any conversation of its account started, also before a restart; for this
+    /// machine's own account, everything here.
+    #[default]
     Account,
 }
+
+/// What a hub puts before the subject it signed in to make a caller's account.
+pub const HUB_ACCOUNT_PREFIX: &str = "hub:";
+
+impl Caller {
+    /// An account a hub signed in, in one of its MCP sessions.
+    pub fn hub(subject: &str, session: &str) -> Self {
+        Self {
+            account: format!("{HUB_ACCOUNT_PREFIX}{subject}"),
+            client: session.into(),
+        }
+    }
+}
+
+impl crate::RequestBody {
+    /// Name `caller` as who sent this request, replacing whatever a tool call put there:
+    /// what a transport does with the caller it authenticated before passing a request on.
+    pub fn set_caller(&mut self, caller: &Caller) {
+        if let Some(slot) = self.caller_slot() {
+            *slot = Some(caller.clone());
+        }
+    }
+
+    /// The caller this request names, for a kind of request that carries one.
+    pub fn caller(&self) -> Option<&Caller> {
+        match self {
+            Self::OperationStart(input) => input.caller.as_ref(),
+            Self::OperationList(input) => input.caller.as_ref(),
+            Self::OperationInput(input) => input.caller.as_ref(),
+            Self::OperationResize(input) => input.caller.as_ref(),
+            _ => None,
+        }
+    }
+
+    // Every kind is named, so a new one that carries a caller cannot slip past a transport.
+    fn caller_slot(&mut self) -> Option<&mut Option<Caller>> {
+        match self {
+            Self::OperationStart(input) => Some(&mut input.caller),
+            Self::OperationList(input) => Some(&mut input.caller),
+            Self::OperationInput(input) => Some(&mut input.caller),
+            Self::OperationResize(input) => Some(&mut input.caller),
+            Self::OperationGet(_)
+            | Self::OperationRead(_)
+            | Self::OperationCancel(_)
+            | Self::OperationWait(_)
+            | Self::OperationsChanged(_)
+            | Self::FileRead(_)
+            | Self::FileList(_)
+            | Self::FileWrite(_)
+            | Self::FileEdit(_)
+            | Self::FileInfo(_)
+            | Self::FileMkdir(_)
+            | Self::FileMove(_) => None,
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests;

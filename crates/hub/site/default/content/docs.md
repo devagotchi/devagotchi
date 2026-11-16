@@ -61,7 +61,8 @@ server; [/llms-full.txt](/llms-full.txt) is that with every page inlined.
 | `run` | Runs a command on a machine and returns its output in one call. |
 | `read_file`, `read_multiple_files`, `read_image`, `list_directory`, `get_file_info`, `write_file`, `edit_file`, `create_directory`, `move_file` | Work on a machine's files. |
 | `operation_start` | Runs a program as a job the machine's broker owns, for long jobs. |
-| `operation_wait`, `operation_get`, `operation_read` | Wait for a job, see its state, and read its output after a cursor. |
+| `operation_wait`, `operation_list`, `operation_get`, `operation_read` | Wait for a job, list your jobs on a machine, see a job's state, and read its output after a cursor. |
+| `operation_input`, `operation_resize` | Type into a job started with `interactive` (a prompt, a REPL, a sign-in) and resize its terminal. Only the conversation that started it types there. |
 | `operation_cancel` | Stops a job. Disconnecting never does. |
 | `approval_request`, `approval_wait` | Asks you to approve a step, with what, why and how to undo it; you decide on [Approvals](/approvals) and the AI continues on your answer. |
 | `whoami` | The account you are signed in as and what it may use. |

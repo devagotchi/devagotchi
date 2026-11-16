@@ -87,6 +87,19 @@ def call(tool, arguments):
     return result.get("isError", False), structured
 
 
+def in_another_session(work):
+    """Run `work` in a second MCP session of the same token: another conversation."""
+    global session
+    first, session = session, {"id": None, "rid": 0}
+    try:
+        rpc("initialize", {"protocolVersion": "2025-06-18", "capabilities": {},
+                           "clientInfo": {"name": "hub-probe-2", "version": "0"}})
+        http("POST", "/mcp", {"jsonrpc": "2.0", "method": "notifications/initialized"})
+        return work()
+    finally:
+        session = first
+
+
 failures = 0
 
 
@@ -121,8 +134,8 @@ unannotated = [t["name"] for t in listed if not t.get("title") or not (
     and (t["annotations"]["readOnlyHint"] or "destructiveHint" in t["annotations"]))]
 check("every tool has a title and annotations", not unannotated, ", ".join(unannotated))
 broker_tools = ["approval_request", "approval_wait", "connection_call", "connections", "create_directory", "edit_file", "get_file_info",
-                "list_directory", "machine_add", "machine_update", "machines", "move_file", "operation_cancel", "operation_get", "operation_read",
-                "operation_start", "operation_wait", "read_file", "read_image", "read_multiple_files", "run", "whoami",
+                "list_directory", "machine_add", "machine_update", "machines", "move_file", "operation_cancel", "operation_get", "operation_input",
+                "operation_list", "operation_read", "operation_resize", "operation_start", "operation_wait", "read_file", "read_image", "read_multiple_files", "run", "whoami",
                 "workflow_cancel", "workflow_list", "workflow_start", "workflow_status", "workflow_wait",
                 "write_file"]
 board_tools = [t for t in tools if t.startswith("board_")]
@@ -169,6 +182,64 @@ if args.run_broker:
                                              "input": {"operation_id": slow["operation_id"], "timeout_ms": 30000}})
         check("operation_wait answers when a cancelled command settles",
               stopped.get("state") == "cancelled" and time.monotonic() - began < 15, json.dumps(stopped)[:200])
+    # A program that asks for input. The hub names the caller (this account, this MCP
+    # session) over whatever a tool call says, and the link refuses any caller no hub can be.
+    forged = {"account": "local", "client": "forged"}
+
+    def interactive(command, mode):
+        return call("operation_start", {"broker": args.run_broker, "input": {
+            "idempotency_key": str(uuid.uuid4()), "executable": "", "args": [], "command": command,
+            "deadline_ms": 30000, "interactive": {"mode": mode}, "caller": forged}})
+
+    def typed(operation_id, text, keys, take_over=False):
+        return call("operation_input", {"broker": args.run_broker, "input": {
+            "operation_id": operation_id, "text": text, "keys": keys, "take_over": take_over}})
+
+    def output_of(operation_id):
+        _, view = call("operation_wait", {"broker": args.run_broker,
+                                          "input": {"operation_id": operation_id, "timeout_ms": 30000}})
+        _, page = call("operation_read", {"broker": args.run_broker,
+                                          "input": {"operation_id": operation_id, "cursor": 0, "max_bytes": 4096}})
+        return view, "".join(f.get("text", "") for f in page.get("frames", []))
+
+    if sys.platform.startswith("linux"):
+        is_error, piped = interactive("read line; echo got:$line", "pipe")
+        check("an interactive start ignores a forged caller", not is_error
+              and (piped.get("operation", {}).get("interactive") or {}).get("mode") == "pipe", json.dumps(piped)[:240])
+        piped_id = piped.get("operation", {}).get("operation_id", "")
+        is_error, other = in_another_session(lambda: typed(piped_id, "from b", ["enter"]))
+        check("another conversation does not type into it", is_error and other.get("code") == "not_your_session",
+              json.dumps(other)[:200])
+        is_error, resized = call("operation_resize", {"broker": args.run_broker, "input": {
+            "operation_id": piped_id, "cols": 100, "rows": 30}})
+        check("a pipe has no terminal to resize", is_error and resized.get("code") == "no_terminal",
+              json.dumps(resized)[:200])
+        is_error, sent = typed(piped_id, "hello", ["enter"])
+        view, text = output_of(piped_id)
+        def listed(scope):
+            _, page = call("operation_list", {"broker": args.run_broker, "input": {"scope": scope}})
+            return [op["operation_id"] for op in page.get("operations", [])]
+        others_mine = in_another_session(lambda: listed("mine"))
+        check("operation_list shows the account's jobs, and `mine` only this conversation's",
+              piped_id in listed("account") and piped_id in listed("mine") and piped_id not in others_mine,
+              f"mine elsewhere: {others_mine}")
+        check("the conversation that started it types into it", not is_error and view.get("state") == "succeeded"
+              and "got:hello" in text, f"{json.dumps(sent)[:120]} state={view.get('state')} output={text[:80]!r}")
+        is_error, shell = interactive("read x; stty size", "terminal")
+        shell_id = shell.get("operation", {}).get("operation_id", "")
+        is_error, taken = in_another_session(lambda: call("operation_resize", {"broker": args.run_broker, "input": {
+            "operation_id": shell_id, "cols": 100, "rows": 30, "take_over": True}}))
+        size = taken.get("interactive") or {}
+        check("its account's other conversation takes over and resizes it", not is_error
+              and (size.get("cols"), size.get("rows")) == (100, 30), json.dumps(taken)[:200])
+        in_another_session(lambda: typed(shell_id, "go", ["enter"], take_over=True))
+        view, text = output_of(shell_id)
+        check("the program sees its new terminal size", view.get("state") == "succeeded" and "30 100" in text,
+              f"state={view.get('state')} output={text[-80:]!r}")
+    else:
+        is_error, refused = interactive("echo hi", "terminal")
+        check("an interactive start waits for this platform", is_error
+              and refused.get("code") == "unsupported_platform", json.dumps(refused)[:200])
     # A broker that runs only granted programs refuses a command line, in words.
     is_error, refused = call("run", {"machine": args.broker, "command": "echo hi"})
     check("run on a granted-only broker refused", is_error and refused.get("code") == "command_not_allowed",
