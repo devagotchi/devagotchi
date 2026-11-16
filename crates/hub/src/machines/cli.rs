@@ -103,6 +103,12 @@ mod tests {
     use super::named_link;
     use crate::config::HubConfig;
 
+    // A broker on the hub's own host: an absolute socket path, or a named pipe on Windows.
+    #[cfg(unix)]
+    const SOCKET: &str = "/run/devagotchi-broker.sock";
+    #[cfg(windows)]
+    const SOCKET: &str = r"\\.\pipe\devagotchi-broker";
+
     fn config(brokers: &str) -> HubConfig {
         HubConfig::parse_with(
             &format!(
@@ -116,9 +122,11 @@ mod tests {
 
     #[test]
     fn a_code_is_issued_only_for_a_device_the_config_names_as_a_link() {
-        let hub = config(
-            r#"[{"name": "box1", "link": true}, {"name": "here", "socket": "/run/b.sock"}]"#,
-        );
+        let brokers = serde_json::json!([
+            {"name": "box1", "link": true},
+            {"name": "here", "socket": SOCKET},
+        ]);
+        let hub = config(&brokers.to_string());
         assert!(named_link(&hub, "box1").is_ok());
         assert_eq!(named_link(&hub, "here").unwrap_err().code, "invalid_cli");
         let missing = named_link(&hub, "box2").unwrap_err();
