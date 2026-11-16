@@ -16,6 +16,7 @@ use devagotchi_contracts::{
 };
 
 use crate::broker::ExecPolicy;
+use crate::execution::platform::file_identity::file_identity;
 
 mod lines;
 mod manage;
@@ -131,6 +132,7 @@ impl Scope<'_> {
                 next_offset: lines.next_offset,
                 eof: lines.eof,
                 modified_ms: modified_ms(&metadata),
+                identity: file_identity(&file, &metadata),
                 start_line: lines.start_line,
                 next_line: lines.next_line,
                 total_lines: lines.total_lines,
@@ -188,6 +190,7 @@ impl Scope<'_> {
             next_offset,
             eof: next_offset >= size,
             modified_ms: modified_ms(&metadata),
+            identity: file_identity(&file, &metadata),
             start_line: None,
             next_line: None,
             total_lines: None,
@@ -212,21 +215,45 @@ impl Scope<'_> {
         }
         let mut entries = Vec::new();
         let mut truncated = false;
+        // Entries come in one fixed order (directories first, then by name, depth first), so
+        // a page goes on from the entry its cursor names; one that is gone is said, not guessed.
+        let mut after = input.cursor.clone();
         walk(
             &root,
             "",
             input.depth,
             input.max_entries as usize,
-            &mut entries,
-            &mut truncated,
+            &mut Walk {
+                entries: &mut entries,
+                truncated: &mut truncated,
+                after: &mut after,
+            },
         )
         .map_err(|e| io_error(&shown, e))?;
+        if let Some(cursor) = after {
+            return Err(BridgeError::new(
+                "cursor_not_found",
+                format!("{shown} no longer has {cursor}: list it again from the start"),
+            ));
+        }
+        let next_cursor = truncated
+            .then(|| entries.last().map(|entry| entry.path.clone()))
+            .flatten();
         Ok(FileListing {
             path: shown,
             entries,
             truncated,
+            next_cursor,
         })
     }
+}
+
+/// Where a listing is: the entries so far, whether the limit cut it, and the cursor still to
+/// pass (entries up to and including it are walked, not returned).
+struct Walk<'a> {
+    entries: &'a mut Vec<FileEntry>,
+    truncated: &'a mut bool,
+    after: &'a mut Option<String>,
 }
 
 /// One directory's entries, directories first then by name, and below them as deep as
@@ -237,28 +264,29 @@ fn walk(
     prefix: &str,
     depth: u32,
     limit: usize,
-    entries: &mut Vec<FileEntry>,
-    truncated: &mut bool,
+    at: &mut Walk<'_>,
 ) -> std::io::Result<()> {
-    let mut children: Vec<(String, PathBuf, Option<Metadata>)> = std::fs::read_dir(dir)?
+    let mut children: Vec<(String, bool, PathBuf, Option<Metadata>)> = std::fs::read_dir(dir)?
         .filter_map(Result::ok)
         .map(|entry| {
-            let name = entry.file_name().to_string_lossy().into_owned();
+            let native = entry.file_name();
+            let name = native.to_string_lossy().into_owned();
             (
                 name,
+                native.to_str().is_none(),
                 entry.path(),
                 std::fs::symlink_metadata(entry.path()).ok(),
             )
         })
         .collect();
     children.sort_by(|left, right| {
-        let left_dir = left.2.as_ref().is_some_and(Metadata::is_dir);
-        let right_dir = right.2.as_ref().is_some_and(Metadata::is_dir);
+        let left_dir = left.3.as_ref().is_some_and(Metadata::is_dir);
+        let right_dir = right.3.as_ref().is_some_and(Metadata::is_dir);
         right_dir.cmp(&left_dir).then_with(|| left.0.cmp(&right.0))
     });
-    for (name, path, metadata) in children {
-        if entries.len() >= limit {
-            *truncated = true;
+    for (name, name_lossy, path, metadata) in children {
+        if at.after.is_none() && at.entries.len() >= limit {
+            *at.truncated = true;
             return Ok(());
         }
         let relative = if prefix.is_empty() {
@@ -278,146 +306,31 @@ fn walk(
             size: metadata.as_ref().filter(|m| m.is_file()).map(Metadata::len),
             modified_ms: metadata.as_ref().and_then(modified_ms),
             error: None,
+            name_lossy,
         };
-        if kind == "dir" && depth > 0 {
-            let at = entries.len();
-            entries.push(entry);
-            if let Err(error) = walk(&path, &relative, depth - 1, limit, entries, truncated) {
-                entries[at].error = Some(error.to_string());
-            }
-            continue;
+        // Before the cursor: walked for its place in the order, not returned.
+        let passed = at.after.as_deref() == Some(relative.as_str());
+        let returned = at.after.is_none();
+        if passed {
+            *at.after = None;
         }
-        entries.push(entry);
+        let slot = at.entries.len();
+        if returned {
+            at.entries.push(entry);
+        }
+        if kind == "dir" && depth > 0 {
+            if let Err(error) = walk(&path, &relative, depth - 1, limit, at) {
+                if returned {
+                    at.entries[slot].error = Some(error.to_string());
+                }
+            }
+            if *at.truncated {
+                return Ok(());
+            }
+        }
     }
     Ok(())
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn scope(workspace: &Path, policy: ExecPolicy) -> Scope<'_> {
-        Scope { workspace, policy }
-    }
-
-    fn read(scope: &Scope<'_>, path: &Path, offset: i64, max_bytes: usize) -> FileContent {
-        scope
-            .read(FileReadInput {
-                path: path.display().to_string(),
-                offset,
-                max_bytes,
-                start_line: None,
-                line_count: None,
-            })
-            .unwrap()
-    }
-
-    #[test]
-    fn text_reads_in_pages_without_splitting_a_character() {
-        let directory = tempfile::tempdir().unwrap();
-        let workspace = dunce::canonicalize(directory.path()).unwrap();
-        let file = workspace.join("notes.txt");
-        std::fs::write(&file, "héllo wörld\nline two\n").unwrap();
-        let scope = scope(&workspace, ExecPolicy::Granted);
-        // "hé" is three bytes; a two-byte page stops before the cut "é".
-        let first = read(&scope, &file, 0, 2);
-        assert_eq!(first.text.as_deref(), Some("h"));
-        assert_eq!(first.next_offset, 1);
-        let rest = read(&scope, &file, first.next_offset as i64, 1024);
-        assert_eq!(rest.text.as_deref(), Some("éllo wörld\nline two\n"));
-        assert!(rest.eof);
-        // A tail: the last 9 bytes.
-        let tail = read(&scope, &file, -9, 1024);
-        assert_eq!(tail.text.as_deref(), Some("line two\n"));
-        assert_eq!(tail.offset, tail.size - 9);
-    }
-
-    #[test]
-    fn binary_comes_back_as_base64() {
-        let directory = tempfile::tempdir().unwrap();
-        let workspace = dunce::canonicalize(directory.path()).unwrap();
-        let file = workspace.join("blob.bin");
-        std::fs::write(&file, [0u8, 159, 146, 150, 1, 2]).unwrap();
-        let content = read(&scope(&workspace, ExecPolicy::Granted), &file, 0, 1024);
-        assert!(content.text.is_none());
-        assert_eq!(
-            BASE64.decode(content.bytes_base64.unwrap()).unwrap(),
-            [0u8, 159, 146, 150, 1, 2]
-        );
-    }
-
-    #[test]
-    fn the_granted_policy_stays_inside_the_workspace() {
-        let directory = tempfile::tempdir().unwrap();
-        let workspace = dunce::canonicalize(directory.path()).unwrap().join("ws");
-        std::fs::create_dir(&workspace).unwrap();
-        let outside = workspace.parent().unwrap().join("outside.txt");
-        std::fs::write(&outside, "secret").unwrap();
-        let input = FileReadInput {
-            path: outside.display().to_string(),
-            offset: 0,
-            max_bytes: 1024,
-            start_line: None,
-            line_count: None,
-        };
-        let refused = scope(&workspace, ExecPolicy::Granted)
-            .read(input.clone())
-            .unwrap_err();
-        assert_eq!(refused.code, "path_outside_workspace");
-        let read = scope(&workspace, ExecPolicy::Account).read(input).unwrap();
-        assert_eq!(read.text.as_deref(), Some("secret"));
-        let missing = scope(&workspace, ExecPolicy::Account)
-            .read(FileReadInput {
-                path: workspace.join("nope").display().to_string(),
-                offset: 0,
-                max_bytes: 1024,
-                start_line: None,
-                line_count: None,
-            })
-            .unwrap_err();
-        assert_eq!(missing.code, "path_not_found");
-    }
-
-    #[test]
-    fn listings_put_directories_first_and_respect_depth_and_limits() {
-        let directory = tempfile::tempdir().unwrap();
-        let workspace = dunce::canonicalize(directory.path()).unwrap();
-        std::fs::create_dir_all(workspace.join("src/deep")).unwrap();
-        std::fs::write(workspace.join("README.md"), "hi").unwrap();
-        std::fs::write(workspace.join("src/main.rs"), "fn main() {}").unwrap();
-        std::fs::write(workspace.join("src/deep/x.rs"), "").unwrap();
-        let scope = scope(&workspace, ExecPolicy::Granted);
-        let list = |depth, max_entries| {
-            scope
-                .list(FileListInput {
-                    path: workspace.display().to_string(),
-                    depth,
-                    max_entries,
-                })
-                .unwrap()
-        };
-        let top = list(0, 200);
-        let names: Vec<_> = top
-            .entries
-            .iter()
-            .map(|e| (e.path.as_str(), e.kind.as_str()))
-            .collect();
-        assert_eq!(names, [("src", "dir"), ("README.md", "file")]);
-        assert_eq!(top.entries[1].size, Some(2));
-        let all = list(2, 200);
-        let paths: Vec<_> = all.entries.iter().map(|e| e.path.as_str()).collect();
-        assert_eq!(
-            paths,
-            [
-                "src",
-                "src/deep",
-                "src/deep/x.rs",
-                "src/main.rs",
-                "README.md"
-            ]
-        );
-        let cut = list(2, 2);
-        assert!(cut.truncated);
-        assert_eq!(cut.entries.len(), 2);
-    }
-}
+mod tests;

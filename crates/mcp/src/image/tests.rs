@@ -21,6 +21,7 @@ fn page(
         next_offset: next,
         eof: next >= size,
         modified_ms: Some(1),
+        identity: None,
         start_line: None,
         next_line: None,
         total_lines: None,

@@ -81,6 +81,12 @@ export interface FileContent {
    * Whether this page reached the end of the file.
    */
   eof: boolean;
+  /**
+   * Which file object was read: device and inode on Unix, volume serial and file ID on
+   * Windows. It stays through a rename and changes when the file is replaced by another, so
+   * pages read in turn are known to be of one file when it is the same on each.
+   */
+  identity?: string | null;
   modified_ms?: number | null;
   /**
    * Read by lines: the `start_line` to read on from, when lines remain and the number
@@ -187,6 +193,10 @@ export interface FileInfoInput {
 }
 export interface FileListInput {
   /**
+   * Where to go on from: the previous page's `next_cursor`. Absent for the first page.
+   */
+  cursor?: string | null;
+  /**
    * How many levels below it to include, 0..=3 (default 0: its own entries).
    */
   depth?: number;
@@ -204,6 +214,10 @@ export interface FileListing {
    * Directories first at each level, then by name.
    */
   entries: FileEntry[];
+  /**
+   * When it did: pass this as `cursor` for the entries after these, in the same order.
+   */
+  next_cursor?: string | null;
   /**
    * The directory's canonical path.
    */
@@ -223,6 +237,11 @@ export interface FileEntry {
    */
   kind: string;
   modified_ms?: number | null;
+  /**
+   * True when the name on disk is not valid Unicode: `path` shows it with U+FFFD in
+   * place of what could not be decoded, so it cannot be used to reach the entry.
+   */
+  name_lossy?: boolean;
   /**
    * Path relative to the listed directory, `/`-separated.
    */

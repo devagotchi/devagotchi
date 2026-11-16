@@ -57,6 +57,9 @@ pub struct ListDirectoryInput {
     /// Most entries to return, 1 to 1000 (default 200).
     #[serde(default)]
     pub max_entries: Option<u32>,
+    /// The previous page's `next_cursor`, to go on where it stopped.
+    #[serde(default)]
+    pub cursor: Option<String>,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -171,7 +174,7 @@ impl Hub {
 
     #[tool(
         name = "list_directory",
-        description = "List a directory on one of the user's machines: each entry's relative path, kind (file, dir, symlink), size and modified time, directories first. depth 1 to 3 includes subdirectories. Get machine names from `machines`.",
+        description = "List a directory on one of the user's machines: each entry's relative path, kind (file, dir, symlink), size and modified time, directories first. depth 1 to 3 includes subdirectories. When `truncated`, pass `next_cursor` as `cursor` for the rest. Get machine names from `machines`.",
         title = "List a directory on a machine",
         annotations(
             title = "List a directory on a machine",
@@ -188,6 +191,7 @@ impl Hub {
             path: input.path,
             depth: input.depth,
             max_entries: input.max_entries.unwrap_or(200),
+            cursor: input.cursor,
         });
         match self
             .call("list_directory", &input.machine, body, context)

@@ -20,6 +20,11 @@ create that tag, and a prerelease tag does not move the `:latest` image.
 - `install.sh` follows the release channel (`ghcr.io/devagotchi/devagotchi:latest`) unless
   `--channel main`, `--tag vX.Y.Z`, or `--track IMAGE` says otherwise. `:latest` moves only
   for a stable tag. Until one exists, pin `--tag v0.1.0-alpha.1` or use `--channel main`.
+- `list_directory` goes on past `max_entries`: a truncated listing names `next_cursor`, passed back
+  as `cursor` for the entries after it in the same order (a vanished cursor is refused,
+  `cursor_not_found`). An entry whose name is not valid Unicode is marked `name_lossy`.
+  `read_file` says which file object it read (`identity`: device and inode, or volume serial and
+  file ID), so pages read in turn are known to be of one file.
 - `devagotchi hub set-password … --password-stdin` sets the password of an existing account from
   the hub's host (the password on stdin, never an argument or a terminal); the account's browser
   sessions end, its passkeys and sign-ins stay, and it is audited without the password.
