@@ -29,7 +29,7 @@ use serde::{Deserialize, Serialize};
 use super::owner_of;
 use crate::mcp::Hub;
 
-fn refused(error: LexiconError) -> Json<BridgeError> {
+pub(super) fn refused(error: LexiconError) -> Json<BridgeError> {
     let message = match &error {
         LexiconError::Invalid(m) | LexiconError::Conflict(m) | LexiconError::Store(m) => m.clone(),
         LexiconError::NotFound => "no entry with that id is yours".to_string(),

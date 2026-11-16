@@ -123,7 +123,7 @@ impl LexiconBundleV1 {
     }
 
     /// The bundle read from JSON and checked: its format, its size, one owner, ids that are
-    /// unique and well formed, revisions from 1.
+    /// unique and well formed, revisions from 1, one live entry per phrase in a scope.
     pub fn read(json: &str) -> Result<Self> {
         let bundle: Self = serde_json::from_str(json)
             .map_err(|e| LexiconError::Invalid(format!("the bundle does not read: {e}")))?;
@@ -141,6 +141,7 @@ impl LexiconBundleV1 {
             return bad(format!("at most {MAX_BUNDLE_ENTRIES} entries"));
         }
         let mut ids = std::collections::HashSet::new();
+        let mut live = std::collections::HashSet::new();
         for entry in &self.entries {
             crate::lexicon::check_id(&entry.id, "entries.id")?;
             if !ids.insert(entry.id.as_str()) {
@@ -151,6 +152,13 @@ impl LexiconBundleV1 {
             }
             if entry.revision == 0 {
                 return bad(format!("entries: {} has revision 0", entry.id));
+            }
+            let phrase = (entry.scope.clone(), crate::words::normalize(&entry.phrase));
+            if entry.state.live() && !live.insert(phrase) {
+                return bad(format!(
+                    "entries: {} is a second live entry for its phrase",
+                    entry.id
+                ));
             }
         }
         Ok(())

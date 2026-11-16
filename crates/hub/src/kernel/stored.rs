@@ -1,7 +1,8 @@
 //! The kernel's lexicon [`Store`] on the hub's Postgres (migration 0032): entries, their
 //! events and receipts, every query scoped to one owner. The rules that move an entry are the
 //! kernel's; this keeps what it decides, with the database holding the two rules a racing
-//! write could break (the revision a change read, one live entry per phrase in a scope).
+//! write could break (the revision a change read, one live entry per phrase in a scope), and
+//! refusing every write while another side holds the lexicon (`authority.rs`).
 
 use devagotchi_contracts::BridgeError;
 use devagotchi_kernel::{
@@ -15,13 +16,13 @@ use sqlx::{AnyConnection, Row};
 
 use crate::store::{Failed, Store as Postgres, transaction};
 
-const CONFLICT: &str = "lexicon_conflict";
+pub(super) const CONFLICT: &str = "lexicon_conflict";
 const NOT_FOUND: &str = "lexicon_not_found";
 
 /// The lexicon's tables in the hub's store.
 #[derive(Clone, Debug)]
 pub struct Stored {
-    store: Postgres,
+    pub(super) store: Postgres,
 }
 
 impl Stored {
@@ -31,7 +32,7 @@ impl Stored {
 }
 
 /// How a scope is kept: its kind, and its project (empty for the person's own).
-fn scope_key(scope: &Scope) -> (&'static str, &str) {
+pub(super) fn scope_key(scope: &Scope) -> (&'static str, &str) {
     match scope {
         Scope::Personal => ("personal", ""),
         Scope::Project { project_id } => ("project", project_id.as_str()),
@@ -42,24 +43,24 @@ fn revision(value: u64) -> Answer<i64> {
     i64::try_from(value).map_err(|_| LexiconError::Invalid("revision out of range".into()))
 }
 
-fn encode<T: serde::Serialize>(value: &T) -> Answer<String> {
+pub(super) fn encode<T: serde::Serialize>(value: &T) -> Answer<String> {
     serde_json::to_string(value).map_err(|e| LexiconError::Store(format!("encode: {e}")))
 }
 
-fn decode<T: serde::de::DeserializeOwned>(text: &str) -> Answer<T> {
+pub(super) fn decode<T: serde::de::DeserializeOwned>(text: &str) -> Answer<T> {
     serde_json::from_str(text).map_err(|e| LexiconError::Store(format!("a stored record: {e}")))
 }
 
-fn store_failed(error: sqlx::Error) -> LexiconError {
+pub(super) fn store_failed(error: sqlx::Error) -> LexiconError {
     LexiconError::Store(error.to_string())
 }
 
 /// A refusal inside a transaction, as the kernel names it on the way out.
-fn refused(code: &str, message: impl Into<String>) -> Failed {
+pub(super) fn refused(code: &str, message: impl Into<String>) -> Failed {
     Failed::Refused(BridgeError::new(code, message))
 }
 
-fn from_bridge(error: BridgeError) -> LexiconError {
+pub(super) fn from_bridge(error: BridgeError) -> LexiconError {
     match error.code.as_str() {
         CONFLICT => LexiconError::Conflict(error.message),
         NOT_FOUND => LexiconError::NotFound,
@@ -67,7 +68,7 @@ fn from_bridge(error: BridgeError) -> LexiconError {
     }
 }
 
-fn into_failed(error: LexiconError) -> Failed {
+pub(super) fn into_failed(error: LexiconError) -> Failed {
     match error {
         LexiconError::Conflict(why) => refused(CONFLICT, why),
         LexiconError::NotFound => refused(NOT_FOUND, "no such entry"),
@@ -144,6 +145,9 @@ impl Store for Stored {
             ..write.event.clone()
         })?;
         let seq = transaction!(&self.store, |connection| {
+            // Only while this hub holds the lexicon, and never after a handover began.
+            let holds = super::authority::hold(connection, owner, false).await?;
+            holds.fence(holds.epoch).map_err(into_failed)?;
             let used: Option<String> = sqlx::query_scalar(
                 "SELECT request_id FROM devagotchi.kernel_lexicon_receipts
                  WHERE owner_id = $1 AND request_id = $2",
@@ -273,7 +277,11 @@ impl Store for Stored {
 
 /// A deleted entry leaves no text: its earlier events and receipts keep their ids and
 /// revisions, their words erased. Inside the commit's transaction.
-async fn erase(connection: &mut AnyConnection, owner: &str, id: &str) -> Result<(), Failed> {
+pub(super) async fn erase(
+    connection: &mut AnyConnection,
+    owner: &str,
+    id: &str,
+) -> Result<(), Failed> {
     let events = sqlx::query(
         "SELECT seq, event FROM devagotchi.kernel_lexicon_events
          WHERE owner_id = $1 AND entry_id = $2",

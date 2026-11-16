@@ -17,6 +17,8 @@ use crate::{
     tenancy::tests::tenants::{hosted_with, refused},
 };
 
+mod handoff;
+
 const ALICE: &str = "github:1001";
 const BOB: &str = "github:1002";
 
@@ -280,7 +282,7 @@ async fn one_live_phrase_holds_when_two_writes_race() {
     assert_eq!(live.len(), 1);
 }
 
-fn text(answer: &Value) -> String {
+pub(super) fn text(answer: &Value) -> String {
     answer.to_string()
 }
 

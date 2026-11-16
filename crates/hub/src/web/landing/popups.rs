@@ -225,6 +225,10 @@ pub const TOOLS: [(&str, &[(&[&str], &str)]); 7] = [
                 &["lexicon_propose", "lexicon_review"],
                 "Adds a phrase as suggested, unclear or yours, and lets you confirm, retire, reword or delete it.",
             ),
+            (
+                &["lexicon_handoff"],
+                "Hands your words to Clyffy and takes them back, one keeper at a time, with any two meanings you confirmed left for you to pick.",
+            ),
         ],
     ),
 ];

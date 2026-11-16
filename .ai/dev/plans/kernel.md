@@ -46,7 +46,7 @@ same trait on its own database. That keeps the kernel public and host-neutral.
 | K2 | `dictionary` and `lexicon` domains: model, scopes, states (proposed, confirmed, dismissed, retired, inconclusive), CAS revisions, events, resolver, shipped seed; in-memory `Store` | K1 | resolver tests on the seed and the disambiguation rows | done |
 | K3 | Hub hosting: `kernel_` tables, Postgres `Store`, MCP tools `lexicon_resolve`, `lexicon_propose`, `lexicon_review`, `dictionary_get` | K2 | store tests on Postgres; tool tests | done |
 | K4 | `handoff`: `LexiconBundleV1`, merge engine, authority (devagotchi, handing_over, clyffy, restoring) with an epoch fence, restore from the mirror | K2 | property tests: merge order-independent for non-conflicts; confirmed-vs-confirmed differences become conflicts; an old epoch's write is refused | done |
-| K5 | Hub keeps each owner's authority (`kernel_lexicon_authority`), fences the lexicon tools' writes by it, and serves the handover, take-in and restore steps | K3, K4 | Postgres tests: a write after `begin_handover` is refused; a restore writes the merged entries back; conflicts are listed for the person | next |
+| K5 | Hub keeps each owner's authority (`kernel_lexicon_authority`), fences the lexicon tools' writes by it, and serves the handover, mirror and restore steps (`lexicon_handoff`) | K3, K4 | Postgres tests: a write after `begin` is refused; a conflict is previewed and blocks the export; the mirror follows Clyffy; a restore writes Clyffy's last bundle back | done |
 
 ## K2 decisions
 
@@ -95,6 +95,23 @@ same trait on its own database. That keeps the kernel public and host-neutral.
   while Clyffy holds the lexicon (that epoch) or while it is restored (that epoch or the one
   before the restore began).
 
+## K5 decisions
+
+- One tool, `lexicon_handoff`, with steps status, preview, begin, export, complete, abort,
+  mirror and restore, so Clyffy (signed in through this hub as the person) needs nothing
+  else. `status` gives the owner id a bundle must carry.
+- The hub does the merge, once, at `export`: Clyffy sends its own lexicon if it had one, the
+  hub keeps the merged result and returns it for Clyffy to adopt. Entries another replaced
+  travel as dismissed (one revision on), so both sides keep every id. A conflict (two
+  confirmed meanings) refuses the export: `preview` lists them before `begin`, and `abort`
+  gives the lexicon back so the person can settle them here.
+- While Clyffy holds it, Clyffy is the one source of truth: `mirror` replaces this hub's
+  read-only copy with Clyffy's bundle (no merge). `restore` does the same with Clyffy's last
+  bundle, or keeps the copy when Clyffy cannot send one, and this hub writes again.
+- Fence: every lexicon write takes the owner's authority row `FOR SHARE` in its transaction;
+  every move takes it `FOR UPDATE` and checks it against what it read. An entry that leaves
+  the hub's copy, or arrives deleted, has its words erased from its events and receipts.
+
 ## Research behind the model
 
 - Concept scheme: W3C SKOS Reference (2009): one `prefLabel` per concept, any number of
@@ -141,9 +158,15 @@ same trait on its own database. That keeps the kernel public and host-neutral.
   confirmed meaning only giving way to the same meaning; the property test fails when copies
   are ordered by less than their whole content), the authority's moves and fences, a
   Clyffy-written bundle read as it is, and a whole handover and restore.
+- K5, 2026-11-16, local, Postgres 55432: kernel 57 passed; `cargo test -p devagotchi-hub`
+  439 passed, among them a person's words going to Clyffy and back through
+  `lexicon_handoff` (preview conflict, writes refused after `begin`, export refused on a
+  conflict, merged export, mirror with a deletion erased from history, old-epoch bundles
+  refused, another person untouched, restore); `layout` 7; `generate-contracts --check`
+  current; `tests/e2e.py` E2E PASSED with `lexicon_handoff` served.
 
 ## Delivery
 
-Implementation: K1 to K4 done, K5 next. Validation: local receipts above (no CI by request).
-Push: increment-179/desktop-commander-parity. PR: none. Main: K1 to K4 landed with this push.
-**DELIVERY INCOMPLETE: K5 remains**
+Implementation: K1 to K5 done. Validation: local receipts above (no CI by request).
+Push: increment-179/desktop-commander-parity. PR: none. Main: K1 to K5 landed with this push.
+**DELIVERY INCOMPLETE: Clyffy's side (calling `lexicon_handoff`) is Clyffy's repo, out of scope here**

@@ -101,7 +101,7 @@ pub fn scope_for(tool: &str) -> Option<Scope> {
         "write_file" | "edit_file" | "create_directory" | "move_file" => Scope::FilesWrite,
         "approval_request" | "approval_wait" => Scope::ApprovalsRequest,
         "dictionary_get" | "lexicon_resolve" => Scope::WordsRead,
-        "lexicon_propose" | "lexicon_review" => Scope::WordsWrite,
+        "lexicon_propose" | "lexicon_review" | "lexicon_handoff" => Scope::WordsWrite,
         "board_settings" | "board_wake" => Scope::BoardsAdmin,
         "board_attach" | "board_issue_context" | "board_prime" => Scope::BoardsRead,
         "board_ready" | "board_list" | "board_get" | "board_events" => Scope::BoardsRead,

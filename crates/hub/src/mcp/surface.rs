@@ -522,7 +522,7 @@ impl Hub {
             + Self::workflow_router()
             + Self::offers_router()
             + Self::connections_router()
-            + Self::lexicon_router()
+            + Self::words_router()
     }
 }
 
