@@ -4,7 +4,9 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 mod files;
+mod interactive;
 pub use files::*;
+pub use interactive::*;
 
 pub const API_VERSION: u32 = 1;
 pub const MAX_FRAME_BYTES: usize = 64 * 1024;
@@ -73,6 +75,16 @@ pub struct StartInput {
     pub cwd: Option<String>,
     /// Execution deadline, not a client wait timeout. 1..=300000 milliseconds.
     pub deadline_ms: u64,
+    /// Keep the program's input open for `operation_input`: on a pseudo-terminal (`terminal`,
+    /// the default: prompts, REPLs, sign-ins, Ctrl-C) or on a plain pipe (`pipe`). Absent:
+    /// the program reads nothing (its stdin is the null device), as before.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub interactive: Option<InteractiveInput>,
+    /// Who is starting it, set by the transport that carried the request (this machine's
+    /// adapter, a hub), never by an AI: whatever arrives here from a tool call is replaced.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(skip)]
+    pub caller: Option<Caller>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -126,6 +138,15 @@ pub struct ListInput {
     pub offset: u64,
     #[serde(default = "default_list_limit")]
     pub limit: u32,
+    /// With a caller: `mine` (the default) lists what this conversation or client started;
+    /// `account` lists what any of its account's conversations started (and, for this
+    /// machine's own account, everything here). Without a caller (the inspector): everything.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub scope: Option<ListScope>,
+    /// Set by the transport, never by an AI (see `StartInput::caller`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(skip)]
+    pub caller: Option<Caller>,
 }
 fn default_list_limit() -> u32 {
     32
@@ -140,6 +161,9 @@ pub struct OperationSummary {
     pub updated_at_ms: u64,
     /// Bounded display preview only. Execute only the exact argv from the canonical request.
     pub display_command: String,
+    /// How an interactive operation takes input; absent for one that takes none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub interactive: Option<InputMode>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -201,6 +225,9 @@ pub struct OperationView {
     pub ownership_scope: String,
     pub cancellation_requested: bool,
     pub output_complete: bool,
+    /// Present for an interactive operation: how it takes input and whether it still can.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub interactive: Option<InteractiveView>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -281,6 +308,8 @@ pub enum RequestBody {
     FileInfo(FileInfoInput),
     FileMkdir(DirectoryInput),
     FileMove(FileMoveInput),
+    OperationInput(SendInput),
+    OperationResize(ResizeInput),
 }
 
 impl RequestBody {
@@ -321,6 +350,7 @@ pub enum ResponseBody {
     Written(FileWritten),
     Revision(Revision),
     Info(FileInfo),
+    InputSent(InputSent),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
