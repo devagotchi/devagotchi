@@ -774,7 +774,18 @@ to take the account back if someone else used a leaked link first. The config th
 reads must name the same owner as the hub's, or the link is refused before it is spent.
 After that, `/auth/login` offers local password, configured providers, email link when
 configured, and passkey fallback. Email recovery requires configured SMTP and mailbox access;
-otherwise the host operator issues a new owner link. Sessions last 30 days unused and 90 at
+otherwise the host operator issues a new owner link, or sets the password of any existing
+account from the host, with the password on stdin and never as an argument:
+
+```bash
+printf '%s\n' "$NEW_PASSWORD" | devagotchi hub set-password --state-dir DIR \
+  --config /etc/devagotchi/hub.json --account ID --email you@example.com --password-stdin
+```
+
+It refuses an address another account uses, a terminal (where the password would echo) and
+an account that does not exist, and makes none. The account's browser sessions end; its
+passkeys, sign-ins and AI connections stay. It is on the audit chain as
+`account.password_reset`, without the password. Sessions last 30 days unused and 90 at
 most, end when the account is disabled, and are kept only as hashes. Signing out takes the
 hub's own page.
 
