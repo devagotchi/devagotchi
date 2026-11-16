@@ -44,8 +44,9 @@ same trait on its own database. That keeps the kernel public and host-neutral.
 |---|---|---|---|---|
 | K1 | Move machine-engine `src/ai/` to `crates/kernel/src/capture/`; `devagotchi ai` unchanged; ratchet entries move with their files | none | `git diff -M` renames; kernel 18 tests, `ai_workflow`, `one_binary`, `layout` green | done |
 | K2 | `dictionary` and `lexicon` domains: model, scopes, states (proposed, confirmed, dismissed, retired, inconclusive), CAS revisions, events, resolver, shipped seed; in-memory `Store` | K1 | resolver tests on the seed and the disambiguation rows | done |
-| K3 | Hub hosting: `kernel_` tables, Postgres `Store`, MCP tools `lexicon_resolve`, `lexicon_propose`, `lexicon_review`, `dictionary_get` | K2 | store tests on Postgres; tool tests | not started |
-| K4 | `handoff`: `LexiconBundleV1` in contracts, merge engine, authority (devagotchi, handing_over, clyffy, restoring) with an epoch fence, restore from the mirror | K2 | property tests: merge order-independent for non-conflicts; confirmed-vs-confirmed differences become conflicts; an old epoch's write is refused | not started |
+| K3 | Hub hosting: `kernel_` tables, Postgres `Store`, MCP tools `lexicon_resolve`, `lexicon_propose`, `lexicon_review`, `dictionary_get` | K2 | store tests on Postgres; tool tests | done |
+| K4 | `handoff`: `LexiconBundleV1`, merge engine, authority (devagotchi, handing_over, clyffy, restoring) with an epoch fence, restore from the mirror | K2 | property tests: merge order-independent for non-conflicts; confirmed-vs-confirmed differences become conflicts; an old epoch's write is refused | done |
+| K5 | Hub keeps each owner's authority (`kernel_lexicon_authority`), fences the lexicon tools' writes by it, and serves the handover, take-in and restore steps | K3, K4 | Postgres tests: a write after `begin_handover` is refused; a restore writes the merged entries back; conflicts are listed for the person | next |
 
 ## K2 decisions
 
@@ -62,6 +63,37 @@ same trait on its own database. That keeps the kernel public and host-neutral.
 - Owner ids are any 1 to 128 of `[A-Za-z0-9_-.:@/]`, so a hub subject and a Clyffy UUID both fit.
 - `Store` uses `impl Future` methods (no async-trait dependency); `MemoryStore` is the
   reference the Postgres store will be tested against.
+
+## K3 decisions
+
+- Tables `kernel_lexicon_entries`, `kernel_lexicon_events`, `kernel_lexicon_receipts`
+  (migration 0032), domain prefix `kernel_` added to layout rule 8 and its test. Hub-wide and
+  keyed by owner like `machine_devices`: a subject may have no tenant, so every query names the
+  owner rather than relying on a tenant's row-level security.
+- The database also holds the two rules a race could break: `SELECT … FOR UPDATE` on the
+  entry for its revision, and a partial unique index for one live phrase per scope (a lost
+  race retries and comes back as a conflict).
+- Owner is the signed-in subject's id; an id the lexicon cannot key is keyed by its SHA-256.
+- Tools: `dictionary_get`, `lexicon_resolve` (phrase or text), `lexicon_propose` (`start`:
+  proposed, inconclusive, or confirmed only on the person's own words), `lexicon_review`
+  (list, history, confirm, dismiss, retire, delete, revise). Writes are recorded in the audit
+  chain. API keys get two new scopes, `words.read` and `words.write`.
+
+## K4 decisions
+
+- The bundle lives in `devagotchi_kernel::handoff`, not `devagotchi-contracts`: the kernel
+  already depends on contracts, and the bundle carries the kernel's own `Entry` types.
+- A bundle entry is Clyffy's entry field for field (`owner_id`, `indexed_revision` carried),
+  plus `concepts` and the states `inconclusive` and `retired`, both optional on read.
+- Merge: one copy per id (highest revision, then latest change; the same revision and time
+  with other content is a conflict); one live entry per normalized phrase per scope; two
+  confirmed meanings (meaning normalized plus concept set) are never chosen between: all go
+  to the person as a conflict. Equal confirmed meanings keep the first confirmed and union
+  the examples. Copies are ordered by their whole content, so the result does not depend on
+  which side or order they came in.
+- Authority: every move but a completion raises the epoch; Clyffy's bundle is taken in only
+  while Clyffy holds the lexicon (that epoch) or while it is restored (that epoch or the one
+  before the restore began).
 
 ## Research behind the model
 
@@ -100,9 +132,18 @@ same trait on its own database. That keeps the kernel public and host-neutral.
   with exact-case names. `layout` 7 passed.
 - K1 on main after P9, 2026-11-16, local: kernel 18 passed, machine-engine 107 (its 18 `ai`
   tests now live in the kernel), `layout`, `ai_workflow`, `one_binary` 7, 3 and 11 passed.
+- K3, 2026-11-16, local, Postgres 55432: `cargo test -p devagotchi-hub` 438 passed, among
+  them the Postgres store telling the same story as `MemoryStore`, one live phrase holding
+  when two writes race, and the tools keeping each person's words to themselves; `layout` 7;
+  `generate-contracts --check` current; `tests/e2e.py` E2E PASSED with the four tools served.
+- K4, 2026-11-16, local: kernel 55 passed, 15 of them the handoff's: merge cases, 2,000
+  generated pairs of sides (symmetric, order-free, one live phrase, nothing dropped, a
+  confirmed meaning only giving way to the same meaning; the property test fails when copies
+  are ordered by less than their whole content), the authority's moves and fences, a
+  Clyffy-written bundle read as it is, and a whole handover and restore.
 
 ## Delivery
 
-Implementation: K1 and K2 done, K3 next. Validation: local receipts above (no CI by request).
-Push: increment-179/desktop-commander-parity. PR: none. Main: K1 landed.
-**DELIVERY INCOMPLETE: K3 and K4 remain**
+Implementation: K1 to K4 done, K5 next. Validation: local receipts above (no CI by request).
+Push: increment-179/desktop-commander-parity. PR: none. Main: K1 to K4 landed with this push.
+**DELIVERY INCOMPLETE: K5 remains**

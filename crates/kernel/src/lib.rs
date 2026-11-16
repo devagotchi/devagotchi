@@ -8,11 +8,13 @@
 //!   machine's private capture journal and delivery status (DG-CAPTURE-1).
 //! - `dictionary`: the concepts Devagotchi routes to (domain boundaries and stacks), their
 //!   names and disambiguation rules, and the shipped seed.
+//! - `handoff`: the Clyffy handoff: the bundle, the merge, and who holds the lexicon.
 //! - `lexicon`: the person's and their projects' own phrases, their states and revisions,
 //!   the store a host implements, and the resolver.
 //! - `words`: how both compare text.
 
 pub mod capture;
 pub mod dictionary;
+pub mod handoff;
 pub mod lexicon;
 pub mod words;
