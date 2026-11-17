@@ -41,6 +41,7 @@ mod discovery_tests;
 mod email;
 mod hosted;
 mod hub_settings;
+mod hub_settings_owner;
 #[cfg(test)]
 mod hub_settings_tests;
 mod landing;
@@ -59,6 +60,10 @@ mod offers;
 mod operator;
 #[cfg(test)]
 pub(crate) mod operator_tests;
+mod provider_apply;
+#[cfg(test)]
+mod shippin_tests;
+mod sign_in_cards;
 #[cfg(test)]
 mod walkthrough_tests;
 #[cfg(test)]

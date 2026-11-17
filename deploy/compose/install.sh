@@ -11,8 +11,9 @@
 #   sudo ./install.sh --domain hub.example.com --site /srv/my-site        # its own site
 #   sudo ./install.sh --site /srv/my-site --site-only                     # a site change
 #
-# Re-running it is safe: it rewrites .env from the flags, keeps the volumes, and deploys
-# the image the track points at now. Nothing here is specific to one host or domain.
+# Re-running it is safe: it rewrites .env from the flags you pass, keeps a value you do not
+# pass (tenancy, operators, sign-in providers, mail, analytics), keeps the volumes, and
+# deploys the image the track points at now. Nothing here is specific to one host or domain.
 set -euo pipefail
 
 usage() {
@@ -29,9 +30,8 @@ install.sh --domain NAME [options]
   --channel release|main
                        release (default): follow ghcr.io/devagotchi/devagotchi:latest, which
                        moves only when a stable release is published (a tag with no prerelease
-                       suffix). main: follow :main. Until the first stable tag, :latest does
-                       not exist: pass --tag v0.1.0-alpha.1 or --channel main
-  --tag TAG            pin one release tag, prerelease included (v0.1.0 or v0.1.0-alpha.1)
+                       suffix). main: follow :main, which is ahead of :latest until the next tag
+  --tag TAG            pin one release tag (v0.1.0). A prerelease tag does not move :latest
   --track IMAGE        follow this image instead of --channel or --tag
   --dir DIR            where the stack lives (default /opt/devagotchi-hub)
   --source DIR|URL     where compose.yaml and update.sh come from (default: beside this
@@ -51,9 +51,10 @@ The hub's site: its name, copy, colours and pictures (crates/hub/README.md, "The
   --no-site            back to the hub's built-in site
 A hosted hub, who runs it, and how people sign in (see crates/hub/README.md):
   --tenancy single|multi
-                       single (default): one owner's hub, claimed from its log when no
+                       single on a first install: one owner's hub, claimed from its log when no
                        operator is set; multi: a hosted service, an account for everyone who
-                       connects, never claimed
+                       connects, never claimed. A re-run that omits this keeps the tenancy
+                       already in .env
   --operators LIST     who operates it, comma separated: email:ADDRESS or PROVIDER:SUBJECT
   --analytics on|off   a hosted hub counts visits and its accounts' milestones for its
                        operator page (default on)
@@ -64,8 +65,11 @@ A hosted hub, who runs it, and how people sign in (see crates/hub/README.md):
                        (default: private and loopback addresses)
   --google             Sign in with Google: DEVAGOTCHI_GOOGLE_CLIENT_ID and _SECRET
   --github             Sign in with GitHub: DEVAGOTCHI_GITHUB_CLIENT_ID and _SECRET
-  --nomen ISSUER       an OpenID Connect sign-in at ISSUER (https://id.example.com):
-                       DEVAGOTCHI_NOMEN_CLIENT_ID and, when the app has one, _SECRET
+  --nomen ISSUER       Sign in with Shippin at ISSUER (https://id.example.com), on from
+                       this install. The issuer is the one you pass. Turn it off later on
+                       /admin, Sign-in. DEVAGOTCHI_NOMEN_CLIENT_ID and, when the app has one, _SECRET
+                       Passing --google, --github or --nomen replaces the provider list with
+                       the ones named this run. Omitting all three keeps the providers in .env
   --email-from ADDRESS sign-in links by email from ADDRESS: DEVAGOTCHI_SMTP_URL
                        (smtps://user@host:465 or smtp://user@host:587) and DEVAGOTCHI_SMTP_PASSWORD
   --env-file FILE      read those variables from FILE (KEY=VALUE lines, as the secret store
@@ -79,6 +83,8 @@ track="" channel="" tag="" dir=/opt/devagotchi-hub source=""
 repo=devagotchi/devagotchi ref="" print_ref=false timer=true site="" site_only=false no_site=false
 tenancy="" operators="" proxies="" google=false github=false nomen="" email_from="" env_file=""
 analytics="" analytics_days=""
+tenancy_set=false operators_set=false analytics_set=false analytics_days_set=false
+proxies_set=false sign_in_set=false email_set=false
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --domain) domain="$2"; shift 2 ;;
@@ -99,15 +105,15 @@ while [[ $# -gt 0 ]]; do
     --site) site="$2"; shift 2 ;;
     --site-only) site_only=true; shift ;;
     --no-site) no_site=true; shift ;;
-    --tenancy) tenancy="$2"; shift 2 ;;
-    --operators) operators="$2"; shift 2 ;;
-    --analytics) analytics="$2"; shift 2 ;;
-    --analytics-retention-days) analytics_days="$2"; shift 2 ;;
-    --trusted-proxies) proxies="$2"; shift 2 ;;
-    --google) google=true; shift ;;
-    --github) github=true; shift ;;
-    --nomen) nomen="$2"; shift 2 ;;
-    --email-from) email_from="$2"; shift 2 ;;
+    --tenancy) tenancy="$2"; tenancy_set=true; shift 2 ;;
+    --operators) operators="$2"; operators_set=true; shift 2 ;;
+    --analytics) analytics="$2"; analytics_set=true; shift 2 ;;
+    --analytics-retention-days) analytics_days="$2"; analytics_days_set=true; shift 2 ;;
+    --trusted-proxies) proxies="$2"; proxies_set=true; shift 2 ;;
+    --google) google=true; sign_in_set=true; shift ;;
+    --github) github=true; sign_in_set=true; shift ;;
+    --nomen) nomen="$2"; sign_in_set=true; shift 2 ;;
+    --email-from) email_from="$2"; email_set=true; shift 2 ;;
     --env-file) env_file="$2"; shift 2 ;;
     -h|--help) usage; exit 0 ;;
     *) echo "install.sh: unknown option $1" >&2; usage >&2; exit 2 ;;
@@ -249,6 +255,8 @@ command -v curl >/dev/null || { apt-get update -q && apt-get install -yq curl; }
 # The stack's files: from beside this script (a checkout, or what an orchestrator copied
 # in), or fetched from the repository at one ref.
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=env.sh
+. "$here/env.sh"
 if [[ -z "$source" ]]; then
   if [[ -f "$here/compose.yaml" && -f "$here/update.sh" ]]; then source="$here"
   else source="https://raw.githubusercontent.com/$repo/$(deploy_ref)/deploy/compose"; fi
@@ -292,7 +300,6 @@ secret_names=(DEVAGOTCHI_GOOGLE_CLIENT_ID DEVAGOTCHI_GOOGLE_CLIENT_SECRET DEVAGO
   DEVAGOTCHI_CLICKHOUSE_PASSWORD DEVAGOTCHI_HUB_SIGNAL_SINKS DEVAGOTCHI_SIGNAL_TOKEN
   DEVAGOTCHI_SIGNAL_SECRET)
 declare -A secret=()
-unquote() { sed "s/^'\(.*\)'\$/\1/; s/^\"\(.*\)\"\$/\1/"; }
 from_file() { [[ -n "$env_file" ]] && sed -n "s/^\(export \)\{0,1\}$1=//p" "$env_file" | tail -1 | unquote; }
 from_dotenv() { [[ -f "$dir/.env" ]] && sed -n "s/^$1=//p" "$dir/.env" | tail -1 | unquote; }
 for name in "${secret_names[@]}"; do
@@ -319,7 +326,7 @@ if [[ -n "$nomen" ]]; then
   need DEVAGOTCHI_NOMEN_CLIENT_ID --nomen
   nomen_secret=""
   [[ -n "${secret[DEVAGOTCHI_NOMEN_CLIENT_SECRET]}" ]] && nomen_secret=',"client_secret_env":"DEVAGOTCHI_NOMEN_CLIENT_SECRET"'
-  providers+=("{\"kind\":\"oidc\",\"name\":\"nomen\",\"label\":\"OpenID Connect\",\"issuer\":\"${nomen%/}\",\"client_id_env\":\"DEVAGOTCHI_NOMEN_CLIENT_ID\"$nomen_secret}")
+  providers+=("{\"kind\":\"oidc\",\"name\":\"nomen\",\"label\":\"Shippin\",\"issuer\":\"${nomen%/}\",\"client_id_env\":\"DEVAGOTCHI_NOMEN_CLIENT_ID\"$nomen_secret}")
 fi
 email=null
 if [[ -n "$email_from" ]]; then
@@ -329,6 +336,30 @@ if [[ -n "$email_from" ]]; then
   email="{\"smtp_url_env\":\"DEVAGOTCHI_SMTP_URL\"$password,\"from\":\"$email_from\"}"
 fi
 json_list() { local IFS=,; printf '[%s]' "$*"; }
+# Flags this run did not pass keep what .env already says. A first install has no .env,
+# so tenancy falls through to single and the provider list to empty.
+tenancy=$(keep_env DEVAGOTCHI_HUB_TENANCY "$tenancy" "$tenancy_set" "$dir/.env")
+[[ -n "$tenancy" ]] || tenancy=single
+[[ "$tenancy" == single || "$tenancy" == multi ]] || die "tenancy is single or multi (from --tenancy or the existing .env)"
+operators=$(keep_env DEVAGOTCHI_HUB_OPERATORS "$operators" "$operators_set" "$dir/.env")
+[[ "$operators" =~ ^[A-Za-z0-9@._+:,-]*$ ]] || die "--operators is email:ADDRESS or PROVIDER:SUBJECT, comma separated"
+analytics=$(keep_env DEVAGOTCHI_HUB_ANALYTICS "$analytics" "$analytics_set" "$dir/.env")
+[[ -z "$analytics" || "$analytics" == on || "$analytics" == off ]] || die "--analytics is on or off"
+analytics_days=$(keep_env DEVAGOTCHI_HUB_ANALYTICS_RETENTION_DAYS "$analytics_days" "$analytics_days_set" "$dir/.env")
+[[ -z "$analytics_days" || "$analytics_days" =~ ^[0-9]+$ ]] || die "--analytics-retention-days is a number of days"
+if $sign_in_set; then
+  providers_json=$(json_list "${providers[@]}")
+else
+  providers_json=$(keep_env DEVAGOTCHI_HUB_PROVIDERS '[]' false "$dir/.env")
+fi
+[[ "$providers_json" != *"'"* ]] || die "a sign-in provider value has a quote, which .env cannot hold"
+if ! $email_set; then
+  email=$(keep_env DEVAGOTCHI_HUB_EMAIL null false "$dir/.env")
+fi
+kept_proxies=""
+if ! $proxies_set; then
+  kept_proxies=$(keep_env DEVAGOTCHI_HUB_TRUSTED_PROXIES "" false "$dir/.env")
+fi
 proxy_list=()
 IFS=, read -ra given <<<"$proxies"
 for proxy in "${given[@]}"; do [[ -n "$proxy" ]] && proxy_list+=("\"$proxy\""); done
@@ -347,17 +378,21 @@ DEVAGOTCHI_PG_SHARED_BUFFERS=${shared}MB
 DEVAGOTCHI_PG_EFFECTIVE_CACHE_SIZE=${cache}MB
 DEVAGOTCHI_IMAGE=${pinned:-$track}
 # The hub: one owner's or hosted, its operators, its sign-ins (install.sh's flags).
-DEVAGOTCHI_HUB_TENANCY=${tenancy:-single}
+DEVAGOTCHI_HUB_TENANCY=$tenancy
 DEVAGOTCHI_HUB_OPERATORS=$operators
 DEVAGOTCHI_HUB_ANALYTICS=$analytics
 DEVAGOTCHI_HUB_ANALYTICS_RETENTION_DAYS=$analytics_days
-DEVAGOTCHI_HUB_PROVIDERS='$(json_list "${providers[@]}")'
+DEVAGOTCHI_HUB_PROVIDERS='$providers_json'
 DEVAGOTCHI_HUB_EMAIL='$email'
 # The hub's site directory (install.sh --site); empty: its built-in site.
 DEVAGOTCHI_SITE_DIR=$site_dir
 EOF
-if [[ ${#proxy_list[@]} -gt 0 ]]; then
-  printf "DEVAGOTCHI_HUB_TRUSTED_PROXIES='%s'\n" "$(json_list "${proxy_list[@]}")" >> "$dir/.env.new"
+if $proxies_set; then
+  if [[ ${#proxy_list[@]} -gt 0 ]]; then
+    printf "DEVAGOTCHI_HUB_TRUSTED_PROXIES='%s'\n" "$(json_list "${proxy_list[@]}")" >> "$dir/.env.new"
+  fi
+elif [[ -n "$kept_proxies" ]]; then
+  printf "DEVAGOTCHI_HUB_TRUSTED_PROXIES='%s'\n" "$kept_proxies" >> "$dir/.env.new"
 fi
 for name in "${secret_names[@]}"; do
   if [[ -n "${secret[$name]}" ]]; then printf "%s='%s'\n" "$name" "${secret[$name]}" >> "$dir/.env.new"; fi

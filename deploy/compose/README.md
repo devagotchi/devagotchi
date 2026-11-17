@@ -229,8 +229,10 @@ sudo ./install.sh --domain app.example.com --rp-id example.com --tenancy multi \
   `.env` (0600): `DEVAGOTCHI_GOOGLE_CLIENT_ID`/`_SECRET`, `DEVAGOTCHI_GITHUB_CLIENT_ID`/`_SECRET`,
   `DEVAGOTCHI_NOMEN_CLIENT_ID` (and `_SECRET` if its application has one),
   `DEVAGOTCHI_SMTP_URL` (`smtps://user@host:465` or `smtp://user@host:587`, never a password)
-  and `DEVAGOTCHI_SMTP_PASSWORD`. A re-run keeps the values `.env` already has for any it is
-  not given. Each provider's redirect URI is `https://<domain>/auth/provider/<google|github|nomen>/callback`.
+  and `DEVAGOTCHI_SMTP_PASSWORD`. A re-run keeps the values `.env` already has for any flag it
+  is not given, including `--tenancy`, `--operators` and the sign-in providers. Passing
+  `--google`, `--github` or `--nomen` replaces the provider list with the ones named that run.
+  Each provider's redirect URI is `https://<domain>/auth/provider/<google|github|nomen>/callback`.
 - `--trusted-proxies` lists the proxies whose `X-Forwarded-For` names the client (for the
   per-address limit on new accounts); by default private and loopback addresses, which is
   what Caddy on the compose network and an edge proxy on the host are.

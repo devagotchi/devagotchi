@@ -198,6 +198,18 @@ curl -fsS "http://127.0.0.1:$port/" | grep -q "Get started" || fail "the hosted 
 curl -fsS "http://127.0.0.1:$port/auth/login" | grep -q "Continue with Google" || fail "the sign-in page offers Google"
 echo "PASS install.sh: a hosted hub with an operator and Google, its secrets kept 0600, no claim"
 
+# A re-run that does not repeat the hosted flags keeps them. Omitting --tenancy used to
+# write single and drop the operators and the sign-in providers.
+out=$("$root/deploy/compose/install.sh" --domain hub.test.example --rp-id test.example \
+  --edge external --hub-bind 127.0.0.1 --hub-port "$port" --dir "$dir" --no-timer --track "$track" 2>&1) \
+  || { printf '%s\n' "$out" >&2; fail "install.sh re-run without the hosted flags"; }
+[[ "$(env_get DEVAGOTCHI_HUB_TENANCY)" == multi ]] || fail "a re-run keeps tenancy multi"
+[[ "$(env_get DEVAGOTCHI_HUB_OPERATORS)" == email:ops@test.example ]] || fail "a re-run keeps the operators"
+env_get DEVAGOTCHI_HUB_PROVIDERS | grep -q google || fail "a re-run keeps Sign in with Google"
+[[ "$(env_get DEVAGOTCHI_HUB_ANALYTICS_RETENTION_DAYS)" == 30 ]] || fail "a re-run keeps how long raw visits are kept"
+grep -q "/claim#" <<<"$out" && fail "the re-run of a hosted hub still prints no claim link"
+echo "PASS install.sh: a re-run keeps tenancy, operators, sign-in providers and analytics"
+
 # The deploy files come with the image, from the commit its label names. The local registry
 # holds two images of the running hub, relabelled with made-up commits; a file server holds
 # those commits' deploy files: the first's as they are with a marker, the second's with a

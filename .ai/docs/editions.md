@@ -28,11 +28,14 @@ Decided by the operator on 2026-11-14, and recorded so this repository does not 
 - The commercial cloud is a marketing site and a hosted service at devagotchi.com, with a free
   tier. Its repository is `shippinAI/devagotchi-cloud` (private, made 2026-11-14); none of its
   deployment belongs in this repository.
-- Sign in with Shippin (Nomen) is on from a hub's first start and the owner turns it off with one
-  switch on `/admin` -> Sign-in, so Google sign-in always works without the owner's own Google
-  client ([free edition plan](../dev/plans/free-edition.md), S0 and D1). This replaces the
-  earlier same-day line "This core does not default to it": until S0 lands, an operator types
-  the issuer on `/admin`, or passes it to `install.sh --nomen`.
+- Sign in with Shippin (Nomen) has a card on `/admin` -> Sign-in from a hub's first start. The
+  switch on that card offers it, on once the issuer is saved, and turns it off without deleting
+  the issuer. The issuer, client id and secret are settings: type them, or pass
+  `install.sh --nomen ISSUER` with `DEVAGOTCHI_NOMEN_CLIENT_ID`. Nothing in this repository
+  fills in an issuer. A hub with no issuer shows no Shippin button, so Google still needs the
+  owner's own client until an issuer is set. Signing in with no client registered at all is
+  S0 (Nomen accepts Client ID Metadata Documents). That change is in Nomen, not this
+  repository, and has not landed ([free edition plan](../dev/plans/free-edition.md)).
 - Billing, when the cloud repository has code, is Stripe. Plugin submission comes later.
 - A self-hosted install names its own hub. No hostname or address is a default in code,
   scripts, or examples.

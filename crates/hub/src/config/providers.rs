@@ -13,7 +13,7 @@
 //!       "client_id_env": "DEVAGOTCHI_NOMEN_CLIENT_ID", "client_secret_env": "DEVAGOTCHI_NOMEN_CLIENT_SECRET" }
 //!   ],
 //!   "email": { "smtp_url_env": "DEVAGOTCHI_SMTP_URL", "password_env": "DEVAGOTCHI_SMTP_PASSWORD",
-//!              "from": "Devagotchi <sign-in@devagotchi.com>" }
+//!              "from": "Devagotchi <sign-in@example.com>" }
 //! }
 //! ```
 //!

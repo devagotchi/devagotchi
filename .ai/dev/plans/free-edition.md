@@ -21,7 +21,7 @@
   [desktop-commander-teardown](../../../docs/desktop-commander-teardown.md) as the parity
   reference.
 - PR: one per milestone, in the order below
-- Branch / baseline: from `5c28f8c` (v0.1.0)
+- Branch / baseline: from `5c28f8c`. `v0.1.0` is re-cut at the release commit; that earlier commit is not the baseline.
 
 ## What is true today (each checked on `5c28f8c` or the live hub, 2026-11-14)
 
@@ -168,9 +168,9 @@ the submodule (`git submodule update --init`, CI checks out with `submodules: tr
 | R3 | Postgres only: machines, push, audit, browser sessions, Nomen sign-ins move into their domains' tables; `auth.mode devagotchi`, the store's SQLite backend and twin migrations, and the hub's SQLite board fallback are deleted | a hub test runs `hub serve` with every feature exercised and finds no `*.sqlite3` in the state directory; `grep -rln rusqlite crates/hub crates/store` empty | in progress, increment 147 (#195): machines, push, audit, browser sessions and Nomen sign-ins on Postgres; `auth.mode devagotchi`, the SQLite backend and twin migrations deleted; every table prefixed (receipt below). the hub's SQLite board fallback, `hub import-board` and the board command line left the hub in R1 (#196). The `devagotchi ai` journal moved to the machine engine (`crates/core/src/ai/`) in increment 150, so `grep -rln rusqlite crates/hub crates/store` is empty, and `tests/e2e.py` fails if the hub's state directory holds a SQLite file after every probe. Done |
 | R4 | `tenancy` as its own crate, out of the default build; a one-owner hub has no tenant code in its binary | the default binary's symbols carry no `tenancy`; a hub built with it passes the tenant tests | not started |
 | U0 | The UI contract: each domain's pages listed in its front door; `/admin` grouped by domain; the CI check that every config key has a page or is a listed deploy-time value | the check fails on a config key with neither | not started |
-| S0 | Nomen accepts Client ID Metadata Documents (public client, PKCE, redirect checked against the hub's document); in `nomen-react-go`, with its tests | Nomen's tests; a hub on a fresh domain signs in through id.shippin.cloud with nothing registered | not started |
-| D1 | Sign-in as Desktop Commander's: **Continue with Shippin** on by default (Google and email through Shippin; off with one switch on `/admin` → Sign-in), Continue with Google when the owner adds their own client, email + password (Sign in / Sign up), Forgot password by email; nothing else before the AI app gets its connection | `tests/first_connect_browser.py` on a fresh hub with no settings: the Shippin button is there, turning it off removes it; live check on app.devagotchi.com | not started |
-| D1a | **Shippin sign-in rulings** (operator, 2026-11-15): nothing about Shippin is hardcoded (issuer, project and client are settings, shipped as the installer's defaults); the owner turns it off on `/admin` → Sign-in; the button carries a clear notice: *this gives you an account on Shippin.ai, to use on your site and to activate across the Shippin network suite of services*. Until Nomen takes Client ID Metadata Documents (S0), a hub joins Nomen with `hub connect-nomen` (the owner approves a code) | D1 | the notice shown beside the button; off removes it; a hub with no Shippin settings shows no Shippin button | not started |
+| S0 | Nomen accepts Client ID Metadata Documents (public client, PKCE, redirect checked against the hub's document); in `nomen-react-go`, with its tests | Nomen's tests; a hub on a fresh domain signs in through the issuer the operator configured, with nothing registered | not started (other repository; blocks a Shippin button with no client id) |
+| D1 | Sign-in as Desktop Commander's: **Continue with Shippin** offered from `/admin` → Sign-in (the switch defaults to on; off removes the button), Continue with Google when the owner adds their own client, email + password (Sign in / Sign up), Forgot password by email; nothing else before the AI app gets its connection | a fresh hub shows the Shippin card with an empty issuer and no button; saving an issuer shows the button; the switch removes it | partial: the card, the switch and the notice are in this tree (`web/shippin_tests.rs`). A button with no issuer configured is not invented. Forgot-password mail was already a separate setting. Live check on a hosted domain is the operator's |
+| D1a | **Shippin sign-in rulings** (operator, 2026-11-15): nothing about Shippin is hardcoded (issuer, project and client are settings, shipped as the installer's defaults); the owner turns it off on `/admin` → Sign-in; the button carries a clear notice: *this gives you an account on Shippin.ai, to use on your site and to activate across the Shippin network suite of services*. Until Nomen takes Client ID Metadata Documents (S0), a hub joins Nomen with `hub connect-nomen` (the owner approves a code) or `install.sh --nomen` | D1 | the notice shown beside the button; off removes it; a hub with no Shippin settings shows no Shippin button | partial: notice, switch and `install.sh --nomen` landed. `connect-nomen` is unchanged. S0 has not |
 | D2 | Machine connect as Desktop Commander's: one line per OS, no sudo, installs for the user and starts with the computer; the machine shows a code, the person approves it in the browser they are signed in with (device grant), and the AI says the machine is online | e2e on Linux and Windows CI: line → code → approve → `machines` online → `run echo ok` | not started |
 | D3 | Tool parity: search sessions, interactive processes and sessions, process list and kill, `edit_block` by range and fuzzy, `write_pdf`, reading PDF/Excel/DOCX, settings get/set, recent tool calls; each with the machine's grants deciding what runs | one test per tool against a real broker; the tool list compared to teardown §1.3 in a test | in progress: `list_directory` paging by cursor, lossy-name marking and the read's file `identity` (from `agent/g3-file-read-queries`, increment 165); interactive processes in the broker on Linux (pseudo-terminal and pipe, ownership by account, take-over, the keyboard lease; from `wip/pty-unix-uncommitted`, increment 166); their MCP tools on the local adapter and the hub (`operation_input`, `operation_resize`, and the hub's `operation_list` now that lists are filtered by caller), with each transport naming the caller and the link refusing a hub that claims any but its own accounts (increment 167); on Windows, a pseudo-console (ConPTY) of the operation's own or a pipe, the root created on the console by hand (no stable `std` attribute list), owned by the Job Object as every root is (increment 168) |
 | D4 | Local mode as Desktop Commander's: one line adds Devagotchi to Claude Code, Codex, Claude Desktop, Cursor on the same computer | a test per client config writer | not started |
@@ -178,7 +178,7 @@ the submodule (`git submodule update --init`, CI checks out with `submodules: tr
 | E1 | Passkeys after the first connection: no passkey anywhere before a machine is online (landing copy, claim, sign-in); the account page offers one after | `live_check.py` and `first_connect_browser.py` assert no "passkey" before the machine is online | not started |
 | E2 | Then the expansions in their own plans: phone (push exists), AgentHub features, provenance (`self-hosted-and-provenance.md` P1-P4), connections | per plan | not started |
 | K1 | The optional cache ([ADR 0004](../../../docs/adr/0004-optional-cache-dragonfly.md)): `cache.url` / `DEVAGOTCHI_HUB_CACHE_URL` (Redis protocol, Dragonfly recommended), off by default; the `/admin` card with Check; `/healthz` shows it; rate limits shared through it when set, in-process when not; an opt-in Dragonfly service in the compose stack | R3 | hub tests with and without a cache, the cache stopped mid-run (degraded, nothing wrong), compose with the profile | not started |
-| V1 | A release a solo developer installs from GitHub: tag the free edition once D2 passes (the operator tags), then a scheduled CI job installs the **latest release** (not `main`) with each installer and runs the install check against it | D2, the operator's tag | the scheduled job green on the release | not started; the only release, `v0.1.0`, is from before R1 and R3 |
+| V1 | A release a solo developer installs from GitHub: tag the free edition once D2 passes (the operator tags), then a scheduled CI job installs the **latest release** (not `main`) with each installer and runs the install check against it | D2, the operator's tag | the scheduled job green on the release | not started. `v0.1.0` is re-cut at the release commit; the earlier tag is not the baseline. The operator tags |
 
 ## Order, as of 2026-11-15
 
@@ -192,13 +192,12 @@ with Dragonfly optional. The order:
 5. V1: the release solo developers install. Then the cloud lane ([cloud-edition](cloud-edition.md)
    C2b, C2c, C8, C9).
 
-## Release baseline (operator, 2026-11-15)
+## Release baseline (operator, 2026-11-17)
 
-When every item the operator named is merged (the optional cache, AgentHub on its own, Desktop
-Commander parity, the tenancy crate, support access, the leftovers) and the operator says go:
-the old `v0.1.0` release and tag (commit 5c28f8c, before R1 and R3) are deleted, `v0.1.0` is
-made again on that `main`, and the cloud repository's `core` pin moves to it. That release is
-the baseline everything after extends.
+`v0.1.0` is re-cut at the release commit: the readiness work merged to `main`. That tag is
+the first real release, and the baseline everything after extends. The operator re-cuts it.
+This repository does not delete, move, or create the tag. `Cargo.toml` stays `0.1.0`. The
+cloud repository's `core` pin moves to that commit. The earlier tag is not a baseline.
 
 ## Information needed from Jesse
 

@@ -342,9 +342,11 @@ names another (`scripts/lay-down-dist.sh COMMIT DIR` lays one down for a commit 
 on `/account` and the AI's `machine_add` give one line per OS:
 
 ```bash
-curl -fsSL https://app.devagotchi.com/join/dvg-… | sudo sh      # Linux, x86_64 or aarch64
-irm https://app.devagotchi.com/join/dvg-….ps1 | iex             # Windows PowerShell, no admin
+curl -fsSL https://hub.example.com/join/dvg-… | sudo sh      # Linux, x86_64 or aarch64
+irm https://hub.example.com/join/dvg-….ps1 | iex             # Windows PowerShell, no admin
 ```
+
+The host is that hub's own public URL, the one `install.sh --domain` set.
 
 `/join/<code>` answers with a script for that code: the machine's name, the build version and
 the SHA-256 of each file it then downloads from `/dist/<file>`. It installs that build, makes

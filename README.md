@@ -14,9 +14,12 @@ administrator rights), then `setup` gives every AI client it finds (Claude Code,
 Desktop) an MCP server named `devagotchi`. No account, nothing to start by hand: your broker
 starts in the background on an AI's first call, and again on the first call after a reboot.
 
-> **Not published yet.** These lines work once the first release (v0.1.0) is out; until then
-> the links return 404. Build from source instead ([Linux](#build-the-linux-core),
-> [Windows](#build-and-run-on-windows)).
+> The first release is **v0.1.0**. The operator re-cuts that tag at the release commit
+> on `main`. The notes are under Unreleased in [CHANGELOG.md](CHANGELOG.md). `Cargo.toml`
+> stays `0.1.0`. This repository does not create, move, or delete the tag. Until that
+> re-cut, building from source is how you run what is on `main`
+> ([Linux](#build-the-linux-core), [Windows](#build-and-run-on-windows)). Clone with
+> submodules (`git clone --recurse-submodules`), or `cargo build` cannot see AgentHub.
 
 Linux (x86_64, ARM64; glibc 2.35 or later, e.g. Ubuntu 22.04, Debian 12):
 
@@ -114,7 +117,7 @@ This directory is the desktop foundation and planning source preview, not a sign
 - The desktop inspector reads the same operations, displays exact command details and live retained output, and can request cancellation.
 - The native host validates broker responses against Rust types. Desktop types are generated from the same canonical Rust contracts.
 
-This desktop implementation does not yet provide file/search/edit tools, PTY input, workspace onboarding, a tray/service installer, Windows ConPTY, macOS process supervision, signed updates, task-graph execution, trusted mesh, or runtime HTTP. Those capabilities follow the scoped sequence in the [master plan](docs/product-and-platform-plan.md). The website/reference publication is a separate immediate workstream and does not wait for full native release.
+The desktop broker provides the file, search, edit and process tools in the table below, including interactive jobs on a pseudo-terminal (Linux) or a pseudo-console (Windows, ConPTY). It does not yet provide macOS process supervision, signed updates, task-graph execution, a trusted mesh, or runtime HTTP. Those follow the scoped sequence in the [master plan](docs/product-and-platform-plan.md). `write_pdf`, and reading PDF, Excel and DOCX inside the file tools, are not in this tree; the gap list is [.ai/docs/desktop-commander-parity.md](.ai/docs/desktop-commander-parity.md). The website/reference publication is a separate workstream and does not wait for a full native release.
 
 ## Components
 
@@ -123,7 +126,7 @@ This desktop implementation does not yet provide file/search/edit tools, PTY inp
 | Broker | `crates/machine-engine/src/broker.rs`, `crates/machine-engine/src/journal.rs`, `crates/machine-engine/src/service/` | Admission, operation lifecycle, output retention, cancellation, recovery |
 | Execution | `crates/machine-engine/src/execution.rs`, `crates/machine-engine/src/execution/platform/linux.rs`, `crates/machine-engine/src/execution/platform/windows.rs` | Process orchestration; spawning, observing, and terminating one root's owned process group or Job Object |
 | Local IPC | `crates/ipc/src/lib.rs`, `crates/ipc/src/unix.rs`, `crates/ipc/src/windows.rs`, `crates/ipc/src/windows/security.rs` | Private state directory, Unix socket or named pipe, peer UID or SID, instance lock, bounded framed requests |
-| MCP adapter | `crates/mcp/src/main.rs` | Official `rmcp` 3.5.1 stdio transport and four typed tools |
+| MCP adapter | `crates/mcp` | Official `rmcp` 3.9.0 stdio transport and the tools in the table below |
 | Desktop app | `apps/desktop` | Tauri 2 native host and React/TypeScript inspector |
 | Website and public reference service | [`apps/website`](apps/website/README.md) | Product documentation, source download, and read-only HTTP/MCP reference routes |
 | AgentHub | [`crates/agenthub`](crates/agenthub/src/lib.rs) | The agents' board: tickets claimed under a lease, worked, noted and handed off, approvals, notes that reach agents; a local SQLite file or the Postgres of record, events exported to ClickHouse when there is one. The hub serves it (MCP tools, `board` command line, pages) from `crates/hub/src/agenthub/` |
@@ -146,7 +149,7 @@ cargo build --locked --bins
 cargo test --locked --lib
 ```
 
-The account (D22): `devagotchi login` signs in at a hub from any terminal (app.devagotchi.com unless `--hub` names another; `--issuer` signs in with your Shippin account directly) — it shows a code and a URL, you approve on any device where you are signed in with a sign-in method configured for that hub, and the tokens land owner-only in `~/.config/devagotchi/account.json` (`whoami` names the account, `logout` revokes). `devagotchi login --local` records the other choice: no account, everything on this machine. `devagotchi start` says which it is until one is on file. An agent reaches the hosted hub as that account with `devagotchi mcp --hub` — the same stdio command, relayed to the hub, the token never in the agent's config. `devagotchi connect` sets that up in Claude Code, Codex and Claude Desktop in one go (each config backed up and written whole), then starts the server once and lists its tools; `--local` points them at this machine's broker instead. A project's board moves to the hub with `devagotchi board bind`: from then on `devagotchi board …` and the hook pack run there as your account, your agents as seats, from every machine you sign in on (`board unbind` goes back).
+The account (D22): `devagotchi login` signs in at a hub from any terminal. There is no built-in hub address: pass `--hub`, set `DEVAGOTCHI_HUB`, or reuse the hub the last login saved (it asks when none of those is set). `--issuer` signs in at an OpenID Connect issuer you name. It shows a code and a URL, you approve on any device where you are signed in with a sign-in method configured for that hub, and the tokens land owner-only in `~/.config/devagotchi/account.json` (`whoami` names the account, `logout` revokes). `devagotchi login --local` records the other choice: no account, everything on this machine. `devagotchi start` says which it is until one is on file. An agent reaches the hosted hub as that account with `devagotchi mcp --hub` — the same stdio command, relayed to the hub, the token never in the agent's config. `devagotchi connect` sets that up in Claude Code, Codex and Claude Desktop in one go (each config backed up and written whole), then starts the server once and lists its tools; `--local` points them at this machine's broker instead. A project's board moves to the hub with `devagotchi board bind`: from then on `devagotchi board …` and the hook pack run there as your account, your agents as seats, from every machine you sign in on (`board unbind` goes back).
 
 The quick way: `devagotchi start` runs your broker with no paths to remember — the first run writes `broker.json` (it runs what your account can, `exec_policy` `account`; workspace: your home directory, or `--workspace`; grants, used only if you set `exec_policy` to `granted`: the toolchains found on PATH, plus `--grant`) under `~/.config/devagotchi`, keeps its state under `~/.local/state/devagotchi`, and tells `devagotchi mcp` where to find it. The explicit way, with your own config (`config/broker.example.json` as a template; absolute, existing paths; only executables you intend to authorize; the state directory's parent must already exist — the broker creates the state directory with mode `0700` or verifies an existing private directory):
 
@@ -220,7 +223,7 @@ Those are historical local-adapter results. The separate Site reference MCP targ
 
 | Tool | Effect |
 |---|---|
-| `run` | Run a command line in one call: start it, wait up to 50 s, return its output and exit code; one still running keeps running and is followed with the operation tools |
+| `run` | Run a command line in one call: start it, wait up to 50 s for the answer (default 30), return its output and exit code. The command itself runs up to an hour unless you set a shorter or longer limit (a day at most). One still running keeps running and is followed with the operation tools |
 | `read_file` | Read a file (text as text, anything else as base64), 24 KiB a call: by lines (`start_line`, negative for the last lines, `line_count`; it gives `next_line` and `total_lines`) or by bytes (`offset`, negative for a log's end) |
 | `list_directory` | List a directory, up to three levels deep |
 | `write_file` | Overwrite (atomically), create or append; returns the SHA-256 to guard the next write |
@@ -230,6 +233,14 @@ Those are historical local-adapter results. The separate Site reference MCP targ
 | `get_file_info` | Kind, size, times, read-only, Unix mode, a link's target, a text file's line count |
 | `create_directory` | Make a directory and its missing parents; an existing one is not an error |
 | `move_file` | Move or rename on the same filesystem; never replaces without `overwrite`, never a directory |
+| `search_files` | Search file names or contents under a directory, one page at a time (`cursor` continues) |
+| `read_url` | Read an http or https page from this machine (so its localhost is reachable), one page at a time. An account broker only |
+| `get_config` | The broker's workspace, exec policy, grants and limits |
+| `set_config_value` | Change a live limit (`max_concurrent`, `max_operations`, `output_limit_bytes`) and save it. Workspace and policy stay the operator's |
+| `list_processes` | Processes on this machine, on an account broker. A job's processes are tagged with its operation |
+| `kill_process` | Stop a process by pid. Refuses the broker and a job's own root (that one is `operation_cancel`) |
+| `get_recent_tool_calls` | Recent tool calls on this connection (through a hub: the caller's own audit) |
+| `get_usage_stats` | Counts of those calls, by tool and by failure |
 | `operation_start` | Admit a command line, or an executable with exact arguments, with a retry key |
 | `operation_list` | List the broker's operations, newest first, before and after restarts |
 | `operation_wait` | Wait until an operation finishes or prints, without polling |
@@ -292,7 +303,7 @@ Executable grants authorize the behavior of that executable as your OS user. Gra
 
 Output and command arguments can contain sensitive or hostile text. The broker and inspector do not send telemetry, and the journal is stored locally. Connected MCP clients receive tool results and may forward them to their configured model or services. The UI renders output as text. The journal contains exact arguments and retained output, so choose a private local state directory and appropriate retention. Logical output/frame and operation counts are bounded; a strict physical disk quota and a complete denial/audit event chain are later release requirements.
 
-The current engine uses pipes, not a PTY. It clears inherited environment variables and closes stdin. On Windows it keeps only `SystemRoot`, which Windows system libraries require. Programs that need environment configuration, interactive input, or a real terminal are outside this initial execution contract and must receive explicit future support.
+Non-interactive jobs use pipes: the broker clears inherited environment variables and closes stdin. On Windows those jobs keep only `SystemRoot`, which Windows system libraries require. A job started with `interactive` keeps a pseudo-terminal on Linux or a pseudo-console (ConPTY) on Windows and accepts typed text and named keys (`operation_input`, `operation_resize`).
 
 ## License
 

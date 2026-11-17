@@ -55,6 +55,29 @@ pub struct Provider {
     endpoints: tokio::sync::OnceCell<Endpoints>,
 }
 
+impl Provider {
+    pub(super) fn client_id(&self) -> &str {
+        &self.client_id
+    }
+
+    pub(super) fn secret(&self) -> Option<&str> {
+        self.secret.as_deref()
+    }
+
+    pub(super) fn from_parts(
+        config: ProviderConfig,
+        client_id: String,
+        secret: Option<String>,
+    ) -> Arc<Self> {
+        Arc::new(Self {
+            config,
+            client_id,
+            secret,
+            endpoints: tokio::sync::OnceCell::new(),
+        })
+    }
+}
+
 #[derive(Debug, Clone)]
 struct Endpoints {
     authorize: String,
@@ -167,52 +190,9 @@ impl Providers {
         self.current().into_iter().find(|p| p.config.name() == name)
     }
 
-    /// Offer the config file's providers with `stored` over them: one saved on the settings
-    /// page replaces the file's of that name, and one turned off there takes it away.
+    /// Offer the config file's providers with `stored` over them. See `provider_apply`.
     pub fn apply(&self, stored: &[crate::identity::accounts::sign_in_settings::StoredSignIn]) {
-        let mut list: Vec<Arc<Provider>> = self
-            .from_config
-            .iter()
-            .filter(|p| !stored.iter().any(|s| s.name == p.config.name()))
-            .cloned()
-            .collect();
-        for setting in stored.iter().filter(|s| s.enabled) {
-            // An OpenID Connect provider's public client has no secret (PKCE only).
-            let secret = if setting.sealed_secret.is_empty() {
-                None
-            } else if let Some(secret) = self
-                .sealer
-                .open_value(&setting.name, &setting.sealed_secret)
-            {
-                Some(secret)
-            } else {
-                eprintln!(
-                    "devagotchi-hub: sign-in {}: its secret does not open with this hub's key; save it again",
-                    setting.name
-                );
-                continue;
-            };
-            let mut described = serde_json::json!({ "kind": setting.kind, "name": setting.name });
-            if !setting.label.is_empty() {
-                described["label"] = setting.label.clone().into();
-            }
-            if !setting.issuer.is_empty() {
-                described["issuer"] = setting.issuer.clone().into();
-            }
-            let config = match serde_json::from_value::<ProviderConfig>(described) {
-                Ok(config) => config,
-                Err(error) => {
-                    eprintln!("devagotchi-hub: sign-in {}: {error}", setting.name);
-                    continue;
-                }
-            };
-            list.push(Arc::new(Provider {
-                config,
-                client_id: setting.client_id.clone(),
-                secret,
-                endpoints: tokio::sync::OnceCell::new(),
-            }));
-        }
+        let list = super::provider_apply::overlay(&self.from_config, stored, &self.sealer);
         *self.list.write().expect("providers") = list;
     }
 
@@ -225,8 +205,16 @@ impl Providers {
         ordered
             .into_iter()
             .map(|provider| {
+                let notice = if provider.config.name() == "nomen" {
+                    format!(
+                        "<p class=\"meta\">{}</p>",
+                        pages::escape(super::sign_in_cards::SHIPPIN_NOTICE)
+                    )
+                } else {
+                    String::new()
+                };
                 format!(
-                    "<a class=\"button\" href=\"/auth/provider/{}?return_to={}{}\">Continue with {}</a> ",
+                    "<a class=\"button\" href=\"/auth/provider/{}?return_to={}{}\">Continue with {}</a>{notice}",
                     pages::escape(provider.config.name()),
                     pages::escape(&encode(return_to)),
                     if link { "&amp;link=1" } else { "" },

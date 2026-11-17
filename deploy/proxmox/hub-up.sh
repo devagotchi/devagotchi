@@ -152,11 +152,11 @@ push_files() {
   sha=$(curl -fsSL "https://api.github.com/repos/$repo/commits/$files_ref" | sed -n 's/^  "sha": "\([0-9a-f]\{40\}\)".*/\1/p' | head -1)
   [[ -n "$sha" ]] || die "could not resolve $repo@$files_ref"
   say "the deploy files from $repo@$files_ref (${sha:0:12})"
-  for file in install.sh compose.yaml update.sh backup.sh; do
+  for file in install.sh env.sh compose.yaml update.sh backup.sh; do
     curl -fsSL "https://raw.githubusercontent.com/$repo/$sha/deploy/compose/$file" -o "$work/$file"
   done
   in_ct mkdir -p "$src"
-  for file in install.sh compose.yaml update.sh backup.sh; do
+  for file in install.sh env.sh compose.yaml update.sh backup.sh; do
     pct push "$ct" "$work/$file" "$src/$file" --perms 0755
   done
   if [[ -n "$site" ]]; then

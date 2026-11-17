@@ -35,7 +35,6 @@
 510	crates/hub/src/web/app/agenthub/ticket_tests.rs
 713	crates/hub/src/web/approvals.rs
 633	crates/hub/src/web/discovery_tests.rs
-733	crates/hub/src/web/hub_settings.rs
 542	crates/hub/src/web/hub_settings_tests.rs
 664	crates/hub/src/web/landing.rs
 751	crates/hub/src/web/oauth.rs
@@ -43,7 +42,7 @@
 742	crates/hub/src/web/pages.rs
 1534	crates/hub/src/web/passkey_tests.rs
 1112	crates/hub/src/web/passkeys.rs
-949	crates/hub/src/web/providers.rs
+937	crates/hub/src/web/providers.rs
 686	crates/hub/src/web/routes.rs
 1204	crates/hub/src/web/tests/mod.rs
 1086	crates/hub/src/web/workflow.rs
