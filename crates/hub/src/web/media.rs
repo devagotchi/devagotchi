@@ -1,7 +1,6 @@
-//! The site's files under `/assets/` (`site/assets.rs`): its logo, icon, pictures, setup
-//! video and fonts. Pages name them with their content hash (`?v=`), so they are cached for
-//! a year; the hash is also their ETag. The video answers byte ranges, which Safari needs
-//! before it plays anything: one range a request, `206` with `Content-Range`, `416` past
+//! The site's files under `/assets/` (`site/assets.rs`): its logo, icon, pictures and fonts.
+//! Pages name them with their content hash (`?v=`), so they are cached for a year; the hash
+//! is also their ETag. Each answers byte ranges: one range a request, `206` with `Content-Range`, `416` past
 //! the end, the whole file for a range it cannot read or an `If-Range` that no longer
 //! matches.
 

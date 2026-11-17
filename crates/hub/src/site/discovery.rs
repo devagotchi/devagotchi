@@ -218,7 +218,7 @@ pub struct Meta<'a> {
 }
 
 /// The head of a public page: its description, its canonical link and `og:url` at the
-/// site's own address (`site_base`), Open Graph and Twitter cards (with the site's poster,
+/// site's own address (`site_base`), Open Graph and Twitter cards (with the site's preview picture,
 /// served by this hub, as their picture, when it has one) and its JSON-LD. The JSON-LD is
 /// data, never run: the pages' CSP has no `script-src` and needs none for it.
 pub fn head(site: &Site, public_url: &str, meta: &Meta) -> String {
@@ -248,11 +248,11 @@ pub fn head(site: &Site, public_url: &str, meta: &Meta) -> String {
     tag("property", "og:title", &title);
     tag("property", "og:description", description);
     tag("property", "og:url", &url);
-    let picture = site.named(site.info.assets.poster.as_ref());
-    if let Some(poster) = picture {
-        tag("property", "og:image", &format!("{hub}{}", poster.url()));
-        tag("property", "og:image:type", poster.mime);
-        if let Some((width, height)) = png_size(&poster.bytes) {
+    let picture = site.named(site.info.assets.preview.as_ref());
+    if let Some(preview) = picture {
+        tag("property", "og:image", &format!("{hub}{}", preview.url()));
+        tag("property", "og:image:type", preview.mime);
+        if let Some((width, height)) = png_size(&preview.bytes) {
             tag("property", "og:image:width", &width.to_string());
             tag("property", "og:image:height", &height.to_string());
         }
@@ -268,8 +268,8 @@ pub fn head(site: &Site, public_url: &str, meta: &Meta) -> String {
     );
     tag("name", "twitter:title", &title);
     tag("name", "twitter:description", description);
-    if let Some(poster) = picture {
-        tag("name", "twitter:image", &format!("{hub}{}", poster.url()));
+    if let Some(preview) = picture {
+        tag("name", "twitter:image", &format!("{hub}{}", preview.url()));
     }
     out.push_str(&format!("<link rel=\"canonical\" href=\"{}\">", attr(&url)));
     for data in &meta.json_ld {
@@ -328,8 +328,8 @@ pub fn landing_json_ld(site: &Site, front: Front, public_url: &str) -> Vec<Value
             "priceCurrency": offer.currency,
         });
     }
-    if let Some(poster) = site.named(info.assets.poster.as_ref()) {
-        software["image"] = format!("{hub}{}", poster.url()).into();
+    if let Some(preview) = site.named(info.assets.preview.as_ref()) {
+        software["image"] = format!("{hub}{}", preview.url()).into();
     }
     if site.pages.contains_key("docs") {
         software["softwareHelp"] =

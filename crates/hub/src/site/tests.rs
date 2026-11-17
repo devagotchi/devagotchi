@@ -189,8 +189,7 @@ fn the_built_in_site_checks_out_and_says_what_the_hub_always_said() {
             "icon.svg",
             "logo.svg",
             "pet.svg",
-            "turnkey-poster.png",
-            "turnkey.mp4"
+            "preview.png"
         ]
     );
     for asset in site.assets.values() {
@@ -460,10 +459,10 @@ fn a_site_that_does_not_check_out_says_what_and_where() {
         (
             Box::new(|d| {
                 edit_json(&d.join("site.json"), |v| {
-                    v["assets"]["video"] = "film.mp4".into()
+                    v["assets"]["preview"] = "film.png".into()
                 })
             }),
-            &["assets.video", "no assets/film.mp4"],
+            &["assets.preview", "no assets/film.png"],
         ),
         (
             Box::new(|d| {

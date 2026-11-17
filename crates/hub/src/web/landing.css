@@ -47,13 +47,139 @@ html:has(> body.landing) { scroll-snap-type: y proximity; }
 .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
 .diagram { width: 100%; max-width: 470px; justify-self: center; }
 .hero-visual { display: grid; min-width: 0; }
-/* The setup video: in the hero on a wide screen, and in the Watch it set up popup. */
-.hero-video { display: none; margin: 0; }
-.hero-video figcaption { margin-top: 12px; color: var(--muted); font-size: .9rem; }
-.turnkey { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; border-radius: 16px;
-  background: var(--deep); box-shadow: 0 30px 60px -30px rgba(12, 40, 26, .45); }
-.video-frame { margin: 0 0 14px; }
-.video-frame .turnkey { border-radius: var(--radius-l); box-shadow: none; }
+/* The setup walkthrough beside the hero's words (walkthrough.rs): the steps of getting
+   started, each a scene of drawn screens. The steps are radio buttons, so the chosen one
+   shows with no script; /assets/landing.js moves along on its own and marks it `live`. */
+.walkthrough { display: grid; gap: 12px; margin: 0; min-width: 0; }
+.walk-stage { position: relative; aspect-ratio: 16 / 11; overflow: hidden;
+  border: 1px solid var(--line); border-radius: var(--radius-l);
+  background: color-mix(in srgb, var(--accent) 7%, var(--surface));
+  box-shadow: 0 30px 60px -36px rgba(12, 40, 26, .45); }
+.live .walk-stage { cursor: pointer; }
+/* A phone's column is narrow: a taller stage, so the screens keep a readable size. */
+@media (max-width: 600px) { .walk-stage { aspect-ratio: 1 / 1; } }
+.walk-scene { position: absolute; inset: clamp(12px, 2.2vw, 24px); display: none; gap: 14px;
+  align-items: center; justify-items: center; }
+.walk-scene:first-child { display: grid; }
+.walk-scene.screens-2 { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); }
+/* The chosen step's scene and caption (one rule per step a walkthrough may have). */
+.walkthrough:has(.walk-tab input:checked) .walk-scene,
+.walkthrough:has(.walk-tab input:checked) .walk-caption span { display: none; }
+.walkthrough:has(.walk-tab:nth-of-type(1) input:checked) .walk-scene:nth-child(1),
+.walkthrough:has(.walk-tab:nth-of-type(2) input:checked) .walk-scene:nth-child(2),
+.walkthrough:has(.walk-tab:nth-of-type(3) input:checked) .walk-scene:nth-child(3),
+.walkthrough:has(.walk-tab:nth-of-type(4) input:checked) .walk-scene:nth-child(4),
+.walkthrough:has(.walk-tab:nth-of-type(5) input:checked) .walk-scene:nth-child(5),
+.walkthrough:has(.walk-tab:nth-of-type(6) input:checked) .walk-scene:nth-child(6),
+.walkthrough:has(.walk-tab:nth-of-type(7) input:checked) .walk-scene:nth-child(7),
+.walkthrough:has(.walk-tab:nth-of-type(8) input:checked) .walk-scene:nth-child(8) { display: grid; }
+.walk-caption span { display: none; }
+.walk-caption span:first-child,
+.walkthrough:has(.walk-tab:nth-of-type(1) input:checked) .walk-caption span:nth-child(1),
+.walkthrough:has(.walk-tab:nth-of-type(2) input:checked) .walk-caption span:nth-child(2),
+.walkthrough:has(.walk-tab:nth-of-type(3) input:checked) .walk-caption span:nth-child(3),
+.walkthrough:has(.walk-tab:nth-of-type(4) input:checked) .walk-caption span:nth-child(4),
+.walkthrough:has(.walk-tab:nth-of-type(5) input:checked) .walk-caption span:nth-child(5),
+.walkthrough:has(.walk-tab:nth-of-type(6) input:checked) .walk-caption span:nth-child(6),
+.walkthrough:has(.walk-tab:nth-of-type(7) input:checked) .walk-caption span:nth-child(7),
+.walkthrough:has(.walk-tab:nth-of-type(8) input:checked) .walk-caption span:nth-child(8) { display: inline; }
+.walk-caption { margin: 2px 0 0; min-height: 1.4em; font: 600 1.05rem/1.35 var(--font-ui); }
+
+/* The steps: a tab each, the current one filling with how long is left. */
+.walk-nav { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.walk-tabs { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; margin: 0; padding: 0; border: 0; }
+.walk-tab { position: relative; display: inline-flex; align-items: center; gap: 6px; overflow: hidden;
+  padding: 6px 11px 7px; border: 1px solid var(--line); border-radius: var(--radius-pill);
+  color: var(--muted); font-size: .85rem; cursor: pointer; }
+.walk-tab:hover { color: var(--text); border-color: var(--accent); }
+.walk-tab input { position: absolute; inset: 0; margin: 0; opacity: 0; cursor: pointer; }
+.walk-tab:has(input:checked) { color: var(--text); border-color: var(--accent); background: var(--surface); }
+.walk-tab:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+.walk-n { color: var(--accent); font-weight: 700; }
+.walk-bar { position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: var(--accent);
+  transform: scaleX(0); transform-origin: left; }
+.walk-pause { margin-left: auto; padding: 5px 10px; border: 0; background: none; color: var(--muted);
+  font: inherit; font-size: .85rem; text-decoration: underline; cursor: pointer; }
+.walk-pause:hover { color: var(--text); }
+
+/* The drawn screens. Sizes follow the stage, so a scene reads the same on any width. */
+.scr { display: flex; flex-direction: column; width: 100%; max-height: 100%; min-width: 0; overflow: hidden;
+  border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--text);
+  box-shadow: 0 18px 40px -28px rgba(12, 40, 26, .5);
+  font-size: clamp(.6rem, .42rem + .42vw, .8rem); line-height: 1.45; }
+.scr p { margin: 0; }
+.typed { display: inline-block; max-width: 100%; vertical-align: top; }
+.scr-bar { display: flex; align-items: center; gap: 5px; padding: 7px 10px; border-bottom: 1px solid var(--line);
+  background: var(--sunk); color: var(--muted); }
+.scr-bar i { width: 8px; height: 8px; flex: none; border-radius: 50%; background: var(--line); }
+.scr-bar span { flex: 1; min-width: 0; margin-left: 6px; padding: 1px 8px; overflow: hidden;
+  border-radius: var(--radius-pill); background: var(--surface); text-align: center;
+  text-overflow: ellipsis; white-space: nowrap; }
+.scr-body { display: flex; flex-direction: column; gap: 7px; min-height: 0; padding: 12px 14px; overflow: hidden; }
+.tty { border-color: transparent; background: var(--deep); color: var(--on-deep); font-family: var(--font-mono); }
+.tty .scr-bar { border-color: transparent; background: color-mix(in srgb, var(--deep) 80%, #000);
+  color: var(--on-deep-muted); }
+.tty .scr-bar i { background: color-mix(in srgb, var(--on-deep) 30%, transparent); }
+.tty .scr-bar span { background: none; }
+.tty .scr-body { gap: 3px; overflow-wrap: anywhere; }
+.tty .ps { color: var(--on-deep-muted); }
+.tty .hl { padding: 2px 5px; border-radius: 5px; font-weight: 700;
+  background: color-mix(in srgb, var(--online) 22%, transparent);
+  color: color-mix(in srgb, var(--online) 45%, var(--on-deep)); }
+.pg-h { font-weight: 700; font-size: 1.3em; line-height: 1.25; }
+.fld { display: grid; gap: 2px; }
+.fld-l { color: var(--muted); font-size: .9em; }
+.fld-v { min-height: 1.9em; padding: 4px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg);
+  overflow-wrap: anywhere; }
+.code { padding: 6px 8px; border-radius: 6px; background: var(--sunk); font-family: var(--font-mono); overflow-wrap: anywhere; }
+.acts { display: flex; gap: 8px; }
+.btn { padding: 5px 12px; border: 1px solid var(--line); border-radius: 8px; font-weight: 600; }
+.btn.pri { border-color: var(--accent); background: var(--accent); color: var(--bg); }
+.done { color: var(--online); font-weight: 700; }
+.done::before { content: "\25CF  "; }
+.handset { max-width: 230px; border: 6px solid var(--deep); border-radius: 24px; }
+.handset .scr-bar i { display: none; }
+.handset .scr-bar span { margin: 0; }
+.lock .scr-body { min-height: 100%; justify-content: flex-start; padding-top: 18px;
+  background: linear-gradient(180deg, var(--deep), color-mix(in srgb, var(--deep) 65%, #000)); color: var(--on-deep); }
+.scr .clock { margin: 6px 0 16px; font-size: 2.6em; font-weight: 300; text-align: center; }
+.notice { padding: 8px 10px; border-radius: 14px; background: color-mix(in srgb, var(--surface) 94%, transparent);
+  color: var(--text); }
+.notice-t { font-weight: 700; }
+.chat .scr-body { gap: 8px; }
+.say { max-width: 88%; }
+.say.you { align-self: flex-end; padding: 6px 10px; border-radius: 12px; background: var(--sunk); }
+.tool { align-self: flex-start; padding: 3px 8px; border: 1px solid var(--line); border-radius: 8px;
+  color: var(--muted); font-size: .92em; }
+.tool-n { color: var(--accent); font-family: var(--font-mono); font-weight: 700; }
+
+/* A scene plays out when it shows: lines arrive in turn, typing types, the button is
+   pressed, and the result shows. Shown again, it plays again. */
+@media (prefers-reduced-motion: no-preference) {
+  .walk-scene .ln { animation: walk-in .32s ease-out both; }
+  .walk-scene .ln:nth-child(2) { animation-delay: .22s; }
+  .walk-scene .ln:nth-child(3) { animation-delay: .44s; }
+  .walk-scene .ln:nth-child(4) { animation-delay: .66s; }
+  .walk-scene .ln:nth-child(5) { animation-delay: .88s; }
+  .walk-scene .ln:nth-child(6) { animation-delay: 1.1s; }
+  .walk-scene .ln:nth-child(7) { animation-delay: 1.32s; }
+  .walk-scene .ln:nth-child(8) { animation-delay: 1.54s; }
+  .walk-scene .ln:nth-child(n + 9) { animation-delay: 1.76s; }
+  .walk-scene .screens-2 > .scr:nth-child(2) .ln { animation-delay: 1.2s; }
+  .walk-scene .typed { animation: walk-type .8s steps(22, end) .15s both; }
+  .walk-scene .tap { animation: walk-tap .7s 2.1s both; }
+  .walk-scene .done { animation: walk-in .4s 2.7s both; }
+  .walk-scene .notice { animation: walk-drop .5s .3s both; }
+  .walk-tab, .walk-tab input { transition: color .15s, border-color .15s, background-color .15s; }
+}
+@keyframes walk-in { from { opacity: 0; translate: 0 6px; } to { opacity: 1; translate: 0 0; } }
+@keyframes walk-type { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes walk-drop { from { opacity: 0; translate: 0 -14px; } to { opacity: 1; translate: 0 0; } }
+@keyframes walk-tap {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 55%, transparent); }
+  45% { scale: .94; }
+  100% { box-shadow: 0 0 0 10px transparent; scale: 1; }
+}
 .how-diagram { display: none; }
 .topology { display: block; width: 100%; height: auto; }
 .topology text { font: 12px var(--font-ui); fill: var(--text); }
@@ -226,11 +352,6 @@ html:has(> body.landing) { scroll-snap-type: y proximity; }
   color: var(--accent); font: inherit; font-weight: 600; text-decoration: underline;
   text-decoration-thickness: 1px; text-underline-offset: 3px; cursor: pointer; }
 .pop:hover { text-decoration-thickness: 2px; }
-.pop.watch { text-decoration: none; padding: 6px 4px; }
-.pop.watch:hover { text-decoration: underline; }
-.play { width: 32px; height: 32px; flex: none; }
-.play circle { fill: none; stroke: currentColor; stroke-width: 1.5; }
-.play path { fill: currentColor; }
 .meta .pop { font-weight: 600; }
 .modal { width: min(640px, calc(100vw - 32px)); max-height: min(84vh, 760px); max-height: min(84dvh, 760px);
   margin: auto; padding: 0; overflow: auto; overscroll-behavior: contain; border: 1px solid var(--line);
@@ -258,9 +379,6 @@ html:has(> body.landing) { scroll-snap-type: y proximity; }
 .tools dt { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 4px 6px; }
 .tools dt code { padding: 1px 7px; border-radius: var(--radius-s); background: var(--sunk); font-size: .82rem; }
 .tools dd { margin: 4px 0 0; color: var(--muted); }
-.video-slot { display: grid; place-items: center; aspect-ratio: 16 / 9; margin: 0 0 18px; padding: 20px;
-  border-radius: 14px; background: var(--deep); color: var(--on-deep-muted); text-align: center; }
-.video-slot p { max-width: 26em; margin: 0; }
 html:has(.modal:popover-open) { overflow: hidden; }
 
 @media (min-width: 760px) {
@@ -272,8 +390,6 @@ html:has(.modal:popover-open) { overflow: hidden; }
 @media (min-width: 900px) {
   .hero { grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr); gap: 56px; }
   .landing .hero h1 { font-size: clamp(2.4rem, .8rem + 3.2vw, 3.6rem); max-width: 16ch; }
-  .hero-visual .diagram { display: none; }
-  .hero-video { display: block; }
   #how { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 64px; align-content: center;
     align-items: center; }
   #how > h2 { grid-column: 1 / -1; }

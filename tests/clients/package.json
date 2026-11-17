@@ -8,6 +8,6 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.32.2",
-    "@openai/codex": "0.167.2"
+    "@openai/codex": "0.169.0"
   }
 }
