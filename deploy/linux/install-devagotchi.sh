@@ -7,13 +7,13 @@
 # /mcp for agents, /link for machines, the project boards), listening on loopback behind Caddy
 # for TLS. Run it as root; the services never run as root.
 #
-#   sudo ./install-devagotchi.sh --version 0.2.0                  # from a GitHub release (sha256 checked)
+#   sudo ./install-devagotchi.sh --version 0.1.0                  # from a GitHub release (sha256 checked)
 #   sudo ./install-devagotchi.sh --bin-dir ./target/release       # from a local build
 #   sudo ./install-devagotchi.sh --hub https://hub.example.com --device wi1 --enroll < code
 #   sudo ./install-devagotchi.sh --exec-policy account ...       # the broker runs commands as its account
 #   sudo ./install-devagotchi.sh --developer ...                 # also print the local MCP command
 #   sudo env DEVAGOTCHI_HUB_STORAGE_URL=postgres://devagotchi@/devagotchi?host=/var/run/postgresql \
-#        ./install-devagotchi.sh --role hub --version 0.2.0 --public-url https://devagotchi.com \
+#        ./install-devagotchi.sh --role hub --version 0.1.0 --public-url https://devagotchi.com \
 #        --auth-config ./auth.json --person 395290028818825218 --board devagotchi --caddy
 #   sudo env DEVAGOTCHI_HUB_STORAGE_URL=… ./install-devagotchi.sh --role hub --public-url http://127.0.0.1:8787 --person jesse --agent claude   # dev tokens: tests only
 #   sudo ./install-devagotchi.sh --uninstall

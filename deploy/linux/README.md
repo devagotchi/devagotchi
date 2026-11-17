@@ -18,12 +18,12 @@ needs systemd as init; it is tested on Ubuntu 24.04 in CI, on x86_64 and on 64-b
 ## Install, join a hub, upgrade, remove
 
 ```bash
-sudo ./install-devagotchi.sh --version 0.2.0 --grant /usr/bin/journalctl   # release archives, sha256 checked
+sudo ./install-devagotchi.sh --version 0.1.0 --grant /usr/bin/journalctl   # release archives, sha256 checked
 # on the hub host: devagotchi hub enroll --state-dir … --config … --device wi1   (prints a one-time code)
 sudo ./install-devagotchi.sh --hub https://hub.example.com --device wi1 --enroll   # paste the code
 # or, from "Add a machine" on the hub's /account page, one line that does all of the above:
 #   curl -fsSL https://hub.example.com/join/dvg-… | sudo sh   (extra installer flags: | sudo sh -s -- --workspace /srv)
-sudo ./install-devagotchi.sh --version 0.2.1          # upgrade; --version 0.2.0 again rolls back
+sudo ./install-devagotchi.sh --version 0.1.1          # upgrade; --version 0.1.0 again rolls back
 sudo ./install-devagotchi.sh --uninstall              # stops and removes the services; files stay
 ```
 
@@ -54,10 +54,10 @@ fetches the certificate itself once DNS points at the host.
 
 ```bash
 sudo env DEVAGOTCHI_HUB_STORAGE_URL=postgres://devagotchi@/devagotchi?host=/var/run/postgresql \
-     ./install-devagotchi.sh --role hub --version 0.2.0 --public-url https://devagotchi.com \
+     ./install-devagotchi.sh --role hub --version 0.1.0 --public-url https://devagotchi.com \
      --board devagotchi --person jesse --agent claude-on-gus --agent codex-on-dabo --caddy
 sudo ./install-devagotchi.sh --role hub --agent gemini-on-wi1     # one more token, printed once
-sudo ./install-devagotchi.sh --role hub --version 0.2.1            # upgrade; config, tokens, boards kept
+sudo ./install-devagotchi.sh --role hub --version 0.1.1            # upgrade; config, tokens, boards kept
 ```
 
 | | |
