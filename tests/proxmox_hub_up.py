@@ -189,7 +189,7 @@ def main() -> int:
           and s["install"][s["install"].index("--rp-id") + 1] == "example.com"
           and s["install"][s["install"].index("--domain") + 1] == DOMAIN, out)
     check("edge: the deploy files of one commit", s["pushed"] == sorted(
-        ["install.sh", "compose.yaml", "update.sh", "backup.sh"]), out)
+        ["install.sh", "env.sh", "compose.yaml", "update.sh", "backup.sh"]), out)
     check("edge: claim link", f"https://{DOMAIN}/claim#ABCD-EFGH-JKMN-PQRS-TVWX-YZ23" in out
           and "Claim it now" in out, out)
     print("PASS an unprivileged container behind its own Caddy is reloaded as the hub")
