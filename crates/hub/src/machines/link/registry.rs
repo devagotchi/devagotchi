@@ -28,12 +28,6 @@ impl Links {
         self.devices.held(owner).await
     }
 
-    /// Move machines, codes, and push subscriptions from one account id to another
-    /// after a provisional account is merged.
-    pub async fn reassign_owner(&self, from: &str, to: &str) -> BridgeResult<usize> {
-        self.devices.reassign_owner(from, to).await
-    }
-
     /// Spend an account's one-time code and bind `public_key` to `name`. The code is
     /// the secret; this is the same check the link handshake uses.
     pub async fn enroll_owned(
@@ -58,6 +52,7 @@ impl Links {
 
     /// A one-time code for `owner` to add a machine named `device` ("Add a machine"). The
     /// names in the hub config are the operator's. Audited without the code.
+    #[cfg(test)]
     pub async fn issue_owned_code(&self, owner: &str, device: &str) -> BridgeResult<String> {
         self.issue_owned_code_within(owner, device, None).await
     }

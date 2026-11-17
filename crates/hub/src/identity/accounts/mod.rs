@@ -389,11 +389,6 @@ impl Accounts {
         .is_ok()
     }
 
-    /// The tenancy these accounts were opened with.
-    pub fn tenancy(&self) -> &crate::config::TenancyConfig {
-        &self.tenancy
-    }
-
     /// Make an account. There is at most one owner, and an id is never reused.
     pub async fn create(&self, id: &str, name: &str, owner: bool) -> BridgeResult<Account> {
         let name = check_name(id, name)?;

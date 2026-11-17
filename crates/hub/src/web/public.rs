@@ -105,25 +105,3 @@ pub async fn terms(State(state): State<AppState>) -> Response {
 pub async fn support(State(state): State<AppState>) -> Response {
     page(&state, "support")
 }
-
-/// The site's public page `name` as one hub of `kind` would draw it, counting visits
-/// (`switch` `analytics`) or not, for tests.
-#[cfg(test)]
-pub fn render(
-    site: &crate::site::Site,
-    name: &str,
-    kind: &str,
-    switch: &str,
-    public_url: &str,
-) -> String {
-    let page = &site.pages[name];
-    let ctx = Ctx::new(site)
-        .with("mcp", format!("{}/mcp", public_url.trim_end_matches('/')))
-        .with("updated", page.updated.clone())
-        .with("retention_days", "90");
-    format!(
-        "{}<p class=\"meta\">{}</p>",
-        page.render(&ctx, &[kind, switch]),
-        ctx.inline(&site.messages.page_footer)
-    )
-}
