@@ -64,7 +64,18 @@ impl<T> Variants<T> {
         }
     }
 
-    fn check(&self, what: &str) -> Result<(), String> {
+    /// Every value with the key it is under (`default` for a single one).
+    pub fn each(&self) -> Vec<(&str, &T)> {
+        match self {
+            Variants::One(value) => vec![("default", value)],
+            Variants::By(map) => map
+                .iter()
+                .map(|(key, value)| (key.as_str(), value))
+                .collect(),
+        }
+    }
+
+    pub(crate) fn check(&self, what: &str) -> Result<(), String> {
         if let Variants::By(map) = self {
             for key in map.keys() {
                 if !VARIANT_KEYS.contains(&key.as_str()) {
@@ -317,7 +328,7 @@ pub enum SignUp {
     EarlyAccess,
 }
 
-/// Which of `assets/` the pages use. Each is optional: no video, no Watch it set up.
+/// Which of `assets/` the pages use. Each is optional.
 #[derive(Debug, Clone, Default, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct AssetNames {
@@ -333,11 +344,9 @@ pub struct AssetNames {
     /// How it fits together, drawn inline (SVG) in the hero and How it works.
     #[serde(default)]
     pub diagram: Option<String>,
-    /// The setup video (MP4 or WebM) and its poster.
+    /// The picture link previews and search results show (PNG, JPEG or WebP).
     #[serde(default)]
-    pub video: Option<String>,
-    #[serde(default)]
-    pub poster: Option<String>,
+    pub preview: Option<String>,
 }
 
 impl SiteFile {
@@ -559,10 +568,9 @@ pub struct Hero {
     pub actions: Variants<Vec<Action>>,
     #[serde(default)]
     pub note: Variants<String>,
+    /// The steps of getting started, shown beside the words and moving on by themselves.
     #[serde(default)]
-    pub video_label: String,
-    #[serde(default)]
-    pub video_caption: String,
+    pub walkthrough: Option<super::walkthrough::Walkthrough>,
 }
 
 /// A link that looks like a button.
@@ -777,7 +785,6 @@ pub struct Footer {
 pub struct Popups {
     pub claim: ClaimPopup,
     pub tools: ToolsPopup,
-    pub watch: WatchPopup,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -801,17 +808,6 @@ pub struct ToolsPopup {
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct WatchPopup {
-    pub title: String,
-    /// The button that opens it.
-    pub button: String,
-    pub caption: String,
-    #[serde(default)]
-    pub steps: Vec<Item>,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-#[serde(deny_unknown_fields)]
 pub struct Term {
     /// What `{term:<key>}` shows when it names no text of its own.
     pub word: String,
@@ -827,6 +823,9 @@ impl Landing {
         self.hero.lead.check(&what("hero.lead"))?;
         self.hero.note.check(&what("hero.note"))?;
         self.hero.actions.check(&what("hero.actions"))?;
+        if let Some(walkthrough) = &self.hero.walkthrough {
+            walkthrough.check(&what("hero.walkthrough"))?;
+        }
         for (band, name) in [(&self.claim, "claim"), (&self.how, "how")] {
             for step in &band.steps {
                 step.text.check(&what(&format!("{name}.steps")))?;
