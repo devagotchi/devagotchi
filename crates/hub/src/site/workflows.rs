@@ -14,7 +14,7 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
-use super::{Ctx, Site};
+use super::Site;
 
 /// The step kinds this hub implements.
 pub const KINDS: [&str; 5] = [SECURE_ACCOUNT, MACHINE, PHONE, AI_CLIENT, DONE];
@@ -126,11 +126,6 @@ impl WorkflowsFile {
 }
 
 impl Workflow {
-    /// Whether the hub can start it.
-    pub fn available(&self) -> bool {
-        self.unavailable.is_none()
-    }
-
     fn check_steps(&self) -> Result<(), String> {
         if self.unavailable.is_some() {
             if !self.steps.is_empty() {
@@ -561,11 +556,6 @@ impl Site {
             }
         }
         Ok(out)
-    }
-
-    /// `text` from the site, filled and drawn as inline markup.
-    pub fn inline_text(&self, text: &str) -> String {
-        Ctx::new(self).inline(text)
     }
 }
 

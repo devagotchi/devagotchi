@@ -765,15 +765,15 @@ async fn notify_this_phone_then_an_approval_buzzes_it_encrypted() {
         !payload.to_string().contains("systemctl"),
         "the command never travels in a push"
     );
-    let left = w
-        .hub
-        .push
-        .as_ref()
-        .unwrap()
-        .devices()
-        .push_for(OWNER)
-        .await
-        .unwrap();
+    let devices = w.hub.push.as_ref().unwrap().devices();
+    let mut left = Vec::new();
+    for _ in 0..100 {
+        left = devices.push_for(OWNER).await.unwrap();
+        if left.len() < 2 {
+            break;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+    }
     assert_eq!(
         left.len(),
         1,

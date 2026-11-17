@@ -52,8 +52,120 @@
       "nomen": "A {label:nomen} account is free. [Docs](/docs)",
       "hosted": "No form and nothing to claim: your account is made the moment your AI connects, and you secure it with a {term:passkey} afterwards. Have one already? [Sign in]({sign_in_url})."
     },
-    "video_label": "Setting up {product}, step by step: 57 seconds, captions on screen, no sound",
-    "video_caption": "The whole setup, from an empty server to an AI that asks first. 57 seconds, no sound."
+    "walkthrough": {
+      "label": "Getting started with {product}, step by step",
+      "pause": "Pause",
+      "play": "Play",
+      "steps": [
+        {
+          "tab": "Connect",
+          "caption": "Add one address to your AI app.",
+          "screens": [
+            {
+              "kind": "window",
+              "title": "Claude · Settings · Connectors",
+              "heading": "Add custom connector",
+              "fields": [
+                {
+                  "label": "Name",
+                  "value": "{product}"
+                },
+                {
+                  "label": "Remote MCP server URL",
+                  "value": "{mcp}"
+                }
+              ],
+              "button": "Add",
+              "secondary": "Cancel"
+            }
+          ]
+        },
+        {
+          "tab": "Approve",
+          "caption": "Approve it once, and your AI is connected.",
+          "screens": [
+            {
+              "kind": "window",
+              "title": "{host}/oauth/authorize",
+              "heading": "Connect Claude?",
+              "lines": [
+                "Claude asks to use this hub as you: every tool on the machines you reach, until you disconnect it."
+              ],
+              "button": "Connect",
+              "secondary": "Cancel",
+              "status": "Connected"
+            }
+          ]
+        },
+        {
+          "tab": "Add a machine",
+          "caption": "Your AI hands you one line. Paste it on the machine, and it is online.",
+          "seconds": 4.5,
+          "screens": [
+            {
+              "kind": "chat",
+              "title": "Claude",
+              "lines": [
+                "you: Add my server so you can work on it.",
+                "tool: machine_add server",
+                "ai: Paste this one line on server. It works once.",
+                "tool: machines server online"
+              ]
+            },
+            {
+              "kind": "terminal",
+              "title": "server",
+              "lines": [
+                "$ curl -fsSL https://{host}/join/dvg-3f9a1c0e | sudo sh",
+                "devagotchi join: installing",
+                "! server is linked to your hub"
+              ]
+            }
+          ]
+        },
+        {
+          "tab": "Work",
+          "caption": "It works there: commands, files, and long jobs that keep running when the chat ends.",
+          "screens": [
+            {
+              "kind": "chat",
+              "title": "Claude",
+              "lines": [
+                "you: Why is the site slow on server?",
+                "tool: run df -h /",
+                "ai: The disk is 97% full. Old logs in /var/log/app take 31 GB.",
+                "you: Clear the ones older than a month."
+              ]
+            }
+          ]
+        },
+        {
+          "tab": "You decide",
+          "caption": "Before anything you cannot undo, it asks. You approve on your phone.",
+          "seconds": 4.5,
+          "screens": [
+            {
+              "kind": "chat",
+              "title": "Claude",
+              "lines": [
+                "ai: Deleting logs cannot be undone, so I'll ask you first.",
+                "tool: approval_request Delete logs older than 30 days on server",
+                "tool: approval_wait approved",
+                "ai: Approved and done: 29 GB freed on server."
+              ]
+            },
+            {
+              "kind": "phone",
+              "title": "18:04",
+              "notice": [
+                "Approval needed",
+                "Delete logs older than 30 days on server"
+              ]
+            }
+          ]
+        }
+      ]
+    }
   },
   "claim": {
     "title": "Claim it in a minute",
@@ -322,7 +434,7 @@
       },
       {
         "q": "Is Devagotchi open source?",
-        "a": "It is source-available under the Business Source License 1.1. You can read the code, run your own hub in production for yourself or your organization at no cost, and change it. You cannot offer it to others as a hosted service. Each version becomes open source under the AGPL-3.0 four years after it is published."
+        "a": "It is source-available under the Functional Source License (FSL-1.1-ALv2). You can read the code, change it, and run your own hub at no cost for yourself or your organization. You cannot offer it to others as a commercial service that competes with it. Each version becomes open source under the Apache License 2.0 two years after it is published."
       }
     ],
     "meta": "The source is on GitHub: [devagotchi/devagotchi]({link:source})."
@@ -413,37 +525,6 @@
     "tools": {
       "title": "What the AI can do",
       "intro": "Every tool your AI gets from this hub. Each machine still decides what may run there: only the programs you granted, or anything its own account can."
-    },
-    "watch": {
-      "title": "Watch it set up",
-      "button": "Watch it set up",
-      "caption": "57 seconds, captions on screen, no sound. The same steps, in words:",
-      "steps": [
-        {
-          "term": "One command on a server.",
-          "text": "`docker compose up -d`, or `install.sh` on Debian and Ubuntu."
-        },
-        {
-          "term": "The log prints a claim link.",
-          "text": ""
-        },
-        {
-          "term": "Your phone opens it.",
-          "text": "Name yourself, make your passkey, and you are signed in as the owner."
-        },
-        {
-          "term": "Claude connects.",
-          "text": "Add a custom connector at your hub's MCP address, approve it on the hub's consent page, and it is connected."
-        },
-        {
-          "term": "Add a machine.",
-          "text": "One line on that machine, and it shows up online."
-        },
-        {
-          "term": "Your AI asks first.",
-          "text": "It asks to restart a service; the approval reaches your phone; you approve, and it is done."
-        }
-      ]
     }
   },
   "glossary": {
@@ -483,5 +564,138 @@
       "word": "HTTPS",
       "definition": "The encrypted web address your AI app connects to. Your machines dial out to it, so none of them opens a port."
     }
+  },
+  "compare": {
+    "rail": "Compared",
+    "title": "More than a computer in the chat",
+    "intro": "Desktop Commander puts a computer in your AI chat, and it is good at it. {product} is built for what goes around that: real terminals, jobs that outlive the chat, every machine you have, a hub you own, and you in the loop. Side by side, from Desktop Commander's own source; each citation opens its evidence.",
+    "what": "What",
+    "them": "Desktop Commander",
+    "us": "{product}",
+    "evidence_for": "the evidence for",
+    "rows": [
+      {
+        "what": "Programs that ask for input",
+        "them": "Pipes, with prompts guessed from the output. No terminal.",
+        "cite": "terminal-manager.ts",
+        "us": "A real terminal (a pseudo-terminal on Linux, ConPTY on Windows) or a pipe. Your AI types, presses keys, resizes it, sends Ctrl-C.",
+        "evidence": [
+          "Desktop Commander starts every program with Node's `spawn` and its output on pipes (`src/terminal-manager.ts:192`). Nothing in its source opens a pseudo-terminal.",
+          "So a program that checks for a terminal (a password prompt, a REPL, an installer's questions, `ssh`) sees none."
+        ],
+        "source": {
+          "label": "Read the line in Desktop Commander's source",
+          "href": "https://github.com/wonderwhy-er/DesktopCommanderMCP/blob/bce370e9395f5bc74eda34913e5ae1dee48df8f8/src/terminal-manager.ts#L192"
+        }
+      },
+      {
+        "what": "When the AI app goes away",
+        "them": "Running programs live inside its server: when it exits, they go with it.",
+        "cite": "index.ts",
+        "us": "Jobs belong to the machine's broker, not the chat. They keep running when the AI app closes or the connection drops, and a broker restart is recorded, never hidden or replayed.",
+        "evidence": [
+          "In its own words, exiting its server \"would drop every running process, session and search\" (`src/index.ts:97-100`)."
+        ],
+        "source": {
+          "label": "Read the comment in Desktop Commander's source",
+          "href": "https://github.com/wonderwhy-er/DesktopCommanderMCP/blob/bce370e9395f5bc74eda34913e5ae1dee48df8f8/src/index.ts#L97-L100"
+        }
+      },
+      {
+        "what": "What a command may run",
+        "them": "A blocklist its own security policy calls advisory, not a boundary. With no folders set, every path is allowed.",
+        "cite": "SECURITY.md",
+        "us": "An allowlist of exact programs, or your account's shell when you choose it. Under the allowlist, files stay inside the workspace.",
+        "evidence": [
+          "Desktop Commander's SECURITY.md: its restrictions are \"safety guardrails\", \"not a security sandbox\", and path and command restrictions \"can be circumvented by design\".",
+          "By default `allowedDirectories` is empty (`src/config-manager.ts:279`), and an empty list allows every path (`src/tools/filesystem.ts:293`)."
+        ],
+        "source": {
+          "label": "Read Desktop Commander's security policy",
+          "href": "https://github.com/wonderwhy-er/DesktopCommanderMCP/blob/bce370e9395f5bc74eda34913e5ae1dee48df8f8/SECURITY.md"
+        }
+      },
+      {
+        "what": "Before a risky step",
+        "them": "Nothing asks you first.",
+        "cite": "README",
+        "us": "Your AI asks: what will change, why, and how to undo it. You approve on your phone, and it carries on.",
+        "evidence": [
+          "Desktop Commander's README and tool list have no step that waits for a person's approval. Its remote `review_device_call` only shows a call the AI app itself blocked."
+        ],
+        "source": {
+          "label": "Read Desktop Commander's tool list",
+          "href": "https://github.com/wonderwhy-er/DesktopCommanderMCP/blob/bce370e9395f5bc74eda34913e5ae1dee48df8f8/README.md#available-tools"
+        }
+      },
+      {
+        "what": "The record",
+        "them": "A log file on the machine. Remote calls are swept from its servers about a minute after they finish.",
+        "cite": "README",
+        "us": "Every call on your hub's hash-chained audit: who, what, where and how it ended, and changing a row breaks the chain.",
+        "evidence": [
+          "Desktop Commander keeps a local tool-call log. Remote calls pass through its `mcp_remote_calls` table, whose rows are \"automatically swept shortly after completion\" and \"not kept as a long-term historical server-side audit trail\" (README, lines 816-820)."
+        ],
+        "source": {
+          "label": "Read the section in Desktop Commander's README",
+          "href": "https://github.com/wonderwhy-er/DesktopCommanderMCP/blob/bce370e9395f5bc74eda34913e5ae1dee48df8f8/README.md#L816-L820"
+        }
+      },
+      {
+        "what": "Who runs the remote side",
+        "them": "Desktop Commander's own cloud. Running it yourself is an open request.",
+        "cite": "#714",
+        "us": "You do, with one Docker command, or use the hosted hub. Your machines dial out to it; none opens a port.",
+        "evidence": [
+          "Remote Desktop Commander routes calls through its hosted service. Its backend is not in the open repository, and issue #714, a self-hosted backend, is open."
+        ],
+        "source": {
+          "label": "Read issue #714",
+          "href": "https://github.com/wonderwhy-er/DesktopCommanderMCP/issues/714"
+        }
+      },
+      {
+        "what": "Telemetry",
+        "them": "On unless you turn it off. The install tracker sends anyway.",
+        "cite": "capture.ts",
+        "us": "The broker on your machine sends none.",
+        "evidence": [
+          "`telemetryEnabled` defaults to true (`src/config-manager.ts:280`), and events go to `telemetry.desktopcommander.app` (`src/utils/capture.ts:68`).",
+          "`npm install` runs `track-installation.js` (`package.json:29`), which checks neither the setting nor `DESKTOP_COMMANDER_DISABLE_TELEMETRY`."
+        ],
+        "source": {
+          "label": "Read the telemetry code",
+          "href": "https://github.com/wonderwhy-er/DesktopCommanderMCP/blob/bce370e9395f5bc74eda34913e5ae1dee48df8f8/src/utils/capture.ts#L68-L80"
+        }
+      },
+      {
+        "what": "Several agents at once",
+        "them": "No shared work: each chat drives the computer on its own.",
+        "cite": "README",
+        "us": "AgentHub boards: tickets your agents claim, hand off and finish, so two never take the same work.",
+        "evidence": [
+          "Desktop Commander's README and tool list have no task board, claim or hand-off."
+        ],
+        "source": {
+          "label": "Read Desktop Commander's README",
+          "href": "https://github.com/wonderwhy-er/DesktopCommanderMCP/blob/bce370e9395f5bc74eda34913e5ae1dee48df8f8/README.md"
+        }
+      },
+      {
+        "what": "Price",
+        "them": "Free on one machine without an account. Remote: free for 10,000 calls a month, then $20 a month plus VAT.",
+        "cite": "pricing",
+        "us": "Free to run yourself, on as many machines as you like. The hosted hub is free during the alpha.",
+        "evidence": [
+          "From Desktop Commander's pricing page, read on 16 November 2026."
+        ],
+        "source": {
+          "label": "Read Desktop Commander's pricing",
+          "href": "https://desktopcommander.app/pricing/"
+        }
+      }
+    ],
+    "source_note": "read at Desktop Commander's release v0.3.3 (commit bce370e, 12 November 2026).",
+    "footnote": "Desktop Commander is ahead today on macOS, which {product} does not run on yet, on PDF, Excel and Word files, and on its listings in Claude's and ChatGPT's directories. Its facts here are read from its source at release v0.3.3 and its pricing page on 16 November 2026."
   }
 }

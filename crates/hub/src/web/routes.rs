@@ -18,7 +18,8 @@ use super::{
     Exchange, SessionToken, WebLogin, analytics, approvals, claim, device, discovery, email,
     machines, notify, oauth, offers, operator,
     pages::{self, Viewer},
-    passkeys, providers, public, safe_return_to, sign_in, workflow,
+    passkeys::{self, owner_password_script},
+    providers, public, safe_return_to, sign_in, workflow,
 };
 use crate::{
     AppState,
@@ -51,10 +52,8 @@ pub fn router(hub_authorization: bool) -> Router<AppState> {
         .route("/passkey/sign-in/options", post(passkeys::sign_in_options))
         .route("/passkey/sign-in", post(passkeys::sign_in))
         .route("/assets/passkey.js", get(passkeys::script))
-        .route(
-            "/assets/owner-password.js",
-            get(passkeys::owner_password_script),
-        )
+        .route("/assets/landing.js", get(super::landing::script))
+        .route("/assets/owner-password.js", get(owner_password_script))
         .route("/auth/provider/link", post(providers::link))
         .route("/auth/provider/{name}", get(providers::start))
         .route("/auth/provider/{name}/callback", get(providers::callback))
@@ -114,7 +113,7 @@ pub fn router(hub_authorization: bool) -> Router<AppState> {
         // The one-tap link that links an account to the site's network (`offers.rs`).
         .route("/offers/{token}", get(offers::show).post(offers::go))
         .route("/assets/hub.css", get(css))
-        // The site's own files: its logo, icon, pictures, video and fonts.
+        // The site's own files: its logo, icon, pictures and fonts.
         .route("/assets/{file}", get(super::media::asset));
     if !hub_authorization {
         return router;

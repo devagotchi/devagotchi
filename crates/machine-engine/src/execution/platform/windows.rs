@@ -54,7 +54,7 @@ pub(crate) const TERMINATION_VERIFIED_DETAIL: &str = " TerminateJobObject was is
 pub(crate) const OBSERVATION_FAILED_DETAIL: &str =
     "Job Object observation failed and requested cancellation. ";
 pub(crate) const TERMINATION_UNVERIFIED_DETAIL: &str = " Job Object termination was not verified";
-pub(crate) const PIPE_TIMEOUT_DETAIL: &str = " Output pipes did not close within one second of root settlement; a process holding them may have received them outside the job. Reading was stopped, output is incomplete, and processes outside the owned Job Object are not tracked or terminated.";
+pub(crate) const PIPE_TIMEOUT_DETAIL: &str = " Output pipes did not close within three seconds of root settlement; a process holding them may have received them outside the job. Reading was stopped, output is incomplete, and processes outside the owned Job Object are not tracked or terminated.";
 pub(crate) const RUNNING_DETAIL_ACCOUNT: &str = "Root created suspended as the broker's account with its environment, null stdin, and no console window, then assigned to a broker-owned Job Object before it ran. Executable behavior is not sandboxed.";
 
 /// The Job Object owns every member however it groups itself; there is one scope.
