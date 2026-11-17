@@ -180,6 +180,26 @@ impl Accounts {
             .map_or(Ok(account.clone()), |_| Err(account_disabled(&account.id)))
     }
 
+    /// The account whose password login is `email`, if any (`devagotchi hub test-accounts`).
+    pub(crate) async fn password_account_of(&self, email: &str) -> BridgeResult<Option<String>> {
+        let Some(email) = normalize_email(email) else {
+            return Ok(None);
+        };
+        transaction!(&self.store, |connection| {
+            if self
+                .enter(connection, Lookup::Identity("email", &email))
+                .await?
+                .is_none()
+            {
+                return Ok(None);
+            }
+            let found =
+                sqlx::query_scalar("SELECT account_id FROM auth_passwords WHERE email = $1")
+                    .bind(&email);
+            Ok(found.fetch_optional(&mut *connection).await?)
+        })
+    }
+
     /// The account a password sign-up made for `proven`'s verified address, when `proven`
     /// itself reaches no account yet: the page that offers to link them (`web/providers.rs`).
     pub async fn password_account_for(&self, proven: &Proven) -> BridgeResult<Option<String>> {
