@@ -13,5 +13,6 @@ the phone before the next phase; the cloud waits until it is all proven. Then th
 
 Active: [AI development contracts and local capture](ai-development-capture.md);
 [Make alpha = pre-release obvious](alpha-stage-obvious.md);
+[Texas baseline: installed the way a public customer would](texas-baseline.md);
 [Structure cleanup](structure-cleanup.md); [The kernel](kernel.md).
 Broader product delivery remains in the [canonical release plan](../../../docs/implementation-and-release-plan.md).
