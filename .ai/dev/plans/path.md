@@ -119,7 +119,7 @@ Nothing new is built until this phase has run once; what it finds is fixed first
 | 5.4 | the plugins work with no hub: Devagotchi on this computer alone, as Desktop Commander does (`devagotchi mcp` over stdio, the local broker) | absent from the plugins: only `devagotchi connect` writes that setup (Claude Code, Codex, Claude Desktop) | install the plugin on a computer with no hub; Claude runs a command there |
 | 5.5 | Grok, through the Claude marketplace format | unchecked: "Not yet checked in a real Grok session" (`plugins/README.md`) | install in Grok Build; it reaches Texas |
 | 5.6 | a local UI the person opens themselves, not the server | absent | the operator's review |
-| 5.3 | API keys with granular control and durations | built | a key limited to one machine and one hour |
+| 5.7 | API keys with granular control and durations | built | a key limited to one machine and one hour |
 
 ## Phase 6: connectors and every setting in the UI
 
