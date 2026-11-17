@@ -10,6 +10,9 @@
   and what has to be true before the cloud repository starts.
 - Non-goals: re-deciding anything already ruled (listed in each track's plan).
 
+> **Order:** [the path](path.md) (2026-11-17) decides what comes next and what "done" means.
+> The cloud lane below waits until every phase there is proven.
+
 ## The four tracks
 
 | Track | Plan | Where it stands (main, `ed818cf`) | Next |
