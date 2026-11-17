@@ -22,7 +22,7 @@ pub(crate) fn enroll(state: &Path, config: Option<&Path>, device: &str) -> Bridg
         ));
     }
     if let Some(path) = config {
-        named_link(&crate::read_config(path)?, device)?;
+        named_link(&crate::config::read(path)?, device)?;
     }
     let code = store::block_on(async {
         let store = store::for_command(state, config).await?;
