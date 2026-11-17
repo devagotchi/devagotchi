@@ -18,8 +18,10 @@ use devagotchi_contracts::{
 use crate::broker::ExecPolicy;
 use crate::execution::platform::file_identity::file_identity;
 
+pub(crate) mod given;
 mod lines;
 mod manage;
+mod search;
 mod write;
 
 const MAX_ENTRIES: u32 = 1000;
@@ -69,7 +71,7 @@ fn readable(text: &str) -> bool {
 
 /// How many leading bytes of `bytes` are readable text: all of them, or all but a
 /// character cut by the end of the page. `None` when they are not text.
-fn text_prefix(bytes: &[u8]) -> Option<usize> {
+pub(crate) fn text_prefix(bytes: &[u8]) -> Option<usize> {
     match std::str::from_utf8(bytes) {
         Ok(text) if readable(text) => Some(bytes.len()),
         Err(error)
@@ -84,11 +86,15 @@ fn text_prefix(bytes: &[u8]) -> Option<usize> {
 }
 
 impl Scope<'_> {
+    /// `path` as the agent wrote it, made absolute: `~` is the broker account's home and a
+    /// relative path is under the workspace.
+    fn given(&self, path: &str) -> BridgeResult<PathBuf> {
+        given::absolute(path, Some(self.workspace))
+    }
+
     fn resolve(&self, path: &str) -> BridgeResult<PathBuf> {
-        if !Path::new(path).is_absolute() || path.as_bytes().contains(&0) {
-            return Err(invalid("path must be an absolute path without NUL bytes"));
-        }
-        let canonical = dunce::canonicalize(path).map_err(|error| io_error(path, error))?;
+        let given = self.given(path)?;
+        let canonical = dunce::canonicalize(&given).map_err(|error| io_error(path, error))?;
         if self.policy == ExecPolicy::Granted && !canonical.starts_with(self.workspace) {
             return Err(BridgeError::new(
                 "path_outside_workspace",

@@ -19,11 +19,13 @@ pub static MIGRATIONS: Migrator = Migrator {
 pub static DATABASE: [&Migrator; 2] = [&MIGRATIONS, &devagotchi_agenthub::migrations::MIGRATIONS];
 
 /// The hub's database at `url`, brought up to date.
+#[cfg(test)]
 pub async fn open(url: &str) -> BridgeResult<Store> {
     Store::open(url, &DATABASE).await
 }
 
-/// [`open`], with the migration records in `schema` ([`Store::open_in`]).
+/// The hub's database at `url`, brought up to date, with the migration records in `schema`
+/// ([`Store::open_in`]).
 pub async fn open_in(url: &str, schema: Option<&str>) -> BridgeResult<Store> {
     Store::open_in(url, schema, &DATABASE).await
 }

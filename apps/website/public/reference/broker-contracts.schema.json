@@ -16,6 +16,721 @@
       ],
       "type": "object"
     },
+    "ChangesInput": {
+      "additionalProperties": false,
+      "description": "Wait until the broker's operations change as a list shows them: one admitted, retired,\nor moved to another state (output alone is not a change here). For a view that\nre-lists only when something changed, instead of on a timer.",
+      "properties": {
+        "after_revision": {
+          "description": "The revision your list reflects (from the last answer). Absent: answer at once with\nthe current revision. A broker that restarted answers at once, too.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "timeout_ms": {
+          "description": "Longest to wait, 1..=50000 milliseconds; at the limit the same revision comes back.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "timeout_ms"
+      ],
+      "type": "object"
+    },
+    "ConfigGetInput": {
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "ConfigSetInput": {
+      "additionalProperties": false,
+      "properties": {
+        "key": {
+          "description": "One of `output_limit_bytes`, `max_operations`, `max_concurrent`.",
+          "type": "string"
+        },
+        "value": {
+          "description": "The new value, a whole number.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "key",
+        "value"
+      ],
+      "type": "object"
+    },
+    "ConfigView": {
+      "additionalProperties": false,
+      "properties": {
+        "account": {
+          "description": "The OS account the broker runs as, and its home directory (what `~` means).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "allowed_executables": {
+          "description": "The programs a `granted` broker runs (canonical paths).",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "arch": {
+          "type": "string"
+        },
+        "changeable": {
+          "description": "The settings `set_config_value` changes.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "changed": {
+          "description": "What the last change did, for `set_config_value`.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "config_file": {
+          "description": "The broker.json this broker was started from, when it was started from one.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "exec_policy": {
+          "description": "`account`: anything this OS account can run. `granted`: only `allowed_executables`.",
+          "type": "string"
+        },
+        "home": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "max_concurrent": {
+          "description": "Jobs running at once.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "max_operations": {
+          "description": "Jobs kept, running and finished; the oldest finished one is retired past this.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "operations_held": {
+          "description": "Jobs held now, and how many of them are running.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "operations_running": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "os": {
+          "description": "`linux` or `windows`, and the CPU architecture.",
+          "type": "string"
+        },
+        "output_limit_bytes": {
+          "description": "Output kept per job, in bytes.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "version": {
+          "description": "The broker's build.",
+          "type": "string"
+        },
+        "workspace": {
+          "description": "Where a relative path and a job without `cwd` start (canonical).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "workspace",
+        "exec_policy",
+        "allowed_executables",
+        "output_limit_bytes",
+        "max_operations",
+        "max_concurrent",
+        "changeable",
+        "operations_held",
+        "operations_running",
+        "os",
+        "arch",
+        "version"
+      ],
+      "type": "object"
+    },
+    "DirectoryInput": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "description": "Path (absolute, `~/...`, or relative to the workspace) of the directory to make; missing parents are made too. An existing\ndirectory is not an error.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "type": "object"
+    },
+    "FileContent": {
+      "additionalProperties": false,
+      "properties": {
+        "bytes_base64": {
+          "description": "The raw bytes, base64, when they are not text.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "eof": {
+          "description": "Whether this page reached the end of the file.",
+          "type": "boolean"
+        },
+        "identity": {
+          "description": "Which file object was read: device and inode on Unix, volume serial and file ID on\nWindows. It stays through a rename and changes when the file is replaced by another, so\npages read in turn are known to be of one file when it is the same on each.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "modified_ms": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "next_line": {
+          "description": "Read by lines: the `start_line` to read on from, when lines remain and the number\nis known. A single line longer than `max_bytes` is read on by bytes, from\n`next_offset`.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "next_offset": {
+          "description": "The offset to read on from.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "offset": {
+          "description": "Where these bytes start.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "path": {
+          "description": "The file's canonical path.",
+          "type": "string"
+        },
+        "size": {
+          "description": "The file's size in bytes when it was read.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "start_line": {
+          "description": "Read by lines: the 1-based number of the first line returned, when known (always\nfor a positive `start_line`; from the end, for files up to 8 MiB).",
+          "format": "uint64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "text": {
+          "description": "The bytes as text, when they are UTF-8 text. A character split at the end of the\npage is left for the next read.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "total_lines": {
+          "description": "Read by lines: the file's line count, for files up to 8 MiB, or once a read from a\nknown line number reaches the end.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "path",
+        "size",
+        "offset",
+        "next_offset",
+        "eof"
+      ],
+      "type": "object"
+    },
+    "FileEditInput": {
+      "additionalProperties": false,
+      "properties": {
+        "expected_replacements": {
+          "default": 1,
+          "description": "How many times `old_text` must occur (default 1); every occurrence is replaced, and\na different count changes nothing.",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "new_text": {
+          "description": "Text to put in its place.",
+          "type": "string"
+        },
+        "old_text": {
+          "description": "Exact text to find, including whitespace and line endings.",
+          "type": "string"
+        },
+        "path": {
+          "description": "Path (absolute, `~/...`, or relative to the workspace) of a UTF-8 text file.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "old_text",
+        "new_text"
+      ],
+      "type": "object"
+    },
+    "FileEntry": {
+      "additionalProperties": false,
+      "properties": {
+        "error": {
+          "description": "Why a directory's own entries are missing (it could not be read).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "kind": {
+          "description": "`file`, `dir`, `symlink` or `other`. Symbolic links are listed, never followed.",
+          "type": "string"
+        },
+        "modified_ms": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "name_lossy": {
+          "description": "True when the name on disk is not valid Unicode: `path` shows it with U+FFFD in\nplace of what could not be decoded, so it cannot be used to reach the entry.",
+          "type": "boolean"
+        },
+        "path": {
+          "description": "Path relative to the listed directory, `/`-separated.",
+          "type": "string"
+        },
+        "size": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "path",
+        "kind"
+      ],
+      "type": "object"
+    },
+    "FileInfo": {
+      "additionalProperties": false,
+      "properties": {
+        "created_ms": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "kind": {
+          "description": "`file`, `dir`, `symlink` or `other`.",
+          "type": "string"
+        },
+        "lines": {
+          "description": "For a text file of at most 8 MiB: how many lines it has.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "link_target": {
+          "description": "Where a symbolic link points, as stored in the link.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "made": {
+          "description": "After create_directory: whether this call made it (false: it existed already).",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "mode": {
+          "description": "Unix permission bits in octal (`0644`); absent on Windows.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "modified_ms": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "path": {
+          "description": "The path, canonical up to its own name (a link is reported as itself).",
+          "type": "string"
+        },
+        "readonly": {
+          "description": "Whether its permissions mark it read-only.",
+          "type": "boolean"
+        },
+        "replaced": {
+          "description": "After move_file: whether a file at the destination was replaced.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "size": {
+          "description": "Size in bytes (for a link, the link's own).",
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "path",
+        "kind",
+        "size",
+        "readonly"
+      ],
+      "type": "object"
+    },
+    "FileInfoInput": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "description": "Path (absolute, `~/...`, or relative to the workspace) of a file, directory or symbolic link.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "type": "object"
+    },
+    "FileListInput": {
+      "additionalProperties": false,
+      "properties": {
+        "cursor": {
+          "description": "Where to go on from: the previous page's `next_cursor`. Absent for the first page.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "depth": {
+          "default": 0,
+          "description": "How many levels below it to include, 0..=3 (default 0: its own entries).",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "max_entries": {
+          "default": 200,
+          "description": "Most entries to return, 1..=1000 (default 200).",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "path": {
+          "description": "Path (absolute, `~/...`, or relative to the workspace) of the directory.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "type": "object"
+    },
+    "FileListing": {
+      "additionalProperties": false,
+      "properties": {
+        "entries": {
+          "description": "Directories first at each level, then by name.",
+          "items": {
+            "$ref": "#/$defs/FileEntry"
+          },
+          "type": "array"
+        },
+        "next_cursor": {
+          "description": "When it did: pass this as `cursor` for the entries after these, in the same order.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "path": {
+          "description": "The directory's canonical path.",
+          "type": "string"
+        },
+        "truncated": {
+          "description": "Whether `max_entries` cut the listing short.",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "path",
+        "entries",
+        "truncated"
+      ],
+      "type": "object"
+    },
+    "FileMoveInput": {
+      "additionalProperties": false,
+      "properties": {
+        "destination": {
+          "description": "Path (absolute, `~/...`, or relative to the workspace) it moves to, on the same filesystem. Its parent directory must exist.",
+          "type": "string"
+        },
+        "overwrite": {
+          "default": false,
+          "description": "Replace a file already at the destination (never a directory). Default false: an\nexisting destination refuses the move and changes nothing.",
+          "type": "boolean"
+        },
+        "source": {
+          "description": "Path (absolute, `~/...`, or relative to the workspace) of the file, directory or link to move or rename (a link moves as\nitself, never what it points to).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source",
+        "destination"
+      ],
+      "type": "object"
+    },
+    "FileReadInput": {
+      "additionalProperties": false,
+      "properties": {
+        "line_count": {
+          "description": "With `start_line`: how many lines, 1..=5000 (default 1000; from a negative\n`start_line`, the lines to the end). Never more than `max_bytes` of text.",
+          "format": "uint32",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "max_bytes": {
+          "default": 24576,
+          "description": "Bytes to read, 1..=24576 (default 24576). Read on from `next_offset` for more.",
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "offset": {
+          "default": 0,
+          "description": "Byte offset to start at; negative counts back from the end (a tail). Default 0.\nWith a positive `start_line`: the `next_offset` that came with that `next_line`, so\nthe line is not searched for again.",
+          "format": "int64",
+          "type": "integer"
+        },
+        "path": {
+          "description": "Path (absolute, `~/...`, or relative to the workspace) of the file.",
+          "type": "string"
+        },
+        "start_line": {
+          "description": "Read by lines instead of bytes: the 1-based line to start at, or negative to count\nback from the end (-50: the last 50 lines). `offset` is then not used.",
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "type": "object"
+    },
+    "FileSearchInput": {
+      "additionalProperties": false,
+      "properties": {
+        "case_sensitive": {
+          "description": "Match case exactly; by default case is ignored.",
+          "type": "boolean"
+        },
+        "context_lines": {
+          "default": 0,
+          "description": "Lines of context before and after each content match, 0..=5.",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "cursor": {
+          "description": "Where to go on from: the previous page's `next_cursor`. Absent for the first page.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "glob": {
+          "description": "Only files whose name matches this glob, such as `*.rs` or `*.{ts,tsx}`.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "include_ignored": {
+          "description": "Also search hidden files and what .gitignore excludes (both are skipped by default,\nas git and ripgrep skip them).",
+          "type": "boolean"
+        },
+        "max_results": {
+          "default": 100,
+          "description": "Most matches on this page, 1..=500 (default 100).",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "path": {
+          "description": "Directory to search (absolute, `~/...`, or relative to the workspace).",
+          "type": "string"
+        },
+        "pattern": {
+          "description": "What to look for: plain text, or a regular expression with `regex`.",
+          "type": "string"
+        },
+        "regex": {
+          "description": "Read `pattern` as a regular expression (Rust syntax, like ripgrep's).",
+          "type": "boolean"
+        },
+        "target": {
+          "$ref": "#/$defs/SearchTarget",
+          "default": "names",
+          "description": "`names` (default) or `contents`."
+        }
+      },
+      "required": [
+        "path",
+        "pattern"
+      ],
+      "type": "object"
+    },
+    "FileWriteInput": {
+      "additionalProperties": false,
+      "properties": {
+        "bytes_base64": {
+          "description": "The content as base64 bytes. At most 32 KiB of content per call; append for more.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "create_dirs": {
+          "default": false,
+          "description": "Create missing parent directories.",
+          "type": "boolean"
+        },
+        "expected_sha256": {
+          "description": "Overwrite only if the file's current SHA-256 is this (from an earlier write or\nedit), so a change made in between is not lost.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "mode": {
+          "$ref": "#/$defs/WriteMode",
+          "default": "overwrite"
+        },
+        "path": {
+          "description": "Path (absolute, `~/...`, or relative to the workspace) of the file.",
+          "type": "string"
+        },
+        "text": {
+          "description": "The content as text, written as UTF-8 exactly as given. Give this or `bytes_base64`.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "type": "object"
+    },
+    "FileWritten": {
+      "additionalProperties": false,
+      "properties": {
+        "created": {
+          "description": "Whether the file was created.",
+          "type": "boolean"
+        },
+        "path": {
+          "description": "The file's canonical path.",
+          "type": "string"
+        },
+        "replacements": {
+          "description": "For an edit: how many occurrences were replaced.",
+          "format": "uint32",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "sha256": {
+          "description": "SHA-256 of its whole content after the change: pass it as `expected_sha256` next time.",
+          "type": "string"
+        },
+        "size": {
+          "description": "Its size after the change.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "path",
+        "size",
+        "sha256",
+        "created"
+      ],
+      "type": "object"
+    },
     "GetInput": {
       "additionalProperties": false,
       "properties": {
@@ -25,6 +740,89 @@
       },
       "required": [
         "operation_id"
+      ],
+      "type": "object"
+    },
+    "InputMode": {
+      "description": "How an interactive operation takes input.",
+      "oneOf": [
+        {
+          "const": "terminal",
+          "description": "A pseudo-terminal: the program sees a terminal of `cols` by `rows`, echoes what is\ntyped, and Ctrl-C interrupts it. Output is one stream, `terminal`.",
+          "type": "string"
+        },
+        {
+          "const": "pipe",
+          "description": "A plain pipe on stdin; stdout and stderr stay separate. Ctrl-C signals the program.",
+          "type": "string"
+        }
+      ]
+    },
+    "InteractiveInput": {
+      "additionalProperties": false,
+      "properties": {
+        "cols": {
+          "default": 80,
+          "description": "Terminal width, 2..=500 columns (default 80).",
+          "format": "uint16",
+          "maximum": 65535,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "mode": {
+          "$ref": "#/$defs/InputMode",
+          "default": "terminal"
+        },
+        "rows": {
+          "default": 24,
+          "description": "Terminal height, 1..=200 rows (default 24).",
+          "format": "uint16",
+          "maximum": 65535,
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "InteractiveView": {
+      "additionalProperties": false,
+      "description": "An interactive operation's input, as it stands.",
+      "properties": {
+        "cols": {
+          "description": "The terminal's current size (terminal mode).",
+          "format": "uint16",
+          "maximum": 65535,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "input_open": {
+          "description": "Whether `operation_input` can still reach the program.",
+          "type": "boolean"
+        },
+        "mode": {
+          "$ref": "#/$defs/InputMode"
+        },
+        "rows": {
+          "format": "uint16",
+          "maximum": 65535,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "writer_until_ms": {
+          "description": "Until when (milliseconds since the Unix epoch) one client holds the keyboard; others\nwait or take it over. Absent when nobody holds it.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "mode",
+        "cols",
+        "rows",
+        "input_open"
       ],
       "type": "object"
     },
@@ -42,9 +840,34 @@
           "format": "uint64",
           "minimum": 0,
           "type": "integer"
+        },
+        "scope": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ListScope"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "With a caller: `account` (the default) lists what any of its account's conversations\nstarted, also before a restart (for this machine's own account, everything here);\n`mine` only what this conversation or client started. Without a caller: everything."
         }
       },
       "type": "object"
+    },
+    "ListScope": {
+      "oneOf": [
+        {
+          "const": "mine",
+          "description": "What this conversation or client started.",
+          "type": "string"
+        },
+        {
+          "const": "account",
+          "description": "What any conversation of its account started, also before a restart; for this\nmachine's own account, everything here.",
+          "type": "string"
+        }
+      ]
     },
     "OperationState": {
       "enum": [
@@ -70,6 +893,17 @@
         "display_command": {
           "description": "Bounded display preview only. Execute only the exact argv from the canonical request.",
           "type": "string"
+        },
+        "interactive": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/InputMode"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "How an interactive operation takes input; absent for one that takes none."
         },
         "operation_id": {
           "type": "string"
@@ -132,6 +966,17 @@
             "integer",
             "null"
           ]
+        },
+        "interactive": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/InteractiveView"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Present for an interactive operation: how it takes input and whether it still can."
         },
         "operation_id": {
           "type": "string"
@@ -268,6 +1113,171 @@
       ],
       "type": "object"
     },
+    "ProcessInfo": {
+      "additionalProperties": false,
+      "properties": {
+        "broker": {
+          "description": "This broker, a process it runs under, or another Devagotchi process (its link, an\nadapter): stopping it would cut this connection, so kill_process refuses it.",
+          "type": "boolean"
+        },
+        "command": {
+          "description": "The command line, cut when very long.",
+          "type": "string"
+        },
+        "cpu_percent": {
+          "description": "Share of one CPU over a short sample (100 is one whole core).",
+          "format": "double",
+          "type": "number"
+        },
+        "memory_bytes": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "operation_id": {
+          "description": "The Devagotchi job this process belongs to, when it is one of this broker's.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "parent_pid": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "pid": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "started_at_ms": {
+          "description": "When it started, ms since the epoch.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "user": {
+          "description": "The OS account it runs as.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "pid",
+        "name",
+        "command",
+        "cpu_percent",
+        "memory_bytes"
+      ],
+      "type": "object"
+    },
+    "ProcessKillInput": {
+      "additionalProperties": false,
+      "properties": {
+        "force": {
+          "description": "Kill at once (SIGKILL) instead of asking it to stop (SIGTERM). On Windows a process is\nalways ended at once.",
+          "type": "boolean"
+        },
+        "pid": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "pid"
+      ],
+      "type": "object"
+    },
+    "ProcessKilled": {
+      "additionalProperties": false,
+      "properties": {
+        "exited": {
+          "description": "Whether it was gone within a few seconds.",
+          "type": "boolean"
+        },
+        "name": {
+          "type": "string"
+        },
+        "pid": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "signal": {
+          "description": "`terminate` or `kill`.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "pid",
+        "name",
+        "signal",
+        "exited"
+      ],
+      "type": "object"
+    },
+    "ProcessListInput": {
+      "additionalProperties": false,
+      "properties": {
+        "filter": {
+          "description": "Only processes whose name or command line contains this (case ignored).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "max_results": {
+          "default": 200,
+          "description": "Most processes to return, 1..=1000 (default 200), busiest first.",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "ProcessPage": {
+      "additionalProperties": false,
+      "properties": {
+        "matched": {
+          "description": "Processes that matched, before `max_results`.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "processes": {
+          "items": {
+            "$ref": "#/$defs/ProcessInfo"
+          },
+          "type": "array"
+        },
+        "total": {
+          "description": "Processes on the machine.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "processes",
+        "matched",
+        "total"
+      ],
+      "type": "object"
+    },
     "ReadInput": {
       "additionalProperties": false,
       "properties": {
@@ -294,6 +1304,139 @@
       ],
       "type": "object"
     },
+    "Revision": {
+      "additionalProperties": false,
+      "description": "The broker's current operations revision.",
+      "properties": {
+        "revision": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "revision"
+      ],
+      "type": "object"
+    },
+    "SearchMatch": {
+      "additionalProperties": false,
+      "properties": {
+        "after": {
+          "description": "Lines just after the match, in order.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "before": {
+          "description": "Lines just before the match, in order.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "kind": {
+          "description": "`file` or `dir`, for a name match.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "line": {
+          "description": "The matching line's number (1-based), for a content match.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "path": {
+          "description": "Path relative to the searched directory, `/`-separated.",
+          "type": "string"
+        },
+        "text": {
+          "description": "The matching line, without its line ending; a very long line is cut.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "type": "object"
+    },
+    "SearchPage": {
+      "additionalProperties": false,
+      "properties": {
+        "complete": {
+          "description": "True when the whole search is done; false with `next_cursor` when there is more.",
+          "type": "boolean"
+        },
+        "files_searched": {
+          "description": "Files whose contents this page read (contents searches).",
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "files_skipped": {
+          "description": "Files this page could not search: unreadable, binary, or over 8 MiB.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "matches": {
+          "description": "In path order: a directory's entries by name, each directory's contents where its name\nfalls. Within a file, by line.",
+          "items": {
+            "$ref": "#/$defs/SearchMatch"
+          },
+          "type": "array"
+        },
+        "next_cursor": {
+          "description": "Pass as `cursor`, with the same other inputs, for the next page.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "path": {
+          "description": "The searched directory's canonical path.",
+          "type": "string"
+        },
+        "stopped_by": {
+          "description": "Why this page stopped early: `max_results` or `time`.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "path",
+        "matches",
+        "files_searched",
+        "files_skipped",
+        "complete"
+      ],
+      "type": "object"
+    },
+    "SearchTarget": {
+      "oneOf": [
+        {
+          "const": "names",
+          "description": "File and directory names (the default).",
+          "type": "string"
+        },
+        {
+          "const": "contents",
+          "description": "Lines inside text files.",
+          "type": "string"
+        }
+      ]
+    },
     "StartInput": {
       "additionalProperties": false,
       "properties": {
@@ -305,31 +1448,53 @@
           },
           "type": "array"
         },
+        "combined_output": {
+          "description": "One pipe for stdout and stderr, so the output keeps the order the program wrote it\n(as a terminal shows it); every frame is then `stdout`. `run` sets it. Ignored for an\ninteractive operation, whose terminal already merges them.",
+          "type": "boolean"
+        },
+        "command": {
+          "description": "A command line for the machine's own shell (bash or sh on Linux, Windows PowerShell\non Windows), accepted by a broker that runs commands as its account. Give either\nthis or `executable` with `args`, not both.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "cwd": {
-          "description": "Absolute working directory within the configured workspace; defaults to its root.",
+          "description": "Working directory (absolute, `~/...`, or relative to the workspace); defaults to the\nworkspace. A broker that runs only\ngranted programs keeps it within the workspace.",
           "type": [
             "string",
             "null"
           ]
         },
         "deadline_ms": {
-          "description": "Execution deadline, not a client wait timeout. 1..=300000 milliseconds.",
+          "description": "Execution deadline, not a client wait timeout. 1..=[`MAX_DEADLINE_MS`] milliseconds.",
           "format": "uint64",
           "minimum": 0,
           "type": "integer"
         },
         "executable": {
-          "description": "Absolute path of an executable granted by the broker operator.",
+          "default": "",
+          "description": "The program to run, with `args`: a name on PATH (`python3`, `cargo`), or a path,\nabsolute or relative to `cwd`. A script runs with its interpreter (its `#!` line, or\nits extension: `.py` with Python, `.ps1` with PowerShell, `.sh` with bash, `.js` with\nnode), never through a file association; the operation's detail says what ran and why.\nOn a broker that runs only operator-granted programs the program must be granted.\nLeave empty when `command` is given.",
           "type": "string"
         },
         "idempotency_key": {
           "description": "A caller-created retry key. The same key and inputs return the same operation.",
           "type": "string"
+        },
+        "interactive": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/InteractiveInput"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Keep the program's input open for `operation_input`: on a pseudo-terminal (`terminal`,\nthe default: prompts, REPLs, sign-ins, Ctrl-C) or on a plain pipe (`pipe`). Absent:\nthe program reads nothing (its stdin is the null device), as before."
         }
       },
       "required": [
         "idempotency_key",
-        "executable",
         "deadline_ms"
       ],
       "type": "object"
@@ -349,6 +1514,149 @@
         "replayed"
       ],
       "type": "object"
+    },
+    "UrlContent": {
+      "additionalProperties": false,
+      "properties": {
+        "bytes_base64": {
+          "description": "The raw bytes, base64, when they are not text.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "content_type": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "eof": {
+          "description": "Whether this page reached the end of the body.",
+          "type": "boolean"
+        },
+        "next_offset": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "offset": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "size": {
+          "description": "The body's length, when the server said it.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "status": {
+          "description": "The HTTP status code.",
+          "format": "uint16",
+          "maximum": 65535,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "text": {
+          "description": "The bytes as text, when they are UTF-8 text.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "url": {
+          "description": "The address that answered, after redirects.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "url",
+        "status",
+        "offset",
+        "next_offset",
+        "eof"
+      ],
+      "type": "object"
+    },
+    "UrlReadInput": {
+      "additionalProperties": false,
+      "properties": {
+        "max_bytes": {
+          "description": "Bytes to return, 1..=24576 (default 24576).",
+          "format": "uint",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "offset": {
+          "default": 0,
+          "description": "Where to start in the response body (the previous page's `next_offset`).",
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "url": {
+          "description": "An http or https address.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "url"
+      ],
+      "type": "object"
+    },
+    "WaitInput": {
+      "additionalProperties": false,
+      "properties": {
+        "operation_id": {
+          "type": "string"
+        },
+        "output_after": {
+          "description": "Return when output beyond this sequence exists (the cursor you have read up to), as\nwell as when the operation settles. Without it, return only when it settles.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "timeout_ms": {
+          "description": "Longest to wait, 1..=50000 milliseconds. The answer comes as soon as the operation\nchanges as asked, without polling; at the limit it comes back unchanged.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "operation_id",
+        "timeout_ms"
+      ],
+      "type": "object"
+    },
+    "WriteMode": {
+      "oneOf": [
+        {
+          "const": "overwrite",
+          "description": "Replace the file's whole content (atomically: a new file renamed into place), or\ncreate it. The default.",
+          "type": "string"
+        },
+        {
+          "const": "create",
+          "description": "Create the file; refuse when it exists.",
+          "type": "string"
+        },
+        {
+          "const": "append",
+          "description": "Add to the end of the file, creating it when missing.",
+          "type": "string"
+        }
+      ]
     }
   },
   "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -357,6 +1665,54 @@
   "properties": {
     "bridge_error": {
       "$ref": "#/$defs/BridgeError"
+    },
+    "changes_input": {
+      "$ref": "#/$defs/ChangesInput"
+    },
+    "config_get_input": {
+      "$ref": "#/$defs/ConfigGetInput"
+    },
+    "config_set_input": {
+      "$ref": "#/$defs/ConfigSetInput"
+    },
+    "config_view": {
+      "$ref": "#/$defs/ConfigView"
+    },
+    "directory_input": {
+      "$ref": "#/$defs/DirectoryInput"
+    },
+    "file_content": {
+      "$ref": "#/$defs/FileContent"
+    },
+    "file_edit_input": {
+      "$ref": "#/$defs/FileEditInput"
+    },
+    "file_info": {
+      "$ref": "#/$defs/FileInfo"
+    },
+    "file_info_input": {
+      "$ref": "#/$defs/FileInfoInput"
+    },
+    "file_list_input": {
+      "$ref": "#/$defs/FileListInput"
+    },
+    "file_listing": {
+      "$ref": "#/$defs/FileListing"
+    },
+    "file_move_input": {
+      "$ref": "#/$defs/FileMoveInput"
+    },
+    "file_read_input": {
+      "$ref": "#/$defs/FileReadInput"
+    },
+    "file_search_input": {
+      "$ref": "#/$defs/FileSearchInput"
+    },
+    "file_write_input": {
+      "$ref": "#/$defs/FileWriteInput"
+    },
+    "file_written": {
+      "$ref": "#/$defs/FileWritten"
     },
     "get_input": {
       "$ref": "#/$defs/GetInput"
@@ -373,14 +1729,41 @@
     "output_page": {
       "$ref": "#/$defs/OutputPage"
     },
+    "process_kill_input": {
+      "$ref": "#/$defs/ProcessKillInput"
+    },
+    "process_killed": {
+      "$ref": "#/$defs/ProcessKilled"
+    },
+    "process_list_input": {
+      "$ref": "#/$defs/ProcessListInput"
+    },
+    "process_page": {
+      "$ref": "#/$defs/ProcessPage"
+    },
     "read_input": {
       "$ref": "#/$defs/ReadInput"
+    },
+    "revision": {
+      "$ref": "#/$defs/Revision"
+    },
+    "search_page": {
+      "$ref": "#/$defs/SearchPage"
     },
     "start_input": {
       "$ref": "#/$defs/StartInput"
     },
     "start_output": {
       "$ref": "#/$defs/StartOutput"
+    },
+    "url_content": {
+      "$ref": "#/$defs/UrlContent"
+    },
+    "url_read_input": {
+      "$ref": "#/$defs/UrlReadInput"
+    },
+    "wait_input": {
+      "$ref": "#/$defs/WaitInput"
     }
   },
   "required": [
@@ -388,10 +1771,35 @@
     "get_input",
     "read_input",
     "list_input",
+    "wait_input",
+    "changes_input",
+    "revision",
     "start_output",
     "operation_view",
     "output_page",
     "operations_page",
+    "file_read_input",
+    "file_content",
+    "file_list_input",
+    "file_listing",
+    "file_write_input",
+    "file_edit_input",
+    "file_written",
+    "file_info_input",
+    "directory_input",
+    "file_move_input",
+    "file_info",
+    "file_search_input",
+    "search_page",
+    "config_get_input",
+    "config_set_input",
+    "config_view",
+    "process_list_input",
+    "process_page",
+    "process_kill_input",
+    "process_killed",
+    "url_read_input",
+    "url_content",
     "bridge_error"
   ],
   "title": "BrokerContracts",
