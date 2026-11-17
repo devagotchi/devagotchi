@@ -17,7 +17,7 @@ use axum::{
 };
 use serde_json::{Value, json};
 
-use super::*;
+use super::{issuer::DEVICE_GRANT, *};
 
 const SUBJECT: &str = "395290028818825218";
 

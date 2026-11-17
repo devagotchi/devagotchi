@@ -8,7 +8,7 @@ use serde_json::{Value, json};
 use sqlx::Row;
 
 use super::analytics;
-use crate::*;
+use crate::{identity, machines};
 use crate::{
     identity::accounts::identities::Proven,
     tenancy::tests::tenants::{Hosted, hosted_with, refused},

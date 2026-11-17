@@ -16,8 +16,8 @@
 //! - **Milestones** (`funnel.rs`): each tenant's, once, where it happens. Made (with the
 //!   AI client family), secured (with the sign-in), waiting and admitted are written in the
 //!   account store's own transaction that does them (`accounts/`); the first machine
-//!   (`link.rs`), the first operation (`mcp/surface.rs`, with the latest kept a day at a time) and
-//!   the first board (`agenthub/mcp.rs`) through the queue below.
+//!   (`link.rs`), the first operation (`mcp/hub.rs`, with the latest kept a day at a time) and
+//!   the first board (`agenthub/mcp/tools/settings.rs`) through the queue below.
 //! - **Writes never slow or fail a page**: the queue is bounded, a full one drops the
 //!   record and counts it (`dropped`, said in the log), and one task writes what arrives in
 //!   batches (`writer.rs`). It also rolls each finished day into daily totals

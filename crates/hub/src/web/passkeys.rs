@@ -177,7 +177,7 @@ impl HubSignIn {
         &self.accounts
     }
 
-    /// Whether this hub can be claimed from the browser (`identity/accounts/claim.rs`): a one-owner
+    /// Whether this hub can be claimed from the browser (`identity/accounts/claim/mod.rs`): a one-owner
     /// hub whose config names no owner and no operators, and no owner can sign in yet. A
     /// config that names its owner has decided who that is: their passkey or password is
     /// set with the one-time link from

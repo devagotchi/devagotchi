@@ -54,7 +54,7 @@ fn set_password_takes_the_password_on_stdin_never_as_an_argument() {
         parse_owner(vec!["--help".into()]).unwrap(),
         Command::Help
     ));
-    assert!(crate::USAGE.contains("hub set-password"));
+    assert!(crate::cli::USAGE.contains("hub set-password"));
 }
 
 #[test]

@@ -1,5 +1,8 @@
 use super::*;
-use crate::store::testing::{self, TestStore};
+use crate::{
+    identity::accounts::passkey::Asserted,
+    store::testing::{self, TestStore},
+};
 
 const A: &str = "acct_aaaaaaaaaaaaaaaaaaaaaaaaaa";
 const B: &str = "acct_bbbbbbbbbbbbbbbbbbbbbbbbbb";

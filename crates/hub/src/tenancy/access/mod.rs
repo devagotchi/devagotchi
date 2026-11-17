@@ -10,8 +10,8 @@
 //!   in; so is every tenant made before early access existed.
 //! - A waiting tenant's account works as before: it is made on first connect, it is
 //!   secured with any sign-in, its AI connects and asks `whoami`. Nothing else runs for it:
-//!   no tool, no machine added or enrolled, no board written (`mcp/surface.rs`,
-//!   `tenancy/machines.rs`, `lib.rs`, `web/approvals.rs`).
+//!   no tool, no machine added or enrolled, no board written (`mcp/handler.rs`,
+//!   `tenancy/machines.rs`, `machines/routes.rs`, `web/approvals.rs`).
 //! - Opening sign-up lets each waiting tenant in on its next request (`settle_in`),
 //!   recorded as `open sign-up`. Going back to early access never puts anyone back.
 //! - An operator lets tenants in and changes their plans (`admit`, `set_plan`); each step
