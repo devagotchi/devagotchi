@@ -344,8 +344,12 @@ if args.run_broker and args.run_dir:
           and any(p.get("pid") == outsider.pid for p in listed.get("processes", [])), json.dumps(listed)[:240])
     is_error, stopped = call("kill_process", {"machine": args.run_broker, "pid": outsider.pid})
     outsider.wait(timeout=5)
+    # A polite stop (SIGTERM, -15) where the system has one; Windows has none for another
+    # process, so the broker ends it at once and says "kill".
+    stopped_as = ("kill", lambda code: code is not None) if os.name == "nt" else ("terminate", lambda code: code == -15)
     check("kill_process stops it", not is_error and stopped.get("exited") is True
-          and outsider.returncode == -15, json.dumps(stopped)[:200])
+          and stopped.get("signal") == stopped_as[0] and stopped_as[1](outsider.returncode),
+          f"{json.dumps(stopped)[:200]} returncode={outsider.returncode}")
     is_error, granted = call("list_processes", {"machine": args.broker})
     check("a broker that runs only granted programs keeps to its own jobs",
           is_error and granted.get("code") == "not_permitted", json.dumps(granted)[:200])
