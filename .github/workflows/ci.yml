@@ -161,6 +161,8 @@ jobs:
           load: true
           cache-from: type=gha,scope=hub-image
           cache-to: type=gha,scope=hub-image,mode=max
+      - run: bash tests/install_env_keep.sh
+      - run: shellcheck -S warning deploy/compose/install.sh deploy/compose/env.sh tests/install_env_keep.sh
       - run: python3 tests/proxmox_hub_up.py
       - run: sudo bash tests/deploy_scripts.sh devagotchi-hub:ci
 

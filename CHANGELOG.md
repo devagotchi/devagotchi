@@ -7,8 +7,34 @@ heading. Agents draft the fragments below; they never tag.
 
 ## Unreleased
 
-These notes are what the operator promotes when tagging `v0.1.0-alpha.1`. This file does not
-create that tag, and a prerelease tag does not move the `:latest` image.
+These notes are what the operator promotes when tagging `v0.2.0`. This file does not create
+that tag, and it does not bump `Cargo.toml`: the operator does both in the same commit as the
+`## 0.2.0` heading, then tags. `v0.1.0` is already published (2026-11-14). `v0.1.0-alpha.1`
+was never tagged. `v0.2.0` is the next stable tag rather than `v0.1.1` because the license
+changed, sign-in and install no longer assume a hub address, and the machine tools grew to
+the set tracked in [.ai/docs/desktop-commander-parity.md](.ai/docs/desktop-commander-parity.md).
+A prerelease tag would not move the `:latest` image. The project stage stays alpha
+([.ai/project.json](.ai/project.json)); this tag is a public pre-release a solo user can
+install, not a production promotion.
+
+### Since v0.1.0, for a solo install
+
+- Sign in with Shippin has a card on `/admin` → Sign-in from the hub's first start. The
+  switch offers it (on once you save) and turns it off without deleting the issuer. The
+  issuer is the one you type, or the one you pass to `install.sh --nomen`. Nothing fills a
+  host in. The button says what a Shippin account is for. A hub with no issuer shows no
+  Shippin button. Signing in with no client registered at all waits on Nomen accepting
+  Client ID Metadata Documents, which is not in this repository.
+- `install.sh` keeps tenancy, operators, sign-in providers, mail and analytics when a re-run
+  omits those flags. Passing `--google`, `--github` or `--nomen` replaces the provider list
+  with the ones named that run. `--nomen` labels the button Shippin.
+- Machine tools added since the tag: `search_files`, `read_url`, `get_config`,
+  `set_config_value`, `list_processes`, `kill_process`, `get_recent_tool_calls`,
+  `get_usage_stats`. Script launch by name and by interpreter, ordered command output, `~`
+  and relative paths, and deadlines up to a day (a `run` defaults to an hour). The gap that
+  is still open is in the parity doc. `write_pdf` is not implemented.
+- A fresh `git clone` needs `git submodule update --init` before `cargo build`. AgentHub is
+  the `crates/agenthub` submodule.
 
 ### The license is the Functional Source License (FSL-1.1-ALv2)
 - Devagotchi moves from the Business Source License 1.1 to FSL-1.1-ALv2, held by AngryVibes LLC:
@@ -125,9 +151,9 @@ create that tag, and a prerelease tag does not move the `:latest` image.
   settings in sections that swipe sideways; drag it down, tap outside or press Escape to close.
 
 ### License, and an image anyone can pull (increment 127)
-- Devagotchi is source-available under the Business Source License 1.1, held by AngryVibes LLC:
-  production self-hosting is free, offering it to others as a hosted service is not, and each
-  version becomes AGPL-3.0 four years after it is published. The crates say `BUSL-1.1`.
+- For a short stretch after 0.1.0 the crates said `BUSL-1.1` (Business Source License 1.1,
+  AGPL-3.0 after four years). The license change at the top of this section replaces that:
+  the crates say `FSL-1.1-ALv2`.
 - The hub image on GHCR is public. Each publish now pulls it back with no login and runs it, so
   a private package fails the release instead of a self-hoster's update.
 
