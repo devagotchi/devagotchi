@@ -12,7 +12,7 @@ use crate::mcp::{
     schema::{MachineAdd, MachineAdded, MachineUpdate, MachineUpdated, Machines, OrgRole, WhoAmI},
 };
 
-#[tool_router(router = machine_router, vis = "pub(super)")]
+#[tool_router(router = machines_router, vis = "pub(super)")]
 impl Hub {
     #[tool(
         name = "whoami",
@@ -43,20 +43,7 @@ impl Hub {
                 .and_then(|access| access.waiting_since),
             access_note,
             plan,
-            brokers: {
-                let mut brokers: Vec<String> = self
-                    .config
-                    .brokers_for(&subject.id)
-                    .into_iter()
-                    .map(|b| b.name.clone())
-                    .collect();
-                for device in self.own_machines(&subject).await {
-                    if !brokers.contains(&device.name) {
-                        brokers.push(device.name);
-                    }
-                }
-                brokers
-            },
+            brokers: self.machine_names(&subject).await,
             boards: {
                 let hub = self.clone();
                 let who = subject.clone();

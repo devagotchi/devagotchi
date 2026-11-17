@@ -77,6 +77,23 @@ impl Hub {
             .collect()
     }
 
+    /// Every machine `subject` may reach by name: the config's brokers granted to it, then the
+    /// machines it added. What `whoami` lists.
+    pub(crate) async fn machine_names(&self, subject: &Subject) -> Vec<String> {
+        let mut names: Vec<String> = self
+            .config
+            .brokers_for(&subject.id)
+            .into_iter()
+            .map(|broker| broker.name.clone())
+            .collect();
+        for device in self.own_machines(subject).await {
+            if !names.contains(&device.name) {
+                names.push(device.name);
+            }
+        }
+        names
+    }
+
     /// A one-time code for a machine of `subject`'s called `name`: the name it is stored
     /// under, and the code. An account nobody secured adds `tenancy.unsecured.machines` at
     /// most; a tenant on a plan, the plan's `machines`; a tenant waiting to be let in, none.

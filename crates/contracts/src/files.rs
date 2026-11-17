@@ -10,7 +10,7 @@ pub const MAX_FILE_READ_BYTES: usize = 24 * 1024;
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct FileReadInput {
-    /// Absolute path of the file.
+    /// Path (absolute, `~/...`, or relative to the workspace) of the file.
     pub path: String,
     /// Byte offset to start at; negative counts back from the end (a tail). Default 0.
     /// With a positive `start_line`: the `next_offset` that came with that `next_line`, so
@@ -81,7 +81,7 @@ pub struct FileContent {
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct FileListInput {
-    /// Absolute path of the directory.
+    /// Path (absolute, `~/...`, or relative to the workspace) of the directory.
     pub path: String,
     /// How many levels below it to include, 0..=3 (default 0: its own entries).
     #[serde(default)]
@@ -151,7 +151,7 @@ pub enum WriteMode {
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct FileWriteInput {
-    /// Absolute path of the file.
+    /// Path (absolute, `~/...`, or relative to the workspace) of the file.
     pub path: String,
     /// The content as text, written as UTF-8 exactly as given. Give this or `bytes_base64`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -173,7 +173,7 @@ pub struct FileWriteInput {
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct FileEditInput {
-    /// Absolute path of a UTF-8 text file.
+    /// Path (absolute, `~/...`, or relative to the workspace) of a UTF-8 text file.
     pub path: String,
     /// Exact text to find, including whitespace and line endings.
     pub old_text: String,
@@ -208,14 +208,14 @@ pub struct FileWritten {
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct FileInfoInput {
-    /// Absolute path of a file, directory or symbolic link.
+    /// Path (absolute, `~/...`, or relative to the workspace) of a file, directory or symbolic link.
     pub path: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct DirectoryInput {
-    /// Absolute path of the directory to make; missing parents are made too. An existing
+    /// Path (absolute, `~/...`, or relative to the workspace) of the directory to make; missing parents are made too. An existing
     /// directory is not an error.
     pub path: String,
 }
@@ -223,10 +223,10 @@ pub struct DirectoryInput {
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct FileMoveInput {
-    /// Absolute path of the file, directory or link to move or rename (a link moves as
+    /// Path (absolute, `~/...`, or relative to the workspace) of the file, directory or link to move or rename (a link moves as
     /// itself, never what it points to).
     pub source: String,
-    /// Absolute path it moves to, on the same filesystem. Its parent directory must exist.
+    /// Path (absolute, `~/...`, or relative to the workspace) it moves to, on the same filesystem. Its parent directory must exist.
     pub destination: String,
     /// Replace a file already at the destination (never a directory). Default false: an
     /// existing destination refuses the move and changes nothing.

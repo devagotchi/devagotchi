@@ -11,15 +11,15 @@ mod operations;
 impl Hub {
     /// Every tool this hub serves: its own, and each domain's router added to them.
     pub(crate) fn router() -> ToolRouter<Self> {
-        Self::machine_router()
+        Self::machines_router()
             + Self::operation_router()
-            + Self::run_router()
-            + Self::files_router()
+            + Self::machine_router()
             + Self::callers_router()
             + Self::board_router()
             + Self::workflow_router()
             + Self::offers_router()
             + Self::connections_router()
+            + Self::words_router()
     }
 }
 
