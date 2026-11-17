@@ -14,9 +14,12 @@ with exactly CODE (a linked machine that is offline or revoked). Exit 0 only whe
 step holds.
 """
 import argparse
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import os
+import subprocess
 import sys
+import threading
 import time
 import urllib.error
 import urllib.request
@@ -134,9 +137,9 @@ unannotated = [t["name"] for t in listed if not t.get("title") or not (
     "readOnlyHint" in t.get("annotations", {}) and "openWorldHint" in t.get("annotations", {})
     and (t["annotations"]["readOnlyHint"] or "destructiveHint" in t["annotations"]))]
 check("every tool has a title and annotations", not unannotated, ", ".join(unannotated))
-broker_tools = ["approval_request", "approval_wait", "connection_call", "connections", "create_directory", "edit_file", "get_file_info",
-                "list_directory", "machine_add", "machine_update", "machines", "move_file", "operation_cancel", "operation_get", "operation_input",
-                "operation_list", "operation_read", "operation_resize", "operation_start", "operation_wait", "read_file", "read_image", "read_multiple_files", "run", "whoami",
+broker_tools = ["approval_request", "approval_wait", "connection_call", "connections", "create_directory", "dictionary_get", "edit_file", "get_config", "get_file_info", "get_recent_tool_calls",
+                "get_usage_stats", "kill_process", "lexicon_handoff", "lexicon_propose", "lexicon_resolve", "lexicon_review", "list_directory", "list_processes", "machine_add", "machine_update", "machines", "move_file", "operation_cancel", "operation_get", "operation_input",
+                "operation_list", "operation_read", "operation_resize", "operation_start", "operation_wait", "read_file", "read_image", "read_multiple_files", "read_url", "run", "search_files", "set_config_value", "whoami",
                 "workflow_cancel", "workflow_list", "workflow_start", "workflow_status", "workflow_wait",
                 "write_file"]
 board_tools = [t for t in tools if t.startswith("board_")]
@@ -207,10 +210,10 @@ if args.run_broker:
     # cursor move, so the size is written with an x), sh elsewhere.
     if os.name == "nt":
         read_line = "$line = [Console]::In.ReadLine(); 'got:' + $line"
-        show_size = "$null = [Console]::ReadLine(); '{0}x{1}' -f [Console]::WindowHeight, [Console]::WindowWidth"
+        show_size = "'ready'; $null = [Console]::ReadLine(); '{0}x{1}' -f [Console]::WindowHeight, [Console]::WindowWidth"
         new_size = "30x100"
     else:
-        read_line, show_size, new_size = "read line; echo got:$line", "read x; stty size", "30 100"
+        read_line, show_size, new_size = "read line; echo got:$line", "echo ready; read x; stty size", "30 100"
     is_error, piped = interactive(read_line, "pipe")
     check("an interactive start ignores a forged caller", not is_error
           and (piped.get("operation", {}).get("interactive") or {}).get("mode") == "pipe", json.dumps(piped)[:240])
@@ -235,6 +238,17 @@ if args.run_broker:
           and "got:hello" in text, f"{json.dumps(sent)[:120]} state={view.get('state')} output={text[:80]!r}")
     is_error, shell = interactive(show_size, "terminal")
     shell_id = shell.get("operation", {}).get("operation_id", "")
+    # Resize only once the program is up: a shell starting up (Windows PowerShell on a slow
+    # machine) sets its console's size itself, over one that came before it was ready.
+    shown = ""
+    for _ in range(90):
+        _, page = call("operation_read", {"broker": args.run_broker, "input": {
+            "operation_id": shell_id, "cursor": 0, "max_bytes": 4096}})
+        shown = "".join(f.get("text", "") for f in page.get("frames", []))
+        if "ready" in shown:
+            break
+        time.sleep(0.5)
+    check("the program on its terminal is up", "ready" in shown, repr(shown[-120:]))
     is_error, taken = in_another_session(lambda: call("operation_resize", {"broker": args.run_broker, "input": {
         "operation_id": shell_id, "cols": 100, "rows": 30, "take_over": True}}))
     size = taken.get("interactive") or {}
@@ -311,6 +325,78 @@ if args.run_broker and args.run_dir:
     is_error, info = call("get_file_info", {"machine": args.run_broker, "path": moved_file})
     check("get_file_info counts lines", not is_error and info.get("kind") == "file" and info.get("lines") == 2,
           json.dumps(info)[:200])
+    is_error, found = call("search_files", {"machine": args.run_broker, "path": args.run_dir,
+                                            "pattern": "GAMMA", "target": "contents", "context_lines": 1})
+    hits = found.get("matches", []) if not is_error else []
+    check("search_files finds a line with its context", found.get("complete") is True
+          and any(h.get("line") == 2 and h.get("text") == "gamma" and h.get("before") == ["alpha"] for h in hits),
+          json.dumps(found)[:300])
+    # The machine itself: its settings, and its processes.
+    is_error, config = call("get_config", {"machine": args.run_broker})
+    check("get_config reads the broker's settings", not is_error and config.get("exec_policy") == "account"
+          and "max_concurrent" in config.get("changeable", []), json.dumps(config)[:240])
+    is_error, kept = call("set_config_value", {"machine": args.run_broker, "key": "exec_policy", "value": 1})
+    check("set_config_value leaves what an agent may run to the operator",
+          is_error and kept.get("code") == "setting_not_changeable", json.dumps(kept)[:200])
+    outsider = subprocess.Popen(["sleep", "77"])
+    is_error, listed = call("list_processes", {"machine": args.run_broker, "filter": "sleep 77"})
+    check("list_processes finds a process", not is_error
+          and any(p.get("pid") == outsider.pid for p in listed.get("processes", [])), json.dumps(listed)[:240])
+    is_error, stopped = call("kill_process", {"machine": args.run_broker, "pid": outsider.pid})
+    outsider.wait(timeout=5)
+    # A polite stop (SIGTERM, -15) where the system has one; Windows has none for another
+    # process, so the broker ends it at once and says "kill".
+    stopped_as = ("kill", lambda code: code is not None) if os.name == "nt" else ("terminate", lambda code: code == -15)
+    check("kill_process stops it", not is_error and stopped.get("exited") is True
+          and stopped.get("signal") == stopped_as[0] and stopped_as[1](outsider.returncode),
+          f"{json.dumps(stopped)[:200]} returncode={outsider.returncode}")
+    is_error, granted = call("list_processes", {"machine": args.broker})
+    check("a broker that runs only granted programs keeps to its own jobs",
+          is_error and granted.get("code") == "not_permitted", json.dumps(granted)[:200])
+    # The web as the machine reaches it: a server on its own localhost, read in pages.
+    page_body = ("line %d\n" * 4000) % tuple(range(4000))
+
+    class Page(BaseHTTPRequestHandler):
+        def do_GET(self):
+            body = page_body.encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "text/plain; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def log_message(self, *_):
+            pass
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), Page)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    address = "http://127.0.0.1:%d/page" % server.server_port
+    read, offset = "", 0
+    for _ in range(10):
+        is_error, got = call("read_url", {"machine": args.run_broker, "url": address, "offset": offset})
+        if is_error:
+            break
+        read += got.get("text") or ""
+        offset = got.get("next_offset", 0)
+        if got.get("eof"):
+            break
+    check("read_url reads the machine's localhost, page by page", not is_error and read == page_body
+          and got.get("status") == 200 and got.get("content_type", "").startswith("text/plain"), json.dumps(got)[:240])
+    server.shutdown()
+    is_error, granted = call("read_url", {"machine": args.broker, "url": address})
+    check("a broker that runs only granted programs reads no web address",
+          is_error and granted.get("code") == "not_permitted", json.dumps(granted)[:200])
+    # What this caller did, from the hub's audit: newest first, and tallied.
+    is_error, recent = call("get_recent_tool_calls", {"tool": "read_url", "max_results": 2})
+    calls = recent.get("calls", []) if not is_error else []
+    check("get_recent_tool_calls shows the caller's own calls, newest first", len(calls) == 2
+          and calls[0].get("machine") == args.broker and calls[0].get("outcome") == "not_permitted"
+          and calls[1].get("target") == address and calls[1].get("outcome") == "ok"
+          and recent.get("matched", 0) >= 3, json.dumps(recent)[:300])
+    is_error, usage = call("get_usage_stats", {})
+    tools_used = {t["name"]: t for t in usage.get("tools", [])} if not is_error else {}
+    check("get_usage_stats tallies them", "read_url" in tools_used and tools_used["read_url"].get("failed", 0) >= 1
+          and any(f.get("name") == "not_permitted" for f in usage.get("failures", [])), json.dumps(usage)[:300])
     is_error, both = call("read_multiple_files", {"machine": args.run_broker,
                                                   "paths": [moved_file, os.path.join(args.run_dir, "missing.txt")]})
     files = both.get("files", []) if not is_error else []

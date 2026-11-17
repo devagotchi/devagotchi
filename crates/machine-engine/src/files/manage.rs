@@ -26,14 +26,6 @@ fn outside() -> BridgeError {
     )
 }
 
-fn absolute(path: &str) -> BridgeResult<&Path> {
-    let given = Path::new(path);
-    if !given.is_absolute() || path.as_bytes().contains(&0) {
-        return Err(invalid("path must be an absolute path without NUL bytes"));
-    }
-    Ok(given)
-}
-
 /// The nearest part of `path` that exists (as itself, links not followed), and the plain
 /// names below it that do not. `None` when the missing part is not plain names (`.`, `..`).
 fn split_existing(path: &Path) -> Option<(&Path, Vec<&std::ffi::OsStr>)> {
@@ -109,12 +101,12 @@ impl Scope<'_> {
     /// `path` canonical up to its own name, without following the name itself: the
     /// directory it is in, resolved, joined with its name (a root is itself).
     fn place(&self, path: &str) -> BridgeResult<PathBuf> {
-        let given = absolute(path)?;
+        let given = self.given(path)?;
         let place = match (given.parent(), given.file_name()) {
             (Some(parent), Some(name)) => dunce::canonicalize(parent)
                 .map_err(|e| io_error(path, e))?
                 .join(name),
-            _ => dunce::canonicalize(given).map_err(|e| io_error(path, e))?,
+            _ => dunce::canonicalize(&given).map_err(|e| io_error(path, e))?,
         };
         if self.policy == ExecPolicy::Granted && !place.starts_with(self.workspace) {
             return Err(outside());
@@ -159,8 +151,8 @@ impl Scope<'_> {
     /// workspace), the missing part must be plain names and is made one name at a time.
     /// Returns the directory, canonical, and whether anything was made.
     pub(super) fn make_dirs(&self, path: &str) -> BridgeResult<(PathBuf, bool)> {
-        let given = absolute(path)?;
-        let Some((existing, missing)) = split_existing(given) else {
+        let given = self.given(path)?;
+        let Some((existing, missing)) = split_existing(&given) else {
             return Err(invalid(
                 "the directories to make must be plain names, without . or ..",
             ));

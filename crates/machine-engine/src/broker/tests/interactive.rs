@@ -34,6 +34,7 @@ fn interactive_start(
         cwd: None,
         deadline_ms: 30_000,
         interactive: interactive(mode),
+        combined_output: false,
         caller: Some(caller("local", "conversation-a")),
     }
 }
