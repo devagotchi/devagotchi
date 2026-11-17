@@ -1,0 +1,118 @@
+# Mail the operator when a pull request merges or closes, and when CI fails, whoever or
+# whichever AI did it: every merge and every CI run goes through GitHub, so this sees all of
+# them. One mail per event, the subject starting MERGED, CLOSED or CI FAILED so a mail rule
+# can make it ring.
+#
+# Sent through Resend's HTTP API. Set once, for this repository or the organization:
+#   secret   RESEND_API_KEY  a Resend API key
+#   variable NOTIFY_TO       where the mail goes
+#   variable NOTIFY_FROM     the sender, on a domain verified in Resend
+# The address stays out of this public file. Without them the run fails and says what is
+# missing. A run cancelled because a newer push replaced it is not mailed.
+#
+# Titles and branch names are untrusted text: they reach the shell only through env and jq,
+# never through ${{ }} inside a script. Nothing is checked out.
+name: notify
+
+on:
+  pull_request_target:
+    types: [closed]
+  workflow_run:
+    workflows: [ci]
+    types: [completed]
+
+permissions: {}
+
+jobs:
+  pull-request:
+    if: github.event_name == 'pull_request_target'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Mail that the pull request merged or closed
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          TO: ${{ vars.NOTIFY_TO }}
+          FROM: ${{ vars.NOTIFY_FROM }}
+          REPO: ${{ github.repository }}
+          NUMBER: ${{ github.event.pull_request.number }}
+          TITLE: ${{ github.event.pull_request.title }}
+          MERGED: ${{ github.event.pull_request.merged }}
+          BY: ${{ github.event.pull_request.merged_by.login || github.actor }}
+          BRANCH: ${{ github.event.pull_request.head.ref }}
+          SHA: ${{ github.event.pull_request.merge_commit_sha }}
+          URL: ${{ github.event.pull_request.html_url }}
+        run: |
+          set -euo pipefail
+          for need in RESEND_API_KEY TO FROM; do
+            if [ -z "${!need:-}" ]; then
+              echo "::error::notify needs secret RESEND_API_KEY and variables NOTIFY_TO and NOTIFY_FROM ($need is empty)"
+              exit 1
+            fi
+          done
+          if [ "$MERGED" = true ]; then
+            state=MERGED
+            what="merged by $BY into main as ${SHA:0:12}"
+          else
+            state="CLOSED (not merged)"
+            what="closed by $BY without merging"
+          fi
+          subject="$state: $REPO #$NUMBER $TITLE"
+          text=$(printf '%s\n\n#%s %s\nbranch %s, %s\n\n%s\n' "$state" "$NUMBER" "$TITLE" "$BRANCH" "$what" "$URL")
+          jq -n --arg from "$FROM" --arg to "$TO" --arg subject "$subject" --arg text "$text" \
+            '{from: $from, to: [$to], subject: $subject, text: $text,
+              headers: {"X-Priority": "1", "Importance": "high"}}' \
+            | curl -fsS --retry 3 https://api.resend.com/emails \
+                -H "Authorization: Bearer $RESEND_API_KEY" -H "Content-Type: application/json" \
+                --data-binary @-
+          echo
+          echo "mailed: $subject"
+
+  ci-failed:
+    if: >-
+      github.event_name == 'workflow_run' &&
+      contains(fromJSON('["failure", "timed_out", "startup_failure"]'), github.event.workflow_run.conclusion)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      actions: read
+    steps:
+      - name: Mail that CI failed, with the jobs that failed
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          TO: ${{ vars.NOTIFY_TO }}
+          FROM: ${{ vars.NOTIFY_FROM }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          RUN_URL: ${{ github.event.workflow_run.html_url }}
+          CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          BRANCH: ${{ github.event.workflow_run.head_branch }}
+          SHA: ${{ github.event.workflow_run.head_sha }}
+          EVENT: ${{ github.event.workflow_run.event }}
+          PR: ${{ github.event.workflow_run.pull_requests[0].number }}
+          COMMIT: ${{ github.event.workflow_run.head_commit.message }}
+        run: |
+          set -euo pipefail
+          for need in RESEND_API_KEY TO FROM; do
+            if [ -z "${!need:-}" ]; then
+              echo "::error::notify needs secret RESEND_API_KEY and variables NOTIFY_TO and NOTIFY_FROM ($need is empty)"
+              exit 1
+            fi
+          done
+          jobs=$(gh api "repos/$REPO/actions/runs/$RUN_ID/jobs?per_page=100" \
+            --jq '.jobs[] | select(.conclusion == "failure" or .conclusion == "timed_out") | "- \(.name): \(.html_url)"' \
+            || echo "- (could not list the jobs)")
+          where="branch $BRANCH"
+          if [ -n "$PR" ]; then where="#$PR, $where"; fi
+          subject="CI FAILED: $REPO $where"
+          text=$(printf 'CI %s on %s (%s, %s)\n%s\n\nFailed jobs:\n%s\n\n%s\n' \
+            "$CONCLUSION" "$where" "$EVENT" "${SHA:0:12}" "${COMMIT%%$'\n'*}" "$jobs" "$RUN_URL")
+          jq -n --arg from "$FROM" --arg to "$TO" --arg subject "$subject" --arg text "$text" \
+            '{from: $from, to: [$to], subject: $subject, text: $text,
+              headers: {"X-Priority": "1", "Importance": "high"}}' \
+            | curl -fsS --retry 3 https://api.resend.com/emails \
+                -H "Authorization: Bearer $RESEND_API_KEY" -H "Content-Type: application/json" \
+                --data-binary @-
+          echo
+          echo "mailed: $subject"
