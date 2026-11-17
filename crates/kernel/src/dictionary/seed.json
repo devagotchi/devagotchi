@@ -1,0 +1,893 @@
+{
+  "source": "Devagotchi seed: Boundary Question Bank, Domain Boundaries v0.1 and Stack Category Routing v0.2",
+  "concepts": [
+    {
+      "id": "boundary/iam",
+      "scheme": "boundary",
+      "label": "Identity and Access Management",
+      "definition": "Who a person is, how they prove it, and what they may do: accounts, sign-in, sessions, credentials, federation and the account lifecycle.",
+      "aliases": [
+        "IAM",
+        "user",
+        "users",
+        "user accounts",
+        "accounts",
+        "login",
+        "log in",
+        "sign in",
+        "sign up",
+        "register",
+        "create an account",
+        "profiles",
+        "forgot password",
+        "reset password",
+        "remember me",
+        "Google login",
+        "log in with X",
+        "verify their email",
+        "authentication"
+      ],
+      "informal": [
+        "who's logged in",
+        "keep them logged in"
+      ],
+      "terms": [
+        "subject",
+        "identity proofing",
+        "enrollment",
+        "credential service provider",
+        "authenticator",
+        "authenticator assurance level",
+        "memorized secret",
+        "multi-factor",
+        "phishing-resistant authenticator",
+        "passkey",
+        "session",
+        "session token",
+        "re-authentication",
+        "federation",
+        "assertion",
+        "relying party",
+        "authorization",
+        "role",
+        "permission",
+        "account lifecycle"
+      ],
+      "sources": [
+        "Boundary Question Bank: Domain Boundaries v0.1 (2026-09-30)",
+        "NIST SP 800-63-4 (63A, 63B, 63C), July 2025",
+        "OWASP ASVS 5.0.0: V6 to V10, V14, V16",
+        "NIST SP 800-53 Rev 5: AC-2, AC-7, AC-12",
+        "ACM CS2023 SEC; SE2014 SEC"
+      ]
+    },
+    {
+      "id": "boundary/admin",
+      "scheme": "boundary",
+      "label": "Privileged Access and Administration",
+      "definition": "The people who run the app and what they may change for everyone: roles, least privilege, audited privileged actions, moderation and system configuration.",
+      "aliases": [
+        "admin",
+        "admin panel",
+        "admin dashboard",
+        "control panel",
+        "back office",
+        "manage users",
+        "super user",
+        "owner account",
+        "staff view",
+        "moderation",
+        "ban a user",
+        "impersonate",
+        "log in as"
+      ],
+      "informal": [
+        "backend for me",
+        "god mode",
+        "the place where I change stuff",
+        "settings for the whole app"
+      ],
+      "terms": [
+        "privileged account",
+        "role",
+        "permission",
+        "role-based access control",
+        "attribute-based access control",
+        "separation of duties",
+        "least privilege",
+        "dual authorization",
+        "break-glass",
+        "audited override",
+        "audit record",
+        "audit trail",
+        "privilege review",
+        "revocation",
+        "tenant isolation",
+        "configuration item",
+        "controlled change",
+        "impersonation"
+      ],
+      "sources": [
+        "Boundary Question Bank: Domain Boundaries v0.1 (2026-09-30)",
+        "NIST SP 800-53 Rev 5: AC-2, AC-3, AC-5, AC-6, AU, CM",
+        "OWASP ASVS 5.0.0: V2, V8, V13, V16",
+        "ANSI INCITS 359 Role Based Access Control"
+      ],
+      "depends_on": [
+        "boundary/iam"
+      ]
+    },
+    {
+      "id": "boundary/messaging",
+      "scheme": "boundary",
+      "label": "Real-time Messaging",
+      "definition": "People talking to each other through the app as it happens: conversations, delivery, ordering, presence, retention and moderation.",
+      "aliases": [
+        "chat",
+        "messaging",
+        "messages",
+        "DMs",
+        "inbox",
+        "live chat",
+        "group chat",
+        "channels",
+        "rooms",
+        "threads",
+        "replies",
+        "read receipts",
+        "comments in real time"
+      ],
+      "informal": [
+        "let users talk to each other",
+        "typing dots",
+        "online status",
+        "notifications when someone replies"
+      ],
+      "terms": [
+        "message-passing",
+        "delivery guarantee",
+        "idempotency key",
+        "ordering",
+        "sequence number",
+        "logical clock",
+        "causal order",
+        "acknowledgement",
+        "durability",
+        "replicated state",
+        "presence",
+        "ephemeral state",
+        "WebSocket",
+        "server-sent events",
+        "long polling",
+        "resume cursor",
+        "backpressure",
+        "fan-out",
+        "retention",
+        "end-to-end encryption"
+      ],
+      "sources": [
+        "Boundary Question Bank: Domain Boundaries v0.1 (2026-09-30)",
+        "ACM CS2023: PDC, NC, DM",
+        "SWEBOK: Software Design",
+        "OWASP ASVS 5.0.0: V1, V4.4, V5, V11, V17",
+        "RFC 6455 WebSocket; RFC 6120 and 6121 XMPP; Matrix specification"
+      ],
+      "depends_on": [
+        "boundary/iam",
+        "boundary/admin"
+      ]
+    },
+    {
+      "id": "boundary/llm",
+      "scheme": "boundary",
+      "label": "LLM Integration Layer",
+      "definition": "A language model inside the app: the provider adapter, prompts, retrieval over documents, tool calling and agency, output handling, budgets and evaluation.",
+      "aliases": [
+        "AI",
+        "the AI",
+        "the bot",
+        "assistant",
+        "AI feature",
+        "ask the AI",
+        "agent",
+        "RAG",
+        "chat with my docs",
+        "LLM"
+      ],
+      "informal": [
+        "add ChatGPT",
+        "add Claude",
+        "make it smart",
+        "generate with AI",
+        "summarize this",
+        "auto-write",
+        "autocomplete",
+        "let it do things for me",
+        "train it on my data"
+      ],
+      "terms": [
+        "model provider",
+        "gateway",
+        "system prompt",
+        "prompt template",
+        "context assembly",
+        "untrusted content",
+        "retrieval",
+        "embedding",
+        "vector store",
+        "tool calling",
+        "agency",
+        "human-in-the-loop",
+        "output handling",
+        "guardrail",
+        "evaluation set",
+        "regression",
+        "observability trace",
+        "token accounting",
+        "budget",
+        "data provenance",
+        "fine-tuning"
+      ],
+      "sources": [
+        "Boundary Question Bank: Domain Boundaries v0.1 (2026-09-30)",
+        "OWASP Top 10 for LLM Applications 2025: LLM01 to LLM10",
+        "NIST AI RMF 1.0; NIST AI 600-1",
+        "ISO/IEC 42001:2023",
+        "ACM CS2023: AI",
+        "SWEBOK: Software Design"
+      ],
+      "depends_on": [
+        "boundary/iam",
+        "boundary/admin"
+      ]
+    },
+    {
+      "id": "stack/nextjs",
+      "scheme": "stack",
+      "label": "Next.js App Router",
+      "definition": "Next.js with the App Router: React rendered on the server and the client.",
+      "aliases": [
+        "Next.js",
+        "app router",
+        "server components"
+      ],
+      "informal": [
+        "Vercel"
+      ],
+      "exact_case": [
+        "Next"
+      ],
+      "sources": [
+        "Boundary Question Bank: Stack Category Routing v0.2 (2026-09-30)"
+      ],
+      "markers": [
+        "next.config.*"
+      ],
+      "packages": [
+        "next"
+      ]
+    },
+    {
+      "id": "stack/rust",
+      "scheme": "stack",
+      "label": "Rust",
+      "definition": "Rust built with Cargo.",
+      "aliases": [
+        "cargo",
+        "crate",
+        "tokio"
+      ],
+      "informal": [
+        "the borrow checker",
+        "the engine",
+        "the core",
+        "memory safe"
+      ],
+      "sources": [
+        "Boundary Question Bank: Stack Category Routing v0.2 (2026-09-30)"
+      ],
+      "markers": [
+        "Cargo.toml",
+        "Cargo.lock",
+        "rust-toolchain.toml"
+      ]
+    },
+    {
+      "id": "stack/go",
+      "scheme": "stack",
+      "label": "Go",
+      "definition": "Go modules.",
+      "aliases": [
+        "Golang",
+        "goroutine",
+        "go mod"
+      ],
+      "informal": [
+        "the service"
+      ],
+      "exact_case": [
+        "Go"
+      ],
+      "sources": [
+        "Boundary Question Bank: Stack Category Routing v0.2 (2026-09-30)"
+      ],
+      "markers": [
+        "go.mod",
+        "go.sum"
+      ]
+    },
+    {
+      "id": "stack/react",
+      "scheme": "stack",
+      "label": "React (without a meta-framework)",
+      "definition": "React on its own, usually built with Vite, with no Next.js.",
+      "aliases": [
+        "React",
+        "JSX",
+        "Vite"
+      ],
+      "informal": [
+        "components",
+        "hooks",
+        "the UI"
+      ],
+      "sources": [
+        "Boundary Question Bank: Stack Category Routing v0.2 (2026-09-30)"
+      ],
+      "markers": [
+        "vite.config.*"
+      ],
+      "packages": [
+        "react"
+      ],
+      "yields_to": [
+        "stack/nextjs"
+      ]
+    },
+    {
+      "id": "stack/typescript",
+      "scheme": "stack",
+      "label": "TypeScript",
+      "definition": "TypeScript; it composes with the stack that runs it.",
+      "aliases": [
+        "TS",
+        "tsconfig"
+      ],
+      "informal": [
+        "types",
+        "add types"
+      ],
+      "exact_case": [
+        "TS"
+      ],
+      "sources": [
+        "Boundary Question Bank: Stack Category Routing v0.2 (2026-09-30)"
+      ],
+      "markers": [
+        "tsconfig.json"
+      ]
+    },
+    {
+      "id": "stack/vanilla-js",
+      "scheme": "stack",
+      "label": "JavaScript (no framework)",
+      "definition": "Plain JavaScript with no framework.",
+      "aliases": [
+        "JavaScript",
+        "plain JavaScript",
+        "vanilla JS"
+      ],
+      "informal": [
+        "no framework",
+        "just JS",
+        "script tag"
+      ],
+      "sources": [
+        "Boundary Question Bank: Stack Category Routing v0.2 (2026-09-30)"
+      ],
+      "markers": [
+        "package.json"
+      ],
+      "yields_to": [
+        "stack/nextjs",
+        "stack/react",
+        "stack/typescript"
+      ]
+    },
+    {
+      "id": "stack/c",
+      "scheme": "stack",
+      "label": "C",
+      "definition": "C built with Make or CMake.",
+      "aliases": [
+        "gcc",
+        "clang"
+      ],
+      "informal": [
+        "low level",
+        "embedded"
+      ],
+      "exact_case": [
+        "C"
+      ],
+      "sources": [
+        "Boundary Question Bank: Stack Category Routing v0.2 (2026-09-30)"
+      ],
+      "markers": [
+        "*.c"
+      ]
+    },
+    {
+      "id": "stack/cpp",
+      "scheme": "stack",
+      "label": "C++",
+      "definition": "C++ built with CMake.",
+      "aliases": [
+        "CMake",
+        "STL"
+      ],
+      "informal": [
+        "the game engine"
+      ],
+      "sources": [
+        "Boundary Question Bank: Stack Category Routing v0.2 (2026-09-30)"
+      ],
+      "markers": [
+        "*.cpp",
+        "*.cc",
+        "*.hpp"
+      ]
+    },
+    {
+      "id": "stack/python",
+      "scheme": "stack",
+      "label": "Python",
+      "definition": "Python packages and scripts.",
+      "aliases": [
+        "pip",
+        "Flask",
+        "FastAPI",
+        "Django"
+      ],
+      "informal": [
+        "script",
+        "notebook"
+      ],
+      "sources": [
+        "Boundary Question Bank: Stack Category Routing v0.2 (2026-09-30)"
+      ],
+      "markers": [
+        "pyproject.toml",
+        "requirements.txt",
+        "setup.py"
+      ]
+    },
+    {
+      "id": "stack/pytorch-lightning",
+      "scheme": "stack",
+      "label": "PyTorch Lightning",
+      "definition": "Model training with PyTorch Lightning.",
+      "aliases": [
+        "Lightning",
+        "LightningModule"
+      ],
+      "informal": [
+        "train the model"
+      ],
+      "sources": [
+        "Boundary Question Bank: Stack Category Routing v0.2 (2026-09-30)"
+      ],
+      "packages": [
+        "lightning",
+        "pytorch-lightning"
+      ]
+    },
+    {
+      "id": "stack/java",
+      "scheme": "stack",
+      "label": "Java",
+      "definition": "Java on the JVM, built with Maven or Gradle.",
+      "aliases": [
+        "Spring",
+        "Maven",
+        "Gradle",
+        "JVM"
+      ],
+      "sources": [
+        "Boundary Question Bank: Stack Category Routing v0.2 (2026-09-30)"
+      ],
+      "markers": [
+        "pom.xml",
+        "build.gradle",
+        "build.gradle.kts"
+      ]
+    },
+    {
+      "id": "stack/sql",
+      "scheme": "stack",
+      "label": "SQL",
+      "definition": "A relational database and its queries and migrations.",
+      "aliases": [
+        "Postgres",
+        "PostgreSQL",
+        "SQLite",
+        "MySQL",
+        "joins"
+      ],
+      "informal": [
+        "the database",
+        "queries",
+        "tables"
+      ],
+      "sources": [
+        "Boundary Question Bank: Stack Category Routing v0.2 (2026-09-30)"
+      ],
+      "markers": [
+        "*.sql",
+        "migrations/"
+      ]
+    },
+    {
+      "id": "stack/drizzle",
+      "scheme": "stack",
+      "label": "Drizzle ORM",
+      "definition": "Drizzle, a TypeScript ORM.",
+      "aliases": [
+        "Drizzle",
+        "drizzle-orm"
+      ],
+      "sources": [
+        "Boundary Question Bank: Stack Category Routing v0.2 (2026-09-30)"
+      ],
+      "markers": [
+        "drizzle.config.*"
+      ],
+      "packages": [
+        "drizzle-orm"
+      ]
+    },
+    {
+      "id": "stack/prisma",
+      "scheme": "stack",
+      "label": "Prisma ORM",
+      "definition": "Prisma, a TypeScript ORM, and its migrations.",
+      "aliases": [
+        "Prisma",
+        "schema.prisma",
+        "Prisma Client"
+      ],
+      "sources": [
+        "Boundary Question Bank: Stack Category Routing v0.2 (2026-09-30)"
+      ],
+      "markers": [
+        "schema.prisma"
+      ],
+      "packages": [
+        "prisma",
+        "@prisma/client"
+      ]
+    },
+    {
+      "id": "stack/ruby",
+      "scheme": "stack",
+      "label": "Ruby",
+      "definition": "Ruby, often Rails, with Bundler.",
+      "aliases": [
+        "Rails",
+        "gem",
+        "bundler",
+        "rake"
+      ],
+      "sources": [
+        "Boundary Question Bank: Stack Category Routing v0.2 (2026-09-30)"
+      ],
+      "markers": [
+        "Gemfile",
+        "Gemfile.lock",
+        "*.rb",
+        "config.ru"
+      ]
+    },
+    {
+      "id": "stack/specta",
+      "scheme": "stack",
+      "label": "Specta",
+      "definition": "Rust types generated into TypeScript with Specta.",
+      "aliases": [
+        "tauri-specta",
+        "rspc"
+      ],
+      "informal": [
+        "generated bindings from Rust"
+      ],
+      "sources": [
+        "Boundary Question Bank: Stack Category Routing v0.2 (2026-09-30)"
+      ],
+      "packages": [
+        "specta",
+        "tauri-specta"
+      ]
+    },
+    {
+      "id": "stack/schemars",
+      "scheme": "stack",
+      "label": "schemars",
+      "definition": "Rust types published as JSON Schema with schemars.",
+      "aliases": [
+        "JsonSchema derive",
+        "JSON Schema from Rust types"
+      ],
+      "sources": [
+        "Boundary Question Bank: Stack Category Routing v0.2 (2026-09-30)"
+      ],
+      "packages": [
+        "schemars"
+      ]
+    }
+  ],
+  "rules": [
+    {
+      "phrase": "users",
+      "route": {
+        "to": "elsewhere",
+        "what": "reporting and analytics"
+      },
+      "cues": [
+        "how many",
+        "active",
+        "analytics",
+        "metrics",
+        "count",
+        "growth",
+        "daily",
+        "monthly",
+        "report",
+        "reports",
+        "signups per"
+      ],
+      "note": "Users counted in a report are reporting, not identity."
+    },
+    {
+      "phrase": "active users",
+      "route": {
+        "to": "elsewhere",
+        "what": "reporting and analytics"
+      },
+      "note": "Active users is a report, not identity."
+    },
+    {
+      "phrase": "admin user",
+      "route": {
+        "to": "split",
+        "concepts": [
+          "boundary/admin",
+          "boundary/iam"
+        ]
+      },
+      "note": "The privilege model is administration; the credential is identity."
+    },
+    {
+      "phrase": "user settings",
+      "route": {
+        "to": "concept",
+        "concept": "boundary/iam"
+      },
+      "cues": [
+        "password",
+        "login",
+        "log in",
+        "sign in",
+        "session",
+        "passkey",
+        "two-factor",
+        "2fa",
+        "email"
+      ],
+      "note": "Credential and session settings are identity."
+    },
+    {
+      "phrase": "user settings",
+      "route": {
+        "to": "elsewhere",
+        "what": "preferences, on the product surface"
+      },
+      "note": "One person's preferences belong to the product, not identity."
+    },
+    {
+      "phrase": "dashboard",
+      "route": {
+        "to": "concept",
+        "concept": "boundary/admin"
+      },
+      "cues": [
+        "users",
+        "manage",
+        "configuration",
+        "config",
+        "roles",
+        "ban",
+        "whole app",
+        "everyone"
+      ],
+      "note": "A dashboard that manages users or the system is administration."
+    },
+    {
+      "phrase": "dashboard",
+      "route": {
+        "to": "elsewhere",
+        "what": "a product surface"
+      },
+      "note": "A dashboard alone is a product surface."
+    },
+    {
+      "phrase": "backend",
+      "route": {
+        "to": "concept",
+        "concept": "boundary/admin"
+      },
+      "cues": [
+        "admin",
+        "manage",
+        "control panel",
+        "staff"
+      ],
+      "note": "A backend where you manage things is administration."
+    },
+    {
+      "phrase": "backend",
+      "route": {
+        "to": "ask",
+        "question": "Do you mean the server code, the API, or pages where you manage the app?"
+      },
+      "note": "Backend alone can mean three things."
+    },
+    {
+      "phrase": "settings",
+      "route": {
+        "to": "concept",
+        "concept": "boundary/admin"
+      },
+      "cues": [
+        "whole app",
+        "everyone",
+        "all users",
+        "system",
+        "site-wide"
+      ],
+      "note": "Settings for the whole system are administration."
+    },
+    {
+      "phrase": "settings",
+      "route": {
+        "to": "concept",
+        "concept": "boundary/iam"
+      },
+      "cues": [
+        "password",
+        "login",
+        "sign in",
+        "account",
+        "session"
+      ],
+      "note": "Credential and session settings are identity."
+    },
+    {
+      "phrase": "settings",
+      "route": {
+        "to": "ask",
+        "question": "Settings for one person, or for the whole app?"
+      },
+      "note": "Settings alone can be either."
+    },
+    {
+      "phrase": "chat",
+      "route": {
+        "to": "concept",
+        "concept": "boundary/llm"
+      },
+      "cues": [
+        "ai",
+        "bot",
+        "assistant",
+        "ask it",
+        "claude",
+        "chatgpt",
+        "gpt",
+        "llm",
+        "model"
+      ],
+      "note": "Chat with an AI is a conversational interface over the model, not messaging between people."
+    },
+    {
+      "phrase": "comments",
+      "route": {
+        "to": "concept",
+        "concept": "boundary/messaging"
+      },
+      "cues": [
+        "real time",
+        "live",
+        "instantly",
+        "typing"
+      ],
+      "note": "Comments that arrive as they happen are messaging."
+    },
+    {
+      "phrase": "comments",
+      "route": {
+        "to": "elsewhere",
+        "what": "a content feature"
+      },
+      "note": "Comments without real-time delivery are content, not messaging."
+    },
+    {
+      "phrase": "notifications",
+      "route": {
+        "to": "elsewhere",
+        "what": "notifications, a boundary of its own (queued)"
+      },
+      "note": "Notifications are their own boundary."
+    },
+    {
+      "phrase": "train it on my data",
+      "route": {
+        "to": "concept",
+        "concept": "boundary/llm"
+      },
+      "note": "This almost always means retrieval over your own documents, not fine-tuning."
+    },
+    {
+      "phrase": "agent",
+      "route": {
+        "to": "concept",
+        "concept": "boundary/llm"
+      },
+      "note": "An agent calls tools on its own, so the agency questions apply."
+    },
+    {
+      "phrase": "the orm",
+      "route": {
+        "to": "concept",
+        "concept": "stack/drizzle"
+      },
+      "cues": [
+        "drizzle"
+      ]
+    },
+    {
+      "phrase": "the orm",
+      "route": {
+        "to": "concept",
+        "concept": "stack/prisma"
+      },
+      "cues": [
+        "prisma"
+      ]
+    },
+    {
+      "phrase": "the orm",
+      "route": {
+        "to": "ask",
+        "question": "Which ORM: Drizzle or Prisma?"
+      }
+    },
+    {
+      "phrase": "migrations",
+      "route": {
+        "to": "concept",
+        "concept": "stack/prisma"
+      },
+      "cues": [
+        "prisma"
+      ]
+    },
+    {
+      "phrase": "migrations",
+      "route": {
+        "to": "concept",
+        "concept": "stack/sql"
+      },
+      "note": "Migrations change the database's schema."
+    }
+  ]
+}

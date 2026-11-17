@@ -197,6 +197,34 @@ impl crate::RequestBody {
     }
 
     /// The caller this request names, for a kind of request that carries one.
+    /// What the request is about, for an audit line: the operation (its retry key when it
+    /// starts one), or the path. Empty for a request about neither.
+    pub fn target(&self) -> String {
+        match self {
+            Self::OperationStart(input) => input.idempotency_key.clone(),
+            Self::OperationGet(input) | Self::OperationCancel(input) => input.operation_id.clone(),
+            Self::OperationRead(input) => input.operation_id.clone(),
+            Self::OperationWait(input) => input.operation_id.clone(),
+            Self::OperationInput(input) => input.operation_id.clone(),
+            Self::OperationResize(input) => input.operation_id.clone(),
+            Self::FileRead(input) => input.path.clone(),
+            Self::FileList(input) => input.path.clone(),
+            Self::FileWrite(input) => input.path.clone(),
+            Self::FileEdit(input) => input.path.clone(),
+            Self::FileInfo(input) => input.path.clone(),
+            Self::FileMkdir(input) => input.path.clone(),
+            Self::FileMove(input) => format!("{} -> {}", input.source, input.destination),
+            Self::FileSearch(input) => input.path.clone(),
+            Self::ConfigSet(input) => input.key.clone(),
+            Self::ProcessKill(input) => format!("pid {}", input.pid),
+            Self::UrlRead(input) => input.url.clone(),
+            Self::OperationList(_)
+            | Self::OperationsChanged(_)
+            | Self::ConfigGet(_)
+            | Self::ProcessList(_) => String::new(),
+        }
+    }
+
     pub fn caller(&self) -> Option<&Caller> {
         match self {
             Self::OperationStart(input) => input.caller.as_ref(),
@@ -227,7 +255,13 @@ impl crate::RequestBody {
             | Self::FileEdit(_)
             | Self::FileInfo(_)
             | Self::FileMkdir(_)
-            | Self::FileMove(_) => None,
+            | Self::FileMove(_)
+            | Self::FileSearch(_)
+            | Self::ConfigGet(_)
+            | Self::ConfigSet(_)
+            | Self::ProcessList(_)
+            | Self::ProcessKill(_)
+            | Self::UrlRead(_) => None,
         }
     }
 }

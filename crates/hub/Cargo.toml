@@ -19,6 +19,8 @@ path = "src/lib.rs"
 devagotchi-contracts = { workspace = true }
 devagotchi-connectors = { workspace = true }
 devagotchi-ipc = { workspace = true }
+# The lexicon and the dictionary it hosts (`crates/kernel`, `src/kernel/`).
+devagotchi-kernel = { workspace = true }
 # The shared database (`crates/store`) and AgentHub, the board (`crates/agenthub`).
 devagotchi-store = { workspace = true }
 devagotchi-agenthub = { workspace = true }

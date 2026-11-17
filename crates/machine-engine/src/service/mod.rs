@@ -130,7 +130,7 @@ pub async fn serve(state: PathBuf, config_path: PathBuf) -> Result<(), Box<dyn s
         return Err("Config must be a regular file no larger than 64 KiB".into());
     }
     // Read with a cap even if the file grows after metadata inspection.
-    let mut file = std::fs::File::open(config_path)?;
+    let mut file = std::fs::File::open(&config_path)?;
     let mut bytes = Vec::new();
     std::io::Read::take(&mut file, (MAX_FRAME_BYTES + 1) as u64).read_to_end(&mut bytes)?;
     if bytes.len() > MAX_FRAME_BYTES {
@@ -140,7 +140,7 @@ pub async fn serve(state: PathBuf, config_path: PathBuf) -> Result<(), Box<dyn s
     let mut guard = StateGuard::acquire(&state)?;
     // Bind before opening the journal, so a foreign endpoint prevents reconciliation.
     let mut listener = guard.bind().await?;
-    let broker = Broker::open(config, &state)?;
+    let broker = Broker::open_at(config, &state, Some(config_path))?;
     write_endpoint_file(&state, guard.endpoint());
     eprintln!("devagotchi broker ready: {}", guard.endpoint().display());
 
