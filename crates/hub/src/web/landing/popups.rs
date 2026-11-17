@@ -1,9 +1,9 @@
 //! The landing page's popups beside the comparison's evidence (`compare.rs`): how claiming
-//! works, every tool the AI gets, and the setup walkthrough. Each is a `popover` opened by a
+//! works and every tool the AI gets. Each is a `popover` opened by a
 //! `popovertarget` button: no script, light dismiss, Escape closes it. A popup is on the
 //! page only when something on it opens it.
 
-use super::{Ctx, modal, video};
+use super::{Ctx, modal};
 
 /// The popups something on this page opens, in the order they close the page.
 pub fn all(ctx: &Ctx) -> String {
@@ -13,13 +13,6 @@ pub fn all(ctx: &Ctx) -> String {
     }
     if ctx.opens("tools") {
         out.push_str(&tools(ctx));
-    }
-    if ctx.opens("watch") {
-        match video(ctx) {
-            Some(video) => out.push_str(&watch(ctx, &video)),
-            None => ctx
-                .problem("{pop:watch} opens the setup video, and site.json names no assets.video"),
-        }
     }
     out
 }
@@ -273,20 +266,5 @@ fn tools(ctx: &Ctx) -> String {
         "m-tools",
         &ctx.inline(&copy.title),
         &format!("<p>{}</p>{groups}", ctx.inline(&copy.intro)),
-    )
-}
-
-/// The setup video, and the same steps as text: what the video shows.
-fn watch(ctx: &Ctx, video: &str) -> String {
-    let copy = &ctx.site.landing.popups.watch;
-    modal(
-        "m-watch",
-        &ctx.inline(&copy.title),
-        &format!(
-            "<div class=\"video-frame\">{video}</div>\
-<p class=\"modal-source\">{}</p>{}",
-            ctx.inline(&copy.caption),
-            steps(ctx, &copy.steps)
-        ),
     )
 }

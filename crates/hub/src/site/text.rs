@@ -9,7 +9,7 @@
 //!   `site.json`. `{link:<name>}`: a public link.
 //!   `{label:<provider>}`: what a sign-in provider is called.
 //! - `{term:<key>}` or `{term:<key>|shown}`: a glossary word with its tooltip.
-//!   `{pop:<claim|tools|watch>|label}`: a button that opens that popup.
+//!   `{pop:<claim|tools>|label}`: a button that opens that popup.
 //! - Whatever the page adds where it draws the copy: `{mcp}` (this hub's MCP address),
 //!   `{sign_in}`, `{sign_in_url}`, `{updated}`, `{retention_days}`, `{link}`, `{hub}`, `{n}`,
 //!   and in `content/llms.md` where the public pages live `{site}` and the join lines
@@ -24,7 +24,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use super::Site;
 
 /// The popups a `{pop:…}` may open.
-pub const POPUPS: [&str; 3] = ["claim", "tools", "watch"];
+pub const POPUPS: [&str; 2] = ["claim", "tools"];
 
 /// What one page's copy is drawn with.
 pub struct Ctx<'a> {

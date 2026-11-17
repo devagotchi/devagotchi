@@ -6,9 +6,8 @@
 //! address and the steps an AI follows, in the llmstxt.org shape, naming only tools the
 //! hub serves; the landing page's JSON-LD parses and says only what the page shows; every
 //! public page has its description, canonical link and cards; the protected-resource
-//! metadata and the MCP instructions name the product and its docs; a neutral site shows
-//! nothing of the built-in one; and no other product is named anywhere a person or an AI
-//! reads.
+//! metadata and the MCP instructions name the product and its docs; and a neutral site shows
+//! nothing of the built-in one. That no other product is named is `naming_tests.rs`.
 
 use axum::http::header;
 use serde_json::{Value, json};
@@ -18,7 +17,7 @@ use crate::{
     tenancy::tests::tenants::{Hosted, hosted_with},
 };
 
-async fn hosted() -> Option<Hosted> {
+pub(super) async fn hosted() -> Option<Hosted> {
     hosted_with(None, |_, _| json!({})).await
 }
 
@@ -35,7 +34,7 @@ async fn neutral() -> Option<Hosted> {
 const SITE: &str = "https://devagotchi.com";
 
 /// `path`'s status, content type and body.
-async fn get(hub: &Hosted, path: &str) -> (u16, String, String) {
+pub(super) async fn get(hub: &Hosted, path: &str) -> (u16, String, String) {
     get_on(hub, None, path).await
 }
 
@@ -326,7 +325,7 @@ async fn the_landing_pages_json_ld_parses_and_says_only_what_the_page_shows() {
         app["image"]
             .as_str()
             .unwrap()
-            .starts_with(&format!("{url}/assets/turnkey-poster.png?v="))
+            .starts_with(&format!("{url}/assets/preview.png?v="))
     );
     // The steps and the questions are the ones on the page, as plain words.
     let steps = data[1]["step"].as_array().unwrap();
@@ -411,7 +410,7 @@ async fn every_public_page_says_what_it_is_where_it_lives_and_how_it_previews() 
         );
         let image = meta(head, "property", "og:image").unwrap();
         assert!(
-            image.starts_with(&format!("{url}/assets/turnkey-poster.png?v=")),
+            image.starts_with(&format!("{url}/assets/preview.png?v=")),
             "{image}"
         );
         assert_eq!(meta(head, "name", "twitter:image"), Some(image));
@@ -419,13 +418,17 @@ async fn every_public_page_says_what_it_is_where_it_lives_and_how_it_previews() 
         // The picture is one this hub serves.
         let (status, kind, _) = get(&hub, image.strip_prefix(url.as_str()).unwrap()).await;
         assert_eq!((status, kind.as_str()), (200, "image/png"));
-        // JSON-LD on the landing page only; no other script anywhere.
+        // JSON-LD and the walkthrough's script, on the landing page only; no other script.
         let scripts = html.matches("<script").count();
         let data = html
             .matches("<script type=\"application/ld+json\">")
             .count();
-        assert_eq!(scripts, data, "{path}");
+        let ours = html
+            .matches("<script src=\"/assets/landing.js\" defer></script>")
+            .count();
+        assert_eq!(scripts, data + ours, "{path}");
         assert_eq!(data > 0, path == "/", "{path}");
+        assert_eq!(ours, usize::from(path == "/"), "{path}");
     }
     // A page's own description, where its front matter gives one.
     let (_, _, privacy) = get(&hub, "/privacy").await;
@@ -465,72 +468,6 @@ async fn the_resource_metadata_and_the_mcp_instructions_name_the_product_and_its
     assert_eq!(info.server_info.name, "devagotchi-hub");
 }
 
-/// The ways another product's name could be written.
-const OTHERS: [&str; 3] = ["desktop commander", "desktopcommander", "desktop-commander"];
-
-fn assert_names_no_other_product(what: &str, text: &str) {
-    let lower = text.to_lowercase();
-    for name in OTHERS {
-        assert!(!lower.contains(name), "{what} names {name}");
-    }
-}
-
-#[tokio::test]
-async fn no_other_product_is_named_in_the_site_any_page_or_the_mcp_surface() {
-    // Every file of the built-in site, as written.
-    let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("site/default");
-    let mut files = vec![dir];
-    while let Some(path) = files.pop() {
-        if path.is_dir() {
-            for entry in std::fs::read_dir(&path).unwrap() {
-                files.push(entry.unwrap().path());
-            }
-        } else if let Ok(text) = std::fs::read_to_string(&path) {
-            assert_names_no_other_product(&path.display().to_string(), &text);
-        }
-    }
-    // Every landing page the hub can draw.
-    let site = site::builtin();
-    for front in [
-        Front::Unclaimed,
-        Front::Passkeys,
-        Front::Nomen,
-        Front::Hosted,
-    ] {
-        let ctx = Ctx::new(&site);
-        let (title, body) = super::landing_for(&site, &ctx, front, "https://hub.example.org");
-        assert_names_no_other_product(front.key(), &format!("{title}{body}"));
-    }
-    // Every page and file a hosted hub serves without sign-in.
-    let hub = or_skip!(hosted());
-    for path in [
-        "/",
-        "/docs",
-        "/privacy",
-        "/terms",
-        "/support",
-        "/llms.txt",
-        "/llms-full.txt",
-        "/robots.txt",
-        "/sitemap.xml",
-        "/.well-known/oauth-protected-resource",
-        "/.well-known/oauth-protected-resource/mcp",
-        "/.well-known/oauth-authorization-server",
-        "/manifest.webmanifest",
-        "/assets/hub.css",
-        "/sw.js",
-    ] {
-        let (_, _, body) = get(&hub, path).await;
-        assert_names_no_other_product(path, &body);
-    }
-    // What an AI reads: the instructions, and every tool as tools/list describes it.
-    let info = rmcp::ServerHandler::get_info(&hub.hub);
-    assert_names_no_other_product("instructions", &info.instructions.unwrap_or_default());
-    for tool in crate::mcp::tools() {
-        assert_names_no_other_product(&tool.name, &serde_json::to_string(&tool).unwrap());
-    }
-}
-
 #[tokio::test]
 async fn a_neutral_site_shows_none_of_the_built_in_one_to_crawlers_or_agents() {
     let hub = or_skip!(neutral());
@@ -558,11 +495,11 @@ async fn a_neutral_site_shows_none_of_the_built_in_one_to_crawlers_or_agents() {
     }
     for (what, text) in &surfaces {
         site::tests::assert_no_brand(what, text);
-        // None of the built-in llms.txt's own lines, its software facts or its poster.
+        // None of the built-in llms.txt's own lines, its software facts or its preview picture.
         for line in defaults.lines().filter(|l| l.len() > 30) {
             assert!(!text.contains(line), "{what} shows the built-in {line:?}");
         }
-        for default in ["DeveloperApplication", "turnkey-poster", "priceCurrency"] {
+        for default in ["DeveloperApplication", "preview.png", "priceCurrency"] {
             assert!(!text.contains(default), "{what} shows {default}");
         }
     }

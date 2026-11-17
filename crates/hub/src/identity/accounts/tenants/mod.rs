@@ -7,7 +7,7 @@
 //! - The hub's first tenant is `home`: its operator's (Jesse is tenant #1 on the hosted
 //!   hub), and on a one-owner hub (`tenancy.mode single`) the only one. Migration 0007 put
 //!   the accounts made before tenants in it; `settle_in` makes it on a new store.
-//! - On Postgres the database keeps tenants apart (`store.rs`, row-level security): every
+//! - On Postgres the database keeps tenants apart (`store/mod.rs`, row-level security): every
 //!   query here runs in a transaction scoped to one tenant and sees no other tenant's rows.
 //! - On a hosted hub (`tenancy.mode multi`) the first connect from an AI client or the CLI
 //!   makes the person's account and its own tenant on the spot (`start_unsecured`): the
@@ -352,7 +352,7 @@ impl Accounts {
                 )
                 .into());
             }
-            // Across every tenant: the one count the hub's role may make (`store.rs`).
+            // Across every tenant: the one count the hub's role may make (`store/mod.rs`).
             let live = self
                 .store
                 .live_unsecured(connection, secs(now) - idle)

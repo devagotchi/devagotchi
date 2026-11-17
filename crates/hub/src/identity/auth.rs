@@ -28,7 +28,7 @@ pub struct Subject {
     /// accounts apart. Never used for grants: two accounts can share a name.
     pub name: Option<String>,
     /// The tenant the account belongs to on a hub with its own accounts (`t-<uuid>`,
-    /// `identity/accounts/tenants.rs`): what keeps one tenant's machines from another's.
+    /// `identity/accounts/tenants/mod.rs`): what keeps one tenant's machines from another's.
     pub tenant: Option<String>,
     /// The organization (tenant) the account belongs to, as the identity provider proved
     /// it (Nomen's `urn:nomen:iam:user:resourceowner:id`). Project boards belong to it:
