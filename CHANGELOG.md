@@ -10,6 +10,12 @@ heading. Agents draft the fragments below; they never tag.
 These notes are what the operator promotes when tagging `v0.1.0-alpha.1`. This file does not
 create that tag, and a prerelease tag does not move the `:latest` image.
 
+### The license is the Functional Source License (FSL-1.1-ALv2)
+- Devagotchi moves from the Business Source License 1.1 to FSL-1.1-ALv2, held by AngryVibes LLC:
+  self-hosting for yourself and your organization stays free; offering it to others as a
+  competing commercial service does not. Each version becomes Apache-2.0 two years after it is
+  published (it was AGPL-3.0 after four).
+
 ### A hub names its own deployment (prepared for v0.1.0-alpha.1)
 - `devagotchi login` and `devagotchi mcp` no longer assume a hub. Pass `--hub`, set
   `DEVAGOTCHI_HUB`, or reuse the hub the last login saved. `connect-nomen` requires

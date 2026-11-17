@@ -30,7 +30,9 @@ from an unrelated passing test.
 - Extend existing owners. Broker owns execution; hub owns coordination; no second scheduler.
   Hosted accounts/boards use Postgres; ClickHouse is analytical, not coordination authority.
   Local journals/offline queues may use SQLite; never fall back locally for a bound board.
-- One binary; behavior goes in its libraries. No network in `core` or `mcp`.
+- One binary; behavior goes in its libraries. No network in `mcp`; the machine engine makes no
+  request on its own, and fetches a URL only for `read_url`, which only a broker running as its
+  account allows (deny.toml says which crates may link an HTTP client, and why).
   Public OSS code must not contain private WardenMesh deployment code or secrets.
 - Platform execution/IPC backends and unsafe code remain confined to `crates/machine-engine/src/execution/platform/*`
   and `crates/ipc/src/{unix,windows}*`, with real-OS tests. No unsafe shortcut elsewhere.

@@ -483,10 +483,6 @@ pub struct Grant {
     /// and move one by hand. The owner is always a person; agents never are.
     #[serde(default)]
     pub human: bool,
-    /// This subject may read and change hub operator settings (`/api/v1/admin/settings`).
-    /// The owner can always do that; this flag is how a control-plane account can too.
-    #[serde(default)]
-    pub operator: bool,
 }
 
 impl HubConfig {
@@ -1011,15 +1007,6 @@ impl HubConfig {
         }
     }
 
-    /// Owner, or a grant marked `operator`. Those accounts may call the admin settings API.
-    pub fn is_operator(&self, subject: &str) -> bool {
-        self.is_owner(subject)
-            || self
-                .grants
-                .iter()
-                .any(|g| g.subject == subject && g.operator)
-    }
-
     /// The people who decide approvals on `project`: the owner and every grant that is
     /// marked human and names the board.
     pub fn people_for_board(&self, project: &str) -> Vec<String> {
@@ -1525,20 +1512,5 @@ mod tests {
             .unwrap()
             .push(serde_json::json!({ "project": "devagotchi" }));
         assert_eq!(parse(&twice).unwrap_err().code, "invalid_config");
-    }
-
-    #[test]
-    fn operator_is_a_grant_flag() {
-        let mut config = good();
-        let parsed = parse(&config).unwrap();
-        assert!(!parsed.is_operator("jesse"));
-        let owner = format!("dg_{}", "a".repeat(32));
-        let operator = format!("dg_{}", "b".repeat(32));
-        config["owner"] = serde_json::json!(owner);
-        config["grants"] = serde_json::json!([{ "subject": operator, "operator": true }]);
-        let parsed = parse(&config).unwrap();
-        assert!(parsed.is_operator(&owner));
-        assert!(parsed.is_operator(&operator));
-        assert!(!parsed.is_operator(&format!("dg_{}", "c".repeat(32))));
     }
 }
