@@ -1,0 +1,140 @@
+# The path: every feature the operator asked for, in order, each proven on a real device
+
+- Contract: DG-DELIVERY-1; stage: read [project.json](../../project.json) (alpha = pre-release)
+- Issue / request: operator, 2026-11-17: "where is my consolidated clear path of features",
+  "every chat request from the past week", "you have not proven" anything; the cloud waits
+  until the application is built and confirmed.
+- PR: not_created
+- Branch / baseline: `increment-187/path`, from `main` at `ea50352`
+- Objective: one list of every application feature asked for in chat from 2026-11-09 to
+  2026-11-17 (104 messages, read in full), what the code on `main` does today, and the one
+  step on Texas and the operator's phone that proves it. Work follows this order.
+- Non-goals: the cloud edition. No C-milestone, no work in `shippinAI/devagotchi-cloud`
+  until every phase below is proven (operator, 2026-11-17).
+- Canonical architecture / related plans: every plan in this folder keeps its detail; this
+  page decides the order and what "done" means. Where a row names a plan milestone, that
+  milestone is the spec.
+
+## What "done" means here
+
+A feature is **done** only when it works on **Texas** (installed from the public release or
+image as a new user would) and on the **operator's phone**, and the PR records what was done
+and what was seen. Code plus a green CI run is **built**, not done. Status below was read from
+the code on `main` at `ea50352` on 2026-11-17 (file and test references in the PR); none of
+it has been proven on a device yet.
+
+Status: **built** (code and a test), **partial** (gap named), **absent**.
+
+## Phase 0: prove what is already built, on Texas and the phone
+
+Nothing new is built until this phase has run once; what it finds is fixed first.
+
+| # | Feature (operator's words, short) | In the code today | Proof |
+|---|---|---|---|
+| 0.1 | "pull this like any user would": turnkey server, update lane | built: `deploy/compose/install.sh` (Docker, Postgres, Caddy TLS, digest pin, update timer with rollback, nightly backup); image public on GHCR | Texas: `install.sh` from the README, nothing else; the hub answers on its domain |
+| 0.2 | log in; "a clear UI install on phone" | built: claim link, sign-in, installable phone app with swipe tabs and Go to sheet (Playwright only) | the operator claims the hub and installs the app on the phone |
+| 0.3 | connect a machine in one line | partial: `join.sh` and `join.ps1`; Linux needs root | Texas joins as a machine; Claude runs a command on it through the hub |
+| 0.4 | "I get proper push notifications" | partial: Web Push with VAPID, tested only against a fake push service | an AI asks for an approval; the operator's phone buzzes |
+| 0.5 | approve on the phone; standing approvals | built | approve on the phone; the waiting AI continues |
+| 0.6 | hosted test hub matches `main` | app.devagotchi.com serves fewer tools than `main` (no `search_files`, `list_processes`, `get_config`, `read_url`, `operation_input`) | update it to `main`; `tools/list` matches |
+
+## Phase 1: sign-in and accounts (free-edition D1, E1; dormancy plan)
+
+| # | Feature | In the code today | Proof |
+|---|---|---|---|
+| 1.1 | sign in with Google or a passkey after username, display name, email, and an Org from the name when none is given | partial: Google and passkey exist; sign-up asks only email and password; no "<name> Org" | a new person on the phone ends up with name, display name and "<name> Org" |
+| 1.2 | Desktop Commander's smooth sign-in; **no passkey on a new account, only after the machine is connected** | partial: "Secure it" with a passkey is shown on every page from the start | new account → machine online → only then a passkey offer |
+| 1.3 | password rules configurable in the UI, 8–12 to start, 15–18 shown as recommended, nothing hardcoded | absent: `MIN_LEN = 8` constant | the owner changes it on a page; sign-up follows it |
+| 1.4 | change or reset the password from the panel | built (change does not ask for the current one; reset needs SMTP from config) | change and reset from the phone |
+| 1.5 | Google sign-in configured in the admin panel, saved to Postgres | built | the owner pastes a client on Texas's `/admin`; Google sign-in works |
+| 1.6 | Shippin.ai sign-in available from deployment, can be toggled off; Google always available; Nomen and other providers in admin | partial: only a generic OIDC card | a Shippin card on `/admin`, on by default, off with one switch |
+| 1.7 | the first MCP connection clearly says it made a new account | partial: only with `tenancy.anonymous_connect`, config-only, default off | connect Claude to a fresh hub; it and the person are told "a new account was made" |
+| 1.8 | re-auth by a link (push, email, email link) for a machine already known; dormant machines become inactive or are removed after N days, set in the UI | partial: email sign-in link for people; no machine re-auth, no dormancy | [dormancy-and-reauth](dormancy-and-reauth.md) M1–M6 on the phone |
+
+## Phase 2: machines
+
+| # | Feature | In the code today | Proof |
+|---|---|---|---|
+| 2.1 | connect with no sudo, every OS: Linux x86_64/aarch64, Windows x64/Arm64 | partial: Windows needs no admin; Linux requires root | a Linux user without sudo joins |
+| 2.2 | label and manage machines "like Tailscale" | partial: list, add, revoke; no label or rename | rename and label from the phone |
+| 2.3 | updates to machines (`machine_update`) | built | Texas updated from the phone |
+| 2.4 | the server is Linux by default, the user may choose Windows, all turnkey | Linux built; Windows server absent (decided 2026-11-17: the same Docker stack, no native Windows hub) | `install.sh` on Linux; the compose stack under Docker Desktop on Windows |
+| 2.5 | Android | the phone app only; Android as a machine has no plan | operator decides (below) |
+| 2.6 | nothing personal hardcoded | `join.ps1` installs to `D:\localdev\devagotchi` when `D:\localdev` exists; "17 clients", the 16-machine limit and the 15-minute code are constants | removed or made settings |
+
+## Phase 3: approvals and notifications
+
+| # | Feature | In the code today | Proof |
+|---|---|---|---|
+| 3.1 | push and email for approvals, choose which is on, re-send mail if it failed | partial: push only; approvals are never emailed | an approval arrives by email when push is off |
+| 3.2 | approve with biometrics, Face ID or PIN per the person's setting | absent: a plain form | Face ID on the phone approves |
+| 3.3 | mobile-tailored approval tickets, email backup, SMS via connectors or self-hosted | partial: phone page; no email, no SMS | an SMS through a connector |
+| 3.4 | not every ticket needs approval when the person says so | built (standing approvals, approve ahead) | a kind approved ahead skips the phone |
+| 3.5 | phone approvals for the scary things: deploys, migrations, push to main, spend over a limit | absent: approvals are advisory; nothing checks commands | a push to main waits for the phone |
+
+## Phase 4: AgentHub
+
+| # | Feature | In the code today | Proof |
+|---|---|---|---|
+| 4.1 | **scan the project folders and get tickets**: a library of the plans and TODOs AI tools write, preview, then import | absent: no `board scan`, no parsers, no preview, no `external_ref` | `devagotchi board scan` on a real repo on Texas, preview, import, tickets on the phone; a second scan imports nothing twice ([factory](agenthub-factory.md) F5) |
+| 4.2 | import from GitHub Issues/Projects, Linear, Jira, CSV, Notion | partial: live GitHub webhook only, no backfill | a repo's open issues imported once |
+| 4.3 | assign agents | built (roster worked out, not editable per board) | assign from the phone; the agent is told |
+| 4.4 | hierarchy configurable in the UI (Org → Project → Area → Epic → Ticket by default) | absent | switch baselines on a board's settings |
+| 4.5 | members, teams, projects and resources managed on the web | partial: orgs, teams, roles, projects; machines not shared per org or team | an org shares a machine with a team |
+| 4.6 | hooks: prime, re-prime after compaction, heartbeat, stop gate, write gate | partial: no write gate; Codex plugin ships no hooks | Claude Code and Codex on Texas show each hook firing |
+| 4.7 | ClickHouse stats and visuals, signals | partial: events exported; one number on the org page; no charts | a board's charts on the phone |
+| 4.8 | AgentHub its own repo and module, its own prefix tables, the hub's Postgres or its own, ClickHouse optional | partial: own repo and `board_` tables; cannot use a separate Postgres; shares schema `devagotchi` | a board on its own Postgres |
+| 4.9 | AgentHub's licence | the submodule is still BUSL-1.1 | operator decides (below) |
+
+## Phase 5: Desktop Commander parity and the plugins
+
+| # | Feature | In the code today | Proof |
+|---|---|---|---|
+| 5.1 | every Desktop Commander capability | partial: missing session search (`start_search` and its companions), `write_pdf` (waits on the operator), `get_tool_result`, `list_sessions` | DC's documented flows, each run from Claude against Texas |
+| 5.2 | plugin for Claude, Codex and Grok; local UI opened by the user's own actions, not the server | partial: Claude connector, skills, hooks; Codex connector only; Grok unchecked; no local UI; `.mcp.json` points at `hub.example.com` | install each plugin from its marketplace; it reaches Texas |
+| 5.3 | API keys with granular control and durations | built | a key limited to one machine and one hour |
+
+## Phase 6: connectors and every setting in the UI
+
+| # | Feature | In the code today | Proof |
+|---|---|---|---|
+| 6.1 | connectors as nested folders; mail first: custom self-hosted SMTP plus turnkey Resend and the other big providers; the top 10–15 with schemas | partial: 11 services in one flat file; SMTP only for sign-in links; no mail connector | send mail through Resend and through own SMTP from Texas |
+| 6.2 | every setting and configuration driven by the UI, grouped and guided | partial: config-only today: SMTP, signal sinks, all of `tenancy`, `machines.auto_update`, storage, `public_url`, owner, operators, grants, brokers, boards, downloads, token lifetimes, early access ([free-edition](free-edition.md) U0) | each one changed from a page on Texas |
+| 6.3 | browser-specific UI | partial: a CSS rail at 1024px, untested | the desktop layout reviewed |
+| 6.4 | "alpha = pre-release" obvious | built in `.ai`; nothing in the UI | an alpha badge in the hub |
+
+## Phase 7: vibe-coder features, Lovable, the cache
+
+| # | Feature | In the code today | Proof |
+|---|---|---|---|
+| 7.1 | keys never in chat: a pasted key is caught, with how to rotate it | absent | paste a key; it is caught |
+| 7.2 | a checkpoint before every AI task, one tap back | absent | restore from the phone |
+| 7.3 | "your AI is stuck" alerts: retry, hand off, stop | absent | a stuck agent alerts the phone |
+| 7.4 | Lovable: an MCP for the user's keys and secrets, reach Resend and Vaultix through the hub, import from Lovable | absent | a Lovable app sends mail through Texas |
+| 7.5 | optional Dragonfly cache | absent ([ADR 0004](../../../docs/adr/0004-optional-cache-dragonfly.md)) | the hub with and without it |
+
+## Phase 8: the site, the docs, the release
+
+| # | Feature | In the code today | Proof |
+|---|---|---|---|
+| 8.1 | the landing page as layman interactives drawn from the real product | plan only ([landing](landing.md), PR #223); the hub still plays a video; apps/website says "four tools" | the operator reviews each scene |
+| 8.2 | the code makes the platforms obvious: hosted on Linux (likely arm64); Windows, Android, Linux, arm64 supported | partial: no single statement; README:5,7,117 and `apps/website/public/llms.txt` are wrong | one statement, checked by a test against the build targets |
+| 8.3 | a release a solo developer installs from GitHub | built once (`v0.1.0`, before most of this) | a new tag installed on Texas from its release page |
+
+Only after Phase 8 is proven: the cloud edition ([cloud-edition](cloud-edition.md)).
+
+## Decisions for the operator
+
+1. **SQLite that remains.** The hub and the link are Postgres only. SQLite is left in three places:
+   - the machine engine's operation journal, on each machine;
+   - the kernel's `devagotchi ai` capture journal, on each machine;
+   - AgentHub's standalone board, `.devagotchi/board.sqlite3`, used when no hub is bound.
+
+   Proposal: keep the two machine-local journals (they are on-machine state, like a phone's
+   offline cache), and move the standalone board to Postgres or drop it.
+2. **Android**: the phone app only, or also as a machine the AI works on?
+3. **AgentHub's licence**: move it from BUSL-1.1 to FSL-1.1-ALv2 like the main repository?
+4. **"Python scans"**: should the scanners be written in Python, or should they scan Python and other
+   projects? F5 proposes data-driven rule files, one per format.
+5. **Tracking**: these rows as tickets on an AgentHub board (in Postgres) on Texas, each with
+   its proof as the check, so progress shows on the phone.
