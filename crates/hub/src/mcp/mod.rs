@@ -5,7 +5,8 @@
 //!
 //! # Owns
 //!
-//! No tables. The router (`surface`), the tool list and each tool's output schema.
+//! No tables. The `Hub` and its routing (`hub`), the server (`handler`), the tools (`tools/`), what
+//! they take and return (`schema`), the tool list and each tool's output schema.
 //!
 //! # Serves
 //!
@@ -24,13 +25,21 @@
 //! `crate::connections` (their tools), `crate::config`.
 
 mod callers;
-mod surface;
+mod handler;
+mod hub;
+mod machines;
+mod schema;
+mod tools;
 
 /// What the rest of the hub uses of the router.
-pub use surface::{Hub, Machine, MachineUpdate};
+pub use hub::Hub;
 #[cfg(test)]
-pub(crate) use surface::{Route, tool_names, tools};
-pub(crate) use surface::{join_line, unexpected_response};
+pub(crate) use hub::Route;
+pub(crate) use hub::unexpected_response;
+pub(crate) use machines::join_line;
+pub use schema::{Machine, MachineUpdate};
+#[cfg(test)]
+pub(crate) use tools::{tool_names, tools};
 
 #[cfg(test)]
 pub(crate) mod output_schema;

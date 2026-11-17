@@ -32,6 +32,7 @@
 pub mod analytics;
 pub mod analytics_settings;
 pub mod audit;
+pub(crate) mod health;
 pub mod warehouse;
 
 #[cfg(test)]

@@ -333,6 +333,7 @@ struct ClientData {
     top_origin: Option<String>,
 }
 
+mod accounts;
 #[cfg(test)]
 pub(crate) mod soft;
 #[cfg(test)]
