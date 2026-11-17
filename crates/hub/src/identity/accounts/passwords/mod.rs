@@ -210,6 +210,7 @@ impl Accounts {
 
     /// Set `account`'s password or change it, for the address its email sign-in proves,
     /// else the first address a provider verified for it.
+    #[cfg(test)]
     pub async fn set_password(&self, account: &str, password: &str) -> BridgeResult<()> {
         let email = transaction!(&self.store, |connection| {
             self.enter(connection, Lookup::Account(account)).await?;

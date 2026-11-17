@@ -67,6 +67,7 @@ fn start(
             cwd: None,
             deadline_ms,
             interactive: None,
+            combined_output: false,
             caller: None,
         })
         .unwrap()

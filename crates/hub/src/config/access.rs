@@ -39,10 +39,6 @@ pub struct Grant {
     /// and move one by hand. The owner is always a person; agents never are.
     #[serde(default)]
     pub human: bool,
-    /// This subject may read and change hub operator settings (`/api/v1/admin/settings`).
-    /// The owner can always do that; this flag is how a control-plane account can too.
-    #[serde(default)]
-    pub operator: bool,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -157,15 +153,6 @@ impl HubConfig {
             }
         }
         Ok(())
-    }
-
-    /// Owner, or a grant marked `operator`. Those accounts may call the admin settings API.
-    pub fn is_operator(&self, subject: &str) -> bool {
-        self.is_owner(subject)
-            || self
-                .grants
-                .iter()
-                .any(|g| g.subject == subject && g.operator)
     }
 
     /// The people who decide approvals on `project`: the owner and every grant that is

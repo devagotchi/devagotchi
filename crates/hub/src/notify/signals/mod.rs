@@ -129,6 +129,7 @@ impl Signal {
 
 /// The contract as JSON Schema, generated from `Signal` (`docs/signals/v1.schema.json`
 /// holds the same; a test keeps them equal).
+#[cfg(test)]
 pub fn json_schema() -> Value {
     serde_json::to_value(schemars::schema_for!(Signal)).expect("signal schema")
 }
@@ -246,10 +247,6 @@ impl Sink {
                 .map_err(|error| BridgeError::new("invalid_config", error.to_string()))?,
             status: Mutex::new(Status::default()),
         })
-    }
-
-    pub fn name(&self) -> &str {
-        &self.name
     }
 
     /// Send what waits, forever, backing off while the sink refuses.

@@ -48,8 +48,7 @@ pub struct Hub {
     pub routed: Arc<Mutex<Routed>>,
 }
 
-/// The distinct machines one MCP session routed calls to, as the caller named them. Two
-/// are enough to know there was more than one.
+/// The distinct machines one MCP session routed calls to, as named: two say there were more.
 #[derive(Debug, Default)]
 pub struct Routed(Vec<String>);
 
@@ -485,24 +484,7 @@ impl Hub {
     ) -> Result<ResponseBody, Json<BridgeError>> {
         let subject = self.subject(&context)?;
         body.set_caller(&Self::caller(&subject, &context));
-        let operation_id = match &body {
-            RequestBody::OperationStart(input) => input.idempotency_key.clone(),
-            RequestBody::OperationGet(input) | RequestBody::OperationCancel(input) => {
-                input.operation_id.clone()
-            }
-            RequestBody::OperationRead(input) => input.operation_id.clone(),
-            RequestBody::OperationWait(input) => input.operation_id.clone(),
-            RequestBody::OperationInput(input) => input.operation_id.clone(),
-            RequestBody::OperationResize(input) => input.operation_id.clone(),
-            RequestBody::FileRead(input) => input.path.clone(),
-            RequestBody::FileList(input) => input.path.clone(),
-            RequestBody::FileWrite(input) => input.path.clone(),
-            RequestBody::FileEdit(input) => input.path.clone(),
-            RequestBody::FileInfo(input) => input.path.clone(),
-            RequestBody::FileMkdir(input) => input.path.clone(),
-            RequestBody::FileMove(input) => format!("{} -> {}", input.source, input.destination),
-            _ => String::new(),
-        };
+        let operation_id = body.target();
         let result = match self.route(&subject, broker).await {
             Ok(route) => {
                 tokio::select! {
@@ -534,13 +516,13 @@ impl Hub {
     /// Every tool this hub serves: its own, and each domain's router added to them.
     pub(crate) fn router() -> rmcp::handler::server::router::tool::ToolRouter<Self> {
         Self::tool_router()
-            + Self::run_router()
-            + Self::files_router()
+            + Self::machine_router()
             + Self::callers_router()
             + Self::board_router()
             + Self::workflow_router()
             + Self::offers_router()
             + Self::connections_router()
+            + Self::words_router()
     }
 }
 
@@ -575,20 +557,7 @@ impl Hub {
                 .and_then(|access| access.waiting_since),
             access_note,
             plan,
-            brokers: {
-                let mut brokers: Vec<String> = self
-                    .config
-                    .brokers_for(&subject.id)
-                    .into_iter()
-                    .map(|b| b.name.clone())
-                    .collect();
-                for device in self.own_machines(&subject).await {
-                    if !brokers.contains(&device.name) {
-                        brokers.push(device.name);
-                    }
-                }
-                brokers
-            },
+            brokers: self.machine_names(&subject).await,
             boards: {
                 let hub = self.clone();
                 let who = subject.clone();
