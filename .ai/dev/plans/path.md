@@ -20,7 +20,7 @@
 A feature is **done** only when it works on **Texas** (installed from the public release or
 image as a new user would) and on the **operator's phone**, and the PR records what was done
 and what was seen. Code plus a green CI run is **built**, not done. Status below was read from
-the code on `main` at `ea50352` on 2026-11-17 (file and test references in the PR); none of
+the code on `main` at `ea50352` on 2026-11-17 (file and test references in the PR), and updated the same day as every open branch was merged (0.0, 0.1, 0.3, 1.6, 4.1, 5.1, 8.1, 8.3, Phase 9); none of
 it has been proven on a device yet.
 
 Status: **built** (code and a test), **partial** (gap named), **absent**.
@@ -31,9 +31,10 @@ Nothing new is built until this phase has run once; what it finds is fixed first
 
 | # | Feature (operator's words, short) | In the code today | Proof |
 |---|---|---|---|
-| 0.1 | "pull this like any user would": turnkey server, update lane | built: `deploy/compose/install.sh` (Docker, Postgres, Caddy TLS, digest pin, update timer with rollback, nightly backup); image public on GHCR | Texas: `install.sh` from the README, nothing else; the hub answers on its domain |
+| 0.0 | built-in accounts for development: an admin and a plain user, to test, confirm and grow with (operator, 2026-11-17) | absent: an account comes only from the claim link, sign-up or `hub owner` | `devagotchi hub test-accounts` on Texas prints an admin and a user login; both sign in on the phone, the admin sees `/admin`, the user does not |
+| 0.1 | "pull this like any user would": turnkey server, update lane | built: `deploy/compose/install.sh` (Docker, Postgres, Caddy TLS, digest pin, update timer with rollback, nightly backup); image public on GHCR; a re-run keeps tenancy, operators, sign-ins, mail and analytics it is not given (#238); pre-release installs pass `--channel main` until a stable tag ([texas-baseline](texas-baseline.md) M2) | Texas: `install.sh` from the README, nothing else; the hub answers on its domain |
 | 0.2 | log in; "a clear UI install on phone" | built: claim link, sign-in, installable phone app with swipe tabs and Go to sheet (Playwright only) | the operator claims the hub and installs the app on the phone |
-| 0.3 | connect a machine in one line | partial: `join.sh` and `join.ps1`; Linux needs root | Texas joins as a machine; Claude runs a command on it through the hub |
+| 0.3 | connect a machine in one line | partial: `join.sh` and `join.ps1`; Linux needs root; `hub enroll` refuses a machine its config does not name before it prints a code (#226) | Texas joins as a machine; Claude runs a command on it through the hub |
 | 0.4 | "I get proper push notifications" | partial: Web Push with VAPID, tested only against a fake push service | an AI asks for an approval; the operator's phone buzzes |
 | 0.5 | approve on the phone; standing approvals | built | approve on the phone; the waiting AI continues |
 | 0.6 | hosted test hub matches `main` | app.devagotchi.com serves fewer tools than `main` (no `search_files`, `list_processes`, `get_config`, `read_url`, `operation_input`) | update it to `main`; `tools/list` matches |
@@ -47,7 +48,7 @@ Nothing new is built until this phase has run once; what it finds is fixed first
 | 1.3 | password rules configurable in the UI, 8–12 to start, 15–18 shown as recommended, nothing hardcoded | absent: `MIN_LEN = 8` constant | the owner changes it on a page; sign-up follows it |
 | 1.4 | change or reset the password from the panel | built (change does not ask for the current one; reset needs SMTP from config) | change and reset from the phone |
 | 1.5 | Google sign-in configured in the admin panel, saved to Postgres | built | the owner pastes a client on Texas's `/admin`; Google sign-in works |
-| 1.6 | Shippin.ai sign-in available from deployment, can be toggled off; Google always available; Nomen and other providers in admin | partial: only a generic OIDC card | a Shippin card on `/admin`, on by default, off with one switch |
+| 1.6 | Shippin.ai sign-in available from deployment, can be toggled off; Google always available; Nomen and other providers in admin | partial: a Shippin card on `/admin` → Sign-in from the first start, its switch on by default, off hides the button and keeps the issuer, the notice beside the button, `install.sh --nomen` (#238); no issuer is built in, so a fresh hub shows no Shippin button until one is set (S0, Nomen accepting Client ID Metadata Documents, is not done) | a Shippin card on `/admin`, on by default, off with one switch |
 | 1.7 | the first MCP connection clearly says it made a new account | partial: only with `tenancy.anonymous_connect`, config-only, default off | connect Claude to a fresh hub; it and the person are told "a new account was made" |
 | 1.8 | re-auth by a link (push, email, email link) for a machine already known; dormant machines become inactive or are removed after N days, set in the UI | partial: email sign-in link for people; no machine re-auth, no dormancy | [dormancy-and-reauth](dormancy-and-reauth.md) M1–M6 on the phone |
 
@@ -76,7 +77,7 @@ Nothing new is built until this phase has run once; what it finds is fixed first
 
 | # | Feature | In the code today | Proof |
 |---|---|---|---|
-| 4.1 | **scan the project folders and get tickets**: a library of the plans and TODOs AI tools write, preview, then import | absent: no `board scan`, no parsers, no preview, no `external_ref` | `devagotchi board scan` on a real repo on Texas, preview, import, tickets on the phone; a second scan imports nothing twice ([factory](agenthub-factory.md) F5) |
+| 4.1 | **scan the project folders and get tickets**: a library of the plans and TODOs AI tools write, preview, then import | built: `devagotchi board scan [PATH] [--import]` (increment 189, #240, agenthub #4): rule files for Kiro, spec-kit, Cursor, Claude, `.ai/` plan tables, plan files, checklists and code markers; preview, import once by fingerprint, on a local board and a hub's Postgres board (proven in CI's `hub (postgres)`). Not yet: closing a ticket when its checkbox is ticked, an MCP `board_scan` tool | `devagotchi board scan` on a real repo on Texas, preview, import, tickets on the phone; a second scan imports nothing twice ([factory](agenthub-factory.md) F5) |
 | 4.2 | import from GitHub Issues/Projects, Linear, Jira, CSV, Notion | partial: live GitHub webhook only, no backfill | a repo's open issues imported once |
 | 4.3 | assign agents | built (roster worked out, not editable per board) | assign from the phone; the agent is told |
 | 4.4 | hierarchy configurable in the UI (Org → Project → Area → Epic → Ticket by default) | absent | switch baselines on a board's settings |
@@ -90,7 +91,7 @@ Nothing new is built until this phase has run once; what it finds is fixed first
 
 | # | Feature | In the code today | Proof |
 |---|---|---|---|
-| 5.1 | every Desktop Commander capability | partial: missing session search (`start_search` and its companions), `write_pdf` (waits on the operator), `get_tool_result`, `list_sessions` | DC's documented flows, each run from Claude against Texas |
+| 5.1 | every Desktop Commander capability | partial: tool by tool in [.ai/docs/desktop-commander-parity.md](../../docs/desktop-commander-parity.md) (#238): missing `write_pdf` (waits on the operator), PDF/Excel/DOCX reading and editing, search sessions (`stop_search`, `list_searches`; `search_files` pages by cursor instead), `give_feedback`, `get_tool_result` | DC's documented flows, each run from Claude against Texas |
 | 5.2 | plugin for Claude, Codex and Grok; local UI opened by the user's own actions, not the server | partial: Claude connector, skills, hooks; Codex connector only; Grok unchecked; no local UI; `.mcp.json` points at `hub.example.com` | install each plugin from its marketplace; it reaches Texas |
 | 5.3 | API keys with granular control and durations | built | a key limited to one machine and one hour |
 
@@ -117,11 +118,21 @@ Nothing new is built until this phase has run once; what it finds is fixed first
 
 | # | Feature | In the code today | Proof |
 |---|---|---|---|
-| 8.1 | the landing page as layman interactives drawn from the real product | plan only ([landing](landing.md), PR #223); the hub still plays a video; apps/website says "four tools" | the operator reviews each scene |
+| 8.1 | the landing page as layman interactives drawn from the real product | partial: the hero is an interactive walkthrough instead of the video, with the comparison back (#221, the interim hero); the plan ([landing](landing.md), #223) replaces it scene by scene (S1 to S9, each from the product's own renderers and recorded examples); apps/website says "four tools" | the operator reviews each scene |
 | 8.2 | the code makes the platforms obvious: hosted on Linux (likely arm64); Windows, Android, Linux, arm64 supported | partial: no single statement; README:5,7,117 and `apps/website/public/llms.txt` are wrong | one statement, checked by a test against the build targets |
-| 8.3 | a release a solo developer installs from GitHub | built once (`v0.1.0`, before most of this) | a new tag installed on Texas from its release page |
+| 8.3 | a release a solo developer installs from GitHub | notes ready: `CHANGELOG.md` Unreleased is the `v0.1.0` release, re-cut by the operator at the release commit ([v0.1-release-readiness](v0.1-release-readiness.md), #238); the old `v0.1.0` tag is from before most of this | a new tag installed on Texas from its release page |
 
-Only after Phase 8 is proven: the cloud edition ([cloud-edition](cloud-edition.md)).
+## Phase 9: after the release, before the cloud
+
+| # | Feature | In the code today | Proof |
+|---|---|---|---|
+| 9.1 | no legacy in the schema: one baseline migration with the final table names in place of 0001 to 0030, migration history tables in schema `devagotchi` with prefixes, stale SQLite comments gone ([texas-baseline](texas-baseline.md) M5; its own plan, since it changes every existing hub's database) | absent | a fresh install on Texas from the one migration |
+| 9.2 | AgentHub's standalone board on Postgres too (decision 1 below; [structure-cleanup](structure-cleanup.md) S11) | absent: `.devagotchi/board.sqlite3` when no hub is bound | `rusqlite` gone from AgentHub's `Cargo.toml` |
+| 9.3 | sign in through Cloudflare Access and Tailscale; Cloudflare Tunnel and Tailscale as machine link routes (D24); Wardenclyffe ([texas-baseline](texas-baseline.md) M6) | absent | Texas reached through each |
+| 9.4 | AgentHub as its own server with its own release, protection and the Devagotchi pin (ADR 0005, [texas-baseline](texas-baseline.md) M7) | absent: AgentHub is served by the hub | an AgentHub release installed alone |
+| 9.5 | the structure finished: each domain serves its own pages (decision 6), the other crates (S10), a test that every front door has its sections (S12) ([structure-cleanup](structure-cleanup.md), map in [structure-cleanup-map](structure-cleanup-map.md)) | S5 to S7 and S9 merged (#228 to #236, agenthub #1 to #3) | the layout tests, and `web/` left with the shell |
+
+Only after Phase 9 is proven: the cloud edition ([cloud-edition](cloud-edition.md)).
 
 ## Decisions for the operator
 
@@ -138,3 +149,6 @@ Only after Phase 8 is proven: the cloud edition ([cloud-edition](cloud-edition.m
    projects? F5 proposes data-driven rule files, one per format.
 5. **Tracking**: these rows as tickets on an AgentHub board (in Postgres) on Texas, each with
    its proof as the check, so progress shows on the phone.
+6. **Where a domain's pages live** ([structure-cleanup](structure-cleanup.md), "Ruling
+   proposed"): each domain serves its own pages from `<domain>/web/`, and the hub's `web/`
+   keeps only the shell (proposed), or `web/` stays and is nested by domain. Step S8 waits on it.
