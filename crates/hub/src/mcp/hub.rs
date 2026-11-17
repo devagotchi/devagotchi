@@ -43,8 +43,7 @@ pub struct Hub {
     pub routed: Arc<Mutex<Routed>>,
 }
 
-/// The distinct machines one MCP session routed calls to, as the caller named them. Two
-/// are enough to know there was more than one.
+/// The distinct machines one MCP session routed calls to, as named: two say there were more.
 #[derive(Debug, Default)]
 pub struct Routed(Vec<String>);
 
@@ -158,24 +157,7 @@ impl Hub {
     ) -> Result<ResponseBody, Json<BridgeError>> {
         let subject = self.subject(&context)?;
         body.set_caller(&Self::caller(&subject, &context));
-        let operation_id = match &body {
-            RequestBody::OperationStart(input) => input.idempotency_key.clone(),
-            RequestBody::OperationGet(input) | RequestBody::OperationCancel(input) => {
-                input.operation_id.clone()
-            }
-            RequestBody::OperationRead(input) => input.operation_id.clone(),
-            RequestBody::OperationWait(input) => input.operation_id.clone(),
-            RequestBody::OperationInput(input) => input.operation_id.clone(),
-            RequestBody::OperationResize(input) => input.operation_id.clone(),
-            RequestBody::FileRead(input) => input.path.clone(),
-            RequestBody::FileList(input) => input.path.clone(),
-            RequestBody::FileWrite(input) => input.path.clone(),
-            RequestBody::FileEdit(input) => input.path.clone(),
-            RequestBody::FileInfo(input) => input.path.clone(),
-            RequestBody::FileMkdir(input) => input.path.clone(),
-            RequestBody::FileMove(input) => format!("{} -> {}", input.source, input.destination),
-            _ => String::new(),
-        };
+        let operation_id = body.target();
         let result = match self.route(&subject, broker).await {
             Ok(route) => {
                 tokio::select! {

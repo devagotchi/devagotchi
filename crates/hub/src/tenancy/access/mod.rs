@@ -339,6 +339,7 @@ impl Accounts {
     }
 
     /// `tenant`'s access as kept, or `None` for a tenant this hub does not have.
+    #[cfg(test)]
     pub async fn access_of(&self, tenant: &str) -> BridgeResult<Option<Access>> {
         transaction!(&self.store, |connection| {
             self.store.scope(connection, tenant).await?;
@@ -348,6 +349,7 @@ impl Accounts {
 
     /// The tenants in `state` ([`ADMITTED`] or [`WAITING`]), at most `most`: the longest
     /// waiting first, the latest let in first.
+    #[cfg(test)]
     pub async fn tenants_in(&self, state: &str, most: u32) -> BridgeResult<Vec<String>> {
         transaction!(&self.store, |connection| {
             Ok(self

@@ -158,6 +158,7 @@ impl Accounts {
     }
 
     /// The account a proven sign-in reaches, made or linked as the module says.
+    #[cfg(test)]
     pub async fn sign_in_identity(&self, proven: &Proven) -> BridgeResult<Account> {
         self.sign_in_identity_at(
             proven,

@@ -1,8 +1,8 @@
 //! `devagotchi hub`: the bastion. Authenticates every caller through the identity
 //! provider, routes typed operations to the broker that owns the target machine,
-//! and audits each call on a hash chain. It never admits a job itself. This library
-//! is its whole behaviour; `devagotchi hub` and `devagotchi board` are its names, and
-//! `devagotchi login`, `logout` and `whoami` (`account`) are how a machine signs in to one.
+//! and audits each call on a hash chain. It never admits a job itself. It hosts the kernel's
+//! lexicon (`kernel/`). This library is its whole behaviour; `devagotchi hub` and `devagotchi
+//! board` are its names; `devagotchi login`, `logout` and `whoami` sign a machine in to one.
 
 // Tests that need the test Postgres skip without one: `or_skip!` (devagotchi-store).
 #[cfg(test)]
@@ -14,6 +14,7 @@ mod config;
 mod connections;
 pub mod extensions;
 mod identity;
+mod kernel;
 pub mod login;
 mod machines;
 mod mcp;

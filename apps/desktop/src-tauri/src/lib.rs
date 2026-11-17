@@ -135,18 +135,7 @@ impl Connection {
 }
 
 fn unexpected(expected: &str, actual: &ResponseBody) -> BridgeError {
-    let actual = match actual {
-        ResponseBody::Start(_) => "start",
-        ResponseBody::Operation(_) => "operation",
-        ResponseBody::Output(_) => "output",
-        ResponseBody::Operations(_) => "operations",
-        ResponseBody::File(_) => "file",
-        ResponseBody::Listing(_) => "listing",
-        ResponseBody::Written(_) => "written",
-        ResponseBody::Revision(_) => "revision",
-        ResponseBody::Info(_) => "info",
-        ResponseBody::InputSent(_) => "input_sent",
-    };
+    let actual = actual.kind();
     BridgeError::new(
         "unexpected_broker_response",
         format!("Expected {expected}, received {actual}"),
