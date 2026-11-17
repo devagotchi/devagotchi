@@ -31,6 +31,10 @@ ignore = [
   # SQLite files of their own making in their state directories and the project's board
   # directory, never files a request hands them.
   { id = "RUSTSEC-2026-0459", reason = "bundled SQLite via libsqlite3-sys 0.37, pinned by sqlx-sqlite 0.9.0 and rusqlite 0.39; tracked until sqlx-sqlite takes libsqlite3-sys 0.39" },
+  # chrono is unmaintained (informational, no patched version). No crate of ours names it:
+  # it comes in through rmcp 3.9 (the MCP SDK) and schemars 1's chrono support, so it leaves
+  # when they move to jiff or time. Not a vulnerability.
+  { id = "RUSTSEC-2026-0543", reason = "chrono unmaintained, transitive via rmcp 3.9 and schemars 1 only; tracked until they move off it" },
 ]
 
 [licenses]

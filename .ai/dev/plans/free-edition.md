@@ -67,7 +67,7 @@ things to that pattern (R0) and names where each piece of the free edition lives
 | hub `src/connectors/` | outside services through the hub (structure-cleanup ruling 1 names them **connectors**; #188 named them "connections", which the rename plan undoes) | `connector_` | `connections.rs`, `accounts/connections.rs` |
 | hub `src/site/` | public pages, copy, assets, docs, `llms.txt` | none | `site/`, `web/landing*`, `web/public.rs`, `web/discovery.rs` |
 | hub `src/mcp/` | the MCP tools, grouped by domain (Machines, Files, Processes, Search, AgentHub, Connectors, Setup) | none | `hub.rs`, `output_schema.rs`, the tool routers |
-| hub top level | `lib.rs`, `config.rs`, `store.rs`, `web.rs`: wiring only | none | structure-cleanup S4 end state |
+| hub top level | `lib.rs` and the `mod` lines; `config/`, `store/`, `web/` are folders like every domain | none | structure-cleanup S4 end state |
 
 ## The UI: every domain is run from its own pages
 
@@ -89,7 +89,7 @@ pages:
 | `hub-server` | `/admin` → Hub: address, updates (track, version running), backups |
 
 Deploy-time values that cannot be set from a page because the hub needs them to start (its
-address, its Postgres URL) are listed as such in the hub's `config.rs` front door and nowhere else. A CI
+address, its Postgres URL) are listed as such in the hub's `config/mod.rs` front door and nowhere else. A CI
 check compares every config key with the domain pages and that list.
 
 ## Sign in with Shippin, on from the first start

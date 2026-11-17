@@ -180,7 +180,7 @@ pub async fn add_json(
     let owner = match state.verifier.verify(token).await {
         Ok(subject) => subject,
         Err(AuthError::Invalid(why)) => {
-            crate::log_refusal(why);
+            crate::identity::bearer::log_refusal(why);
             return json_reply(
                 StatusCode::UNAUTHORIZED,
                 serde_json::json!({ "error": "invalid_token" }),

@@ -16,6 +16,23 @@ create that tag, and a prerelease tag does not move the `:latest` image.
   competing commercial service does not. Each version becomes Apache-2.0 two years after it is
   published (it was AGPL-3.0 after four).
 
+### The landing page shows getting started, and what it does more than Desktop Commander
+- The hero's setup video is now an interactive walkthrough: connect your AI, approve it, add a
+  machine, work, approve on your phone. Each step is drawn as the screens it happens on
+  (a terminal, a browser window, a phone, the AI's chat), moves to the next after about four
+  seconds, and goes to any step when it is chosen or clicked. It holds still on Pause, while a
+  key has focus in it, off screen, in a hidden tab, and for anyone who asks for less motion;
+  without JavaScript the steps still switch when chosen. Its steps are the site's
+  (`content/landing.json` `hero.walkthrough`), checked like the rest of its content.
+- The landing page runs one script of the hub's own (`/assets/landing.js`, `script-src 'self'`,
+  nothing inline). The video and its 1.7 MB file are gone; its poster is the site's link-preview
+  picture (`assets.preview`).
+- The comparison is back, as "More than a computer in the chat": nine rows against Desktop
+  Commander, each citing the line of its source (release v0.3.3) or its pricing page it is read
+  from, and a footnote on where Desktop Commander is ahead today (macOS, PDF/Excel/Word
+  files, its directory listings). Nowhere else names another product: the site, every other
+  page, `llms.txt` and the MCP surface are still held to that.
+
 ### A hub names its own deployment (prepared for v0.1.0-alpha.1)
 - `devagotchi login` and `devagotchi mcp` no longer assume a hub. Pass `--hub`, set
   `DEVAGOTCHI_HUB`, or reuse the hub the last login saved. `connect-nomen` requires

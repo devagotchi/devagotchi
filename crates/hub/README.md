@@ -249,14 +249,14 @@ The directory holds:
 
 | File | What it holds |
 |---|---|
-| `site.json` | **Required.** `product` (name, short name, tagline, description, marketing domain: a host name; when set, the public pages' canonical links, the sitemap and `/llms.txt`'s page links are at `https://<domain>`, and `/robots.txt`, `/sitemap.xml` and the llms files also answer there when that host reaches the hub), `operator` (the legal name the privacy policy and terms use, contact, support email), `links` (public links by name; `hosted_hub` is the hub `devagotchi login` signs in at by default), `sign_in` (`order`: the order of the sign-in buttons by provider name; `labels`: what each provider is called, `nomen` for Nomen sign-in), `landing.sections` (the landing page's sections in order, each `"on": true` or `false`), `mcp` (`name`, optional `title`, `instructions`), `plans`, `services`, `early_access`, `offers` (the network the site belongs to and its free offerings: below), `software` (what the landing page's `SoftwareApplication` JSON-LD says: `category`, `operating_systems`, `offer`), and `assets` (which files are the logo, icon, mascot, diagram, video and poster) |
+| `site.json` | **Required.** `product` (name, short name, tagline, description, marketing domain: a host name; when set, the public pages' canonical links, the sitemap and `/llms.txt`'s page links are at `https://<domain>`, and `/robots.txt`, `/sitemap.xml` and the llms files also answer there when that host reaches the hub), `operator` (the legal name the privacy policy and terms use, contact, support email), `links` (public links by name; `hosted_hub` is the hub `devagotchi login` signs in at by default), `sign_in` (`order`: the order of the sign-in buttons by provider name; `labels`: what each provider is called, `nomen` for Nomen sign-in), `landing.sections` (the landing page's sections in order, each `"on": true` or `false`), `mcp` (`name`, optional `title`, `instructions`), `plans`, `services`, `early_access`, `offers` (the network the site belongs to and its free offerings: below), `software` (what the landing page's `SoftwareApplication` JSON-LD says: `category`, `operating_systems`, `offer`), and `assets` (which files are the logo, icon, mascot, diagram and the link-preview picture, `preview`) |
 | `tokens.json` | The design tokens the stylesheet reads as custom properties: `colors` and `dark` (`--bg`, `--accent`, …), `fonts` (`--font-ui`, `--font-display`, `--font-mono`), `radii` (`--radius-s` … `--radius-pill`), `layout` (`--bar-h`, `--gutter`, `--wide`, `--narrow`), `theme_color` and `background_color` for the installed app, and `font_files` to serve fonts from the hub itself |
 | `content/landing.json` | Every landing section's copy: the hero, how claiming works, How it works, the comparison and its evidence, features, plans and services, connecting an AI, self-hosting, what is coming, the questions, the closing, the footer, the popups, the glossary, and `custom` sections of your own |
 | `content/messages.json` | The sign-in email (`email.subject`, `email.body`, `{link}` is the one-time link), the getting-started ticket (`welcome.title`, `welcome.body`, `{hub}` is the hub's address), the line under every public page, and the words of a workflow's page (`workflow`) |
 | `content/workflows.json` | The setups an AI hands its person as one link (`workflow_start`): each an `id`, a `title`, an `intro` and its ordered `steps`, each a `kind` the hub runs (`machine` with an optional `os`: `linux`, `windows`, `docker` or `host`; `phone`; `ai_client` with its `client`: `claude`, `chatgpt`, `grok` or `cursor`; `secure_account`; `done`) with its own `title` and `text`; or, for one that cannot be done yet, `unavailable` and no steps. `check-site` refuses a kind or an OS the hub does not run |
 | `content/docs.md`, `privacy.md`, `terms.md`, `support.md` | The public pages, in Markdown |
 | `content/llms.md` | What an AI reads at `/llms.txt` (`{site}`: where the public pages live; `{hub}`, `{mcp}` and the join lines: this hub) |
-| `assets/` | The logo, icon, mascot, diagram, video, poster and fonts: SVG, PNG, JPEG, WebP, GIF, ICO, MP4, WebM, WOFF2, WOFF |
+| `assets/` | The logo, icon, mascot, diagram, link-preview picture and fonts: SVG, PNG, JPEG, WebP, GIF, ICO, WOFF2, WOFF |
 
 Only `site.json` is required: any other file left out is the built-in one's, and
 `tokens.json` and `messages.json` may give only the values they change. The simplest start is
@@ -451,7 +451,7 @@ A linked broker that is not connected answers `broker_offline`; one that never e
 ## Authentication
 
 The hub has one account system, `auth.mode` `hub` (below): accounts in the hub's Postgres
-(`src/store.rs`), the hub's own OAuth 2.1 server for AI clients at `/oauth/*` (32b), and the
+(`src/store/mod.rs`), the hub's own OAuth 2.1 server for AI clients at `/oauth/*` (32b), and the
 browser claim of a new hub (`/claim`, 16c). This is the mode `deploy/compose/` runs. The other
 modes check tokens another issuer made and keep no accounts. Overview:
 [docs/auth.md](../../docs/auth.md).
@@ -789,6 +789,24 @@ passkeys, sign-ins and AI connections stay. It is on the audit chain as
 most, end when the account is disabled, and are kept only as hashes. Signing out takes the
 hub's own page.
 
+To develop and test with, two logins come from the host in one command, with no claim link,
+mail or passkey:
+
+```bash
+devagotchi hub test-accounts --state-dir DIR --config /etc/devagotchi/hub.json
+# admin  admin@devagotchi.test  xxxx-xxxx-xxxx-xxxx
+# user   user@devagotchi.test   xxxx-xxxx-xxxx-xxxx
+```
+
+`admin` is the hub's owner (made if the hub has none yet, so a fresh hub needs no claim) with
+a password login: it sees `/admin`. `user` is an ordinary account: on a one-owner hub a person
+the owner added, on a hosted hub a sign-up with its own tenant. The addresses are at
+`devagotchi.test` unless `--admin-email` and `--user-email` name others; `.test` is reserved,
+so no mail reaches them. Each run prints two new passwords to stdout, once: the old ones stop
+working and the test user's sessions end (the owner's stay). On the audit chain as
+`account.test_accounts`, without the passwords. In the compose stack (as `deploy/compose/check.sh` runs `hub owner`): `docker compose exec -T hub
+devagotchi hub test-accounts --state-dir /var/lib/devagotchi --config /etc/devagotchi/hub.json`.
+
 Until the hub issues its own tokens (32b), a hub with no `nomen` block takes no bearer token
 at `/mcp`, and refuses `trusted_issuers`. Plain `http` on loopback is for tests: its cookies
 reach any other service on the same host's loopback.
@@ -989,7 +1007,7 @@ is the owner, and the brokers it may use. `operation_start`, `operation_list`, `
 `operation_get`, `operation_read`, `operation_cancel`, `operation_input` and `operation_resize`
 take `{ "broker": "<name>", "input": {…} }` where `input` is exactly the broker's own contract,
 less who is calling: the hub names that (`hub:<subject>`, this MCP session) over anything an
-input says (`mcp/callers.rs`). A subject without a grant for that
+input says (`mcp/callers/mod.rs`). A subject without a grant for that
 broker gets `not_granted`; an unknown name gets `unknown_broker`; the broker's own refusals
 (`executable_not_allowed`, …) pass through unchanged.
 

@@ -1,5 +1,5 @@
 //! `offers` and `offers_accept`: what the AI offers its person once, and their yes. Listed
-//! and served only while the site's offers show (`Hub::offered`, `mcp/surface.rs`).
+//! and served only while the site's offers show (`Hub::offered`, `mcp/handler.rs`).
 
 use devagotchi_contracts::BridgeError;
 use rmcp::{

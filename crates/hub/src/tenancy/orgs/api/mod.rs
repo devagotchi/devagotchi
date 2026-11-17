@@ -87,7 +87,7 @@ pub(crate) async fn bearer_or_session(
         request.extensions_mut().insert(subject);
         return next.run(request).await;
     }
-    crate::require_bearer(State(state), request, next).await
+    crate::identity::bearer::require_bearer(State(state), request, next).await
 }
 
 fn status_of(code: &str) -> StatusCode {
