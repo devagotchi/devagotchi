@@ -40,8 +40,7 @@ pub(crate) async fn run(
     config::prepare_state_dir(&state_dir)?;
     let devices = Arc::new(Devices::new(board_store.clone()));
     let audit = Arc::new(Audit::new(board_store.clone()));
-    // A hub with its own accounts knows its owner from them, and refuses to start when its
-    // config names someone else.
+    // A hub with its own accounts knows its owner from them, and refuses another in config.
     let accounts = if config.has_accounts() {
         let accounts = Arc::new(identity::configured_accounts(board_store.clone(), &config).await?);
         if let Some(owner) = accounts.owner().await? {

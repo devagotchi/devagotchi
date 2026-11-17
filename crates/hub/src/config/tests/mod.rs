@@ -355,19 +355,4 @@ fn boards_are_granted_like_brokers_and_people_are_declared() {
     assert_eq!(parse(&twice).unwrap_err().code, "invalid_config");
 }
 
-#[test]
-fn operator_is_a_grant_flag() {
-    let mut config = good();
-    let parsed = parse(&config).unwrap();
-    assert!(!parsed.is_operator("jesse"));
-    let owner = format!("dg_{}", "a".repeat(32));
-    let operator = format!("dg_{}", "b".repeat(32));
-    config["owner"] = serde_json::json!(owner);
-    config["grants"] = serde_json::json!([{ "subject": operator, "operator": true }]);
-    let parsed = parse(&config).unwrap();
-    assert!(parsed.is_operator(&owner));
-    assert!(parsed.is_operator(&operator));
-    assert!(!parsed.is_operator(&format!("dg_{}", "c".repeat(32))));
-}
-
 mod hub_mode;

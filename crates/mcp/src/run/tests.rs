@@ -112,6 +112,7 @@ fn start_input() -> StartInput {
         deadline_ms: 300_000,
         caller: None,
         interactive: None,
+        combined_output: false,
     }
 }
 
@@ -265,6 +266,9 @@ fn the_tail_keeps_the_end_on_a_character_boundary() {
     let (kept, cut) = tail("aébc".into(), 3);
     assert!(cut);
     assert_eq!(kept, "bc");
+    // A line that begins early in what is kept is where the tail starts.
+    let (kept, cut) = tail("first line\nsecond\nthird\n".into(), 16);
+    assert_eq!((kept.as_str(), cut), ("second\nthird\n", true));
 }
 
 #[test]
