@@ -25,6 +25,7 @@ async fn only_its_account_reaches_an_operation_and_another_learns_nothing() {
         cwd: None,
         deadline_ms: 30_000,
         interactive: None,
+        combined_output: false,
         caller: owner.clone(),
     };
     let id = broker.start(start.clone()).unwrap().operation.operation_id;
@@ -88,6 +89,7 @@ async fn another_account_does_not_reach_what_this_machine_ran_for_itself() {
             cwd: None,
             deadline_ms: 30_000,
             interactive: None,
+            combined_output: false,
             caller: who(LOCAL_ACCOUNT, "adapter-1"),
         })
         .unwrap()

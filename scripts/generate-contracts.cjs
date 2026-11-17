@@ -10,6 +10,8 @@ const { spawnSync } = require("node:child_process");
 const root = path.resolve(__dirname, "..");
 const schemaFile = path.join(root, "schemas", "broker-contracts.schema.json");
 const typesFile = path.join(root, "apps", "desktop", "src", "generated", "contracts.ts");
+// The website publishes the same schema at /reference/broker-contracts.schema.json.
+const websiteSchemaFile = path.join(root, "apps", "website", "public", "reference", "broker-contracts.schema.json");
 const expectedTypes = [
   "BridgeError", "GetInput", "ListInput", "OperationState", "OperationSummary",
   "OperationsPage", "OperationView", "OutputFrame", "OutputPage", "ReadInput",
@@ -92,7 +94,7 @@ async function main() {
     throw new Error("OperationState must remain a generated string union, not a runtime enum.");
   }
   if (checking) {
-    const differences = (await Promise.all([compare(schemaFile, exported.text), compare(typesFile, types)])).filter(Boolean);
+    const differences = (await Promise.all([compare(schemaFile, exported.text), compare(websiteSchemaFile, exported.text), compare(typesFile, types)])).filter(Boolean);
     if (differences.length) {
       throw new Error(`Contract drift detected:\n${differences.map((difference) => `- ${difference}`).join("\n")}\nRun node scripts/generate-contracts.cjs and review the canonical change.`);
     }
@@ -102,8 +104,10 @@ async function main() {
   await fs.mkdir(path.dirname(schemaFile), { recursive: true });
   await fs.mkdir(path.dirname(typesFile), { recursive: true });
   await fs.writeFile(schemaFile, exported.text);
+  await fs.mkdir(path.dirname(websiteSchemaFile), { recursive: true });
+  await fs.writeFile(websiteSchemaFile, exported.text);
   await fs.writeFile(typesFile, types);
-  process.stdout.write("Generated schemas/broker-contracts.schema.json and apps/desktop/src/generated/contracts.ts.\n");
+  process.stdout.write("Generated schemas/broker-contracts.schema.json, its website copy and apps/desktop/src/generated/contracts.ts.\n");
 }
 
 main().catch((error) => {

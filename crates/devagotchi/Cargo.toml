@@ -17,6 +17,7 @@ path = "src/main.rs"
 
 [dependencies]
 devagotchi-machine-engine = { workspace = true }
+devagotchi-kernel = { workspace = true }
 devagotchi-hub = { path = "../hub" }
 devagotchi-link = { path = "../link" }
 devagotchi-mcp = { path = "../mcp" }
