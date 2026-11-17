@@ -34,6 +34,11 @@ admin/shippin module that would allow us to either deploy a managed instance, or
 tailored commercial signup offering free tier and more".
 
 1. **The standalone edition**, free, self-hosted from GitHub. Done when these rows are done:
+   - first, the dev build and the conformance run that prove every tool call works, the same
+     way every time, and covers everything Desktop Commander offers and more: rows 5.8, 5.9
+     (operator, 2026-11-17: "a true dev build that allows me to track our toolcalling ... not
+     only does every toolcall work, but it is consistent and reliable and covers everything
+     desktop commander offers and more");
    - Desktop Commander, all of it: row 5.1, on this computer with no hub (row 5.4) and through
      a hub to every machine (Phase 2);
    - AgentHub, limited (decision 7 below proposes the line);
@@ -120,6 +125,8 @@ Nothing new is built until this phase has run once; what it finds is fixed first
 | 5.5 | Grok, through the Claude marketplace format | unchecked: "Not yet checked in a real Grok session" (`plugins/README.md`) | install in Grok Build; it reaches Texas |
 | 5.6 | a local UI the person opens themselves, not the server | absent | the operator's review |
 | 5.7 | API keys with granular control and durations | built | a key limited to one machine and one hour |
+| 5.8 | **a dev build that tracks every tool call**: each call, local (`devagotchi mcp`) and through the hub, kept with its tool, machine, target, AI client, duration, outcome, error code and the sizes in and out; a page and a command that show, per tool, calls, failures, and how long they take (median and slowest) | partial: the hub's audit chain keeps who, tool, machine, operation and outcome (`ops/audit.rs`), with no duration, error code, sizes or client; the local adapter keeps the last 1,000 calls in memory only, without durations (`mcp/src/adapter/history.rs`); the broker's log keeps refusals and settlements (`machine-engine/src/trace.rs`) | the conformance run (5.9) on Texas, then the page shows every tool it called, with its numbers |
+| 5.9 | **the conformance run**: every tool, and every Desktop Commander capability in [desktop-commander-parity](../../docs/desktop-commander-parity.md), called the way an AI calls it, many times over, locally and through a hub, on Linux and Windows; each answer checked, a call that fails once in a hundred reported as such; and a check that fails when a tool exists with no conformance case, or a Desktop Commander capability has none | partial: `tests/adapter_probe.py` calls 18 tools once each through the local adapter; it misses `search_files`, `read_url`, `get_config`, `set_config_value`, `list_processes`, `kill_process`, `operation_cancel`, the history tools and every hub-only tool, repeats nothing, and is not compared with Desktop Commander's list | the run's report from Texas and from CI, every tool consistent across its repetitions |
 
 ## Phase 6: connectors and every setting in the UI
 
@@ -157,6 +164,7 @@ Nothing new is built until this phase has run once; what it finds is fixed first
 | 9.3 | sign in through Cloudflare Access and Tailscale; Cloudflare Tunnel and Tailscale as machine link routes (D24); Wardenclyffe ([texas-baseline](texas-baseline.md) M6) | absent | Texas reached through each |
 | 9.4 | AgentHub as its own server with its own release, protection and the Devagotchi pin (ADR 0005, [texas-baseline](texas-baseline.md) M7) | absent: AgentHub is served by the hub | an AgentHub release installed alone |
 | 9.5 | the structure finished: each domain serves its own pages (decision 6), the other crates (S10), a test that every front door has its sections (S12) ([structure-cleanup](structure-cleanup.md), map in [structure-cleanup-map](structure-cleanup-map.md)) | S5 to S7 and S9 merged (#228 to #236, agenthub #1 to #3) | the layout tests, and `web/` left with the shell |
+| 9.6 | **central logging via shippin.ai**: every hub's tool calls and events reach Shippin's logging (operator, 2026-11-17) | partial: the hub already streams its audit chain, board and tenancy events to any HTTPS endpoint (`notify/signals`, signal contract v1, `docs/signals.md`); Shippin's endpoint and how it takes them are not decided | a hub's calls seen in Shippin's logging |
 
 Only after Phase 9 is proven: the cloud edition ([cloud-edition](cloud-edition.md)).
 
