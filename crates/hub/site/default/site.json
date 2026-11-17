@@ -27,6 +27,9 @@
         "id": "how"
       },
       {
+        "id": "compare"
+      },
+      {
         "id": "features"
       },
       {
@@ -155,7 +158,6 @@
     "icon": "icon.svg",
     "mascot": "pet.svg",
     "diagram": "diagram.svg",
-    "video": "turnkey.mp4",
-    "poster": "turnkey-poster.png"
+    "preview": "preview.png"
   }
 }

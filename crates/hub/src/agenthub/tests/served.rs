@@ -33,7 +33,7 @@ impl Fixture {
 
 /// A bound project (B11): the command line against the real hub, in process, as one
 /// account from two machines; the hub arbitrates, the agents are seats.
-mod bound {
+pub(super) mod bound {
     use std::{collections::HashMap, ffi::OsString, path::Path, sync::Arc};
 
     use serde_json::{Value, json};
@@ -50,7 +50,7 @@ mod bound {
 
     const MEMBER: &str = "300000000000000002";
 
-    async fn hub(dir: &Path) -> Option<String> {
+    pub(crate) async fn hub(dir: &Path) -> Option<String> {
         hub_with(dir, json!({}), &[]).await
     }
 
@@ -99,12 +99,12 @@ mod bound {
             web: None,
             passkeys: None,
         };
-        let app = crate::app(state);
+        let app = crate::serve::app(state);
         tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
         Some(url)
     }
 
-    fn signed_in(path: &Path, token: &str) {
+    pub(crate) fn signed_in(path: &Path, token: &str) {
         let now = login::unix_now();
         login::write(
             path,

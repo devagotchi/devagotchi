@@ -6,8 +6,10 @@ use std::sync::{
     atomic::{AtomicI64, Ordering},
 };
 
+use devagotchi_contracts::BridgeResult;
+
 use super::*;
-use crate::store::testing;
+use crate::store::{testing, transaction};
 
 fn clocked(store: Store) -> (Orgs, Arc<AtomicI64>) {
     let now = Arc::new(AtomicI64::new(1_800_000_000));

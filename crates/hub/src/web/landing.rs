@@ -8,23 +8,43 @@
 //! The page is a stack of full-viewport pages under the hub's fixed top bar: each `section`
 //! snaps into place as it scrolls in, and a rail beside them shows which one you are on.
 //! Which sections show, and in what order, is `site.json`'s `landing.sections`. Technical
-//! words carry tooltips (the glossary); the comparison's evidence, how claiming works, the
-//! AI's tools and the setup walkthrough open as popups (`compare.rs`, `popups.rs`). All of
-//! it is CSS, the Popover API and inline SVG under the plain pages' CSP: no script, no
-//! inline style, nothing from another origin.
+//! words carry tooltips (the glossary); the comparison's evidence, how claiming works and the
+//! AI's tools open as popups (`compare.rs`, `popups.rs`). It is CSS, the Popover API and
+//! inline SVG, plus one script of the hub's own that moves the setup walkthrough along
+//! (`walkthrough.rs`, `assets/landing.js`): no inline script or style, nothing from another
+//! origin, and every part works without the script.
 
 mod compare;
 mod network;
 mod popups;
+mod walkthrough;
 
 #[cfg(test)]
 pub(super) use popups::{OFFER_TOOLS, TOOLS};
+pub use walkthrough::script;
 
 use super::pages::escape;
 use crate::site::{self, Action, Ctx, Front, Item, Limit, SignUp, Site, Step, Variants};
 
 /// Where Sign in goes from the landing page.
 const SIGN_IN: &str = "/auth/login?return_to=/account";
+
+/// What `/` adds to the page's head: the icon and colour a search result and a browser tab
+/// show beside the name, and the script that moves the setup walkthrough along (deferred:
+/// the page reads and works without it).
+pub fn head(site: &Site) -> String {
+    let icon = site
+        .named(site.info.assets.icon.as_ref())
+        .map(|icon| {
+            format!(
+                "<link rel=\"icon\" href=\"{}\"><meta name=\"theme-color\" content=\"{}\">",
+                escape(&icon.url()),
+                escape(site.theme_color())
+            )
+        })
+        .unwrap_or_default();
+    format!("{icon}<script src=\"/assets/landing.js\" defer></script>")
+}
 
 /// The title and body of `/` for this kind of hub, with the site the request is served.
 pub fn page(front: &Front, public_url: &str) -> (String, String) {
@@ -69,6 +89,11 @@ fn with_page_vars<'a>(
     public_url: &str,
 ) -> PageCtx<'a> {
     let mcp = format!("{}/mcp", public_url.trim_end_matches('/'));
+    let host = public_url
+        .split("://")
+        .nth(1)
+        .unwrap_or(public_url)
+        .trim_end_matches('/');
     let sign_in = pick(&site.landing.sign_in, front)
         .map(|label| ctx.plain(label))
         .unwrap_or_default();
@@ -80,6 +105,7 @@ fn with_page_vars<'a>(
             Ctx::new(site)
         }
         .with("mcp", mcp)
+        .with("host", host.to_string())
         .with("sign_in", sign_in)
         .with("sign_in_url", SIGN_IN),
     }
@@ -141,37 +167,6 @@ fn diagram(ctx: &Ctx, prefix: &str) -> Option<String> {
     )
 }
 
-/// The setup video: click to play, muted, no download until then. `None` without one.
-fn video(ctx: &Ctx) -> Option<String> {
-    let site = ctx.site;
-    let video = site.named(site.info.assets.video.as_ref())?;
-    let poster = site
-        .named(site.info.assets.poster.as_ref())
-        .map(|poster| format!(" poster=\"{}\"", escape(&poster.url())))
-        .unwrap_or_default();
-    Some(format!(
-        "<video class=\"turnkey\" controls muted playsinline preload=\"none\" width=\"1280\" \
-height=\"720\"{poster} aria-label=\"{label}\"><source src=\"{src}\" type=\"{mime}\"></video>",
-        label = site::text::attr(&ctx.plain(&site.landing.hero.video_label)),
-        src = escape(&video.url()),
-        mime = video.mime,
-    ))
-}
-
-/// Opens the setup walkthrough, when the site has a video.
-fn watch_button(ctx: &Ctx) -> String {
-    if video(ctx).is_none() {
-        return String::new();
-    }
-    ctx.open("watch");
-    format!(
-        "<button type=\"button\" class=\"pop watch\" popovertarget=\"m-watch\">\
-<svg class=\"play\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\">\
-<circle cx=\"12\" cy=\"12\" r=\"11\"/><path d=\"M9.8 7.6l6.4 4.4-6.4 4.4z\"/></svg>{}</button>",
-        ctx.inline(&ctx.site.landing.popups.watch.button)
-    )
-}
-
 /// Links that look like buttons.
 fn actions(ctx: &Ctx, actions: &[Action]) -> String {
     actions
@@ -193,8 +188,8 @@ fn actions(ctx: &Ctx, actions: &[Action]) -> String {
         .collect()
 }
 
-/// The hero: on a phone the diagram follows the words; on a wide screen the setup video
-/// sits beside them.
+/// The hero: the words, and beside them (below them on a phone) the setup walkthrough, or
+/// the site's diagram when it has none.
 fn hero(ctx: &Ctx, front: Front) -> String {
     let hero = &ctx.site.landing.hero;
     let status = pick(&hero.status, front)
@@ -217,23 +212,15 @@ fn hero(ctx: &Ctx, front: Front) -> String {
         .map(|note| format!("<p class=\"meta\">{}</p>", ctx.inline(note)))
         .unwrap_or_default();
     let title = ctx.inline(&hero.title);
-    let cta = format!("<p class=\"cta\">{buttons}{}</p>", watch_button(ctx));
-    let picture = diagram(ctx, "dg")
-        .map(|svg| format!("<div class=\"diagram\">{svg}</div>"))
+    let cta = format!("<p class=\"cta\">{buttons}</p>");
+    // A new hub offers only its claim: no walkthrough of connecting to it yet.
+    let walk = (front != Front::Unclaimed)
+        .then(|| walkthrough::render(ctx, front))
+        .flatten();
+    let visual = walk
+        .or_else(|| diagram(ctx, "dg").map(|svg| format!("<div class=\"diagram\">{svg}</div>")))
+        .map(|shown| format!("<div class=\"hero-visual\">{shown}</div>"))
         .unwrap_or_default();
-    let film = video(ctx)
-        .map(|video| {
-            format!(
-                "<figure class=\"hero-video\">{video}<figcaption>{}</figcaption></figure>",
-                ctx.inline(&hero.video_caption)
-            )
-        })
-        .unwrap_or_default();
-    let visual = if picture.is_empty() && film.is_empty() {
-        String::new()
-    } else {
-        format!("<div class=\"hero-visual\">{picture}{film}</div>")
-    };
     format!(
         "<section class=\"hero\" id=\"top\"><div class=\"hero-text\">{status}<h1>{title}</h1>\
 {lead}{cta}{note}</div>{visual}</section>"

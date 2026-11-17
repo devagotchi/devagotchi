@@ -37,10 +37,13 @@ pub mod files;
 pub mod history;
 pub mod join;
 pub mod link;
+mod routes;
 pub mod run;
 pub mod search;
 pub mod system;
 pub mod update;
+
+pub(crate) use routes::routes;
 
 impl crate::mcp::Hub {
     /// The tools that work on one named machine: running commands, its files, searching them,

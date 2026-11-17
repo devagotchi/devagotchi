@@ -189,8 +189,7 @@ fn the_built_in_site_checks_out_and_says_what_the_hub_always_said() {
             "icon.svg",
             "logo.svg",
             "pet.svg",
-            "turnkey-poster.png",
-            "turnkey.mp4"
+            "preview.png"
         ]
     );
     for asset in site.assets.values() {
@@ -460,10 +459,10 @@ fn a_site_that_does_not_check_out_says_what_and_where() {
         (
             Box::new(|d| {
                 edit_json(&d.join("site.json"), |v| {
-                    v["assets"]["video"] = "film.mp4".into()
+                    v["assets"]["preview"] = "film.png".into()
                 })
             }),
-            &["assets.video", "no assets/film.mp4"],
+            &["assets.preview", "no assets/film.png"],
         ),
         (
             Box::new(|d| {
@@ -818,8 +817,8 @@ fn a_running_hub_follows_its_site_directory_and_keeps_a_good_site_over_a_bad_one
 #[test]
 fn check_site_says_whether_a_directory_checks_out() {
     let dir = neutral_dir();
-    let command = crate::parse_args(["check-site".into(), dir.clone().into_os_string()]).unwrap();
-    assert!(crate::manage(command).is_ok());
+    let command = crate::cli::parse_args(["check-site".into(), dir.as_os_str().into()]).unwrap();
+    assert!(crate::cli::manage(command).is_ok());
     let bad = tempfile::tempdir().unwrap();
     copy(&dir, bad.path());
     std::fs::write(
@@ -828,8 +827,8 @@ fn check_site_says_whether_a_directory_checks_out() {
     )
     .unwrap();
     let command =
-        crate::parse_args(["check-site".into(), bad.path().as_os_str().to_owned()]).unwrap();
-    let error = crate::manage(command).unwrap_err();
+        crate::cli::parse_args(["check-site".into(), bad.path().as_os_str().to_owned()]).unwrap();
+    let error = crate::cli::manage(command).unwrap_err();
     assert_eq!(error.code, "invalid_site");
     assert!(
         error.message.contains("tokens.json colors.acent"),
@@ -838,6 +837,6 @@ fn check_site_says_whether_a_directory_checks_out() {
     );
     for args in [vec!["check-site"], vec!["check-site", "relative/site"]] {
         let args: Vec<std::ffi::OsString> = args.into_iter().map(Into::into).collect();
-        assert!(crate::parse_args(args).is_err());
+        assert!(crate::cli::parse_args(args).is_err());
     }
 }

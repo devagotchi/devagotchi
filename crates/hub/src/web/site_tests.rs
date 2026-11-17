@@ -89,7 +89,7 @@ async fn every_page_of_a_hub_with_a_neutral_site_names_only_that_site() {
     assert_eq!(served.headers()["content-type"], "image/svg+xml");
     assert_eq!(served.bytes().await.unwrap(), icon.bytes);
     for gone in [
-        "/assets/turnkey.mp4",
+        "/assets/preview.png",
         "/assets/pet.svg",
         "/assets/nothing.png",
     ] {
@@ -172,14 +172,15 @@ async fn the_built_in_site_is_what_a_hub_shows_with_no_directory() {
         "{home}"
     );
     assert!(home.contains("<span class=\"brand-name\">Devagotchi</span>"));
-    let video = world.config.site().assets["turnkey.mp4"].clone();
-    assert!(home.contains(&format!(
-        "<source src=\"{}\" type=\"video/mp4\">",
-        video.url()
-    )));
-    let served = world.get(&video.url(), None).await;
+    // The page's script and the picture link previews show, from this hub.
+    assert!(home.contains("<script src=\"/assets/landing.js\" defer></script>"));
+    let preview = world.config.site().assets["preview.png"].clone();
+    assert!(home.contains(&preview.url()), "{home}");
+    let served = world.get(&preview.url(), None).await;
     assert_eq!(served.status(), StatusCode::OK);
     assert_eq!(served.headers()["accept-ranges"], "bytes");
+    let script = world.get("/assets/landing.js", None).await;
+    assert_eq!(script.status(), StatusCode::OK);
     assert_eq!(
         world.get("/assets/icon.svg", None).await.status(),
         StatusCode::OK

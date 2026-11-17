@@ -397,8 +397,9 @@ pub fn scripted(status: StatusCode, title: &str, body: &str, script: &'static st
 #[derive(Clone, Copy)]
 enum Kind {
     Plain,
-    /// The landing page: a plain page (no script) laid out wide as full-viewport pages
-    /// under the fixed bar (`body.landing`, `landing.css`), with the hub's own setup video.
+    /// The landing page: laid out wide as full-viewport pages under the fixed bar
+    /// (`body.landing`, `landing.css`), with one script of the hub's own that moves its setup
+    /// walkthrough along (`/assets/landing.js`).
     Landing,
     /// A page in the phone app's frame (`app_page`), on `tab`; `push` when it can turn on
     /// this phone's notifications.
@@ -419,17 +420,7 @@ fn render(status: StatusCode, title: &str, body: &str, kind: Kind, meta: &str) -
     let site = site();
     let head = match kind {
         Kind::Plain => String::new(),
-        // What a search result and a browser tab show beside the name.
-        Kind::Landing => site
-            .named(site.info.assets.icon.as_ref())
-            .map(|icon| {
-                format!(
-                    "<link rel=\"icon\" href=\"{}\"><meta name=\"theme-color\" content=\"{}\">",
-                    escape(&icon.url()),
-                    escape(site.theme_color())
-                )
-            })
-            .unwrap_or_default(),
+        Kind::Landing => super::landing::head(&site),
         Kind::App { push, .. } => {
             let icon = site
                 .named(site.info.assets.icon.as_ref())
@@ -516,9 +507,9 @@ form-action 'self'; frame-ancestors 'none'; base-uri 'none'"
         Kind::Plain => {
             "default-src 'none'; style-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'"
         }
-        // The setup video and its poster, from this hub only.
+        // The walkthrough's script and the site's pictures, from this hub only.
         Kind::Landing => {
-            "default-src 'none'; style-src 'self'; img-src 'self'; media-src 'self'; form-action 'self'; \
+            "default-src 'none'; style-src 'self'; script-src 'self'; img-src 'self'; form-action 'self'; \
 frame-ancestors 'none'; base-uri 'none'"
         }
     };

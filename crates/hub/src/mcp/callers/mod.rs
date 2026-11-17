@@ -14,7 +14,7 @@ use rmcp::{
 use schemars::JsonSchema;
 use serde::Deserialize;
 
-use super::surface::{Hub, Route, unexpected_response};
+use super::{Hub, hub::Route, unexpected_response};
 use crate::identity::Subject;
 
 /// The header a Streamable HTTP client repeats on every request of its MCP session.
