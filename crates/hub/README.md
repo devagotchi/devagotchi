@@ -789,6 +789,24 @@ passkeys, sign-ins and AI connections stay. It is on the audit chain as
 most, end when the account is disabled, and are kept only as hashes. Signing out takes the
 hub's own page.
 
+To develop and test with, two logins come from the host in one command, with no claim link,
+mail or passkey:
+
+```bash
+devagotchi hub test-accounts --state-dir DIR --config /etc/devagotchi/hub.json
+# admin  admin@devagotchi.test  xxxx-xxxx-xxxx-xxxx
+# user   user@devagotchi.test   xxxx-xxxx-xxxx-xxxx
+```
+
+`admin` is the hub's owner (made if the hub has none yet, so a fresh hub needs no claim) with
+a password login: it sees `/admin`. `user` is an ordinary account: on a one-owner hub a person
+the owner added, on a hosted hub a sign-up with its own tenant. The addresses are at
+`devagotchi.test` unless `--admin-email` and `--user-email` name others; `.test` is reserved,
+so no mail reaches them. Each run prints two new passwords to stdout, once: the old ones stop
+working and the test user's sessions end (the owner's stay). On the audit chain as
+`account.test_accounts`, without the passwords. In the compose stack (as `deploy/compose/check.sh` runs `hub owner`): `docker compose exec -T hub
+devagotchi hub test-accounts --state-dir /var/lib/devagotchi --config /etc/devagotchi/hub.json`.
+
 Until the hub issues its own tokens (32b), a hub with no `nomen` block takes no bearer token
 at `/mcp`, and refuses `trusted_issuers`. Plain `http` on loopback is for tests: its cookies
 reach any other service on the same host's loopback.

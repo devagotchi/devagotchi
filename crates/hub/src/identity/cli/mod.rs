@@ -1,7 +1,13 @@
 //! The identity domain's operator commands, run on the hub's own host with its config and
-//! state: `devagotchi hub owner` (a one-time link for the owner, printed once) and
-//! `devagotchi hub set-password` (a password for an existing account, read from stdin). A
-//! secret never comes in an argument and never reaches a log or the audit chain.
+//! state: `devagotchi hub owner` (a one-time link for the owner, printed once),
+//! `devagotchi hub set-password` (a password for an existing account, read from stdin) and
+//! `devagotchi hub test-accounts` (an admin and a user login to develop with,
+//! `test_accounts.rs`). A secret never comes in an argument and never reaches a log or the
+//! audit chain.
+
+mod test_accounts;
+pub(crate) use test_accounts::TestAccounts;
+pub(crate) use test_accounts::{parse as parse_test_accounts, run as test_accounts};
 
 use std::{
     ffi::OsString,

@@ -126,3 +126,165 @@ fn set_password_sets_an_existing_accounts_password_ends_its_sessions_and_is_audi
         assert!(chain.ok && chain.entries == 1, "{chain:?}");
     });
 }
+
+#[test]
+fn test_accounts_takes_two_addresses_and_never_a_password() {
+    let dir = std::env::temp_dir().to_string_lossy().into_owned();
+    let parse_with = |extra: &[&str]| {
+        let base = ["--state-dir", &dir, "--config", &dir];
+        test_accounts::parse(base.iter().chain(extra).map(OsString::from).collect())
+    };
+    match parse_with(&[]).unwrap() {
+        Command::TestAccounts(options) => {
+            assert_eq!(options.admin_email, test_accounts::ADMIN_EMAIL);
+            assert_eq!(options.user_email, test_accounts::USER_EMAIL);
+        }
+        other => panic!("{other:?}"),
+    }
+    match parse_with(&["--user-email", "Tester@Example.test"]).unwrap() {
+        Command::TestAccounts(options) => assert_eq!(options.user_email, "tester@example.test"),
+        other => panic!("{other:?}"),
+    }
+    for extra in [
+        &["--password", "secret"][..],
+        &["--user-email", "not an address"],
+        &["--user-email", test_accounts::ADMIN_EMAIL],
+        &["--admin-email"],
+    ] {
+        assert!(parse_with(extra).is_err(), "{extra:?}");
+    }
+    assert!(matches!(
+        test_accounts::parse(vec!["--help".into()]).unwrap(),
+        Command::Help
+    ));
+    assert!(crate::cli::USAGE.contains("hub test-accounts"));
+}
+
+#[test]
+fn a_test_password_is_four_groups_of_unmistakable_characters() {
+    let password =
+        test_accounts::password([0, 31, 32, 255, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]);
+    assert_eq!(password.len(), 19);
+    assert_eq!(password.matches('-').count(), 3);
+    assert!(
+        password
+            .chars()
+            .all(|c| c == '-' || (c.is_ascii_alphanumeric() && !"lo01".contains(c))),
+        "{password}"
+    );
+    assert_ne!(
+        test_accounts::password(crate::machines::random::<16>()),
+        test_accounts::password(crate::machines::random::<16>())
+    );
+}
+
+#[test]
+fn test_accounts_make_an_admin_and_a_user_and_rotate_their_passwords() {
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .unwrap();
+    let Some(url) = runtime.block_on(crate::store::testing::empty_postgres()) else {
+        return;
+    };
+    let dir = tempfile::tempdir().unwrap();
+    let state = dir.path().join("state");
+    let config_path = dir.path().join("hub.json");
+    std::fs::write(
+        &config_path,
+        serde_json::json!({
+            "listen": "127.0.0.1:1", "public_url": "http://127.0.0.1:8787",
+            "auth": { "mode": "hub" },
+            "brokers": [], "grants": [], "storage": { "url": url }
+        })
+        .to_string(),
+    )
+    .unwrap();
+    let config = read_config(&config_path).unwrap();
+    let options = test_accounts::TestAccounts {
+        state: state.clone(),
+        config: config_path.clone(),
+        admin_email: test_accounts::ADMIN_EMAIL.into(),
+        user_email: test_accounts::USER_EMAIL.into(),
+    };
+    runtime.block_on(async {
+        let accounts = accounts_at(&state, &config).await.unwrap();
+        let first = test_accounts::make(
+            &accounts,
+            &config,
+            &options,
+            "admin pass one",
+            "user pass one",
+        )
+        .await
+        .unwrap();
+        assert!(first.admin.owner, "admin is the hub's owner");
+        assert!(!first.user.owner, "user is an ordinary account");
+        assert_ne!(first.admin.id, first.user.id);
+        let admin = accounts
+            .sign_in_password(test_accounts::ADMIN_EMAIL, "admin pass one")
+            .await
+            .unwrap();
+        assert_eq!(admin.id, first.admin.id);
+        let user = accounts
+            .sign_in_password(test_accounts::USER_EMAIL, "user pass one")
+            .await
+            .unwrap();
+        assert_eq!(user.id, first.user.id);
+        let (admin_session, user_session) = (
+            accounts.open_session(&admin.id, None).await.unwrap(),
+            accounts.open_session(&user.id, None).await.unwrap(),
+        );
+
+        // Again: the same two accounts, new passwords, the old ones refused.
+        let second = test_accounts::make(
+            &accounts,
+            &config,
+            &options,
+            "admin pass two",
+            "user pass two",
+        )
+        .await
+        .unwrap();
+        assert_eq!(
+            (second.admin.id.as_str(), second.user.id.as_str()),
+            (first.admin.id.as_str(), first.user.id.as_str())
+        );
+        for (email, old, new) in [
+            (
+                test_accounts::ADMIN_EMAIL,
+                "admin pass one",
+                "admin pass two",
+            ),
+            (test_accounts::USER_EMAIL, "user pass one", "user pass two"),
+        ] {
+            assert_eq!(
+                accounts
+                    .sign_in_password(email, old)
+                    .await
+                    .unwrap_err()
+                    .code,
+                "password_wrong"
+            );
+            accounts.sign_in_password(email, new).await.unwrap();
+        }
+        // The owner keeps their session; the test user's ended with its password.
+        assert!(accounts.session(&admin_session).await.unwrap().is_some());
+        assert!(accounts.session(&user_session).await.unwrap().is_none());
+        // The user's address may not be one that signs in to the owner.
+        let clash = test_accounts::TestAccounts {
+            user_email: test_accounts::ADMIN_EMAIL.into(),
+            ..options
+        };
+        assert_eq!(
+            test_accounts::make(&accounts, &config, &clash, "x pass one", "x pass two")
+                .await
+                .err()
+                .unwrap()
+                .code,
+            "invalid_cli"
+        );
+        let chain = Audit::new(accounts.store().clone()).verify().await.unwrap();
+        assert!(chain.ok && chain.entries == 2, "{chain:?}");
+    });
+}
