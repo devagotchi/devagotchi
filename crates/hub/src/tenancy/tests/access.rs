@@ -9,7 +9,7 @@ use std::path::Path;
 use serde_json::{Value, json};
 
 use crate::tenancy::tests::tenants::{Hosted, Person, fill, hosted_with, refused};
-use crate::*;
+use crate::web;
 
 /// A site directory under `dir`: the built-in site with `edit` applied to its site.json
 /// (every other file the built-in one's).

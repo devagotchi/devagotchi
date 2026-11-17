@@ -59,7 +59,7 @@ futures-util = { version = "0.3", default-features = false, features = ["std", "
 # A workflow's link as a QR code on its page (`web/workflow.rs`), drawn as inline SVG: pure
 # Rust, no image crates, nothing at runtime but the link it encodes.
 qrcode = { version = "0.14", default-features = false, features = ["svg"] }
-# Password sign-in (`identity/accounts/passwords.rs`): argon2id, RustCrypto. The salt comes from the
+# Password sign-in (`identity/accounts/passwords/mod.rs`): argon2id, RustCrypto. The salt comes from the
 # hub's own random bytes, so no `rand` feature.
 argon2 = { version = "0.6", default-features = false, features = ["alloc", "password-hash"] }
 

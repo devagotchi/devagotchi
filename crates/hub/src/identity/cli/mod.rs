@@ -11,7 +11,12 @@ use std::{
 
 use devagotchi_contracts::{BridgeError, BridgeResult};
 
-use crate::{Command, accounts_at, operator_event, ops::audit::Audit, read_config};
+use crate::{
+    cli::Command,
+    config::read as read_config,
+    identity::accounts_at,
+    ops::audit::{Audit, operator_event},
+};
 
 pub(crate) fn parse_owner(args: Vec<OsString>) -> BridgeResult<Command> {
     if args.len() == 1 && (args[0] == "--help" || args[0] == "-h") {

@@ -1,9 +1,9 @@
 //! The hub's own OAuth 2.1 authorization server for AI clients (32b): what Claude,
 //! ChatGPT, Codex or any MCP client needs to connect to `<public_url>/mcp` with nothing
-//! else deployed. The store side is `identity/accounts/oauth.rs`.
+//! else deployed. The store side is `identity/accounts/oauth/mod.rs`.
 //!
 //! - `/.well-known/oauth-authorization-server` (RFC 8414) names the endpoints below; the
-//!   protected-resource metadata (RFC 9728, `lib.rs`) names the hub as its server.
+//!   protected-resource metadata (RFC 9728, `identity/bearer.rs`) names the hub as its server.
 //! - `/oauth/register` (RFC 7591): a client registers its redirect URIs. Public clients
 //!   only; PKCE S256 is required of every one.
 //! - `/oauth/authorize`: a signed-in person sees which client asks and

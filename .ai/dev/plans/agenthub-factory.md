@@ -94,7 +94,7 @@ Ruled 2026-11-09: the boundary is set first; enforcement fluid and tunable; a li
 defaults AI tools write; hierarchy configurable. Kept here. The research ranks the completion
 gate highest, so it follows F1 directly. Status lagging reality (a known failure of agent task
 lists) is why every gate reads the board of record, never a cache. Notes and issue text stay
-untrusted data (`agenthub/issue_lifecycle.rs` protocol).
+untrusted data (`agenthub/issue_lifecycle/mod.rs` protocol).
 
 ## Verification receipts
 
