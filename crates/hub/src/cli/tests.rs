@@ -24,10 +24,10 @@ fn cli_requires_both_absolute_paths() {
     );
     assert!(parse_args(["--config", CONFIG].map(OsString::from)).is_err());
     assert!(parse_args(["--state-dir", "s", "--config", CONFIG].map(OsString::from)).is_err());
-    assert_eq!(
-        parse_args(["--help"].map(OsString::from)).unwrap(),
-        Command::Help
-    );
+    for help in [&["--help"][..], &["serve", "--help"], &["owner", "-h"]] {
+        let parsed = parse_args(help.iter().map(OsString::from));
+        assert_eq!(parsed.unwrap(), Command::Help);
+    }
     assert_eq!(
         parse_args(["serve", "--state-dir", STATE, "--config", CONFIG].map(OsString::from))
             .unwrap(),

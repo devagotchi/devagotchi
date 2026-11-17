@@ -8,7 +8,7 @@ pub(crate) const NO_GIT_BASH: &str = "This command runs a shell script, and this
 
 /// The first token of the trimmed line, with a leading quoted token unquoted, and the
 /// rest of the line after it.
-fn first_token(line: &str) -> (&str, bool, &str) {
+pub(crate) fn first_token(line: &str) -> (&str, bool, &str) {
     let line = line.trim();
     if let Some(quote @ ('"' | '\'')) = line.chars().next() {
         let body = &line[1..];

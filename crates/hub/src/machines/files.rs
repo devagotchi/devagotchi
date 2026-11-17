@@ -25,7 +25,7 @@ use crate::mcp::{Hub, unexpected_response};
 pub struct ReadFileInput {
     /// The machine, by its name from `machines`.
     pub machine: String,
-    /// Absolute path of the file on that machine.
+    /// Path (absolute, `~/...`, or relative to the workspace) of the file on that machine.
     pub path: String,
     /// Byte offset to start at; negative counts back from the end, e.g. -4000 for the last
     /// 4000 bytes of a log. Default 0. With start_line, the next_offset that came with it.
@@ -49,7 +49,7 @@ pub struct ReadFileInput {
 pub struct ListDirectoryInput {
     /// The machine, by its name from `machines`.
     pub machine: String,
-    /// Absolute path of the directory on that machine.
+    /// Path (absolute, `~/...`, or relative to the workspace) of the directory on that machine.
     pub path: String,
     /// Levels below it to include, 0 to 3 (default 0: its own entries).
     #[serde(default)]
@@ -67,7 +67,7 @@ pub struct ListDirectoryInput {
 pub struct WriteFileInput {
     /// The machine, by its name from `machines`.
     pub machine: String,
-    /// Absolute path of the file on that machine.
+    /// Path (absolute, `~/...`, or relative to the workspace) of the file on that machine.
     pub path: String,
     /// The content as text, written exactly as given (UTF-8). Give this or bytes_base64.
     #[serde(default)]
@@ -92,7 +92,7 @@ pub struct WriteFileInput {
 pub struct EditFileInput {
     /// The machine, by its name from `machines`.
     pub machine: String,
-    /// Absolute path of a UTF-8 text file on that machine.
+    /// Path (absolute, `~/...`, or relative to the workspace) of a UTF-8 text file on that machine.
     pub path: String,
     /// Exact text to find, including whitespace and line endings. Include enough around the
     /// change that it occurs exactly once.
@@ -109,7 +109,7 @@ pub struct EditFileInput {
 pub struct ReadFilesInput {
     /// The machine, by its name from `machines`.
     pub machine: String,
-    /// Absolute paths of the files on that machine, 1 to 20.
+    /// Paths (absolute, `~/...`, or relative to the workspace) of the files on that machine, 1 to 20.
     pub paths: Vec<String>,
     /// Bytes to read from the start of each, 1 to 24576 (default 24576).
     #[serde(default)]
@@ -121,7 +121,7 @@ pub struct ReadFilesInput {
 pub struct PathOnMachine {
     /// The machine, by its name from `machines`.
     pub machine: String,
-    /// Absolute path on that machine.
+    /// Path (absolute, `~/...`, or relative to the workspace) on that machine.
     pub path: String,
 }
 
@@ -130,9 +130,9 @@ pub struct PathOnMachine {
 pub struct MoveFileInput {
     /// The machine, by its name from `machines`.
     pub machine: String,
-    /// Absolute path of the file, directory or link to move or rename.
+    /// Path (absolute, `~/...`, or relative to the workspace) of the file, directory or link to move or rename.
     pub source: String,
-    /// Absolute path it moves to, on the same filesystem; its parent must exist.
+    /// Path (absolute, `~/...`, or relative to the workspace) it moves to, on the same filesystem; its parent must exist.
     pub destination: String,
     /// Replace a file already at the destination (never a directory). Default false.
     #[serde(default)]

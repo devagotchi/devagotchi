@@ -46,6 +46,7 @@ fn command_line(key: &str, line: &str, cwd: Option<String>) -> StartInput {
         cwd,
         deadline_ms: 120_000,
         interactive: None,
+        combined_output: false,
         caller: None,
     }
 }
@@ -70,6 +71,7 @@ fn input(key: &str, executable: &Path, args: Vec<String>) -> StartInput {
         cwd: None,
         deadline_ms: 5_000,
         interactive: None,
+        combined_output: false,
         caller: None,
     }
 }
@@ -321,6 +323,7 @@ async fn critical_journal_failure_is_visible_and_blocks_new_execution() {
         cwd: None,
         deadline_ms: 3000,
         interactive: None,
+        combined_output: false,
         caller: None,
     };
     let start = broker.start(input.clone()).unwrap();
@@ -366,6 +369,7 @@ async fn recovery_never_replays_unsettled_admissions() {
         cwd: None,
         deadline_ms: 1000,
         interactive: None,
+        combined_output: false,
         caller: None,
     };
     let id = uuid::Uuid::new_v4().to_string();
