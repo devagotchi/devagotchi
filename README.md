@@ -14,10 +14,10 @@ administrator rights), then `setup` gives every AI client it finds (Claude Code,
 Desktop) an MCP server named `devagotchi`. No account, nothing to start by hand: your broker
 starts in the background on an AI's first call, and again on the first call after a reboot.
 
-> **Published release: v0.1.0** (2026-11-14). These lines install that release.
-> `main` has moved on since the tag. The notes for the next tag, v0.2.0, are under
-> Unreleased in [CHANGELOG.md](CHANGELOG.md). The operator tags; this repository does not.
-> Until that tag, building from source is how you run what is on `main`
+> The first release is **v0.1.0**. The operator re-cuts that tag at the release commit
+> on `main`. The notes are under Unreleased in [CHANGELOG.md](CHANGELOG.md). `Cargo.toml`
+> stays `0.1.0`. This repository does not create, move, or delete the tag. Until that
+> re-cut, building from source is how you run what is on `main`
 > ([Linux](#build-the-linux-core), [Windows](#build-and-run-on-windows)). Clone with
 > submodules (`git clone --recurse-submodules`), or `cargo build` cannot see AgentHub.
 

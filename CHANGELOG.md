@@ -7,17 +7,15 @@ heading. Agents draft the fragments below; they never tag.
 
 ## Unreleased
 
-These notes are what the operator promotes when tagging `v0.2.0`. This file does not create
-that tag, and it does not bump `Cargo.toml`: the operator does both in the same commit as the
-`## 0.2.0` heading, then tags. `v0.1.0` is already published (2026-11-14). `v0.1.0-alpha.1`
-was never tagged. `v0.2.0` is the next stable tag rather than `v0.1.1` because the license
-changed, sign-in and install no longer assume a hub address, and the machine tools grew to
-the set tracked in [.ai/docs/desktop-commander-parity.md](.ai/docs/desktop-commander-parity.md).
-A prerelease tag would not move the `:latest` image. The project stage stays alpha
+These notes are the `v0.1.0` release. The operator re-cuts that tag at the release commit
+(this work on `main`). This file does not create, move, or delete a tag, and `Cargo.toml`
+stays `0.1.0`. The earlier tag was not a baseline. `v0.1.0-alpha.1` was never tagged. A
+prerelease tag would not move the `:latest` image. The project stage stays alpha
 ([.ai/project.json](.ai/project.json)); this tag is a public pre-release a solo user can
-install, not a production promotion.
+install, not a production promotion. The gap that is still open is in
+[.ai/docs/desktop-commander-parity.md](.ai/docs/desktop-commander-parity.md).
 
-### Since v0.1.0, for a solo install
+### A solo install
 
 - Sign in with Shippin has a card on `/admin` → Sign-in from the hub's first start. The
   switch offers it (on once you save) and turns it off without deleting the issuer. The
@@ -28,7 +26,7 @@ install, not a production promotion.
 - `install.sh` keeps tenancy, operators, sign-in providers, mail and analytics when a re-run
   omits those flags. Passing `--google`, `--github` or `--nomen` replaces the provider list
   with the ones named that run. `--nomen` labels the button Shippin.
-- Machine tools added since the tag: `search_files`, `read_url`, `get_config`,
+- Machine tools in this release: `search_files`, `read_url`, `get_config`,
   `set_config_value`, `list_processes`, `kill_process`, `get_recent_tool_calls`,
   `get_usage_stats`. Script launch by name and by interpreter, ordered command output, `~`
   and relative paths, and deadlines up to a day (a `run` defaults to an hour). The gap that

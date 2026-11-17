@@ -21,7 +21,7 @@
   [desktop-commander-teardown](../../../docs/desktop-commander-teardown.md) as the parity
   reference.
 - PR: one per milestone, in the order below
-- Branch / baseline: from `5c28f8c` (v0.1.0)
+- Branch / baseline: from `5c28f8c`. `v0.1.0` is re-cut at the release commit; that earlier commit is not the baseline.
 
 ## What is true today (each checked on `5c28f8c` or the live hub, 2026-11-14)
 
@@ -178,7 +178,7 @@ the submodule (`git submodule update --init`, CI checks out with `submodules: tr
 | E1 | Passkeys after the first connection: no passkey anywhere before a machine is online (landing copy, claim, sign-in); the account page offers one after | `live_check.py` and `first_connect_browser.py` assert no "passkey" before the machine is online | not started |
 | E2 | Then the expansions in their own plans: phone (push exists), AgentHub features, provenance (`self-hosted-and-provenance.md` P1-P4), connections | per plan | not started |
 | K1 | The optional cache ([ADR 0004](../../../docs/adr/0004-optional-cache-dragonfly.md)): `cache.url` / `DEVAGOTCHI_HUB_CACHE_URL` (Redis protocol, Dragonfly recommended), off by default; the `/admin` card with Check; `/healthz` shows it; rate limits shared through it when set, in-process when not; an opt-in Dragonfly service in the compose stack | R3 | hub tests with and without a cache, the cache stopped mid-run (degraded, nothing wrong), compose with the profile | not started |
-| V1 | A release a solo developer installs from GitHub: tag the free edition once D2 passes (the operator tags), then a scheduled CI job installs the **latest release** (not `main`) with each installer and runs the install check against it | D2, the operator's tag | the scheduled job green on the release | not started; the only release, `v0.1.0`, is from before R1 and R3 |
+| V1 | A release a solo developer installs from GitHub: tag the free edition once D2 passes (the operator tags), then a scheduled CI job installs the **latest release** (not `main`) with each installer and runs the install check against it | D2, the operator's tag | the scheduled job green on the release | not started. `v0.1.0` is re-cut at the release commit; the earlier tag is not the baseline. The operator tags |
 
 ## Order, as of 2026-11-15
 
@@ -192,13 +192,12 @@ with Dragonfly optional. The order:
 5. V1: the release solo developers install. Then the cloud lane ([cloud-edition](cloud-edition.md)
    C2b, C2c, C8, C9).
 
-## Release baseline (operator, 2026-11-15)
+## Release baseline (operator, 2026-11-17)
 
-When every item the operator named is merged (the optional cache, AgentHub on its own, Desktop
-Commander parity, the tenancy crate, support access, the leftovers) and the operator says go:
-the old `v0.1.0` release and tag (commit 5c28f8c, before R1 and R3) are deleted, `v0.1.0` is
-made again on that `main`, and the cloud repository's `core` pin moves to it. That release is
-the baseline everything after extends.
+`v0.1.0` is re-cut at the release commit: the readiness work merged to `main`. That tag is
+the first real release, and the baseline everything after extends. The operator re-cuts it.
+This repository does not delete, move, or create the tag. `Cargo.toml` stays `0.1.0`. The
+cloud repository's `core` pin moves to that commit. The earlier tag is not a baseline.
 
 ## Information needed from Jesse
 
