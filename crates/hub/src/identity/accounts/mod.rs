@@ -373,11 +373,6 @@ impl Accounts {
         .is_ok()
     }
 
-    /// The tenancy these accounts were opened with.
-    pub fn tenancy(&self) -> &crate::config::TenancyConfig {
-        &self.tenancy
-    }
-
     /// The store, for the modules that keep their tables beside the accounts.
     #[cfg_attr(not(test), allow(dead_code))]
     pub(crate) fn store(&self) -> &Store {

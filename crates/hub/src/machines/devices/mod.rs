@@ -406,6 +406,7 @@ impl Devices {
 
     /// Rewrite machines, unused codes, and push subscriptions that still name `from`
     /// (an identity-provider subject) so they name the Devagotchi account `to`.
+    #[cfg(test)]
     pub async fn reassign_owner(&self, from: &str, to: &str) -> BridgeResult<usize> {
         if from.is_empty() || to.is_empty() || from == to {
             return Ok(0);

@@ -123,7 +123,7 @@ the self-hosted behaviour as its default. Nothing cloud-specific is in the core.
 Superseded 2026-11-14 by the [free edition plan](free-edition.md): multi-tenancy becomes its own
 module outside the default build (R4). The earlier ruling read: already in the core and kept there (ruled 2026-11-11): `tenancy.mode multi`, `/operator` and
 plan limits; C2 lets the cloud replace their policy without moving them. Secrets and hosted
-deployment configuration never enter this repository (editions rule 3). The license (BSL 1.1)
+deployment configuration never enter this repository (editions rule 3). The license (FSL-1.1-ALv2)
 permits the cloud: AngryVibes LLC is the Licensor.
 
 ## Verification receipts

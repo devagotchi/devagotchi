@@ -1,6 +1,6 @@
 [package]
 name = "devagotchi-machine-engine"
-description = "The Devagotchi machine engine: admission, operation lifecycle, SQLite journal, output retention, native process supervision, and the machine's private AI evidence"
+description = "The Devagotchi machine engine: admission, operation lifecycle, SQLite journal, output retention, native process supervision"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -14,12 +14,9 @@ workspace = true
 [dependencies]
 devagotchi-contracts = { workspace = true }
 devagotchi-ipc = { workspace = true }
-getrandom = "0.4"
 hex = { workspace = true }
-# The SQLite journals: the broker's, and `ai`'s (the machine's private AI evidence).
+# The broker's SQLite journal.
 rusqlite = { workspace = true }
-# `devagotchi ai schema`: the capture event's JSON schema.
-schemars = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 sha2 = { workspace = true }
@@ -33,6 +30,14 @@ libc = { workspace = true }
 [target.'cfg(any(target_os = "linux", windows))'.dependencies]
 base64 = { workspace = true }
 dunce = { workspace = true }
+# search_files: ripgrep's walker (honours .gitignore and hidden files) and its regex engine.
+globset = "0.4"
+ignore = "0.4"
+regex = "1"
+# read_url: the same reqwest and rustls the hub and the link already build with.
+reqwest = { version = "0.13", default-features = false, features = ["rustls"] }
+# list_processes and kill_process: one process table on Linux and Windows.
+sysinfo = { version = "0.40", default-features = false, features = ["system", "user"] }
 uuid = { workspace = true }
 
 [target.'cfg(windows)'.dependencies]

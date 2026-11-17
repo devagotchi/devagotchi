@@ -28,6 +28,9 @@ export type OperationState =
 export interface BrokerContracts {
   bridge_error: BridgeError;
   changes_input: ChangesInput;
+  config_get_input: ConfigGetInput;
+  config_set_input: ConfigSetInput;
+  config_view: ConfigView;
   directory_input: DirectoryInput;
   file_content: FileContent;
   file_edit_input: FileEditInput;
@@ -37,6 +40,7 @@ export interface BrokerContracts {
   file_listing: FileListing;
   file_move_input: FileMoveInput;
   file_read_input: FileReadInput;
+  file_search_input: FileSearchInput;
   file_write_input: FileWriteInput;
   file_written: FileWritten;
   get_input: GetInput;
@@ -44,10 +48,17 @@ export interface BrokerContracts {
   operation_view: OperationView;
   operations_page: OperationsPage;
   output_page: OutputPage;
+  process_kill_input: ProcessKillInput;
+  process_killed: ProcessKilled;
+  process_list_input: ProcessListInput;
+  process_page: ProcessPage;
   read_input: ReadInput;
   revision: Revision;
+  search_page: SearchPage;
   start_input: StartInput;
   start_output: StartOutput;
+  url_content: UrlContent;
+  url_read_input: UrlReadInput;
   wait_input: WaitInput;
 }
 export interface BridgeError {
@@ -70,9 +81,77 @@ export interface ChangesInput {
    */
   timeout_ms: number;
 }
+export interface ConfigGetInput {}
+export interface ConfigSetInput {
+  /**
+   * One of `output_limit_bytes`, `max_operations`, `max_concurrent`.
+   */
+  key: string;
+  /**
+   * The new value, a whole number.
+   */
+  value: number;
+}
+export interface ConfigView {
+  /**
+   * The OS account the broker runs as, and its home directory (what `~` means).
+   */
+  account?: string | null;
+  /**
+   * The programs a `granted` broker runs (canonical paths).
+   */
+  allowed_executables: string[];
+  arch: string;
+  /**
+   * The settings `set_config_value` changes.
+   */
+  changeable: string[];
+  /**
+   * What the last change did, for `set_config_value`.
+   */
+  changed?: string | null;
+  /**
+   * The broker.json this broker was started from, when it was started from one.
+   */
+  config_file?: string | null;
+  /**
+   * `account`: anything this OS account can run. `granted`: only `allowed_executables`.
+   */
+  exec_policy: string;
+  home?: string | null;
+  /**
+   * Jobs running at once.
+   */
+  max_concurrent: number;
+  /**
+   * Jobs kept, running and finished; the oldest finished one is retired past this.
+   */
+  max_operations: number;
+  /**
+   * Jobs held now, and how many of them are running.
+   */
+  operations_held: number;
+  operations_running: number;
+  /**
+   * `linux` or `windows`, and the CPU architecture.
+   */
+  os: string;
+  /**
+   * Output kept per job, in bytes.
+   */
+  output_limit_bytes: number;
+  /**
+   * The broker's build.
+   */
+  version: string;
+  /**
+   * Where a relative path and a job without `cwd` start (canonical).
+   */
+  workspace: string;
+}
 export interface DirectoryInput {
   /**
-   * Absolute path of the directory to make; missing parents are made too. An existing
+   * Path (absolute, `~/...`, or relative to the workspace) of the directory to make; missing parents are made too. An existing
    * directory is not an error.
    */
   path: string;
@@ -146,7 +225,7 @@ export interface FileEditInput {
    */
   old_text: string;
   /**
-   * Absolute path of a UTF-8 text file.
+   * Path (absolute, `~/...`, or relative to the workspace) of a UTF-8 text file.
    */
   path: string;
 }
@@ -192,7 +271,7 @@ export interface FileInfo {
 }
 export interface FileInfoInput {
   /**
-   * Absolute path of a file, directory or symbolic link.
+   * Path (absolute, `~/...`, or relative to the workspace) of a file, directory or symbolic link.
    */
   path: string;
 }
@@ -210,7 +289,7 @@ export interface FileListInput {
    */
   max_entries?: number;
   /**
-   * Absolute path of the directory.
+   * Path (absolute, `~/...`, or relative to the workspace) of the directory.
    */
   path: string;
 }
@@ -255,7 +334,7 @@ export interface FileEntry {
 }
 export interface FileMoveInput {
   /**
-   * Absolute path it moves to, on the same filesystem. Its parent directory must exist.
+   * Path (absolute, `~/...`, or relative to the workspace) it moves to, on the same filesystem. Its parent directory must exist.
    */
   destination: string;
   /**
@@ -264,7 +343,7 @@ export interface FileMoveInput {
    */
   overwrite?: boolean;
   /**
-   * Absolute path of the file, directory or link to move or rename (a link moves as
+   * Path (absolute, `~/...`, or relative to the workspace) of the file, directory or link to move or rename (a link moves as
    * itself, never what it points to).
    */
   source: string;
@@ -286,7 +365,7 @@ export interface FileReadInput {
    */
   offset?: number;
   /**
-   * Absolute path of the file.
+   * Path (absolute, `~/...`, or relative to the workspace) of the file.
    */
   path: string;
   /**
@@ -294,6 +373,49 @@ export interface FileReadInput {
    * back from the end (-50: the last 50 lines). `offset` is then not used.
    */
   start_line?: number | null;
+}
+export interface FileSearchInput {
+  /**
+   * Match case exactly; by default case is ignored.
+   */
+  case_sensitive?: boolean;
+  /**
+   * Lines of context before and after each content match, 0..=5.
+   */
+  context_lines?: number;
+  /**
+   * Where to go on from: the previous page's `next_cursor`. Absent for the first page.
+   */
+  cursor?: string | null;
+  /**
+   * Only files whose name matches this glob, such as `*.rs` or `*.{ts,tsx}`.
+   */
+  glob?: string | null;
+  /**
+   * Also search hidden files and what .gitignore excludes (both are skipped by default,
+   * as git and ripgrep skip them).
+   */
+  include_ignored?: boolean;
+  /**
+   * Most matches on this page, 1..=500 (default 100).
+   */
+  max_results?: number;
+  /**
+   * Directory to search (absolute, `~/...`, or relative to the workspace).
+   */
+  path: string;
+  /**
+   * What to look for: plain text, or a regular expression with `regex`.
+   */
+  pattern: string;
+  /**
+   * Read `pattern` as a regular expression (Rust syntax, like ripgrep's).
+   */
+  regex?: boolean;
+  /**
+   * `names` (default) or `contents`.
+   */
+  target?: "names" | "contents";
 }
 export interface FileWriteInput {
   /**
@@ -311,7 +433,7 @@ export interface FileWriteInput {
   expected_sha256?: string | null;
   mode?: "overwrite" | "create" | "append";
   /**
-   * Absolute path of the file.
+   * Path (absolute, `~/...`, or relative to the workspace) of the file.
    */
   path: string;
   /**
@@ -439,6 +561,78 @@ export interface OutputFrame {
    */
   text: string;
 }
+export interface ProcessKillInput {
+  /**
+   * Kill at once (SIGKILL) instead of asking it to stop (SIGTERM). On Windows a process is
+   * always ended at once.
+   */
+  force?: boolean;
+  pid: number;
+}
+export interface ProcessKilled {
+  /**
+   * Whether it was gone within a few seconds.
+   */
+  exited: boolean;
+  name: string;
+  pid: number;
+  /**
+   * `terminate` or `kill`.
+   */
+  signal: string;
+}
+export interface ProcessListInput {
+  /**
+   * Only processes whose name or command line contains this (case ignored).
+   */
+  filter?: string | null;
+  /**
+   * Most processes to return, 1..=1000 (default 200), busiest first.
+   */
+  max_results?: number;
+}
+export interface ProcessPage {
+  /**
+   * Processes that matched, before `max_results`.
+   */
+  matched: number;
+  processes: ProcessInfo[];
+  /**
+   * Processes on the machine.
+   */
+  total: number;
+}
+export interface ProcessInfo {
+  /**
+   * This broker, a process it runs under, or another Devagotchi process (its link, an
+   * adapter): stopping it would cut this connection, so kill_process refuses it.
+   */
+  broker?: boolean;
+  /**
+   * The command line, cut when very long.
+   */
+  command: string;
+  /**
+   * Share of one CPU over a short sample (100 is one whole core).
+   */
+  cpu_percent: number;
+  memory_bytes: number;
+  name: string;
+  /**
+   * The Devagotchi job this process belongs to, when it is one of this broker's.
+   */
+  operation_id?: string | null;
+  parent_pid?: number | null;
+  pid: number;
+  /**
+   * When it started, ms since the epoch.
+   */
+  started_at_ms?: number | null;
+  /**
+   * The OS account it runs as.
+   */
+  user?: string | null;
+}
 export interface ReadInput {
   /**
    * Last sequence consumed, starting at zero. Reading never advances another reader.
@@ -456,11 +650,74 @@ export interface ReadInput {
 export interface Revision {
   revision: number;
 }
+export interface SearchPage {
+  /**
+   * True when the whole search is done; false with `next_cursor` when there is more.
+   */
+  complete: boolean;
+  /**
+   * Files whose contents this page read (contents searches).
+   */
+  files_searched: number;
+  /**
+   * Files this page could not search: unreadable, binary, or over 8 MiB.
+   */
+  files_skipped: number;
+  /**
+   * In path order: a directory's entries by name, each directory's contents where its name
+   * falls. Within a file, by line.
+   */
+  matches: SearchMatch[];
+  /**
+   * Pass as `cursor`, with the same other inputs, for the next page.
+   */
+  next_cursor?: string | null;
+  /**
+   * The searched directory's canonical path.
+   */
+  path: string;
+  /**
+   * Why this page stopped early: `max_results` or `time`.
+   */
+  stopped_by?: string | null;
+}
+export interface SearchMatch {
+  /**
+   * Lines just after the match, in order.
+   */
+  after?: string[];
+  /**
+   * Lines just before the match, in order.
+   */
+  before?: string[];
+  /**
+   * `file` or `dir`, for a name match.
+   */
+  kind?: string | null;
+  /**
+   * The matching line's number (1-based), for a content match.
+   */
+  line?: number | null;
+  /**
+   * Path relative to the searched directory, `/`-separated.
+   */
+  path: string;
+  /**
+   * The matching line, without its line ending; a very long line is cut.
+   */
+  text?: string | null;
+}
 export interface StartInput {
   /**
    * Exact argument vector. No shell parsing, interpolation, or added command text.
    */
   args?: string[];
+  /**
+   * One pipe for stdout and stderr, so the output keeps the order the program wrote it
+   * (as a terminal shows it); every frame is then `stdout`. `run` sets it. Ignored for an
+   * interactive operation, whose terminal already merges them.
+   */
+  combined_output?: boolean;
   /**
    * A command line for the machine's own shell (bash or sh on Linux, Windows PowerShell
    * on Windows), accepted by a broker that runs commands as its account. Give either
@@ -468,17 +725,22 @@ export interface StartInput {
    */
   command?: string | null;
   /**
-   * Absolute working directory; defaults to the workspace. A broker that runs only
+   * Working directory (absolute, `~/...`, or relative to the workspace); defaults to the
+   * workspace. A broker that runs only
    * granted programs keeps it within the workspace.
    */
   cwd?: string | null;
   /**
-   * Execution deadline, not a client wait timeout. 1..=300000 milliseconds.
+   * Execution deadline, not a client wait timeout. 1..=[`MAX_DEADLINE_MS`] milliseconds.
    */
   deadline_ms: number;
   /**
-   * Absolute path of the program to run, with `args`. On a broker that runs only
-   * operator-granted programs it must be granted. Leave empty when `command` is given.
+   * The program to run, with `args`: a name on PATH (`python3`, `cargo`), or a path,
+   * absolute or relative to `cwd`. A script runs with its interpreter (its `#!` line, or
+   * its extension: `.py` with Python, `.ps1` with PowerShell, `.sh` with bash, `.js` with
+   * node), never through a file association; the operation's detail says what ran and why.
+   * On a broker that runs only operator-granted programs the program must be granted.
+   * Leave empty when `command` is given.
    */
   executable?: string;
   /**
@@ -509,6 +771,49 @@ export interface InteractiveInput {
 export interface StartOutput {
   operation: OperationView;
   replayed: boolean;
+}
+export interface UrlContent {
+  /**
+   * The raw bytes, base64, when they are not text.
+   */
+  bytes_base64?: string | null;
+  content_type?: string | null;
+  /**
+   * Whether this page reached the end of the body.
+   */
+  eof: boolean;
+  next_offset: number;
+  offset: number;
+  /**
+   * The body's length, when the server said it.
+   */
+  size?: number | null;
+  /**
+   * The HTTP status code.
+   */
+  status: number;
+  /**
+   * The bytes as text, when they are UTF-8 text.
+   */
+  text?: string | null;
+  /**
+   * The address that answered, after redirects.
+   */
+  url: string;
+}
+export interface UrlReadInput {
+  /**
+   * Bytes to return, 1..=24576 (default 24576).
+   */
+  max_bytes?: number | null;
+  /**
+   * Where to start in the response body (the previous page's `next_offset`).
+   */
+  offset?: number;
+  /**
+   * An http or https address.
+   */
+  url: string;
 }
 export interface WaitInput {
   operation_id: string;
