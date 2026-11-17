@@ -5,7 +5,9 @@ and actual PR once created; use `not_created` before a PR exists, never invent a
 Plans are requested deliverables here, not a general permission to litter the repository
 with scratch notes. Private logs/evidence stay outside Git.
 
-Start with the [roadmap](roadmap.md): AgentHub ([factory](agenthub-factory.md)), the
+Start with [the path](path.md): every feature asked for, in order, each proven on Texas and
+the phone before the next phase; the cloud waits until it is all proven. Then the
+[roadmap](roadmap.md): AgentHub ([factory](agenthub-factory.md)), the
 [phone](mobile-experience.md), the [browser](browser-experience.md), the
 [plugins](plugins.md) and the [cloud edition](cloud-edition.md).
 

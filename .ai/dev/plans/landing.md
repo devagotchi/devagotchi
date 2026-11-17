@@ -8,8 +8,10 @@
   to become interactive events a visitor triggers on click or that move on after 3 to 4 seconds;
   devagotchi.com should make the win over Desktop Commander easy to understand, along with owning
   your instance and the planned hosted tiers.
-- PR: this plan, then one PR per scene (M3 onward). PR #221 (a first walkthrough) stays open and
-  unmerged: it is the prototype this plan replaces, not a base to merge.
+- PR: this plan, then one PR per scene (M3 onward). PR #221 (a first walkthrough) was merged on
+  2026-11-17 as the interim hero, replacing the 1.7 MB video, when the operator asked for every
+  open branch to be absorbed into `main`; it is the prototype this plan replaces scene by scene,
+  and M13 retires it.
 - Branch / baseline: `increment-172/landing-plan`, from `main` at `5104f35`
 - Objective: someone who has never used a terminal understands, in a minute and by trying it
   themselves, what Devagotchi does for them, why it is safer and more capable than a computer in
@@ -110,8 +112,9 @@ these scenes or kept as plain sections where a scene adds nothing; each fold is 
 
 ## Risks and approved decisions
 
-- **Approved (operator, 2026-11-16):** hold PR #221; plan first; real views and real examples;
-  colocated, hypermodular scenes; one scene per PR with review.
+- **Approved (operator, 2026-11-16):** plan first; real views and real examples; colocated,
+  hypermodular scenes; one scene per PR with review. PR #221 was held on 2026-11-16 and merged
+  as the interim hero on 2026-11-17 (operator: absorb every open branch into `main`).
 - **To approve with this plan:** the scene list and order (S1 to S9); the cast (Alex, `server`,
   `home-pc`, `shop`); that drawn third-party screens say whose they are; that the landing page
   runs one small script (`script-src 'self'`, nothing inline), as PR #221 introduced.

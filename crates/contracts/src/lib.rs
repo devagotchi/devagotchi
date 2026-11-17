@@ -360,6 +360,30 @@ pub enum ResponseBody {
     Url(UrlContent),
 }
 
+impl ResponseBody {
+    /// What kind of answer this is, by name: for an error that says a broker answered with
+    /// another kind than the request calls for. Every transport and the desktop name it here.
+    pub fn kind(&self) -> &'static str {
+        match self {
+            Self::Start(_) => "start",
+            Self::Operation(_) => "operation",
+            Self::Output(_) => "output",
+            Self::Operations(_) => "operations",
+            Self::File(_) => "file",
+            Self::Listing(_) => "listing",
+            Self::Written(_) => "written",
+            Self::Revision(_) => "revision",
+            Self::Info(_) => "info",
+            Self::InputSent(_) => "input_sent",
+            Self::Search(_) => "search",
+            Self::Config(_) => "config",
+            Self::Processes(_) => "processes",
+            Self::Killed(_) => "killed",
+            Self::Url(_) => "url",
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(
     tag = "status",
