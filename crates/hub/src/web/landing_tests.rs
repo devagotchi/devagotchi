@@ -82,7 +82,14 @@ fn ai_apps_connect_at_this_hubs_own_address_and_nothing_else_is_hard_coded() {
         let html = body(front);
         assert!(html.contains(&format!("<code>{URL}/mcp</code>")), "{html}");
         assert!(!html.contains("app.devagotchi.com"));
-        assert_eq!(html.matches("/mcp").count(), 1, "one address, this hub's");
+        // Where to connect, and the walkthrough's connector: this hub's address each time.
+        let addresses = html.matches("/mcp").count();
+        assert!(addresses >= 1, "{html}");
+        assert_eq!(
+            html.matches(&format!("{URL}/mcp")).count(),
+            addresses,
+            "only this hub's"
+        );
     }
     // The address is escaped like every other value.
     let (_, odd) = page(&Front::Passkeys, "https://hub.example.org/a\"<b>/");
@@ -165,18 +172,25 @@ async fn the_page_needs_nothing_the_plain_csp_refuses() {
     ] {
         let (csp, html) = served(home(front, URL)).await;
         assert!(
-            csp.starts_with("default-src 'none'; style-src 'self';") && !csp.contains("script-src"),
+            csp.starts_with("default-src 'none'; style-src 'self'; script-src 'self';")
+                && !csp.contains("unsafe")
+                && !csp.contains("media-src"),
             "{csp}"
         );
         assert!(html.contains("<body class=\"landing\">"));
         assert!(html.contains("<link rel=\"stylesheet\" href=\"/assets/hub.css\">"));
-        // No script that runs, no inline style, nothing loaded from anywhere but this hub:
-        // inline SVG, and the setup video and its poster from /assets/. The only script
-        // elements are JSON-LD, data no browser runs, so the CSP needs no script-src.
+        // No inline script or style, nothing loaded from anywhere but this hub: inline SVG,
+        // and one script of the hub's own, deferred, that moves the walkthrough along. Every
+        // other script element is JSON-LD, data no browser runs.
         for refused in ["<style", " style=", "<img", "<iframe"] {
             assert!(!html.contains(refused), "{refused}");
         }
+        let ours = "<script src=\"/assets/landing.js\" defer></script>";
+        assert_eq!(html.matches(ours).count(), 1);
         for script in html.split("<script").skip(1) {
+            if script.starts_with(" src=\"/assets/landing.js\" defer>") {
+                continue;
+            }
             assert!(
                 script.starts_with(" type=\"application/ld+json\">"),
                 "{script}"
@@ -189,39 +203,7 @@ async fn the_page_needs_nothing_the_plain_csp_refuses() {
             serde_json::from_str::<serde_json::Value>(data).unwrap();
         }
         for src in html.split(" src=\"").skip(1) {
-            assert!(src.starts_with("/assets/turnkey.mp4?v="), "{src}");
-        }
-        for poster in html.split(" poster=\"").skip(1) {
-            assert!(
-                poster.starts_with("/assets/turnkey-poster.png?v="),
-                "{poster}"
-            );
-        }
-        assert!(
-            csp.contains("media-src 'self'") && csp.contains("img-src 'self'"),
-            "{csp}"
-        );
-        // The diagram's arrowheads are markers in the same SVG, never a fetch.
-        assert!(html.split("url(").skip(1).all(|rest| rest.starts_with('#')));
-        // Links leave only for the source on GitHub and the site's offerings (and the
-        // network's own address in their intro); the canonical link is the site's own address.
-        let site = crate::site::builtin();
-        let offerings: Vec<&str> = site
-            .info
-            .offers()
-            .map(|offers| offers.items.iter().map(|item| item.href.as_str()).collect())
-            .unwrap_or_default();
-        for href in html.split("href=\"").skip(1) {
-            let href = href.split('"').next().unwrap();
-            assert!(
-                href.starts_with('/')
-                    || href.starts_with('#')
-                    || href == "https://devagotchi.com/"
-                    || href.starts_with("https://github.com/devagotchi/devagotchi")
-                    || offerings.contains(&href)
-                    || href == "https://shippin.cloud",
-                "{href}"
-            );
+            assert!(src.starts_with("/assets/landing.js\""), "{src}");
         }
     }
 }
@@ -305,10 +287,7 @@ fn every_popup_opens_from_a_button_names_itself_and_closes() {
                 "{id} has no opener"
             );
         }
-        assert!(
-            ids.contains("m-claim") && ids.contains("m-watch"),
-            "{ids:?}"
-        );
+        assert!(ids.contains("m-claim"), "{ids:?}");
     }
     let full = body(Front::Passkeys);
     assert!(full.contains("id=\"m-tools\""));
@@ -349,7 +328,7 @@ fn the_rail_names_every_page_in_the_order_they_read() {
         .skip(1)
         .map(|rest| rest.split('"').next().unwrap())
         .collect();
-    assert_eq!(targets.len(), 9, "{targets:?}");
+    assert_eq!(targets.len(), 10, "{targets:?}");
     let at: Vec<usize> = targets
         .iter()
         .map(|id| {
@@ -414,52 +393,6 @@ fn the_shell_stays_and_motion_is_optional_in_the_stylesheet() {
     // Nothing in it reaches another origin.
     assert!(CSS.split("url(").skip(1).all(|rest| rest.starts_with('#')));
     assert!(!CSS.contains("@import") && !CSS.contains("http"));
-}
-
-#[test]
-fn the_video_plays_only_when_asked_and_every_id_is_unique() {
-    for front in [
-        Front::Unclaimed,
-        Front::Passkeys,
-        Front::Nomen,
-        Front::Hosted,
-    ] {
-        let html = body(front);
-        // In the hero (wide screens) and in the Watch it set up popup; click to play.
-        let videos: Vec<&str> = html.split("<video ").skip(1).collect();
-        assert_eq!(videos.len(), 2);
-        for video in videos {
-            let tag = video.split('>').next().unwrap();
-            for needed in [
-                "controls",
-                "muted",
-                "playsinline",
-                "preload=\"none\"",
-                "poster=\"/assets/",
-            ] {
-                assert!(tag.contains(needed), "{needed}: {tag}");
-            }
-            assert!(!tag.contains("autoplay"), "{tag}");
-            assert!(
-                video.contains("<source src=\"/assets/turnkey.mp4?v="),
-                "{video}"
-            );
-        }
-        assert!(html.contains("<figure class=\"hero-video\">"));
-        // The diagram is on the page twice (the hero on a phone, How it works on a wide
-        // screen), so its ids are prefixed: no id is used twice.
-        let ids: Vec<&str> = html
-            .split(" id=\"")
-            .skip(1)
-            .map(|rest| rest.split('"').next().unwrap())
-            .collect();
-        let unique: BTreeSet<&str> = ids.iter().copied().collect();
-        assert_eq!(unique.len(), ids.len(), "{ids:?}");
-        assert!(html.split("url(#").skip(1).all(|rest| {
-            let id = rest.split(')').next().unwrap();
-            unique.contains(id)
-        }));
-    }
 }
 
 /// The value of `name="…"` in the first tag of `html`.

@@ -1,4 +1,4 @@
-//! The site's files in `assets/`: pictures, the video, fonts. Each is served from this hub
+//! The site's files in `assets/`: pictures and fonts. Each is served from this hub
 //! at `/assets/<name>?v=<hash>`, the first 16 hex digits of its SHA-256, so a page always
 //! names the exact bytes it means and the file is cached for a year. Only types a page can
 //! load under the pages' CSP are taken; no HTML, script or stylesheet comes from a site.
@@ -12,7 +12,7 @@ pub const MAX_TOTAL_BYTES: u64 = 64 * 1024 * 1024;
 /// The hub's own files under `/assets/`, which no site file may take the name of.
 const RESERVED: [&str; 3] = ["hub.css", "passkey.js", "push.js"];
 
-const TYPES: [(&str, &str); 11] = [
+const TYPES: [(&str, &str); 9] = [
     ("svg", "image/svg+xml"),
     ("png", "image/png"),
     ("jpg", "image/jpeg"),
@@ -20,8 +20,6 @@ const TYPES: [(&str, &str); 11] = [
     ("webp", "image/webp"),
     ("gif", "image/gif"),
     ("ico", "image/x-icon"),
-    ("mp4", "video/mp4"),
-    ("webm", "video/webm"),
     ("woff2", "font/woff2"),
     ("woff", "font/woff"),
 ];

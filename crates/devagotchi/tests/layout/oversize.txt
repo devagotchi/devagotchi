@@ -32,9 +32,9 @@
 585	crates/hub/src/notify/signals/mod.rs
 844	crates/hub/src/offers/tests.rs
 574	crates/hub/src/ops/analytics/tests.rs
-713	crates/hub/src/site.rs
-1651	crates/hub/src/site/model.rs
-843	crates/hub/src/site/tests.rs
+708	crates/hub/src/site.rs
+1650	crates/hub/src/site/model.rs
+842	crates/hub/src/site/tests.rs
 564	crates/hub/src/site/workflows.rs
 521	crates/hub/src/tenancy/orgs/api/mod.rs
 1548	crates/hub/src/tenancy/orgs/mod.rs
@@ -42,16 +42,26 @@
 607	crates/hub/src/web/analytics.rs
 510	crates/hub/src/web/app/agenthub/ticket_tests.rs
 713	crates/hub/src/web/approvals.rs
+<<<<<<< ours
 696	crates/hub/src/web/discovery_tests.rs
+=======
+633	crates/hub/src/web/discovery_tests.rs
+733	crates/hub/src/web/hub_settings.rs
+>>>>>>> theirs
 542	crates/hub/src/web/hub_settings_tests.rs
-677	crates/hub/src/web/landing.rs
+664	crates/hub/src/web/landing.rs
 751	crates/hub/src/web/oauth.rs
 1082	crates/hub/src/web/orgs.rs
-751	crates/hub/src/web/pages.rs
+742	crates/hub/src/web/pages.rs
 1534	crates/hub/src/web/passkey_tests.rs
 1112	crates/hub/src/web/passkeys.rs
+<<<<<<< ours
 937	crates/hub/src/web/providers.rs
 687	crates/hub/src/web/routes.rs
+=======
+949	crates/hub/src/web/providers.rs
+686	crates/hub/src/web/routes.rs
+>>>>>>> theirs
 1204	crates/hub/src/web/tests/mod.rs
 1086	crates/hub/src/web/workflow.rs
 531	crates/hub/src/workflows/mcp.rs

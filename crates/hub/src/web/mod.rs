@@ -51,6 +51,8 @@ mod machines;
 mod media;
 #[cfg(test)]
 mod media_tests;
+#[cfg(test)]
+mod naming_tests;
 mod nomen_login;
 mod notify;
 pub mod oauth;
@@ -62,6 +64,8 @@ mod provider_apply;
 #[cfg(test)]
 mod shippin_tests;
 mod sign_in_cards;
+#[cfg(test)]
+mod walkthrough_tests;
 #[cfg(test)]
 pub(crate) use operator_tests as operator_tests_support;
 mod orgs;
