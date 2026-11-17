@@ -25,6 +25,28 @@ it has been proven on a device yet.
 
 Status: **built** (code and a test), **partial** (gap named), **absent**.
 
+## What ships first, and what comes after (operator, 2026-11-17)
+
+The operator's words: "the stand alone offering of devagotchi needs to cover just desktop
+commander, and the agenthub is limited, the application to be pushed the plugins that all
+needs to be truly built and setup in this project so we can finally focus on the
+admin/shippin module that would allow us to either deploy a managed instance, or offer a
+tailored commercial signup offering free tier and more".
+
+1. **The standalone edition**, free, self-hosted from GitHub. Done when these rows are done:
+   - Desktop Commander, all of it: row 5.1, on this computer with no hub (row 5.4) and through
+     a hub to every machine (Phase 2);
+   - AgentHub, limited (decision 7 below proposes the line);
+   - the plugins for Claude, Codex and Grok, built and set up in this repository: rows 5.2 to 5.5;
+   - installed from the release as a stranger would: rows 0.0 to 0.6, 8.3.
+2. **Then the admin/Shippin module**, in its own repository: deploy a managed instance for a
+   customer, or a tailored commercial sign-up with a free tier and paid tiers
+   ([cloud-edition](cloud-edition.md); the tenancy crate, free-edition R4). It starts only
+   when step 1 is proven on Texas and the phone.
+
+Rows not named in step 1 (Phases 3, 6, 7, the rest of 4 and 9) are kept and ordered, but they
+are not part of the standalone edition unless the operator says so.
+
 ## Phase 0: prove what is already built, on Texas and the phone
 
 Nothing new is built until this phase has run once; what it finds is fixed first.
@@ -92,7 +114,11 @@ Nothing new is built until this phase has run once; what it finds is fixed first
 | # | Feature | In the code today | Proof |
 |---|---|---|---|
 | 5.1 | every Desktop Commander capability | partial: tool by tool in [.ai/docs/desktop-commander-parity.md](../../docs/desktop-commander-parity.md) (#238): missing `write_pdf` (waits on the operator), PDF/Excel/DOCX reading and editing, search sessions (`stop_search`, `list_searches`; `search_files` pages by cursor instead), `give_feedback`, `get_tool_result` | DC's documented flows, each run from Claude against Texas |
-| 5.2 | plugin for Claude, Codex and Grok; local UI opened by the user's own actions, not the server | partial: Claude connector, skills, hooks; Codex connector only; Grok unchecked; no local UI; `.mcp.json` points at `hub.example.com` | install each plugin from its marketplace; it reaches Texas |
+| 5.2 | the Claude plugin: connector to the person's own hub, skills, hooks | built: `plugins/devagotchi` (hub address set per install, skills `machines` and `agenthub`), `plugins/devagotchi-agenthub` (hooks), held to the hub's tool list by `mcp/tests/plugins.rs` | `/plugin install` in Claude Code, Desktop and claude.ai; it reaches Texas |
+| 5.3 | the Codex plugin, as complete as Claude's | partial: a manifest only; its connector file (`plugins/devagotchi/.mcp.json`) names the placeholder `https://hub.example.com/mcp`, the hub address cannot be set, no hooks, and `plugins/README.md` says it uses the hosted hub | `codex plugin add`, signed in, reaches Texas; the hooks fire in a Codex session |
+| 5.4 | the plugins work with no hub: Devagotchi on this computer alone, as Desktop Commander does (`devagotchi mcp` over stdio, the local broker) | absent from the plugins: only `devagotchi connect` writes that setup (Claude Code, Codex, Claude Desktop) | install the plugin on a computer with no hub; Claude runs a command there |
+| 5.5 | Grok, through the Claude marketplace format | unchecked: "Not yet checked in a real Grok session" (`plugins/README.md`) | install in Grok Build; it reaches Texas |
+| 5.6 | a local UI the person opens themselves, not the server | absent | the operator's review |
 | 5.3 | API keys with granular control and durations | built | a key limited to one machine and one hour |
 
 ## Phase 6: connectors and every setting in the UI
@@ -152,3 +178,10 @@ Only after Phase 9 is proven: the cloud edition ([cloud-edition](cloud-edition.m
 6. **Where a domain's pages live** ([structure-cleanup](structure-cleanup.md), "Ruling
    proposed"): each domain serves its own pages from `<domain>/web/`, and the hub's `web/`
    keeps only the shell (proposed), or `web/` stays and is nested by domain. Step S8 waits on it.
+7. **"AgentHub is limited" in the standalone edition**: where is the line? Proposed: the
+   standalone edition keeps what one person and their AIs need: boards on the person's own hub
+   (and the local board), tickets, claims and leases, notes, approvals on the phone, the hooks,
+   `board scan`. The commercial module adds what teams and a business need: organisations,
+   teams and shared machines (4.5), the configurable hierarchy (4.4), statistics in ClickHouse
+   (4.7), importers beyond `board scan` (4.2), AgentHub on its own Postgres (4.8). Nothing is
+   removed from the code for this; the commercial build turns it on.
