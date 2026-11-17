@@ -91,23 +91,7 @@ pub use adapter::terminal::{INPUT_DESCRIPTION, RESIZE_DESCRIPTION};
 
 /// The kind of broker answer `actual` is, by name.
 pub fn response_kind(actual: &ResponseBody) -> &'static str {
-    match actual {
-        ResponseBody::Start(_) => "start",
-        ResponseBody::Operation(_) => "operation",
-        ResponseBody::Output(_) => "output",
-        ResponseBody::Operations(_) => "operations",
-        ResponseBody::File(_) => "file",
-        ResponseBody::Listing(_) => "listing",
-        ResponseBody::Written(_) => "written",
-        ResponseBody::Revision(_) => "revision",
-        ResponseBody::Info(_) => "info",
-        ResponseBody::InputSent(_) => "input_sent",
-        ResponseBody::Search(_) => "search",
-        ResponseBody::Config(_) => "config",
-        ResponseBody::Processes(_) => "processes",
-        ResponseBody::Killed(_) => "killed",
-        ResponseBody::Url(_) => "url",
-    }
+    actual.kind()
 }
 
 /// A broker answered with another kind of response than the request calls for.
