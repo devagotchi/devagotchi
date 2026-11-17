@@ -10,6 +10,12 @@ heading. Agents draft the fragments below; they never tag.
 These notes are what the operator promotes when tagging `v0.1.0-alpha.1`. This file does not
 create that tag, and a prerelease tag does not move the `:latest` image.
 
+### The license is the Functional Source License (FSL-1.1-ALv2)
+- Devagotchi moves from the Business Source License 1.1 to FSL-1.1-ALv2, held by AngryVibes LLC:
+  self-hosting for yourself and your organization stays free; offering it to others as a
+  competing commercial service does not. Each version becomes Apache-2.0 two years after it is
+  published (it was AGPL-3.0 after four).
+
 ### The landing page shows getting started, and what it does more than Desktop Commander
 - The hero's setup video is now an interactive walkthrough: connect your AI, approve it, add a
   machine, work, approve on your phone. Each step is drawn as the screens it happens on
@@ -23,7 +29,7 @@ create that tag, and a prerelease tag does not move the `:latest` image.
   picture (`assets.preview`).
 - The comparison is back, as "More than a computer in the chat": nine rows against Desktop
   Commander, each citing the line of its source (release v0.3.3) or its pricing page it is read
-  from, and a footnote on where Desktop Commander is ahead today (macOS, search, PDF/Excel/Word
+  from, and a footnote on where Desktop Commander is ahead today (macOS, PDF/Excel/Word
   files, its directory listings). Nowhere else names another product: the site, every other
   page, `llms.txt` and the MCP surface are still held to that.
 

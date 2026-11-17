@@ -3,7 +3,7 @@
 //! underneath, so a command that outlasts the wait keeps running and stays observable with
 //! the operation tools; nothing here owns a job.
 
-use devagotchi_contracts::{BridgeError, OperationState, StartInput};
+use devagotchi_contracts::{BridgeError, OperationState};
 use devagotchi_mcp::run::{self as shared, Failed};
 use rmcp::{
     Json, RoleServer, handler::server::wrapper::Parameters, service::RequestContext, tool,
@@ -22,14 +22,14 @@ pub struct RunInput {
     /// The command line, as you would type it in a terminal on that machine: bash or sh on
     /// Linux, PowerShell on Windows.
     pub command: String,
-    /// Absolute directory to run in; defaults to the machine's workspace.
+    /// Directory to run in (absolute, `~/...`, or relative to the workspace); defaults to the machine's workspace.
     #[serde(default)]
     pub cwd: Option<String>,
     /// Seconds to wait for the result, 1 to 50 (default 30). A command still running then
     /// keeps running; you get its operation_id.
     #[serde(default)]
     pub wait_seconds: Option<u64>,
-    /// Seconds the command may run before the machine stops it, 1 to 300 (default 300).
+    /// Seconds the command may run before the machine stops it, 1 to 86400 (default 3600: an hour).
     #[serde(default)]
     pub timeout_seconds: Option<u64>,
 }
@@ -106,16 +106,13 @@ impl Hub {
                 return Err(Json(error));
             }
         };
-        let start = StartInput {
-            idempotency_key: format!("run-{}", hex::encode(crate::machines::random::<16>())),
-            executable: String::new(),
-            args: Vec::new(),
-            command: Some(input.command),
-            cwd: input.cwd,
-            deadline_ms: timeout * 1000,
-            caller: Some(Self::caller(&subject, &context)),
-            interactive: None,
-        };
+        let start = shared::start(
+            format!("run-{}", hex::encode(crate::machines::random::<16>())),
+            input.command,
+            input.cwd,
+            timeout,
+            Self::caller(&subject, &context),
+        );
         let ran = shared::run(
             |body| self.send_hinted(&route, body),
             start,

@@ -60,7 +60,7 @@ fn claim(ctx: &Ctx) -> String {
 
 /// The hub's MCP tools, grouped by what they are for. They are the hub's own, so they stay
 /// with its code: a test holds this to the tools the hub serves (`hub::tool_names`).
-pub const TOOLS: [(&str, &[(&[&str], &str)]); 6] = [
+pub const TOOLS: [(&str, &[(&[&str], &str)]); 7] = [
     (
         "Find your machines",
         &[
@@ -117,6 +117,22 @@ pub const TOOLS: [(&str, &[(&[&str], &str)]); 6] = [
                 &["operation_cancel"],
                 "Stops a job. Disconnecting never does.",
             ),
+            (
+                &["list_processes", "kill_process"],
+                "Sees every process on the machine, busiest first, and stops one. Never the broker itself.",
+            ),
+            (
+                &["read_url"],
+                "Reads a web address as the machine reaches it, its own localhost included.",
+            ),
+            (
+                &["get_recent_tool_calls", "get_usage_stats"],
+                "Your own recent calls and how they went, so an AI picks up where it was. Never anyone else's.",
+            ),
+            (
+                &["get_config", "set_config_value"],
+                "Reads the machine's settings, and changes how much output and how many jobs it keeps. What it may run stays yours to set.",
+            ),
         ],
     ),
     (
@@ -130,6 +146,10 @@ pub const TOOLS: [(&str, &[(&[&str], &str)]); 6] = [
             (
                 &["list_directory", "get_file_info"],
                 "Lists a folder, or says what a path is without reading it.",
+            ),
+            (
+                &["search_files"],
+                "Finds files by name, or lines inside them, as ripgrep would.",
             ),
             (
                 &["write_file", "edit_file"],
@@ -186,6 +206,23 @@ pub const TOOLS: [(&str, &[(&[&str], &str)]); 6] = [
             &["connections", "connection_call"],
             "Calls the services you connected (Resend, Stripe, GitHub, Slack and more) through the hub: your agent never sees their keys.",
         )],
+    ),
+    (
+        "Keep your words",
+        &[
+            (
+                &["lexicon_resolve", "dictionary_get"],
+                "Says what a phrase means to you and your project, before the dictionary of product boundaries and stacks it ships with.",
+            ),
+            (
+                &["lexicon_propose", "lexicon_review"],
+                "Adds a phrase as suggested, unclear or yours, and lets you confirm, retire, reword or delete it.",
+            ),
+            (
+                &["lexicon_handoff"],
+                "Hands your words to Clyffy and takes them back, one keeper at a time, with any two meanings you confirmed left for you to pick.",
+            ),
+        ],
     ),
 ];
 

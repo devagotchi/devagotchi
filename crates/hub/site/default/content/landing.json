@@ -434,7 +434,7 @@
       },
       {
         "q": "Is Devagotchi open source?",
-        "a": "It is source-available under the Business Source License 1.1. You can read the code, run your own hub in production for yourself or your organization at no cost, and change it. You cannot offer it to others as a hosted service. Each version becomes open source under the AGPL-3.0 four years after it is published."
+        "a": "It is source-available under the Functional Source License (FSL-1.1-ALv2). You can read the code, change it, and run your own hub at no cost for yourself or your organization. You cannot offer it to others as a commercial service that competes with it. Each version becomes open source under the Apache License 2.0 two years after it is published."
       }
     ],
     "meta": "The source is on GitHub: [devagotchi/devagotchi]({link:source})."
@@ -696,6 +696,6 @@
       }
     ],
     "source_note": "read at Desktop Commander's release v0.3.3 (commit bce370e, 12 November 2026).",
-    "footnote": "Desktop Commander is ahead today on macOS, which {product} does not run on yet, on searching files and their contents, on PDF, Excel and Word files, and on its listings in Claude's and ChatGPT's directories. Its facts here are read from its source at release v0.3.3 and its pricing page on 16 November 2026."
+    "footnote": "Desktop Commander is ahead today on macOS, which {product} does not run on yet, on PDF, Excel and Word files, and on its listings in Claude's and ChatGPT's directories. Its facts here are read from its source at release v0.3.3 and its pricing page on 16 November 2026."
   }
 }

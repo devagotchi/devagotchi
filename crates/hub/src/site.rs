@@ -526,11 +526,6 @@ impl Site {
             .unwrap_or(usize::MAX)
     }
 
-    /// `/assets/<name>?v=<hash>` for one of the site's assets.
-    pub fn asset_url(&self, name: &str) -> Option<String> {
-        self.assets.get(name).map(Asset::url)
-    }
-
     /// The asset `site.json` names for `what`, if it names one.
     pub fn named(&self, what: Option<&String>) -> Option<&Asset> {
         what.and_then(|name| self.assets.get(name))
@@ -651,6 +646,7 @@ impl Site {
 
     /// A site may name `links.hosted_hub` for its own pages. The command line does not
     /// read it: a login names its hub with `--hub` or `DEVAGOTCHI_HUB`.
+    #[cfg(test)]
     pub fn hosted_hub(&self) -> Option<&str> {
         self.info
             .links

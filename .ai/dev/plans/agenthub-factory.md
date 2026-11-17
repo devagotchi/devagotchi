@@ -77,7 +77,7 @@ State from `main` at `ed818cf`. F-numbers are the factory board plan's; new item
 | F10 | Owner and delegate: each ticket has the accountable person and the agent holding it; filter by either | F4 | board tests; ticket page | not started |
 | F11 | Live activity line: heartbeats carry what the agent is doing now; the ticket page shows it; a person's reply lands in that agent's inbox | F10 | inbox tests; phone P2b | not started |
 | F3 | Write gate, tunable modes (observe, guide, enforce) | F2, D-decision 2 of the factory plan | hook tests | not started |
-| F5 | Defaults library and importers (markdown plans and TODOs first, then GitHub Issues) | F1 | parser fixtures | not started |
+| F5 | Defaults library and importers (markdown plans and TODOs first, then GitHub Issues) | F1 | parser fixtures | partial: `board scan` (increment 189), the library as rule files, preview, import once by fingerprint, local and hub boards; GitHub Issues and the device proof remain |
 | F6 | Hierarchy, configurable (baseline 1 default, baseline 2 selectable) | F1 | settings tests; UI | not started |
 | F8 | Proof of work (diff or PR, test results, preview) attached at completion; advisory file reservations; fan-out of one parent ticket to child tickets per repository or machine, rolling up to one review | F4 | board tests; review queue shows them | not started |
 | F9 | Outcomes per agent and client: accept rate, send-back rate, claim-to-done time, expired leases, cost per ticket when the client reports it (ClickHouse) | F4, F10 | warehouse tests; Overview card | not started |

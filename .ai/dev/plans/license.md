@@ -21,6 +21,18 @@
 
 ## Risks and approved decisions
 
+**2026-11-16, superseded:** the operator chose the Functional Source License,
+FSL-1.1-ALv2, for the main repository, in place of BSL 1.1. `LICENSE` is the official
+template (getsentry/fsl.software, `FSL-1.1-ALv2.template.md` at `dba73c4`) with its notice
+filled: Copyright 2026 AngryVibes LLC. Its terms are fixed, with no parameters: any purpose but
+a Competing Use (making it available to others in a commercial product or service that
+substitutes for it or for a product or service the Licensor offers with it); internal use,
+non-commercial education and research, and professional services are permitted; each version
+becomes Apache-2.0 on its second anniversary. Crates, plugins, README, the landing FAQ, the
+editions rule and llms.txt say so. AgentHub (its own repository) moves separately.
+
+Before (2026-11-11):
+
 BSL 1.1 caps the change date at four years; the operator chose four over a custom six-year text.
 Change License AGPL-3.0. Not legal advice: a lawyer should read the Additional Use Grant before a
 paid offering depends on it.
