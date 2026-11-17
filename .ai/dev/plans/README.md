@@ -15,6 +15,7 @@ Active: [AI development contracts and local capture](ai-development-capture.md);
 [Make alpha = pre-release obvious](alpha-stage-obvious.md);
 [Texas baseline: installed the way a public customer would](texas-baseline.md);
 [The landing page: layman interactives from the real product](landing.md);
+[Dormant machines and signing back in by a link](dormancy-and-reauth.md);
 [Structure cleanup](structure-cleanup.md); [The kernel](kernel.md);
 [v0.1.0 release readiness](v0.1-release-readiness.md).
 Broader product delivery remains in the [canonical release plan](../../../docs/implementation-and-release-plan.md).
