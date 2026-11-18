@@ -526,6 +526,31 @@ Three more constraints shape the program:
 - **Depends on:** nothing.
 
 ### 246: Installable on Android: PNG icons, and the manifest on the sign-in page (M)
+- **Delivered as (2026-11-18, branch `increment-246/installable-android`, stacked on 245):**
+  - The moves:
+    - `manifest()` and `service_worker()` are in `site/pwa.rs`.
+    - The page kinds, `render` and the CSP are in `web/pages/head.rs`.
+    - `AssetNames` moved from `site/model.rs` to `site/assets.rs`.
+    - The fonts test moved from `site/tests.rs` to `site/assets_tests.rs`.
+    - Ratchet entries went down: `site.rs`, `pages.rs`, `model.rs`, `site/tests.rs` and `landing.rs`.
+  - `site.json` `assets` names new icons. The built-in and neutral sites ship them, and the
+    site check refuses a non-square PNG:
+    - `app_icons`: 192 and 512 square PNGs;
+    - `maskable_icon`: full bleed;
+    - `badge`: one colour on transparent, 96.
+  - The manifest lists each PNG at the size its file measures (`Asset::png_size`, moved from
+    `discovery.rs`).
+  - `background_color` is the `--bg` token. The `tokens.json` field is gone.
+  - Both sign-in pages (hosted `sign_in::page` and the one-owner passkey page) and `/` carry
+    the manifest link, icon and `theme-color`. A new `Kind::SignIn` adds
+    `manifest-src 'self'; img-src 'self'` to their CSP; the landing CSP adds `manifest-src`.
+  - Tests:
+    - `the_app_installs_at_app_and_opens_offline` (extended);
+    - `the_sign_in_page_carries_the_manifest_a_phone_installs_from`;
+    - `the_installed_app_has_measured_png_icons_a_maskable_one_and_a_badge`;
+    - `an_app_icon_that_is_not_a_square_png_stops_the_start`;
+    - `android_browser.py` step 3: installability on `/app` and `/auth/login`, and the icons
+      decoded.
 - **Scope:** Map A1, plus the moves described above.
   - Add `icon-192.png`, `icon-512.png`, a full-bleed `icon-maskable-512.png` and a monochrome `badge-96.png`, emitted with sizes measured by `png_size` (`site/discovery.rs:294`).
   - On `/auth/login` (and the manifest also on `/`): manifest link, `theme-color` and icon, with `manifest-src 'self'` and `img-src 'self'` added to the Kind::Plain CSP for those pages.

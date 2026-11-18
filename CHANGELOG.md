@@ -80,6 +80,19 @@ install, not a production promotion. The gap that is still open is in
   already forgotten past 4096 retirements cannot be brought back. An earlier build run on a
   journal this one opened fails each retirement once the journal holds 4096 tombstones.
 
+### Install the app on Android, from the sign-in page too (increment 246)
+
+- The app has PNG icons now: 192 and 512, a separate maskable one that Android crops to its
+  own shape, and a one-colour badge for the status bar. The manifest lists each one at the
+  size its file really is.
+- The sign-in page and the landing page carry the app's manifest. A phone that is not signed
+  in yet can install the app from the page it lands on.
+- The installed app opens on the page's own background colour (`--bg`). A site's
+  `tokens.json` no longer has `background_color`; remove it if yours sets it.
+- A site names its icons in `site.json` `assets` with `app_icons`, `maskable_icon` and
+  `badge`. A site whose icons are not square PNGs does not start, and says which file is
+  wrong.
+
 ### The phone checks tell the truth, and Android gets its own suite (increment 245)
 
 - The phone app's offline check in CI waited on a cache the service worker no longer fills,
