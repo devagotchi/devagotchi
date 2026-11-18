@@ -27,6 +27,9 @@ Status: **built** (code and a test), **partial** (gap named), **absent**.
 
 ## What ships first, and what comes after (operator, 2026-11-17)
 
+The one-user edition's work is ordered as increments in
+[one-user-edition.md](one-user-edition.md) (operator, 2026-11-18).
+
 The operator's words: "the stand alone offering of devagotchi needs to cover just desktop
 commander, and the agenthub is limited, the application to be pushed the plugins that all
 needs to be truly built and setup in this project so we can finally focus on the
