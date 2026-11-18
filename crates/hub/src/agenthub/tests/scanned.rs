@@ -5,7 +5,7 @@ use std::{ffi::OsString, path::Path};
 
 use serde_json::Value;
 
-use super::served::bound::{hub, signed_in};
+use super::serving::{hub, signed_in};
 use crate::agenthub::cli::{self, EXIT_OK, Invocation};
 
 fn run(cwd: &Path, account: &Path, args: &[&str]) -> (u8, Value) {

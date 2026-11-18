@@ -126,6 +126,11 @@ pub struct CreateIn {
     /// Folds repeats of one failure into one ticket. Optional.
     #[serde(default)]
     pub fingerprint: Option<String>,
+    /// The document item this ticket is imported from: `path` (repository-relative), `item`
+    /// (its stable id there), optional `revision` and `content_sha256`. Once per board: the
+    /// same create again returns the ticket as it is now; changed inputs are `source_conflict`.
+    #[serde(default)]
+    pub origin: Option<crate::agenthub::TicketSource>,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]

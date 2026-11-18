@@ -93,6 +93,9 @@ Ruled 2026-11-09 (Jesse):
 - **Remote importers** with the same contract: GitHub Issues/Projects, Linear, Jira (API),
   CSV, Notion (export). One-shot import by default; two-way sync opt-in per source with a
   stated field-ownership policy.
+- **Import once, by origin** and the scanner's evidence, manifest and review steps: the
+  [factory plan](../.ai/dev/plans/agenthub-factory.md) F5a (built), F5b and F5c, and its
+  import constraints under Risks.
 
 ### F6 — Hierarchy, configurable
 - Board settings hold the hierarchy: levels, names and which kinds live at each. Baseline 1

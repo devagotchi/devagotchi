@@ -3,5 +3,7 @@ mod hosted;
 mod notes;
 mod scanned;
 mod served;
+mod serving;
 mod settings;
+mod sourced;
 mod standalone;

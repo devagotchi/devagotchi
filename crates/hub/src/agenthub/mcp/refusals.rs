@@ -38,6 +38,7 @@ fn next_for(code: &str, id: Option<&str>) -> String {
         "not_granted" | "unknown_board" => "whoami lists the boards your identity may work on".into(),
         "no_board" => "the hub's operator must initialise or fix this board; nothing an agent can do".into(),
         "nothing_ready" => "board_create what you found, or wait with board_wait".into(),
+        "source_conflict" => "board_get the ticket the message names and reconcile it with board_update; never change the origin's path or item to get past it".into(),
         "unknown_environment" => "pass one of the board's environments the message lists, or leave environment out".into(),
         _ => "board_prime to re-orient".into(),
     }
