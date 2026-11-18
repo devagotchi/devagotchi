@@ -49,6 +49,10 @@ install, not a production promotion. The gap that is still open is in
   `provenance`. AgentHub migration 0002 adds `board_sources`. `board scan --import` does not
   pass an origin yet (increment 205; the scanner's evidence, manifest and review are factory
   F5b and F5c).
+- A store takes the hub's Postgres role (`devagotchi_hub`) only in a database that granted it the
+  tables' schema. Roles belong to the server, so a standalone AgentHub board on a server that
+  also holds a hub took a role its own database never granted and could not see its tables
+  (`relation "board_projects" does not exist`; seen in CI, increment 207).
 - `/admin` changes the settings the hub reads while it runs, in force the moment they are
   saved: the shortest password, sign-up rate and the limits of an account nobody has secured,
   connecting an AI with no sign-in, machines updating themselves, how long a workflow link
