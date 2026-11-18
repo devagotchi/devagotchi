@@ -444,7 +444,7 @@ pub(crate) fn app(state: AppState) -> Router {
         )
         .merge(
             // The bar runs first: it marks the operator's requests, which are not counted.
-            web::router(true)
+            web::router(true, state.hub.config.multi_tenant())
                 .layer(middleware::from_fn_with_state(
                     state.clone(),
                     web::counted::count,

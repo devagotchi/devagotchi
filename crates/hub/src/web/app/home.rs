@@ -151,8 +151,9 @@ pub async fn boards(State(state): State<AppState>, headers: HeaderMap) -> Respon
     };
     let site = words();
     let title = &site.messages.app.boards_title;
-    // The organisations a person's boards come from, and where they make one (`web/orgs.rs`).
-    let orgs = if state.hub.boards.orgs().is_some() {
+    // The organisations a person's boards come from, and where they make one (`web/orgs.rs`);
+    // a one-user hub has none to link to (`web/one_user`).
+    let orgs = if state.hub.config.multi_tenant() && state.hub.boards.orgs().is_some() {
         format!(
             "<p><a href=\"/orgs\" id=\"orgs-link\">{}</a></p>",
             pages::escape(&site.messages.orgs.link)
