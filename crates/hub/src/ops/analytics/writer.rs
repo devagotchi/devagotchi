@@ -55,7 +55,7 @@ fn keep_from(retention_days: u32, now: u64) -> i64 {
 pub(super) async fn run(
     store: Store,
     mut received: mpsc::Receiver<Record>,
-    retention_days: u32,
+    live: crate::config::Live,
     dropped: Arc<AtomicU64>,
 ) {
     #[cfg(not(test))]
@@ -77,7 +77,7 @@ pub(super) async fn run(
                         _ => break,
                     }
                 }
-                if let Err(error) = write(&store, &batch, retention_days).await {
+                if let Err(error) = write(&store, &batch, live.get().retention_days).await {
                     eprintln!(
                         "devagotchi hub: analytics: {} records not written: {}",
                         batch.len(),
@@ -87,7 +87,7 @@ pub(super) async fn run(
                 answer(batch);
             }
             _ = maintain_tick.tick() => {
-                if let Err(error) = maintain(&store, retention_days, now_secs()).await {
+                if let Err(error) = maintain(&store, live.get().retention_days, now_secs()).await {
                     eprintln!("devagotchi hub: analytics: daily totals: {}", error.message);
                 }
             }

@@ -400,7 +400,7 @@ pub async fn authorize(
     let sign_in = format!("/auth/login?return_to={}", encode(&this_request(&query)));
     // On a hosted hub with `anonymous_connect`, someone with no session gets the same page:
     // Connect makes their account (`hosted.rs`). Otherwise they sign in or up first.
-    let anonymous = state.hub.config.multi_tenant() && state.hub.config.tenancy.anonymous_connect;
+    let anonymous = state.hub.config.multi_tenant() && state.hub.config.live().anonymous_connect;
     let person = match hub.who(&headers).await {
         Ok(Some(person)) => Some(person),
         Ok(None) if anonymous => None,
@@ -528,7 +528,7 @@ pub async fn decide(
     let approve = form.decision == "approve";
     let multi = state.hub.config.multi_tenant();
     let mut cookies = Vec::new();
-    let anonymous = multi && state.hub.config.tenancy.anonymous_connect;
+    let anonymous = multi && state.hub.config.live().anonymous_connect;
     let person = match hub.who(&headers).await {
         Ok(Some(person)) => Some(person),
         // Cancel needs no account.

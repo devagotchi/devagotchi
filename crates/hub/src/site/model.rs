@@ -1398,7 +1398,7 @@ impl Default for SignInMessages {
             forgot: s("Forgot password?"),
             wrong: s("Email or password is wrong."),
             taken: s("That email already has an account. Sign in instead."),
-            short: s("Use at least 8 characters."),
+            short: s("Use at least {n} characters."),
             slow_down: s("Too many tries. Wait a few minutes."),
             reset_sent: s("Check your email for a sign-in link."),
             reset_unavailable: s(

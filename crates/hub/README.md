@@ -1090,8 +1090,28 @@ sessions of one AI share one inbox, so whichever calls first receives the note.
 Shippin (Nomen, its issuer filled in) and any other OpenID Connect provider (Okta, Entra ID,
 Auth0, Keycloak, Authentik) are set there, each with its redirect address shown, in Postgres (`sign_in_settings`), with the client secret sealed by `identity/sealed.rs` under
 `settings.key` in the state directory. Back up the state volume with the database, or those secrets
-must be entered again. ClickHouse holds statistics only, never settings. Email, ClickHouse and
-signal sinks are still set at install and are shown there read-only.
+must be entered again. ClickHouse holds statistics only, never settings.
+
+The settings the hub reads while it runs are changed there too, and apply the moment they are
+saved, with no restart (`config/live.rs` lists them; Postgres keeps them in `hub_settings`,
+migration 0034; each change is on the hub's own chain as `settings.changed`):
+
+| Card | Setting | Range | Default |
+|---|---|---|---|
+| Sign-in → Passwords | `passwords.min_length` | 8 to 128 characters (15 to 18 recommended) | 8 |
+| People → New accounts | `tenancy.starts_per_hour` | 1 to 10000 | 8 |
+| | `tenancy.max_unsecured` | 1 to 10000000 | 10000 |
+| | `tenancy.anonymous_connect` | on or off | off |
+| | `tenancy.unsecured.machines` / `.clients` / `.idle_days` | 0–100 / 1–100 / 1–90 | 2 / 3 / 14 |
+| Machines and workflows | `machines.auto_update` | on or off | on |
+| | `workflows.link_ttl_secs` | 300 to 86400 | 1800 |
+| Data → Visits (hosted hubs) | `analytics.retention_days` | 1 to 3650 | 90 |
+
+A key the config file names, or its environment variable sets, wins: the page shows its value,
+greyed, and where to change it. Every other key of the config file is set at deploy, and the page
+lists each with why (`DEPLOY_TIME`). A test fails when a config key is in neither list. Email
+(SMTP) and signal sinks get their cards next (hub-settings M3, M5); until then they are set at
+install.
 
 ## API keys
 

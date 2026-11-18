@@ -8,12 +8,14 @@
 
 use super::{
     approvals::same_origin,
+    hub_settings_live,
     hub_settings_owner::{self, AnalyticsForm, Shown, SignInForm, owner},
     operator::hidden,
     pages::{self, Tab, escape},
     routes::{see_other, unavailable},
     sign_in_cards,
 };
+use crate::config::live::Group;
 use crate::ops::warehouse;
 use crate::{
     AppState, config::providers::ProviderConfig, identity::accounts::sign_in_settings::NewSignIn,
@@ -202,18 +204,32 @@ pub async fn page(
         "Off"
     };
     let install = "Set when the hub is installed. Re-run <code>install.sh</code> to change it.";
+    let live = |group| hub_settings_live::card(&state, group);
+    // Visits are counted only on a hosted hub, so only its owner sees how long they are kept.
+    let visits = if state.hub.config.multi_tenant() {
+        live(Group::Analytics)
+    } else {
+        String::new()
+    };
     let body = format!(
         "<h1>Hub settings</h1><p class=\"meta\">For this hub's owner. Changes apply as soon as you save.</p>{flash}\
 <nav class=\"chips\" aria-label=\"Sections\"><a class=\"chip\" href=\"#sign-in\">Sign-in</a>\
 <a class=\"chip\" href=\"#access\">AI access</a><a class=\"chip\" href=\"#people\">People</a>\
+<a class=\"chip\" href=\"#running\">Machines and workflows</a>\
 <a class=\"chip\" href=\"#data\">Data and signals</a></nav>\
 <section class=\"card\" id=\"sign-in\"><h2>Sign-in</h2><p class=\"note help\">How people sign in to this hub: \
-Google, GitHub, Shippin, or any OpenID Connect provider. Shippin's switch is on once you save an issuer, or once install.sh --nomen set one; turn that switch off and the button goes. The issuer is the one you type; nothing is filled in for you. Secrets are encrypted in this hub's Postgres.</p>{cards}\
+Google, GitHub, Shippin, or any OpenID Connect provider. Shippin's switch is on once you save an issuer, or once install.sh --nomen set one; turn that switch off and the button goes. The issuer is the one you type; nothing is filled in for you. Secrets are encrypted in this hub's Postgres.</p>{cards}{passwords}\
 <ul class=\"rows\">{mail}</ul></section>\
 <section class=\"card\" id=\"access\"><h2>AI access</h2><ul class=\"rows\">{connect}{keys}</ul></section>\
-<section class=\"card\" id=\"people\"><h2>People</h2><ul class=\"rows\">{orgs}</ul></section>\
+<section class=\"card\" id=\"people\"><h2>People</h2>{sign_up}<ul class=\"rows\">{orgs}</ul></section>\
+<section class=\"card\" id=\"running\"><h2>Machines and workflows</h2>{machines}{workflows}</section>\
 <section class=\"card\" id=\"data\"><h2>Data and signals</h2><p class=\"note help\">Where AgentHub keeps its boards, \
-and where it sends their events for statistics.</p>{database}{analytics}<ul class=\"rows\">{signals}</ul></section>",
+and where it sends their events for statistics.</p>{database}{analytics}{visits}<ul class=\"rows\">{signals}</ul>{deploy_time}</section>",
+        deploy_time = hub_settings_live::deploy_time_card(),
+        passwords = live(Group::Passwords),
+        sign_up = live(Group::SignUp),
+        machines = live(Group::Machines),
+        workflows = live(Group::Workflows),
         mail = row("Email sign-in links", email, install),
         connect = row(
             "Connect an AI",

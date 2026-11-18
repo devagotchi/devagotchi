@@ -85,6 +85,9 @@ pub(crate) async fn run(
     if let Some(hub) = &passkeys {
         hub.reload_providers().await?;
     }
+    if let Some(accounts) = &accounts {
+        ops::hub_settings::apply_saved(&config, accounts).await?;
+    }
     // A one-owner hub whose config names neither its owner nor its operators may be claimed
     // from the browser (`identity/accounts/claim/mod.rs`); its code is issued once the hub listens, below.
     // A hosted hub (`tenancy.mode multi`) is never claimed.
@@ -102,9 +105,9 @@ pub(crate) async fn run(
     };
     // A hosted hub counts visits and its accounts' milestones for its operator, in its store.
     let analytics = match &accounts {
-        Some(accounts) if config.counts_visits() => Some(ops::analytics::Analytics::start(
+        Some(accounts) if config.counts_visits() => Some(ops::analytics::Analytics::start_with(
             accounts.store().clone(),
-            config.analytics,
+            config.live_handle(),
             &config.public_url,
         )),
         _ => None,
@@ -146,7 +149,7 @@ pub(crate) async fn run(
         Arc::new(workflows::Workflows::new(
             accounts,
             changes,
-            config.workflows.link_ttl_secs,
+            config.live_handle(),
         ))
     });
     // The site's offers on a hub with its own accounts: a provisioning token that is

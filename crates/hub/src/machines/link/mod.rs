@@ -89,8 +89,6 @@ pub struct Links {
     changes: Option<Arc<tokio::sync::Notify>>,
     /// The build this hub hands out (`downloads.rs`), which machines update to.
     offered: Option<String>,
-    /// `machines.auto_update` in the config: machines on another build update themselves.
-    auto_update: bool,
     /// Each machine's latest update, and who waits on one (`machine_update`).
     updates: Mutex<HashMap<String, Update>>,
     update_changed: tokio::sync::Notify,
@@ -175,7 +173,6 @@ pub fn random<const N: usize>() -> [u8; N] {
 impl Links {
     pub fn new(config: Arc<HubConfig>, devices: Arc<Devices>, audit: Arc<Audit>) -> Self {
         Self {
-            auto_update: config.machines.auto_update,
             config,
             devices,
             audit,

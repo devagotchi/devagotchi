@@ -77,6 +77,7 @@ pub(crate) async fn configured_accounts(
         .await?
         .with_tokens(config.token_config())
         .with_tenancy(config.tenancy.clone(), config.operators.clone())
+        .with_live(config.live_handle())
         .with_site(config.site_cell(), &config.public_url)
         .with_analytics(config.counts_visits())
         .with_extensions(config.extensions.clone()))

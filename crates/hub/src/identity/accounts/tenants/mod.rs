@@ -247,7 +247,7 @@ impl Accounts {
                 >= account
                     .last_active
                     .unwrap_or(0)
-                    .saturating_add(self.tenancy.unsecured.idle_secs())
+                    .saturating_add(self.live.get().unsecured.idle_secs())
     }
 
     /// When an account not secured yet ends if it stays unused; `None` once it is secured.
@@ -256,7 +256,7 @@ impl Accounts {
             account
                 .last_active
                 .unwrap_or(0)
-                .saturating_add(self.tenancy.unsecured.idle_secs())
+                .saturating_add(self.live.get().unsecured.idle_secs())
         })
     }
 
@@ -265,7 +265,7 @@ impl Accounts {
     /// near (under a seventh of the idle time, an hour at least).
     pub fn subject(&self, account: &Account, via: &'static str) -> crate::identity::auth::Subject {
         let lapses = self.lapses_at(account);
-        let idle = self.tenancy.unsecured.idle_secs();
+        let idle = self.live.get().unsecured.idle_secs();
         crate::identity::auth::Subject {
             id: account.id.clone(),
             via,
@@ -331,9 +331,9 @@ impl Accounts {
             .filter(|c| !c.is_control())
             .take(128)
             .collect();
-        let per_hour = i64::from(self.tenancy.starts_per_hour);
-        let cap = i64::from(self.tenancy.max_unsecured);
-        let idle = secs(self.tenancy.unsecured.idle_secs());
+        let per_hour = i64::from(self.live.get().starts_per_hour);
+        let cap = i64::from(self.live.get().max_unsecured);
+        let idle = secs(self.live.get().unsecured.idle_secs());
         let token = transaction!(&self.store, |connection| {
             sqlx::query("DELETE FROM auth_account_starts WHERE at <= $1")
                 .bind(secs(now) - 3600)
