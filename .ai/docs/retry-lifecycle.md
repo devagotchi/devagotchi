@@ -33,8 +33,15 @@ The journal's triggers make a tombstone immutable on every connection: a `DELETE
 and the transaction that tried rolls back whole. (`INSERT OR REPLACE` skips delete triggers
 while `recursive_triggers` is off, SQLite's default, so the insert has its own guard.) This
 guards against a mistaken writer, not against the machine's own account deleting the
-journal or the triggers on purpose. A broker build without these triggers prunes tombstones
-when it retires, so on a journal this build has opened its retirements fail.
+journal or the triggers on purpose.
+
+A broker build from before this contract keeps only the newest 4096 tombstones. Run on a
+journal this build has opened, it retires normally while the journal holds fewer than 4096
+tombstones; once it holds 4096, each of its retirements would forget one, so each fails and
+rolls back (`journal/tests.rs`, `a_pruning_build_fails_only_once_it_would_forget_a_key`).
+This is not retroactive either: tombstones an earlier build already pruned are gone and
+cannot be rebuilt, so a journal that went past 4096 retirements under such a build gains no
+protection for the keys it had already forgotten.
 
 ## What a key is bound to
 

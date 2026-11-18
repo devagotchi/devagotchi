@@ -168,8 +168,8 @@ impl Journal {
              END;",
             )
             .map_err(persistence)?;
-        // Added with interactive operations (increment 54). Kept out of view_json, so a broker
-        // from before reads a newer journal as it always did.
+        // Added with interactive operations (increment 54); a journal created before then gains
+        // them here. Folding them into CREATE TABLE is left to its own change.
         let columns: Vec<String> = connection
             .prepare("SELECT name FROM pragma_table_info('operations')")
             .and_then(|mut statement| {
@@ -418,8 +418,8 @@ impl Journal {
     }
 }
 
-/// A view as the journal stores it: everything but `interactive` in view_json, which an
-/// older broker reads unchanged, and `interactive` beside it.
+/// A view as the journal stores it: everything but `interactive` in view_json, and
+/// `interactive` in its own column beside it.
 fn stored(view: &OperationView) -> BridgeResult<(String, Option<String>)> {
     let interactive = view
         .interactive

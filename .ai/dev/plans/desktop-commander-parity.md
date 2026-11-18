@@ -151,7 +151,14 @@ five of which fail against `main`'s broker, settings and journal; the layout rat
 `tests/retry_lifecycle.py` (ported, baseline mode dropped) passed the full gate with 4097 real
 retirements through `devagotchi broker run` and `devagotchi mcp` (4119 child effects, each
 once) and `--quick` on the final build; `tests/e2e.py --no-hub` passed. Linux and the hub e2e
-were not run for this increment, and the harness is not wired into CI.
+were not run for this increment, and the harness is not wired into CI. The full 4097 gate ran
+on the binary built before the last `set_config_value` edit; only `--quick` ran on the final
+one. Review fix: the contract said an older build fails every retirement on a journal this
+build opened; it retires normally below 4096 tombstones and fails only once a prune would
+forget one, now stated and tested (`journal::tests::a_pruning_build_fails_only_once_it_would_forget_a_key`).
+After it, `cargo test -p devagotchi-machine-engine` 100 passed, and with `main`'s
+`journal.rs`, `broker.rs` and `broker/settings.rs` swapped in, those six tests failed (94
+passed) before the branch's files were restored.
 
 Seen once: right after the broker was killed, `devagotchi mcp` reported "your broker is running
 but did not answer within 20 s" while the old one was still shutting down; the next start worked.

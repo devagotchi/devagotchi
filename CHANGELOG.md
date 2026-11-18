@@ -61,7 +61,9 @@ install, not a production promotion. The gap that is still open is in
   retired key stays retired. `set_config_value` saves a limit first and applies it only once
   saved (`config_not_saved` otherwise), and a journal error while retiring down to a lower
   `max_operations` is returned instead of ignored. A key admitted by an earlier build
-  (bound with the grant list) is `idempotency_conflict` on this one.
+  (bound with the grant list) is `idempotency_conflict` on this one. Keys an earlier build had
+  already forgotten past 4096 retirements cannot be brought back. An earlier build run on a
+  journal this one opened fails each retirement once the journal holds 4096 tombstones.
 
 ### The license is the Functional Source License (FSL-1.1-ALv2)
 - Devagotchi moves from the Business Source License 1.1 to FSL-1.1-ALv2, held by AngryVibes LLC:

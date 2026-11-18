@@ -269,3 +269,45 @@ fn retry_evidence_is_permanent_and_immutable() {
         .unwrap();
     assert_eq!(digest, "digest-0");
 }
+
+/// What `.ai/docs/retry-lifecycle.md` says of a build that prunes to the newest 4096 (main
+/// before DG-RETRY-1) on a journal this build opened: its retirement commits while the
+/// journal holds fewer than 4096 tombstones, and fails once its prune would delete one.
+#[test]
+fn a_pruning_build_fails_only_once_it_would_forget_a_key() {
+    fn older_retirement(journal: &mut Journal, key: &str, at: i64) -> rusqlite::Result<()> {
+        let transaction = journal.connection.transaction()?;
+        transaction.execute(
+            "INSERT OR REPLACE INTO retired_keys(idempotency_key,request_digest,retired_at_ms) VALUES(?1,'digest',?2)",
+            params![key, at],
+        )?;
+        transaction.execute(
+            "DELETE FROM retired_keys WHERE rowid NOT IN (SELECT rowid FROM retired_keys ORDER BY retired_at_ms DESC, rowid DESC LIMIT 4096)",
+            [],
+        )?;
+        transaction.commit()
+    }
+    let directory = tempfile::tempdir().unwrap();
+    let state = devagotchi_ipc::private_test_state(directory.path());
+    let mut journal = Journal::open(&state).unwrap();
+    let transaction = journal.connection.transaction().unwrap();
+    for n in 0..4095 {
+        transaction
+            .execute(
+                "INSERT INTO retired_keys VALUES(?1, 'digest', ?2)",
+                params![format!("old-{n}"), n],
+            )
+            .unwrap();
+    }
+    transaction.commit().unwrap();
+
+    older_retirement(&mut journal, "the-4096th", 5000).unwrap();
+    assert_eq!(tombstones(&journal), 4096);
+    assert!(older_retirement(&mut journal, "the-4097th", 5001).is_err());
+    assert_eq!(
+        tombstones(&journal),
+        4096,
+        "the failed retirement rolled back"
+    );
+    assert!(journal.was_retired("old-0").unwrap() && !journal.was_retired("the-4097th").unwrap());
+}

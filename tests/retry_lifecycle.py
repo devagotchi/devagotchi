@@ -9,6 +9,8 @@ The default 4097 real retirements pass the 4096 keys the journal once kept;
 --quick runs 16 and is not that gate.
 
   python tests/retry_lifecycle.py --devagotchi target/debug/devagotchi --work-root target --quick
+
+(on Windows the binary is target/debug/devagotchi.exe)
 """
 import argparse
 import collections
