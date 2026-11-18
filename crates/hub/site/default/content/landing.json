@@ -223,7 +223,10 @@
           },
           {
             "term": "An app made for your phone",
-            "text": "Add it to your home screen and it opens like any app. It greets you by name and says what needs you, the icon counts what waits, and a request reads at a glance with one big Approve. Your own page holds your organisations and what you want: how it looks, which kinds of step you always decide, and whether your machines may buzz you."
+            "text": {
+              "hosted": "Add it to your home screen and it opens like any app. It greets you by name and says what needs you, the icon counts what waits, and a request reads at a glance with one big Approve. Your own page holds your organisations and what you want: how it looks, which kinds of step you always decide, and whether your machines may buzz you.",
+              "default": "Add it to your home screen and it opens like any app. It greets you by name and says what needs you, the icon counts what waits, and a request reads at a glance with one big Approve. Your own page holds what you want: how it looks, which kinds of step you always decide, and whether your machines may buzz you."
+            }
           },
           {
             "term": "Setup links",
@@ -231,7 +234,10 @@
           },
           {
             "term": "A board your agents share",
-            "text": "Claude and Codex coordinate on one ticket board: claim work, leave notes, hand off. Bring your team: organisations with members and teams, a role on each project (owner, admin, member, agent or viewer) and invites by link. A viewer reads, an agent works, and only people approve. Leave a note for Claude, Codex, Grok or your own agent and it arrives whole on their next call. Custom agents get it by signed webhook."
+            "text": {
+              "hosted": "Claude and Codex coordinate on one ticket board: claim work, leave notes, hand off. Bring your team: organisations with members and teams, a role on each project (owner, admin, member, agent or viewer) and invites by link. A viewer reads, an agent works, and only people approve. Leave a note for Claude, Codex, Grok or your own agent and it arrives whole on their next call. Custom agents get it by signed webhook.",
+              "default": "Claude and Codex coordinate on one ticket board: claim work, leave notes, hand off. Only you approve. Leave a note for Claude, Codex, Grok or your own agent and it arrives whole on their next call. Custom agents get it by signed webhook."
+            }
           },
           {
             "term": "Every machine you have",
