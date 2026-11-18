@@ -328,12 +328,15 @@ impl BridgeAdapter {
 
 impl BridgeAdapter {
     /// Every tool this adapter serves.
+    /// Their answers' schemas are open to fields added later (`crate::outputs`).
     fn router() -> rmcp::handler::server::router::tool::ToolRouter<Self> {
-        Self::tool_router()
-            + Self::files_router()
-            + Self::system_router()
-            + Self::terminal_router()
-            + Self::history_router()
+        crate::outputs::open_outputs(
+            Self::tool_router()
+                + Self::files_router()
+                + Self::system_router()
+                + Self::terminal_router()
+                + Self::history_router(),
+        )
     }
 }
 

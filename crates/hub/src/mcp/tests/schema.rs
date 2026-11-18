@@ -47,3 +47,35 @@ fn whoami_output_has_every_required_property() {
     assert!(!required.iter().any(|p| p == "provisional_warning"));
     assert!(!required.iter().any(|p| p == "orgs"));
 }
+
+/// An answer may grow: no advertised output schema refuses a field added later, so a client
+/// still holding an older tool list keeps accepting answers (claude.ai refused every
+/// `read_file` the day `FileContent` gained `identity`). Arguments stay closed.
+#[test]
+fn no_output_schema_refuses_a_field_added_later() {
+    for tool in crate::mcp::tools() {
+        if let Some(schema) = &tool.output_schema {
+            let text = serde_json::to_string(schema.as_ref()).unwrap();
+            assert!(
+                !text.contains("\"additionalProperties\":false"),
+                "{}: its output schema refuses fields added later: {text}",
+                tool.name
+            );
+        }
+    }
+    let read_file =
+        crate::mcp::output_schema::declared("read_file").expect("read_file has an output schema");
+    let answer = serde_json::json!({
+        "path": "/home/me/notes.txt", "size": 5, "offset": 0, "text": "hello",
+        "next_offset": 5, "eof": true, "modified_ms": null, "added_later": true
+    });
+    crate::mcp::output_schema::assert_matches("read_file", &read_file, &answer);
+    let write_file = crate::mcp::tools()
+        .into_iter()
+        .find(|tool| tool.name == "write_file")
+        .expect("write_file is served");
+    assert_eq!(
+        write_file.input_schema["additionalProperties"], false,
+        "arguments stay closed"
+    );
+}

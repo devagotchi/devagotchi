@@ -9,17 +9,20 @@ mod machines;
 mod operations;
 
 impl Hub {
-    /// Every tool this hub serves: its own, and each domain's router added to them.
+    /// Every tool this hub serves: its own, and each domain's router added to them. Their
+    /// answers' schemas are open to fields added later (`devagotchi_mcp::outputs`).
     pub(crate) fn router() -> ToolRouter<Self> {
-        Self::machines_router()
-            + Self::operation_router()
-            + Self::machine_router()
-            + Self::callers_router()
-            + Self::board_router()
-            + Self::workflow_router()
-            + Self::offers_router()
-            + Self::connections_router()
-            + Self::words_router()
+        devagotchi_mcp::outputs::open_outputs(
+            Self::machines_router()
+                + Self::operation_router()
+                + Self::machine_router()
+                + Self::callers_router()
+                + Self::board_router()
+                + Self::workflow_router()
+                + Self::offers_router()
+                + Self::connections_router()
+                + Self::words_router(),
+        )
     }
 }
 
