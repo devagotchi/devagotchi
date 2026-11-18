@@ -47,6 +47,31 @@ and `tests/hub_probe.py` asserts the list. The shorter list seen in claude.ai is
 cached between 2026-11-03 and 2026-11-14. The cached `list_directory` has no `cursor`, and
 there is no `connection_call`.
 
+## Operator clarification, later on 2026-11-18
+
+- **Two products.** The commercial version is powered by Shippin.AI and built by wiredFRONT
+  LLC and AngryVibes LLC. This repository's one-user edition is the operator's test bed: it
+  is tested and waited on, not rushed.
+- **Not this program:** the central public doorway (Cloudflare, Tailscale and more) belongs to
+  the commercial version.
+- **The plugins come forward.** The Claude Code and Codex/ChatGPT plugins install once: one
+  command per client keeps the hub address and the sign-in. After that they reliably raise
+  AgentHub notifications.
+  - Increments 211 → 262 → 264 → 267 come straight after M1, ahead of the rest of phases 2 and 3.
+  - Their acceptance includes a receipt from the operator's PC: an approval and a ticket note
+    each raise a notification in a real session.
+- **The plugins also tell the person about updates** (new increment 270, after 240 and 262):
+  - `devagotchi watch` emits `hub.update_available {running, available, notes_url}` from the
+    hub's release check (240), once per commit;
+  - the Claude Code monitor and the companion popup show it;
+  - `whoami` and the inbox banner carry one line, "Hub update available: X → Y, update from
+    /admin", so Claude, Codex and ChatGPT can say it in the conversation.
+  - Acceptance: a hub test where an available release puts the line in `whoami` and the
+    banner exactly once per commit; a `devagotchi watch` test emitting the event once; a
+    receipt that a real Claude Code session shows it.
+- **The app's update notice (241) stays in M4**, but its banner on Home is the same text as
+  270's line, so the browser, the phone and the plugins say one thing.
+
 Based on `main` f1b48e8, which is also what the live hub runs (`/healthz` downloads.version `main-f1b48e8`). I read `.ai/README.md`, `.ai/docs/editions.md`, `.ai/patterns/layout.md` and `crates/devagotchi/tests/layout/oversize.txt`. The six verified maps are the evidence base. I checked the phase 0 blockers again myself; my findings are below.
 
 ## Phase 0 blockers, checked again
