@@ -17,6 +17,8 @@ fn spawn(line: &str) -> Root {
     command
         .args(["/d", "/c"])
         .raw_arg(line)
+        // A test that fails before job adoption must not leak a suspended cmd.
+        .kill_on_drop(true)
         .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::null());
@@ -144,6 +146,130 @@ async fn termination_ends_every_member_and_verifies_it() {
         .await
         .expect("a job exit notice arrived")
         .unwrap();
+}
+
+#[test]
+fn an_invalid_process_snapshot_fails_closed() {
+    assert!(resume::suspended_threads(null_mut(), 0).is_err());
+}
+
+#[tokio::test]
+async fn a_thread_snapshot_neither_runs_nor_resumes_another_root() {
+    let directory = tempfile::tempdir().unwrap();
+    let first_marker = directory.path().join("first.txt");
+    let second_marker = directory.path().join("second.txt");
+    let mut first = spawn(&format!("echo first>\"{}\"", first_marker.display()));
+    let mut second = spawn(&format!("echo second>\"{}\"", second_marker.display()));
+    let threads =
+        resume::suspended_threads(first.raw_handle().unwrap(), first.id().unwrap()).unwrap();
+    assert_eq!(
+        threads.len(),
+        1,
+        "a new suspended cmd has only its initial thread"
+    );
+    // Capturing and checking the metadata (the creation time against GetThreadTimes on
+    // the opened handle) must not run the target.
+    tokio::time::sleep(Duration::from_millis(100)).await;
+    assert!(!first_marker.exists());
+    assert!(!second_marker.exists());
+    drop(threads);
+    let first_tree = OwnedTree::adopt(&mut first, Scope::Group)
+        .await
+        .ok()
+        .unwrap();
+    timeout(Duration::from_secs(5), first_tree.root_exit(&mut first))
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(
+        std::fs::read_to_string(&first_marker).unwrap().trim(),
+        "first"
+    );
+    assert!(
+        !second_marker.exists(),
+        "resuming one root must not resume the other"
+    );
+    let second_tree = OwnedTree::adopt(&mut second, Scope::Group)
+        .await
+        .ok()
+        .unwrap();
+    timeout(Duration::from_secs(5), second_tree.root_exit(&mut second))
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(
+        std::fs::read_to_string(&second_marker).unwrap().trim(),
+        "second"
+    );
+}
+
+#[tokio::test]
+async fn an_extra_suspend_fails_adoption_and_terminates_without_effect() {
+    use windows_sys::Win32::System::Threading::SuspendThread;
+    let directory = tempfile::tempdir().unwrap();
+    let marker = directory.path().join("must-not-run.txt");
+    let mut child = spawn(&format!("echo unsafe>\"{}\"", marker.display()));
+    let threads =
+        resume::suspended_threads(child.raw_handle().unwrap(), child.id().unwrap()).unwrap();
+    assert_eq!(threads.len(), 1);
+    // SAFETY: an owned handle to this test's suspended child. It stands in for a second
+    // caller holding a suspension, which adoption must never consume.
+    assert_eq!(unsafe { SuspendThread(threads[0].as_raw_handle()) }, 1);
+    drop(threads);
+    let failure = match OwnedTree::adopt(&mut child, Scope::Group).await {
+        Ok(_) => panic!("adopted a root whose thread remained suspended"),
+        Err(failure) => failure,
+    };
+    assert!(
+        matches!(failure.state, OperationState::Failed),
+        "{}",
+        failure.detail
+    );
+    assert!(
+        failure.detail.contains("initial suspend count"),
+        "{}",
+        failure.detail
+    );
+    assert!(
+        failure.detail.contains("no active processes remaining"),
+        "{}",
+        failure.detail
+    );
+    assert!(piped(&mut child).unwrap().try_wait().unwrap().is_some());
+    assert!(!marker.exists());
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn concurrent_suspended_roots_produce_exactly_their_own_effects() {
+    let directory = tempfile::tempdir().unwrap();
+    let mut tasks = tokio::task::JoinSet::new();
+    for index in 0..8 {
+        let marker = directory.path().join(format!("root-{index}.txt"));
+        tasks.spawn(async move {
+            // Prefix redirection: `echo root-N>file` would read the digit as a descriptor.
+            let mut child = spawn(&format!(">\"{}\" echo root-{index}", marker.display()));
+            let tree = OwnedTree::adopt(&mut child, Scope::Group)
+                .await
+                .ok()
+                .unwrap();
+            timeout(Duration::from_secs(5), tree.root_exit(&mut child))
+                .await
+                .unwrap()
+                .unwrap();
+            timeout(Duration::from_secs(5), tree.members_settled())
+                .await
+                .unwrap()
+                .unwrap();
+            assert_eq!(
+                std::fs::read_to_string(marker).unwrap().trim(),
+                format!("root-{index}")
+            );
+        });
+    }
+    while let Some(result) = tasks.join_next().await {
+        result.unwrap();
+    }
+    assert_eq!(std::fs::read_dir(directory.path()).unwrap().count(), 8);
 }
 
 /// Processes started detached (`spawn_detached`), which outlive the broker.

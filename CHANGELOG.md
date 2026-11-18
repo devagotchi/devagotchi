@@ -49,6 +49,18 @@ install, not a production promotion. The gap that is still open is in
 - `/admin` → Signal sinks adds, changes and removes where the hub pushes its signals (log
   services, your own collector), each running the moment it is saved, its token encrypted.
 
+### A command on Windows starts without walking every thread on the machine (increment 201)
+- The broker still creates each root suspended, puts it in its Job Object, and only then
+  resumes it. It now finds the root's threads from a snapshot of the root alone
+  (`PssCaptureSnapshot`, Windows 8.1 or later) instead of a ToolHelp walk of every thread on
+  the machine. That walk took 6.2 s under a parallel test run (Dabo, 2026-11-06), past a
+  5-second deadline, so commands timed out before they ran. On a loaded machine the first
+  input to a new interactive operation could also be refused as `input_blocked`.
+- Every thread is checked before any is resumed: its process ID and creation time must match
+  the snapshot, and `ResumeThread` must report the initial suspend count of one, so another
+  caller's suspension is never consumed. Any mismatch fails the start and terminates the job.
+  This is not sandboxing; the residual limits are in `windows/resume.rs`.
+
 ### The license is the Functional Source License (FSL-1.1-ALv2)
 - Devagotchi moves from the Business Source License 1.1 to FSL-1.1-ALv2, held by AngryVibes LLC:
   self-hosting for yourself and your organization stays free; offering it to others as a
