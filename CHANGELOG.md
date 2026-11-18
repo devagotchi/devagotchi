@@ -38,6 +38,14 @@ install, not a production promotion. The gap that is still open is in
   (kept in `.devagotchi/config.json`, refused with a password in it). With neither, every
   `board` command says so and names `board bind`. The SQLite `board.sqlite3` is gone, and nothing
   is moved from one: `board init` makes a new board (ADR 0005).
+- An importer names where a ticket comes from: `board_create` takes `origin`
+  (`{path, item, revision?, content_sha256?}`), so does `devagotchi board new --origin JSON`.
+  One ticket per origin on a board: creating it again with the same inputs returns the ticket
+  as it is now (its edits, holder and lease kept, nothing written); changed inputs, a new
+  revision included, are refused as `source_conflict` naming that ticket (exit 2). Who
+  recorded it and when are the board's, never the caller's; `board_get`, `board show` and the
+  export show it as `provenance`. AgentHub migration 0002 adds `board_sources`. `board scan
+  --import` does not pass an origin yet (increment 205).
 - `/admin` changes the settings the hub reads while it runs, in force the moment they are
   saved: the shortest password, sign-up rate and the limits of an account nobody has secured,
   connecting an AI with no sign-in, machines updating themselves, how long a workflow link

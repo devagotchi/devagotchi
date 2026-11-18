@@ -308,3 +308,64 @@ async fn plugin_hooks_name_the_client_that_runs_them() {
     );
     assert_eq!(named.status.code(), Some(2));
 }
+
+/// Six importers, six processes, one source item at once: one ticket and one event, every
+/// importer told its id. The same item in another project is that project's own ticket.
+#[tokio::test]
+async fn concurrent_imports_of_one_origin_make_one_ticket() {
+    let storage = or_skip!(empty_postgres());
+    let devagotchi = || board_cli(Some(&storage));
+    let origin = json!({ "path": "docs/ROADMAP.md", "item": "scanner-preview",
+                         "revision": "commit:0123", "content_sha256": "a".repeat(64) })
+    .to_string();
+    let (here, there) = (tempfile::tempdir().unwrap(), tempfile::tempdir().unwrap());
+    let board = |dir: &Path, args: &[&str]| -> Value {
+        let out = devagotchi()
+            .arg("board")
+            .args(args)
+            .arg("--json")
+            .current_dir(dir)
+            .output()
+            .unwrap();
+        assert!(out.status.success(), "{args:?}: {out:?}");
+        serde_json::from_slice(&out.stdout).unwrap()
+    };
+    board(here.path(), &["init", "--project", "imports"]);
+    board(there.path(), &["init", "--project", "elsewhere"]);
+    let importers: Vec<_> = (0..6)
+        .map(|n| {
+            devagotchi()
+                .args(["board", "new", "Implement project scanner", "--json"])
+                .args(["--origin", &origin, "--as", &format!("importer-{n}")])
+                .current_dir(here.path())
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .spawn()
+                .unwrap()
+        })
+        .collect();
+    let ids: Vec<Value> = importers
+        .into_iter()
+        .map(|importer| {
+            let out = importer.wait_with_output().unwrap();
+            assert!(out.status.success(), "{out:?}");
+            serde_json::from_slice::<Value>(&out.stdout).unwrap()["id"].clone()
+        })
+        .collect();
+    assert!(ids.iter().all(|id| id == &ids[0]), "{ids:?}");
+    assert_eq!(
+        board(here.path(), &["ls"]).as_array().map(Vec::len),
+        Some(1)
+    );
+    let chain = board(here.path(), &["verify"]);
+    assert_eq!((&chain["entries"], &chain["ok"]), (&json!(1), &json!(true)));
+    let elsewhere = board(
+        there.path(),
+        &["new", "Implement project scanner", "--origin", &origin],
+    );
+    assert_ne!(elsewhere["id"], ids[0]);
+    assert_eq!(
+        board(here.path(), &["ls"]).as_array().map(Vec::len),
+        Some(1)
+    );
+}

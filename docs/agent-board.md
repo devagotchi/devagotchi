@@ -1,6 +1,6 @@
 # Devagotchi agent board: tickets any subscription can claim, work, annotate and hand off
 
-Revision: **2026-11-17 UTC**. Status: **every board is in Postgres: hosted CLI/MCP/web, and standalone boards since 2026-11-17 (ADR 0005); offline queue pending**.
+Revision: **2026-11-18 UTC**. Status: **every board is in Postgres: hosted CLI/MCP/web, and standalone boards since 2026-11-17 (ADR 0005); offline queue pending**.
 Owner: `crates/hub/src/agenthub/`. This document owns the board contract; the
 [architecture master](product-and-platform-plan.md) owns product decisions and sequencing; the
 [task-graph contract](task-graph-and-mesh-contract.md) owns execution graphs, which are a different thing.
@@ -350,6 +350,7 @@ user-authorized direct-recording exception, limited to hosted storage and offlin
 | B12 | RULED 2026-10-24 (chat, 17:13 EDT; ADR pending through the component) | Connecting never lands on an empty board: a board the hub opens for the first time with no tickets gets a Getting started ticket in the attention state (the steps: machines, phone notifications with a one-tap test approval, one small job, close it). Account boards (B11) get it too, when `board_bind` first makes them. |
 | B13 | RULED 2026-10-24 (chat; ADR pending through the component) | Multi-tenant by default: a project's board belongs to the org (tenant) the identity provider proves the account belongs to, and the org manages it. Every member and the members' agents work it; another org never sees it. Tokens are least-privilege: a sign-in asks only for who the person is, a refresh token, the org and the hub's audience; roles and per-tool scopes follow (21e). The Shippin identity works with PAM on the machines (21f). |
 | B14 | RULED 2026-10-24 (chat; ADR pending through the component) | A project starts when an AI or a person names it, and it must be linked to a real repository (GitHub, GitLab, or wherever the person's code lives). All notes and all chats of the work are saved to that project, so every session has its context (21c, 21d). |
+| B15 | ACCEPTED 2026-11-18 (increment 205) | A ticket imported from a document names its origin `{path, item, revision?, content_sha256?}`; `(path, item)` is unique per board and recorded once with who and when. An exact repeat returns the ticket as it is; changed inputs, a new revision included, are `source_conflict` with nothing written (§10). The wire field is `origin` (the tenant probe fills every `source` argument with a path string). Rescans at a later commit therefore conflict until the scanner's own increment decides how a moved revision is reconciled. |
 
 ## 9. Packets
 
@@ -370,3 +371,43 @@ user-authorized direct-recording exception, limited to hosted storage and offlin
 | 21f | PAM: the Shippin identity is the login on the machines; jobs run as the person's mapped account | a job started by a member runs as that member's OS account |
 | 21g | Projects view: every project of the org with what is held, ready and waiting, to cycle between them and see parallel work at a glance | the org's three projects show their agents working in parallel |
 | 11 | Freeze the Go `agent-hub` | Parity tests pass here; banner there |
+
+## 10. Ticket origins: importing work once (increment 205)
+
+An importer (a scanner, a plan reader, an agent turning a roadmap into tickets) names where a
+ticket comes from when it creates it: `board_create.origin` on MCP, `board new --origin JSON` on
+the command line, `NewTicket.source` in the library. The origin is
+`{path, item, revision?, content_sha256?}` and nothing else (unknown fields are refused):
+
+- `path` is repository-relative, forward slashes, no empty, `.` or `..` part, no `\` or `:`;
+- `item` is the item's stable id within that document, not a line number or a title;
+- `revision` (the commit or tag the importer read) and `content_sha256` (64 lowercase hex) are
+  optional evidence. The board never opens the path or checks the digest: they are what the
+  importer reported.
+
+`(path, item)` is unique per board (`board_sources`, AgentHub migration 0002). The source row,
+the ticket, its dependencies and the `ticket.created` event (whose data carries the
+provenance) are one transaction. The board records `recorded_by` (the acting principal, never
+taken from the origin) and `recorded_at` (the database clock), and `request_sha256`: SHA-256 of
+the normalized creation inputs, format version 1: the title trimmed, description, kind with its
+default spelled out, priority as given (left out stays left out, so a changed board default is
+no conflict), cleaned labels, parent, assignee, discovered-from, environment, fingerprint and
+the whole origin, revision included. The anchors the hub fills from the connection or the
+board's settings (machine, repo, agent, session) and the sightings (`occurrences`,
+`last_seen_at`) are not counted: a retry from another session is still a retry.
+
+Creating it again:
+
+- **same inputs**: the ticket as it is now, with its edits, state, holder, lease and fence; no
+  event, no change notification, nothing written;
+- **changed inputs** (any field above, a new revision included): `source_conflict`, naming the
+  ticket that holds the origin; nothing written (exit 2 on the command line). Reconcile that
+  ticket; never invent another item id to get past it.
+
+Concurrent importers of one origin make one ticket: the losers collide on the unique key,
+their transaction runs again (`devagotchi-store`'s retry on 23505/40001) and returns the
+winner's ticket. The row is append-only (`board_append_only()` refuses UPDATE, DELETE and so
+INSERT … ON CONFLICT DO UPDATE). `board_get`, `board show` and `board export` carry it as
+`provenance`. Tests: `crates/agenthub/src/tests/sources.rs`,
+`crates/agenthub/src/cli/tests/sources.rs`, `crates/hub/src/agenthub/tests/sourced.rs`, and six
+concurrent processes in `crates/devagotchi/tests/board.rs`.
