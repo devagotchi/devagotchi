@@ -113,7 +113,7 @@ pub fn page(
         email = e(&words.email),
         password = e(&words.password),
         submit = e(submit),
-        forgot = if allow_signup || hub.providers.email.is_some() {
+        forgot = if allow_signup || hub.providers.email.get().is_some() {
             format!(
                 "<p><a href=\"/auth/password/forgot?return_to={back}\">{}</a></p>",
                 e(&words.forgot)
@@ -134,7 +134,7 @@ pub fn page(
 pub(super) fn password_form(hub: &HubSignIn, return_to: &str) -> String {
     let words = &hub.site().messages.sign_in;
     let return_to = safe_return_to(return_to);
-    let forgot = if hub.providers.email.is_some() {
+    let forgot = if hub.providers.email.get().is_some() {
         format!(
             "<p><a href=\"/auth/password/forgot?return_to={}\">{}</a></p>",
             super::encode(return_to),
@@ -297,7 +297,7 @@ fn mailing(state: &AppState) -> Result<std::sync::Arc<HubSignIn>, Response> {
         .passkeys
         .clone()
         .ok_or_else(super::routes::not_set_up)?;
-    if hub.providers.email.is_some() {
+    if hub.providers.email.get().is_some() {
         return Ok(hub);
     }
     let words = &hub.site().messages.sign_in;

@@ -1111,9 +1111,16 @@ migration 0034; each change is on the hub's own chain as `settings.changed`):
 
 A key the config file names, or its environment variable sets, wins: the page shows its value,
 greyed, and where to change it. Every other key of the config file is set at deploy, and the page
-lists each with why (`DEPLOY_TIME`). A test fails when a config key is in neither list. Email
-(SMTP) and signal sinks get their cards next (hub-settings M3, M5); until then they are set at
-install.
+lists each with why (`DEPLOY_TIME`). A test fails when a config key is in neither list.
+
+Email is a card too (Sign-in → Email): the mail server sign-in links, password resets and
+early-access notices go out through. Give `smtps://user@host:465` or `smtp://user@host:587` and the
+password or API key in its own field (Resend: `smtps://resend@smtp.resend.com:465` and a Resend API
+key). Check and save connects, starts TLS and signs in, sending nothing, and saves only if that
+works; Send a test to also sends one email. The password is sealed like the sign-in secrets
+(`hub_settings` `mail.*`), audited as `mail.configured` without it, and in force at once. An
+`auth.email` in the config file wins and the card shows it. Signal sinks get their card next
+(hub-settings M5); until then they are set at install.
 
 ## API keys
 

@@ -30,6 +30,8 @@ use crate::{
     notify::mail,
 };
 
+pub use super::mail_cell::MailCell;
+
 /// The mail server and sender the email link goes out through.
 #[derive(Clone)]
 pub struct Mailer {
@@ -109,6 +111,23 @@ impl Mailer {
             password,
             from: config.from.clone(),
             per_address: config.per_address_per_hour,
+            last: Arc::new(std::sync::Mutex::new(None)),
+        })
+    }
+
+    /// A mail server from its parts, as `/admin` → Email saves them: the URL carries no
+    /// password; the password, if any, comes on its own.
+    pub fn from_parts(
+        url: &str,
+        password: Option<String>,
+        from: &str,
+        per_address: u32,
+    ) -> Result<Self, String> {
+        Ok(Self {
+            server: mail::Server::parse(url.trim())?,
+            password: password.filter(|password| !password.is_empty()),
+            from: from.trim().to_string(),
+            per_address,
             last: Arc::new(std::sync::Mutex::new(None)),
         })
     }
@@ -207,18 +226,17 @@ it, tell whoever operates the hub. Nothing in this email does anything.\n"
 /// sign-ins, sent in the background. A tenant with none hears nothing by mail; its account
 /// page says it is in.
 pub(crate) fn announce_admissions(
-    mailer: Mailer,
+    mail: MailCell,
     config: Arc<crate::config::HubConfig>,
 ) -> crate::tenancy::access::Announce {
-    let mailer = Arc::new(mailer);
     Arc::new(move |admitted: crate::tenancy::access::Admitted| {
-        let Some(to) = admitted.email else {
+        let (Some(to), Some(mailer)) = (admitted.email, mail.get()) else {
             return;
         };
         let Ok(runtime) = tokio::runtime::Handle::try_current() else {
             return;
         };
-        let (mailer, config) = (mailer.clone(), config.clone());
+        let config = config.clone();
         runtime.spawn(async move {
             let account = format!("{}/account", config.public_url.trim_end_matches('/'));
             let (subject, body) = config.site().admitted_email(&account);
@@ -276,7 +294,7 @@ pub async fn ask(
     let Some(hub) = state.passkeys.clone() else {
         return super::routes::not_set_up();
     };
-    let Some(mailer) = hub.providers.email.as_ref() else {
+    let Some(mailer) = hub.providers.email.get() else {
         return pages::message(
             StatusCode::NOT_FOUND,
             "No email sign-in here",
@@ -339,7 +357,7 @@ pub async fn ask(
     let hub_for_mail: Arc<HubSignIn> = hub.clone();
     // Sent after the answer: how long the mail server takes says nothing to the asker.
     tokio::spawn(async move {
-        if let Some(mailer) = hub_for_mail.providers.email.as_ref()
+        if let Some(mailer) = hub_for_mail.providers.email.get()
             && let Err(why) = mailer.send(&hub_for_mail.site(), &email, &link).await
         {
             eprintln!("devagotchi-hub: a sign-in link was not sent: {why}");
@@ -361,7 +379,7 @@ pub async fn page(
     if state
         .passkeys
         .as_ref()
-        .and_then(|hub| hub.providers.email.as_ref())
+        .and_then(|hub| hub.providers.email.get())
         .is_none()
     {
         return pages::message(
@@ -401,7 +419,7 @@ pub async fn verify(
     let Some(hub) = state.passkeys.clone() else {
         return super::routes::not_set_up();
     };
-    if hub.providers.email.is_none() {
+    if hub.providers.email.get().is_none() {
         return pages::message(
             StatusCode::NOT_FOUND,
             "No email sign-in here",

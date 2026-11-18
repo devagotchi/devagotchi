@@ -198,10 +198,12 @@ pub async fn page(
         health.as_ref(),
     );
     let sinks = state.hub.boards.signal_sink_count();
-    let email = if hub.providers.email.is_some() {
-        "On"
-    } else {
-        "Off"
+    let stored_mail = match hub.accounts().stored_mail().await {
+        Ok(stored) => stored,
+        Err(error) => {
+            eprintln!("devagotchi hub: mail settings: {error}");
+            return unavailable();
+        }
     };
     let install = "Set when the hub is installed. Re-run <code>install.sh</code> to change it.";
     let live = |group| hub_settings_live::card(&state, group);
@@ -219,7 +221,7 @@ pub async fn page(
 <a class=\"chip\" href=\"#data\">Data and signals</a></nav>\
 <section class=\"card\" id=\"sign-in\"><h2>Sign-in</h2><p class=\"note help\">How people sign in to this hub: \
 Google, GitHub, Shippin, or any OpenID Connect provider. Shippin's switch is on once you save an issuer, or once install.sh --nomen set one; turn that switch off and the button goes. The issuer is the one you type; nothing is filled in for you. Secrets are encrypted in this hub's Postgres.</p>{cards}{passwords}\
-<ul class=\"rows\">{mail}</ul></section>\
+{mail}</section>\
 <section class=\"card\" id=\"access\"><h2>AI access</h2><ul class=\"rows\">{connect}{keys}</ul></section>\
 <section class=\"card\" id=\"people\"><h2>People</h2>{sign_up}<ul class=\"rows\">{orgs}</ul></section>\
 <section class=\"card\" id=\"running\"><h2>Machines and workflows</h2>{machines}{workflows}</section>\
@@ -230,7 +232,7 @@ and where it sends their events for statistics.</p>{database}{analytics}{visits}
         sign_up = live(Group::SignUp),
         machines = live(Group::Machines),
         workflows = live(Group::Workflows),
-        mail = row("Email sign-in links", email, install),
+        mail = super::hub_settings_mail::card(hub, stored_mail.as_ref()),
         connect = row(
             "Connect an AI",
             "17 clients",

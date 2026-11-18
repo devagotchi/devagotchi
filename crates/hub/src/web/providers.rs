@@ -93,7 +93,7 @@ pub struct Providers {
     list: std::sync::RwLock<Vec<Arc<Provider>>>,
     /// What the config file names.
     from_config: Vec<Arc<Provider>>,
-    pub email: Option<super::email::Mailer>,
+    pub(crate) email: super::email::MailCell, // auth.email's, else /admin's (email.rs)
     http: reqwest::Client,
     sealer: crate::identity::Sealer,
 }
@@ -111,7 +111,7 @@ impl Providers {
         Self {
             list: std::sync::RwLock::new(Vec::new()),
             from_config: Vec::new(),
-            email: None,
+            email: super::email::MailCell::default(),
             http: reqwest::Client::builder()
                 .redirect(reqwest::redirect::Policy::none())
                 .build()
@@ -165,7 +165,7 @@ impl Providers {
         Ok(Self {
             list: std::sync::RwLock::new(list.clone()),
             from_config: list,
-            email,
+            email: super::email::MailCell::from_config(email),
             http,
             sealer: crate::identity::Sealer::ephemeral(),
         })

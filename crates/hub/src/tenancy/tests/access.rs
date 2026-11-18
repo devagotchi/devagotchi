@@ -370,12 +370,12 @@ async fn a_tenant_let_in_hears_so_by_email_when_it_has_a_verified_address() {
                                  "from": "Hub <hub@hub.test>" } }
         })
     }));
-    let mailer = web::Providers::from_config(&hub.config)
-        .unwrap()
-        .email
-        .expect("a mail server");
-    hub.accounts
-        .on_admitted(web::announce_admissions(mailer, hub.config.clone()));
+    let providers = web::Providers::from_config(&hub.config).unwrap();
+    assert!(providers.email.get().is_some(), "a mail server");
+    hub.accounts.on_admitted(web::announce_admissions(
+        providers.email.clone(),
+        hub.config.clone(),
+    ));
     let mut with = hub.first_connect("Claude").await;
     let mut without = hub.first_connect("Codex").await;
     let who = whoami(&hub, &mut with).await;

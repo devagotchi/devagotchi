@@ -43,6 +43,9 @@ install, not a production promotion. The gap that is still open is in
   connecting an AI with no sign-in, machines updating themselves, how long a workflow link
   works, and how long a hosted hub keeps visits. A value the config file sets is shown, not
   changed. The page lists every key that is set at deploy, with why.
+- `/admin` → Email sets the hub's mail server (any SMTP login, Resend with an API key), checked
+  before it is saved and in force at once; a test email on request. The password is encrypted
+  in the hub's Postgres.
 
 ### The license is the Functional Source License (FSL-1.1-ALv2)
 - Devagotchi moves from the Business Source License 1.1 to FSL-1.1-ALv2, held by AngryVibes LLC:
