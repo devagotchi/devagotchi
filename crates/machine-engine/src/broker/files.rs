@@ -180,6 +180,7 @@ fn mutation(request: &RequestBody) -> Option<&'static str> {
         | RequestBody::OperationResize(_)
         | RequestBody::ConfigGet(_)
         | RequestBody::ConfigSet(_)
+        | RequestBody::BrokerCapabilities(_)
         | RequestBody::ProcessList(_)
         | RequestBody::ProcessKill(_)
         | RequestBody::UrlRead(_) => None,
