@@ -38,6 +38,11 @@ pub(super) fn routes() -> Router<AppState> {
         )
         .route("/admin/settings/{group}", post(save))
         .route("/admin/mail", post(super::hub_settings_mail::save))
+        .route("/admin/sinks/{name}", post(super::hub_settings_sinks::save))
+        .route(
+            "/admin/sinks/{name}/remove",
+            post(super::hub_settings_sinks::remove),
+        )
 }
 
 /// The card for `group`, with the values in force.

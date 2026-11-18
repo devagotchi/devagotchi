@@ -50,8 +50,9 @@ pub struct Boards {
     /// The export of these boards' events to ClickHouse (`crate::warehouse`), when the hub
     /// has one: from the config at start, or from the settings page at any time.
     warehouse: std::sync::RwLock<Option<Arc<crate::ops::warehouse::Warehouse>>>,
-    /// The hub's signal sinks (`crate::signals`), set once at start.
-    sinks: std::sync::OnceLock<Vec<Arc<crate::notify::signals::Sink>>>,
+    /// The hub's signal sinks (`crate::notify::signals`): the config file's, started once, and
+    /// those set on `/admin`, replaced when one is saved (`set_page_sinks`).
+    sinks: std::sync::RwLock<Vec<RunningSink>>,
     /// The boards the hub's config names (`boards`), shared by grant.
     configured: BTreeSet<String>,
     accounts: Option<Accounts>,
@@ -136,3 +137,11 @@ type BoardOut<T> = Result<Json<T>, Json<BoardError>>;
 
 #[cfg(test)]
 mod tests;
+
+/// A signal sink on its task, and whether the config file names it.
+pub(crate) struct RunningSink {
+    name: String,
+    sink: Arc<crate::notify::signals::Sink>,
+    task: tokio::task::AbortHandle,
+    from_config: bool,
+}

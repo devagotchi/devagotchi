@@ -1119,8 +1119,15 @@ password or API key in its own field (Resend: `smtps://resend@smtp.resend.com:46
 key). Check and save connects, starts TLS and signs in, sending nothing, and saves only if that
 works; Send a test to also sends one email. The password is sealed like the sign-in secrets
 (`hub_settings` `mail.*`), audited as `mail.configured` without it, and in force at once. An
-`auth.email` in the config file wins and the card shows it. Signal sinks get their card next
-(hub-settings M5); until then they are set at install.
+`auth.email` in the config file wins and the card shows it.
+
+Signal sinks are a card as well (Data and signals → Signal sinks): an HTTPS address (or http to
+this machine or a private service name) that takes the hub's signals as NDJSON, with an optional
+bearer token and signing secret (sealed), metadata or full, and which sources. Saved, it runs at
+once; removed, it stops (its place stays in `signal_cursors`, so saved again under the name it
+carries on). The config file's `signals.sinks` are shown there, not changed, and their names
+cannot be taken. Stored in `signal_sinks` (migration 0036), audited as `signals.sink_saved` and
+`signals.sink_removed` without secrets.
 
 ## API keys
 

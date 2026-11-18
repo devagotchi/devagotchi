@@ -30,6 +30,7 @@
 
 pub mod mail;
 pub mod push;
+pub mod signal_sinks;
 pub mod signals;
 
 #[cfg(test)]

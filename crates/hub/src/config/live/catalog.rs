@@ -224,7 +224,7 @@ pub const DEPLOY_TIME: &[(&str, &str)] = &[
     ),
     (
         "signals",
-        "signal sinks; their card on /admin is the next step (hub-settings M5)",
+        "sinks set at deploy; more are added on /admin → Signal sinks, which shows these and leaves them",
     ),
     (
         "tenancy.mode",

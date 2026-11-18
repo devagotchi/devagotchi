@@ -66,7 +66,7 @@ pub(crate) async fn healthz(State(state): State<AppState>) -> Response {
             .boards
             .sinks()
             .iter()
-            .map(|sink| sink.health())
+            .map(|(sink, _)| sink.health())
             .collect(),
     );
     let status = if all_up && chain_ok {
