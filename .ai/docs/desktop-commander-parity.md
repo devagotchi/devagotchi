@@ -45,6 +45,44 @@ That is a different shape, not a missing stop or read.
 | `give_feedback_to_desktop_commander` | Open a feedback form with usage attached | — | Missing. There is no product-feedback tool |
 | `track_ui_event` (handled, not listed in `tools/list`) | Widget telemetry | — | Missing. There is no MCP-Apps UI layer |
 
+## Mutation ordering
+
+Desktop Commander gives no ordering between two calls that change files. Devagotchi's broker
+orders `write_file`, `edit_file`, `create_directory` and `move_file` through one gate per
+broker, held from path resolution through the preconditions, the change and the answer
+(`crates/machine-engine/src/broker/files.rs` has the whole contract in its module docs).
+
+- Two writes guarded by the same `expected_sha256` cannot both succeed: the second answers
+  `changed_since_read`. Of two `mode: create` writes or two moves onto one path, one answers
+  `already_exists`; of two edits of the same `old_text`, one answers `edit_mismatch`. Disjoint
+  edits and unconditional appends both land, each answering the checksum of what it left.
+- A write that leaves the checksum as it was does not use it up: a later write guarded by
+  that checksum can still succeed.
+- One gate, not one per path, so unrelated mutations wait too. That is for correctness, not
+  throughput. Reads (`read_file`, `read_multiple_files`, `list_directory`, `get_file_info`,
+  `search_files`), operations and settings never take it.
+- The gate belongs to the blocking worker once the change starts, so a caller that goes away
+  cannot let another mutation in half way. A mutation still waiting when its caller goes
+  away changes nothing. The broker answers each local connection in a task of its own, so a
+  client that hangs up does not cancel its request; only the broker's shutdown does.
+- **`mutation_busy`.** A local client (`devagotchi mcp`, and the machine link that carries a
+  hub's calls) waits 5 s for a file tool's answer (`devagotchi_ipc::IO_TIMEOUT`). A mutation
+  that has not got the gate within 3 s is refused with `mutation_busy` and has changed
+  nothing, so a queued change never lands after its client stopped waiting. Try it again. A
+  change that got the gate but runs past the client's deadline by itself (a very large file,
+  a slow disk) still lands; after `ipc_timeout`, read the file before assuming it did not.
+- Limits: this is not a filesystem-wide compare-and-swap. External editors, commands the
+  broker runs, and a second broker do not take the gate. Reads can see a move or an append
+  half done. File changes have no journal, retry identity or rollback; whole-file replacement
+  is still by rename.
+
+Checked by `broker/tests/file_mutations.rs` (gate coverage, reads and queries not gated,
+cancellation before and during a change, release after an error or panic, `mutation_busy`
+before the client's deadline) and by `tests/file_mutation_concurrency.py`: a broker and two
+`devagotchi mcp` adapters race barrier-released pairs over ten scenarios and check both answers
+and the bytes on disk. It passes when every check holds and every scenario overlapped at least
+once; how many pairs overlapped is a measurement. CI's e2e job runs it on every OS in the matrix.
+
 ## What Devagotchi has that this list does not
 
 `run` (one call), `operation_get`, `operation_wait`, `operation_resize`, `read_image`, and

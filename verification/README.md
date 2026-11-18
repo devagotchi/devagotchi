@@ -22,6 +22,25 @@ twice: **Connect** on the consent page answered "Not from this hub's page" (the 
 that, the SDK refused `whoami` (its output schema required `provisional_warning`, which the
 hub leaves out). Claude and Grok were not run: they need Jesse's accounts and a public hub.
 
+## File mutation ordering (increment 203)
+
+[file-mutation-ordering.json](file-mutation-ordering.json) and
+[file-mutation-ordering-baseline.json](file-mutation-ordering-baseline.json) are the unmodified
+receipts of `tests/file_mutation_concurrency.py` (line endings made LF), run on Windows 11 on
+2026-11-18 with a disposable broker and two `devagotchi mcp` adapters under a scratch directory.
+The baseline is `--expect-race` against a build of `main` at 219e008, before the broker's
+mutation gate (binary `e4389999...`): the first barrier-released pair of writes guarded by the
+same SHA-256 overlapped and both succeeded. The other is the gated build (binary `35b4a6cd...`,
+built from this increment's code before its commit): 16 rounds, 160 pairs over ten scenarios,
+status `passed`, every check held; `overlap_by_scenario` counts 16 of 16 overlapping pairs in
+each scenario. The pass criterion is that every scenario overlapped at least once; the count
+is a measurement of this machine, not a requirement. The baseline build also fails the normal
+mode at its first pair (two winners). Both receipts record the binary hash at start and end
+(unchanged). Paths inside them describe the scratch directory of that run. The same gated
+harness passed on Linux too (rust:1.99.1-bookworm in Docker, a copy of this tree: 160 pairs, 16 of
+16 overlapping in each scenario); that receipt is kept outside Git. Scope: one broker's
+own file tools; not external writers, a second broker, or a filesystem-wide compare-and-swap.
+
 ## Devspace provisioning
 
 [devspace-provision.json](devspace-provision.json) records the October 20, 2026 UTC end-to-end run of `deploy/devspace/provision.sh` in an Ubuntu 24.04 sandbox: the four failures it surfaced and their fixes, the `devspace-check` output (every toolchain under `/devspace`, nothing stray in `$HOME`), and a broker started with the generated config and probed through `bridge-mcp` (`tests/devspace_broker_probe.py`, since replaced by `tests/adapter_probe.py`: `git --version` succeeded under the broker, an ungranted executable was refused). The sandbox has no PID 1 systemd, so `enable-linger` and the user unit are listed as not verified; they are checked on the real tenant.

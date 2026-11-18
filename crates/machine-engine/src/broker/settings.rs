@@ -13,6 +13,17 @@ const OUTPUT_LIMIT: std::ops::RangeInclusive<usize> = 1024..=16 * 1024 * 1024;
 const OPERATIONS: std::ops::RangeInclusive<usize> = 1..=4096;
 const CONCURRENT: std::ops::RangeInclusive<usize> = 1..=64;
 
+/// broker.json's limits when it leaves them out.
+pub(super) fn default_output_limit() -> usize {
+    262_144
+}
+pub(super) fn default_max_operations() -> usize {
+    64
+}
+pub(super) fn default_max_concurrent() -> usize {
+    4
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct Limits {
     pub(crate) output_limit_bytes: usize,

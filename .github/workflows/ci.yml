@@ -213,6 +213,10 @@ jobs:
             if ($LASTEXITCODE -ne 0) { throw "createdb $db failed" }
           }
       - run: cargo build --locked --bins
+      # Two MCP adapters race file changes on one broker (no hub, no Postgres): both answers and
+      # the bytes on disk are checked; every scenario must overlap at least once.
+      - name: Concurrent file mutations
+        run: python tests/file_mutation_concurrency.py --devagotchi "target/debug/devagotchi${{ runner.os == 'Windows' && '.exe' || '' }}" --work-root target
       # Two builds of this commit by name (crates/devagotchi/build.rs), for machine_update
       # from one to the other (tests/machine_update_probe.py); then target/debug as it was.
       - name: Builds ci-a and ci-b
