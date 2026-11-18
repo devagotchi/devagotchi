@@ -252,7 +252,7 @@ pub fn head(site: &Site, public_url: &str, meta: &Meta) -> String {
     if let Some(preview) = picture {
         tag("property", "og:image", &format!("{hub}{}", preview.url()));
         tag("property", "og:image:type", preview.mime);
-        if let Some((width, height)) = png_size(&preview.bytes) {
+        if let Some((width, height)) = preview.png_size() {
             tag("property", "og:image:width", &width.to_string());
             tag("property", "og:image:height", &height.to_string());
         }
@@ -288,16 +288,6 @@ fn json_in_html(value: &Value) -> String {
         .replace('<', "\\u003c")
         .replace('>', "\\u003e")
         .replace('&', "\\u0026")
-}
-
-/// A PNG's width and height, from its header.
-fn png_size(bytes: &[u8]) -> Option<(u32, u32)> {
-    if bytes.len() < 24 || &bytes[..8] != b"\x89PNG\r\n\x1a\n" || &bytes[12..16] != b"IHDR" {
-        return None;
-    }
-    let word =
-        |at: usize| u32::from_be_bytes([bytes[at], bytes[at + 1], bytes[at + 2], bytes[at + 3]]);
-    Some((word(16), word(20)))
 }
 
 /// The landing page's JSON-LD for `front`: the software always; its questions and its

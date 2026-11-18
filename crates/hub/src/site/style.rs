@@ -10,7 +10,7 @@
 //!   "fonts":  { "ui": "…", "display": "…", "mono": "…" },     // --font-ui, …
 //!   "radii":  { "s": "6px", "m": "8px", "l": "12px", "xl": "20px", "pill": "999px" },
 //!   "layout": { "bar-h": "60px", "gutter": "20px", "wide": "1120px", "narrow": "728px" },
-//!   "theme_color": "#2f6b4f", "background_color": "#f7f6f2",  // the installed app
+//!   "theme_color": "#2f6b4f",                // the installed app's bar; its splash is --bg
 //!   "font_files": [ { "family": "Inter", "file": "inter.woff2", "weight": "100 900" } ]
 //! }
 //! ```
@@ -40,7 +40,6 @@ pub struct Tokens {
     pub radii: BTreeMap<String, String>,
     pub layout: BTreeMap<String, String>,
     pub theme_color: String,
-    pub background_color: String,
     #[serde(default)]
     pub font_files: Vec<FontFile>,
 }
@@ -130,15 +129,11 @@ impl Style {
                 }
             }
         }
-        for (what, value) in [
-            ("theme_color", &tokens.theme_color),
-            ("background_color", &tokens.background_color),
-        ] {
-            if !safe_value(value) {
-                return Err(format!(
-                    "tokens.json {what}: {value:?} is not a plain CSS value"
-                ));
-            }
+        if !safe_value(&tokens.theme_color) {
+            return Err(format!(
+                "tokens.json theme_color: {:?} is not a plain CSS value",
+                tokens.theme_color
+            ));
         }
         let mut css = String::from(":root {\n");
         let line = |css: &mut String, entries: Vec<(String, &String)>| {
@@ -243,7 +238,8 @@ impl Style {
             etag,
             fonts: !tokens.font_files.is_empty(),
             theme_color: tokens.theme_color.clone(),
-            background_color: tokens.background_color.clone(),
+            // The installed app opens on the page's own background (`--bg`).
+            background_color: tokens.colors.get("bg").cloned().unwrap_or_default(),
         })
     }
 }
