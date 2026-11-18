@@ -26,6 +26,9 @@ serde_json = { workspace = true }
 
 [dev-dependencies]
 tempfile = { workspace = true }
+# `tests/board.rs`: a standalone board's Postgres, a database of its own per test.
+devagotchi-store = { workspace = true, features = ["testing"] }
+tokio = { workspace = true }
 
 [package.metadata.dist]
 dist = true

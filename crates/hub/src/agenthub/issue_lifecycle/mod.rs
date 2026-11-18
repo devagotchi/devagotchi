@@ -148,7 +148,7 @@ pub(crate) async fn webhooks_routes(
                     BridgeError::new("board_store", format!("open source board: {error}"))
                 })??;
             board
-                .hosted_backend()?
+                .hosted()
                 .ingest_issue(&event, &delivery, &hash(&body))
                 .await
         })
@@ -221,7 +221,7 @@ pub(crate) async fn issue_state_route(
         let (board, repository, _) =
             authorized_board(&state, &subject, &headers, &query.repository, false).await?;
         let context = board
-            .hosted_backend()?
+            .hosted()
             .issue_context(repository, query.issue_number, query.after, query.limit)
             .await?;
         Ok(Json(context).into_response())
@@ -250,7 +250,7 @@ pub(crate) async fn shared_state_write_route(
         let (board, repository, actor) =
             authorized_board(&state, &subject, &headers, &payload.repository, true).await?;
         let receipt = board
-            .hosted_backend()?
+            .hosted()
             .write_issue_context(&actor, repository, &payload)
             .await?;
         Ok(Json(receipt).into_response())

@@ -61,8 +61,9 @@ hex = "0.4.3"
 # `fallible_uint`: rusqlite 0.38 put the u64/usize conversions behind it; they store values
 # up to i64::MAX and refuse larger ones, exactly as 0.37 did by default.
 rusqlite = { version = "0.39", features = ["bundled", "fallible_uint"] }
-# The Postgres engine every part shares (`crates/store`); the client's offline cache and
-# a standalone board are rusqlite (ADR 0002).
+# The Postgres engine every part shares (`crates/store`), AgentHub's boards included,
+# standalone ones too (ADR 0005); the machine's own journals are rusqlite (the kernel and the
+# machine engine, `.ai/dev/plans/path.md` decision 1).
 sqlx = { version = "0.9", default-features = false, features = ["runtime-tokio", "tls-rustls-aws-lc-rs", "postgres", "any", "migrate", "macros"] }
 sha2 = "0.11.1"
 uuid = { version = "1", features = ["v4"] }

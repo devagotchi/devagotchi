@@ -74,8 +74,9 @@ reconnect. The lease reaper discovers persisted leases across tenants even when 
 has been opened since restart. Scheduling uses database time. Database failures surface as
 errors/503s rather than a local fallback or successful empty board.
 
-Standalone local boards, the broker journal and future offline client cache retain SQLite;
-they are not another authority for a hub-bound board. The older auxiliary hub SQLite stores
+Standalone boards are in Postgres too (ADR 0005, `DEVAGOTCHI_BOARD_STORAGE_URL`); the broker
+journal and a future offline client cache retain SQLite; none is another authority for a
+hub-bound board. The older auxiliary hub SQLite stores
 (audit and devices) have not been migrated by this board cutover. Issue ingress no longer
 opens a prototype SQLite store.
 
@@ -473,8 +474,9 @@ provider cannot be reached the hub answers `503`, never `401`.
 
 The hub keeps everything in Postgres (ADR 0001): accounts, boards, machines, push
 subscriptions, the audit chain, browser sessions and Nomen sign-ins. Its state directory holds
-keys only. Any number of hub instances share the database. SQLite stays where ADR 0002 puts
-it: standalone local boards, the machine's job journal and a client's offline cache. Where the
+keys only. Any number of hub instances share the database. SQLite stays on the machine: the
+machine's job journal, the `devagotchi ai` capture journal and a client's offline cache;
+standalone boards are in Postgres (ADR 0005). Where the
 hub's Postgres is, first match wins:
 
 1. `DEVAGOTCHI_HUB_STORAGE_URL` in the environment: how a Postgres password arrives, from

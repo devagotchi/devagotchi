@@ -61,6 +61,10 @@ storage = os.environ.get("DEVAGOTCHI_HUB_STORAGE_URL", "")
 if not args.no_hub and not storage.startswith(("postgres://", "postgresql://")):
     sys.exit("set DEVAGOTCHI_HUB_STORAGE_URL to an empty Postgres database the hubs may fill "
              "(for example postgres://postgres@127.0.0.1:55432/e2e); the hub does not serve from SQLite")
+# A project's standalone board (`devagotchi board init`) is in Postgres too (docs/adr/0005): the
+# same database, under the local tenant, which is none of the hubs' tenants.
+if storage:
+    os.environ.setdefault("DEVAGOTCHI_BOARD_STORAGE_URL", storage)
 git = os.path.realpath(git)
 
 work = Path(tempfile.mkdtemp(prefix="dvg-e2e-"))

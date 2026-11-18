@@ -126,7 +126,7 @@ async fn stats_for(
         let name = project.clone();
         let (tenant, board) = tokio::task::spawn_blocking(move || {
             let (board, _, _) = hub.board_access(&who, &name)?;
-            let hosted = board.hosted_backend()?;
+            let hosted = board.hosted();
             Ok::<_, BridgeError>((hosted.tenant().to_string(), hosted.board_id().to_string()))
         })
         .await

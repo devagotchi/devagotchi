@@ -120,12 +120,7 @@ async fn signed_deliveries_create_one_canonical_ticket_and_preserve_workflow_acr
     assert_eq!(before.state, after.state);
     assert_eq!(after.fence, held.fence);
     assert_eq!(after.holder.as_deref(), Some("cli"));
-    let context = board
-        .hosted_backend()
-        .unwrap()
-        .issue_context(123, 42, 0, 100)
-        .await
-        .unwrap();
+    let context = board.hosted().issue_context(123, 42, 0, 100).await.unwrap();
     assert_eq!(context.finalization, "pending");
     assert_eq!(context.issue.source_state, "closed");
     let stale = deliver(&hub, &opened, "late-open").await;
@@ -252,16 +247,10 @@ async fn issue_routes_require_board_grants_and_context_writes_are_versioned_appe
     write.request_id = "not-holder".into();
     write.expected_version = held.ticket.version;
     assert_eq!(send(write).await.unwrap().status(), 409);
-    let page = board
-        .hosted_backend()
-        .unwrap()
-        .issue_context(123, 42, 0, 1)
-        .await
-        .unwrap();
+    let page = board.hosted().issue_context(123, 42, 0, 1).await.unwrap();
     assert!(page.next_after.is_some());
     let second = board
-        .hosted_backend()
-        .unwrap()
+        .hosted()
         .issue_context(123, 42, page.next_after.unwrap(), 1)
         .await
         .unwrap();
@@ -423,6 +412,7 @@ async fn mcp_issue_tools_share_rest_authority_receipts_and_refuse_shadow_boards(
                     stdout_is_terminal: false,
                     account_file: Some(account_file.clone()),
                     plugin_host: None,
+                    storage_env: None,
                     hub: Some(std::sync::Arc::new(crate::login::client::AccountHub)),
                 },
                 &mut out,
@@ -447,7 +437,14 @@ async fn mcp_issue_tools_share_rest_authority_receipts_and_refuse_shadow_boards(
                 .unwrap()
                 .contains("MCP checkpoint seen by REST")
         }));
-        assert!(!checkout.join(".devagotchi").join("board.sqlite3").exists());
+        let config: Value = serde_json::from_str(
+            &std::fs::read_to_string(checkout.join(".devagotchi").join("config.json")).unwrap(),
+        )
+        .unwrap();
+        assert!(
+            config["hub"].is_string() && config.get("storage").is_none(),
+            "a bound project names the hub and no standalone board: {config}"
+        );
     })
     .await
     .unwrap();

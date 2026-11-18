@@ -69,6 +69,9 @@ pub fn board_cli(args: Vec<OsString>, account_file: Option<PathBuf>) -> ExitCode
             .ok()
             .filter(|s| !s.trim().is_empty()),
         os_user: env::var("USER").or_else(|_| env::var("USERNAME")).ok(),
+        storage_env: env::var(agenthub::STORAGE_ENV)
+            .ok()
+            .filter(|url| !url.trim().is_empty()),
         stdout_is_terminal: std::io::stdout().is_terminal(),
         account_file,
         plugin_host: agenthub::cli::plugin_host(|name| env::var_os(name)),

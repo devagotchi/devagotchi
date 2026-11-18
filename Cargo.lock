@@ -883,9 +883,11 @@ dependencies = [
  "devagotchi-link",
  "devagotchi-machine-engine",
  "devagotchi-mcp",
+ "devagotchi-store",
  "dunce",
  "serde_json",
  "tempfile",
+ "tokio",
 ]
 
 [[package]]
@@ -901,7 +903,6 @@ dependencies = [
  "hmac",
  "percent-encoding",
  "reqwest",
- "rusqlite",
  "schemars 1.2.3",
  "serde",
  "serde_json",

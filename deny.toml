@@ -27,9 +27,9 @@ ignore = [
   # is opened next to a crafted -wal file of another page size. It reaches us through
   # libsqlite3-sys 0.37, which sqlx-sqlite 0.9.0 and rusqlite 0.39 both pin; the fixed
   # 0.39 needs an sqlx-sqlite that does not exist yet, and one `links = sqlite3` crate is all
-  # a graph may hold, so neither can move alone. The broker, hub and command line open
-  # SQLite files of their own making in their state directories and the project's board
-  # directory, never files a request hands them.
+  # a graph may hold, so neither can move alone. The broker and the command line open
+  # SQLite files of their own making in their state directories, never files a request hands
+  # them.
   { id = "RUSTSEC-2026-0459", reason = "bundled SQLite via libsqlite3-sys 0.37, pinned by sqlx-sqlite 0.9.0 and rusqlite 0.39; tracked until sqlx-sqlite takes libsqlite3-sys 0.39" },
   # chrono is unmaintained (informational, no patched version). No crate of ours names it:
   # it comes in through rmcp 3.9 (the MCP SDK) and schemars 1's chrono support, so it leaves

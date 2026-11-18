@@ -33,6 +33,11 @@ install, not a production promotion. The gap that is still open is in
   is still open is in the parity doc. `write_pdf` is not implemented.
 - A fresh `git clone` needs `git submodule update --init` before `cargo build`. AgentHub is
   the `crates/agenthub` submodule.
+- A project's own board (`devagotchi board init`, no hub bound) is in Postgres: set
+  `DEVAGOTCHI_BOARD_STORAGE_URL` to a `postgres://` URL, or pass `board init --storage URL`
+  (kept in `.devagotchi/config.json`, refused with a password in it). With neither, every
+  `board` command says so and names `board bind`. The SQLite `board.sqlite3` is gone, and nothing
+  is moved from one: `board init` makes a new board (ADR 0005).
 
 ### The license is the Functional Source License (FSL-1.1-ALv2)
 - Devagotchi moves from the Business Source License 1.1 to FSL-1.1-ALv2, held by AngryVibes LLC:

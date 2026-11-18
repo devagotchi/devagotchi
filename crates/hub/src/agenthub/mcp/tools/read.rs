@@ -72,7 +72,7 @@ impl Hub {
             &context,
             Some(Kind::Shared),
             move |board, _| {
-                let hosted = board.hosted_backend()?;
+                let hosted = board.hosted();
                 hosted.blocking(hosted.issue_context(
                     repository,
                     input.issue_number,
@@ -113,7 +113,7 @@ impl Hub {
             &context,
             Some(Kind::Shared),
             move |board, actor| {
-                let hosted = board.hosted_backend()?;
+                let hosted = board.hosted();
                 hosted.blocking(hosted.write_issue_context(actor.id, repository, &input))
             },
         )

@@ -93,6 +93,10 @@ jobs:
           DEVAGOTCHI_TEST_POSTGRES_URL: postgres://postgres@127.0.0.1:55432/postgres
           DEVAGOTCHI_TEST_CLICKHOUSE_URL: http://127.0.0.1:18123
           DEVAGOTCHI_TEST_CLICKHOUSE_USER: devagotchi
+      # The one binary's `board` command line on a standalone board, which is in Postgres.
+      - run: cargo nextest run --locked --profile ci -p devagotchi --test board
+        env:
+          DEVAGOTCHI_TEST_POSTGRES_URL: postgres://postgres@127.0.0.1:55432/postgres
 
   hub-compose:
     # The self-hosted stack (deploy/compose/): the hub image built from this commit, its own
