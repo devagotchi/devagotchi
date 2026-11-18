@@ -56,8 +56,12 @@ install, not a production promotion. The gap that is still open is in
   or two moves onto one path give one `already_exists`, two edits of the same text one
   `edit_mismatch`. Reads, searches, operations and settings never wait for a file change.
 - New error `mutation_busy`: a file change that waited 3 s for another one is refused having
-  changed nothing, before a local client's 5 s deadline, so it never lands after its caller
-  gave up. Try it again.
+  changed nothing, before a local client's 5 s deadline, so it never lands after that client
+  reported `ipc_timeout`. At most 8 changes wait at once; one more gets `mutation_busy` at
+  once, so waiting changes never take every broker connection. Try it again.
+- An MCP cancellation (`request_cancelled`, from `devagotchi mcp` or a hub) only stops the
+  caller's wait: a change it cancelled while queued can still land within those 3 s, with no
+  answer. Read the file before assuming it did not.
 - External editors, commands and a second broker are not ordered by this; it is not a
   filesystem-wide compare-and-swap. `tests/file_mutation_concurrency.py` races two
   `devagotchi mcp` adapters on one broker in CI's e2e job on every OS.

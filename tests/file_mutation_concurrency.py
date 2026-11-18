@@ -105,6 +105,7 @@ class Harness:
         self.log = None
         self.pool = ThreadPoolExecutor(max_workers=2)
         self.receipt = {'started_at_utc': datetime.now(timezone.utc).isoformat(),
+                        'source_commit': args.source_commit,
                         'binary': str(self.binary), 'binary_sha256': sha(self.binary.read_bytes()),
                         'platform': sys.platform, 'work': str(self.work), 'rounds': args.rounds,
                         'diagnostic': args.expect_race, 'interval_clock': 'perf_counter_ns',
@@ -175,7 +176,8 @@ class Harness:
         if changed:
             self.receipt['status'] = 'failed'
             self.receipt['failure'] = 'Candidate binary changed during the run'
-        (self.work / 'receipt.json').write_text(json.dumps(self.receipt, indent=2) + '\n', encoding='utf-8')
+        (self.work / 'receipt.json').write_text(json.dumps(self.receipt, indent=2) + '\n', encoding='utf-8',
+                                                newline='\n')
         print('RECEIPT ' + str(self.work / 'receipt.json'), flush=True)
         require(not changed, 'Candidate binary changed during the run')
 
@@ -288,6 +290,7 @@ def main():
     parser.add_argument('--work-root', type=Path, required=True)
     parser.add_argument('--rounds', type=int, default=16)
     parser.add_argument('--expect-race', action='store_true')
+    parser.add_argument('--source-commit', help='the commit the binary was built from, for the receipt')
     args = parser.parse_args()
     require(args.rounds > 0, '--rounds must be positive')
     h = Harness(args)

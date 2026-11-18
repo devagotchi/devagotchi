@@ -62,15 +62,24 @@ broker, held from path resolution through the preconditions, the change and the 
   throughput. Reads (`read_file`, `read_multiple_files`, `list_directory`, `get_file_info`,
   `search_files`), operations and settings never take it.
 - The gate belongs to the blocking worker once the change starts, so a caller that goes away
-  cannot let another mutation in half way. A mutation still waiting when its caller goes
-  away changes nothing. The broker answers each local connection in a task of its own, so a
-  client that hangs up does not cancel its request; only the broker's shutdown does.
+  cannot let another mutation in half way. The broker answers each local connection in a task
+  of its own, so neither a client that hangs up nor an MCP cancellation withdraws a request
+  the broker already has; only the broker's shutdown does.
 - **`mutation_busy`.** A local client (`devagotchi mcp`, and the machine link that carries a
-  hub's calls) waits 5 s for a file tool's answer (`devagotchi_ipc::IO_TIMEOUT`). A mutation
-  that has not got the gate within 3 s is refused with `mutation_busy` and has changed
-  nothing, so a queued change never lands after its client stopped waiting. Try it again. A
-  change that got the gate but runs past the client's deadline by itself (a very large file,
-  a slow disk) still lands; after `ipc_timeout`, read the file before assuming it did not.
+  hub's calls) waits 5 s for a file tool's answer (`devagotchi_ipc::IO_TIMEOUT`) and then
+  reports `ipc_timeout`. A mutation that has not got the gate within 3 s is refused with
+  `mutation_busy` and has changed nothing, so a queued change never lands after that IPC
+  deadline. Try it again. A change that got the gate but runs past the deadline by itself (a
+  very large file, a slow disk) still lands; after `ipc_timeout`, read the file before
+  assuming it did not. At most 8 mutations wait at once; one more is refused `mutation_busy`
+  at once, so queued changes (with the 16 held `operation_wait`s) never take all of the
+  broker's 32 local connections.
+- **MCP cancellation does not withdraw a change.** An MCP client that cancels a file call
+  (through `devagotchi mcp` or a hub) gets `request_cancelled`: only that adapter stops
+  waiting, and the request it already sent goes on in the broker. A change cancelled while it
+  was queued still gets the gate if it frees within 3 s, and then lands after its client
+  stopped waiting, with no answer to anyone. After `request_cancelled`, read the file before
+  assuming the change did not happen.
 - Limits: this is not a filesystem-wide compare-and-swap. External editors, commands the
   broker runs, and a second broker do not take the gate. Reads can see a move or an append
   half done. File changes have no journal, retry identity or rollback; whole-file replacement
@@ -78,7 +87,7 @@ broker, held from path resolution through the preconditions, the change and the 
 
 Checked by `broker/tests/file_mutations.rs` (gate coverage, reads and queries not gated,
 cancellation before and during a change, release after an error or panic, `mutation_busy`
-before the client's deadline) and by `tests/file_mutation_concurrency.py`: a broker and two
+before the client's deadline and past the queue cap) and by `tests/file_mutation_concurrency.py`: a broker and two
 `devagotchi mcp` adapters race barrier-released pairs over ten scenarios and check both answers
 and the bytes on disk. It passes when every check holds and every scenario overlapped at least
 once; how many pairs overlapped is a measurement. CI's e2e job runs it on every OS in the matrix.

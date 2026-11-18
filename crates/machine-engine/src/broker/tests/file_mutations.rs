@@ -3,7 +3,8 @@
 //! adapters live in tests/file_mutation_concurrency.py.
 
 use super::*;
-use crate::broker::files::MUTATION_WAIT;
+use crate::broker::files::{MAX_QUEUED_MUTATIONS, MUTATION_WAIT};
+use tokio::time::timeout_at;
 
 fn write(path: &Path, text: &str) -> RequestBody {
     RequestBody::FileWrite(FileWriteInput {
@@ -64,6 +65,10 @@ async fn every_mutation_waits_on_the_gate_but_readers_and_queries_do_not() {
         }),
     ];
     let mut pending = Vec::new();
+    let queued = Instant::now();
+    // The reads and queries below must finish while the queued mutations still wait, well
+    // inside MUTATION_WAIT, or those would rightly be refused `mutation_busy`.
+    let reads_by = queued + MUTATION_WAIT / 2;
     for request in requests {
         let broker = Arc::clone(&broker);
         pending.push(tokio::spawn(async move { broker.handle(request).await }));
@@ -82,9 +87,9 @@ async fn every_mutation_waits_on_the_gate_but_readers_and_queries_do_not() {
         start_line: None,
         line_count: None,
     }));
-    let ResponseBody::File(content) = timeout(Duration::from_secs(1), read)
+    let ResponseBody::File(content) = timeout_at(reads_by, read)
         .await
-        .unwrap()
+        .expect("a read waited on the mutation gate (or the runner is badly overloaded)")
         .unwrap()
     else {
         panic!("expected the file's content")
@@ -100,19 +105,22 @@ async fn every_mutation_waits_on_the_gate_but_readers_and_queries_do_not() {
         }),
     ];
     for query in queries {
-        timeout(Duration::from_secs(1), broker.handle(query))
+        timeout_at(reads_by, broker.handle(query))
             .await
-            .expect("a query waited on the mutation gate")
+            .expect("a query waited on the mutation gate (or the runner is badly overloaded)")
             .unwrap();
     }
 
     drop(guard);
+    let held = queued.elapsed();
     for task in pending {
         timeout(Duration::from_secs(5), task)
             .await
             .unwrap()
             .unwrap()
-            .unwrap();
+            .unwrap_or_else(|error| {
+                panic!("a queued mutation failed once the gate was freed after {held:?}: {error:?}")
+            });
     }
     assert_eq!(std::fs::read_to_string(&original).unwrap(), "edited");
     assert_eq!(
@@ -275,5 +283,67 @@ async fn a_mutation_that_waits_past_the_bound_is_refused_and_never_lands() {
         .await
         .unwrap();
     assert!(!file.exists());
+    broker.shutdown().await;
+}
+
+/// Queued mutations each hold a local connection, so the queue is capped: one past the cap is
+/// refused at once, reads still answer, and the queued ones all land once the gate is free.
+#[tokio::test]
+async fn a_mutation_past_the_queue_cap_is_refused_at_once() {
+    let directory = tempfile::tempdir().unwrap();
+    let broker = open_broker(&directory, &[]);
+    let root = directory.path();
+    let guard = hold(&broker).await;
+    // Everything below runs before the queued mutations' own MUTATION_WAIT runs out.
+    let by = Instant::now() + MUTATION_WAIT / 2;
+    let mut pending = Vec::new();
+    for index in 0..MAX_QUEUED_MUTATIONS {
+        let broker = Arc::clone(&broker);
+        let request = write(&root.join(format!("queued-{index}.txt")), "queued");
+        pending.push(tokio::spawn(async move { broker.handle(request).await }));
+    }
+    let queue = &broker.shared.file_mutations.queue;
+    timeout_at(by, async {
+        while queue.available_permits() > 0 {
+            sleep(Duration::from_millis(5)).await;
+        }
+    })
+    .await
+    .expect("the queued mutations never all reached the gate");
+
+    let extra = root.join("extra.txt");
+    let asked = Instant::now();
+    let refused = broker
+        .handle(write(&extra, "over the cap"))
+        .await
+        .unwrap_err();
+    assert_eq!(refused.code, "mutation_busy", "{refused:?}");
+    assert!(
+        asked.elapsed() < MUTATION_WAIT,
+        "a mutation over the cap waited {:?} instead of being refused at once",
+        asked.elapsed()
+    );
+    timeout_at(
+        by,
+        broker.handle(RequestBody::FileInfo(FileInfoInput {
+            path: path_of(root),
+        })),
+    )
+    .await
+    .expect("a read waited behind the full queue")
+    .unwrap();
+
+    drop(guard);
+    for task in pending {
+        timeout(Duration::from_secs(5), task)
+            .await
+            .unwrap()
+            .unwrap()
+            .unwrap();
+    }
+    for index in 0..MAX_QUEUED_MUTATIONS {
+        assert!(root.join(format!("queued-{index}.txt")).exists());
+    }
+    assert!(!extra.exists());
     broker.shutdown().await;
 }
