@@ -63,7 +63,7 @@ pub(super) fn render(
         Kind::Landing => format!(
             "{}{}",
             installable(&site),
-            super::super::landing::head(&site)
+            super::super::landing::head()
         ),
         Kind::App { push, .. } => format!(
             "{}<script src=\"/assets/reveal.js\"></script>\

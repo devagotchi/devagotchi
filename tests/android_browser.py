@@ -11,6 +11,9 @@ colliding in tests/app_browser.py (the hosted hub's phone app, iPhone and Pixel)
 
 1. The owner claims the hub on the Pixel 7.
 2. `/app`, `/approvals` and `/app/me` open as the owner and none scrolls sideways at 412 px.
+3. Chrome finds nothing in the way of installing the app (`Page.getInstallabilityErrors`) on
+   `/app`, and on `/auth/login` for a phone that is not signed in yet; the manifest's PNG
+   icons decode at the sizes they are listed at.
 
 Needs Python Playwright with its Chromium (tests/requirements-browser.txt). CI runs it on
 ubuntu-24.04 (`e2e`, beside tests/app_browser.py); locally, with a throwaway Postgres
@@ -28,6 +31,7 @@ import sys
 import tempfile
 import time
 import urllib.parse
+import urllib.request
 from pathlib import Path
 
 from claim_browser import free_port, serve, settled, stop, wait_ready
@@ -63,6 +67,43 @@ def sideways(page) -> list:
         seen = page.evaluate(what)
         if seen > WIDTH:
             found.append(f"{what} is {seen} px")
+    return found
+
+
+def installability_errors(page) -> list:
+    """What Chrome says keeps it from installing the app from this page; empty when nothing."""
+    cdp = page.context.new_cdp_session(page)
+    try:
+        return cdp.send("Page.getInstallabilityErrors")["installabilityErrors"]
+    finally:
+        cdp.detach()
+
+
+def assert_installable(page, url: str, path: str) -> None:
+    page.goto(url + path)
+    landed = urllib.parse.urlsplit(page.url).path
+    assert landed == path, f"{path} went to {landed}"
+    errors = installability_errors(page)
+    assert errors == [], f"{path} is not installable: {errors}"
+
+
+PNG = bytes([0x89]) + b"PNG\r\n\x1a\n"
+
+
+def png_icons(url: str) -> list:
+    """The manifest's PNG icons as `(purpose, listed, decoded)` sizes, read from the files."""
+    with urllib.request.urlopen(f"{url}/manifest.webmanifest", timeout=10) as answer:
+        manifest = json.load(answer)
+    found = []
+    for icon in manifest["icons"]:
+        if icon["type"] != "image/png":
+            continue
+        with urllib.request.urlopen(url + icon["src"], timeout=10) as answer:
+            assert answer.headers["Content-Type"] == "image/png", icon
+            head = answer.read(24)
+        assert head[:8] == PNG and head[12:16] == b"IHDR", icon
+        decoded = f"{int.from_bytes(head[16:20], 'big')}x{int.from_bytes(head[20:24], 'big')}"
+        found.append((icon["purpose"], icon["sizes"], decoded))
     return found
 
 
@@ -129,6 +170,18 @@ def main() -> int:
             for path in ("/app", "/approvals", "/app/me"):
                 open_as_owner(page, url, path)
                 print(f"PASS {path} opens as the owner on a {PHONE}; no sideways scroll at {WIDTH} px")
+
+            # 3. Installable: from the app, and from the sign-in page a phone lands on.
+            assert_installable(page, url, "/app")
+            print(f"PASS /app is installable on a {PHONE} (no installability errors)")
+            stranger = browser.new_context(**device(p)).new_page()
+            assert_installable(stranger, url, "/auth/login")
+            print(f"PASS /auth/login is installable on a {PHONE} before signing in")
+            icons = png_icons(url)
+            assert all(listed == decoded for _, listed, decoded in icons), icons
+            sizes = {(purpose, listed) for purpose, listed, _ in icons}
+            assert {("any", "192x192"), ("any", "512x512"), ("maskable", "512x512")} <= sizes, icons
+            print("PASS the manifest's PNG icons (192, 512 and a maskable 512) decode at their listed sizes")
             browser.close()
     finally:
         stop(hub)

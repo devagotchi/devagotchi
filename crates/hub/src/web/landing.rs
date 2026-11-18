@@ -29,21 +29,11 @@ use crate::site::{self, Action, Ctx, Front, Item, Limit, SignUp, Site, Step, Var
 /// Where Sign in goes from the landing page.
 const SIGN_IN: &str = "/auth/login?return_to=/account";
 
-/// What `/` adds to the page's head: the icon and colour a search result and a browser tab
-/// show beside the name, and the script that moves the setup walkthrough along (deferred:
-/// the page reads and works without it).
-pub fn head(site: &Site) -> String {
-    let icon = site
-        .named(site.info.assets.icon.as_ref())
-        .map(|icon| {
-            format!(
-                "<link rel=\"icon\" href=\"{}\"><meta name=\"theme-color\" content=\"{}\">",
-                escape(&icon.url()),
-                escape(site.theme_color())
-            )
-        })
-        .unwrap_or_default();
-    format!("{icon}<script src=\"/assets/landing.js\" defer></script>")
+/// What `/` adds to the page's head beside the app's manifest, icon and colour
+/// (`pages/head.rs`): the script that moves the setup walkthrough along (deferred: the page
+/// reads and works without it).
+pub fn head() -> &'static str {
+    "<script src=\"/assets/landing.js\" defer></script>"
 }
 
 /// The title and body of `/` for this kind of hub, with the site the request is served.
