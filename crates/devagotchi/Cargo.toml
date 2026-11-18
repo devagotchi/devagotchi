@@ -25,9 +25,10 @@ dunce = { workspace = true }
 serde_json = { workspace = true }
 
 [dev-dependencies]
-tempfile = { workspace = true }
-# `tests/board.rs`: a standalone board's Postgres, a database of its own per test.
+# `tests/board.rs` (a standalone board) and `tests/hub_recovery.rs` (the hub's accounts): a
+# Postgres database of their own per test.
 devagotchi-store = { workspace = true, features = ["testing"] }
+tempfile = { workspace = true }
 tokio = { workspace = true }
 
 [package.metadata.dist]
