@@ -1,5 +1,6 @@
 use devagotchi_contracts::{
-    API_VERSION, LINK_PROTOCOL_VERSION, LinkFrame, RequestBody, link_signing_message,
+    API_VERSION, CapabilitiesInput, LINK_PROTOCOL_VERSION, LinkFrame, RequestBody, ResponseBody,
+    Revision, link_signing_message,
 };
 use ed25519_dalek::{Signer, SigningKey};
 
@@ -406,4 +407,61 @@ async fn a_full_queue_answers_busy_and_leaves_no_waiters() {
         pending.lock().unwrap().is_empty(),
         "a refused call must not leave a waiter"
     );
+}
+
+/// An inspection gives up after its own 3 seconds, long before the link's call timeout: its
+/// waiter goes, the link stays connected, and the next call on it is answered.
+#[tokio::test]
+async fn an_unanswered_inspection_leaves_no_waiter_and_keeps_the_link() {
+    let dir = tempfile::tempdir().unwrap();
+    let links = links!(dir.path());
+    let key = SigningKey::from_bytes(&[9; 32]);
+    let code = links.devices.issue_code("gus", [5; 16]).await.unwrap();
+    links
+        .admit(hello(&key, HUB, "gus", "n", Some(&code)), "n")
+        .await
+        .unwrap();
+    let (calls, mut received) = mpsc::channel(CALL_QUEUE);
+    let pending: Pending = Arc::default();
+    links.sessions.lock().unwrap().insert(
+        "gus".into(),
+        Session {
+            id: 1,
+            calls,
+            pending: pending.clone(),
+            build: None,
+            control: mpsc::channel(1).0,
+        },
+    );
+    let inspect = RequestBody::BrokerCapabilities(CapabilitiesInput {});
+    let error = devagotchi_mcp::capabilities::response(links.call("gus", inspect))
+        .await
+        .unwrap_err();
+    assert_eq!(error.code, "inspection_timeout");
+    let (_, asked) = received.recv().await.unwrap();
+    assert!(matches!(asked.request, RequestBody::BrokerCapabilities(_)));
+    assert!(
+        pending.lock().unwrap().is_empty(),
+        "an abandoned inspection must not leave a waiter"
+    );
+    assert!(links.connected("gus"));
+    let answering = pending.clone();
+    let device = tokio::spawn(async move {
+        let (id, _) = received.recv().await.unwrap();
+        let waiter = answering.lock().unwrap().remove(&id).unwrap();
+        let answer = ResponseBody::Revision(Revision { revision: 7 });
+        waiter.send(WireResponse::Ok(answer)).unwrap();
+    });
+    let list = RequestBody::OperationList(devagotchi_contracts::ListInput {
+        offset: 0,
+        limit: 1,
+        caller: None,
+        scope: None,
+    });
+    let answer = links.call("gus", list).await.unwrap();
+    assert!(matches!(
+        answer,
+        ResponseBody::Revision(Revision { revision: 7 })
+    ));
+    device.await.unwrap();
 }

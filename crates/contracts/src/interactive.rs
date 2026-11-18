@@ -221,7 +221,8 @@ impl crate::RequestBody {
             Self::OperationList(_)
             | Self::OperationsChanged(_)
             | Self::ConfigGet(_)
-            | Self::ProcessList(_) => String::new(),
+            | Self::ProcessList(_)
+            | Self::BrokerCapabilities(_) => String::new(),
         }
     }
 
@@ -261,7 +262,8 @@ impl crate::RequestBody {
             | Self::ConfigSet(_)
             | Self::ProcessList(_)
             | Self::ProcessKill(_)
-            | Self::UrlRead(_) => None,
+            | Self::UrlRead(_)
+            | Self::BrokerCapabilities(_) => None,
         }
     }
 }

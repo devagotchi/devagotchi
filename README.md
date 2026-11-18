@@ -236,6 +236,7 @@ Those are historical local-adapter results. The separate Site reference MCP targ
 | `search_files` | Search file names or contents under a directory, one page at a time (`cursor` continues) |
 | `read_url` | Read an http or https page from this machine (so its localhost is reachable), one page at a time. An account broker only |
 | `get_config` | The broker's workspace, exec policy, grants and limits |
+| `broker_capabilities` | Ask the broker itself, within 3 seconds, what it is and which requests it answers under its policy. No paths, grants or secrets; it starts nothing. Through a hub: `machine_inspect` |
 | `set_config_value` | Change a live limit (`max_concurrent`, `max_operations`, `output_limit_bytes`) and save it. Workspace and policy stay the operator's |
 | `list_processes` | Processes on this machine, on an account broker. A job's processes are tagged with its operation |
 | `kill_process` | Stop a process by pid. Refuses the broker and a job's own root (that one is `operation_cancel`) |
@@ -249,6 +250,8 @@ Those are historical local-adapter results. The separate Site reference MCP targ
 | `operation_cancel` | Explicitly request cancellation of an admitted job |
 | `operation_input` | Type into a job started with `interactive` (a prompt, a REPL, a sign-in): text, then named keys |
 | `operation_resize` | Resize an interactive job's terminal |
+
+A machine `online` in the hub's `machines` has its link connected; that does not show its broker answers. `machine_inspect` asks the broker through that link and waits at most 3 seconds: `inspection_timeout` means readiness is unknown, and any other error (`broker_offline`, `ipc_io`, `shutting_down`, ...) is the link's or the broker's own. What it lists is what the broker serves, not a grant: the broker still checks every request.
 
 The hub serves the same tools for every linked machine, each with the machine's name. Every request names who is calling, set by the transport and never by the AI: this machine's own account and the adapter process locally, `hub:<subject>` and the MCP session through a hub. So a hub account reaches only its own account's jobs: `operation_list` shows them (`scope: "mine"`, only this conversation's), and getting, reading, waiting on or cancelling another account's answers `not_found`; only the conversation that started an interactive job types into it (another of the same account takes over with `take_over`), and a machine's link refuses a hub that claims to be anyone but its own accounts. Interactive jobs run on Linux (a pseudo-terminal, or a pipe) and on Windows (a pseudo-console of the job's own, ConPTY, or a pipe). On Windows a program on a pipe cannot be sent Ctrl-C: end its input with `ctrl_d`, cancel it, or start it on a terminal.
 

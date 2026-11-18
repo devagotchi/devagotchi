@@ -11,6 +11,10 @@ pub(super) fn input_closed() -> BridgeError {
     )
 }
 
+pub(super) fn no_caller() -> BridgeError {
+    invalid("Input needs a caller: send it through devagotchi mcp or a hub")
+}
+
 /// What a key sends on a terminal (an xterm in its normal cursor mode).
 pub(super) fn key_bytes(key: Key) -> &'static [u8] {
     match key {

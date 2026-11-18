@@ -21,7 +21,7 @@ async fn exit_status_and_output_are_recorded() {
     broker.shutdown().await;
 }
 
-fn account_broker(directory: &tempfile::TempDir) -> Arc<Broker> {
+pub(super) fn account_broker(directory: &tempfile::TempDir) -> Arc<Broker> {
     let config = BrokerConfig {
         workspace: directory.path().display().to_string(),
         allowed_executables: vec![],

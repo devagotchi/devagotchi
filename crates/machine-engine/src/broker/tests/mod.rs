@@ -176,6 +176,7 @@ fn output_text(broker: &Broker, id: &str) -> String {
 }
 
 mod access;
+mod capabilities;
 mod file_mutations;
 mod interactive;
 mod lifecycle;

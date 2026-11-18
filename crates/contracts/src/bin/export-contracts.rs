@@ -1,12 +1,12 @@
 //! Export canonical Rust DTO schemas without opening a broker or journal.
 
 use devagotchi_contracts::{
-    BridgeError, ChangesInput, ConfigGetInput, ConfigSetInput, ConfigView, DirectoryInput,
-    FileContent, FileEditInput, FileInfo, FileInfoInput, FileListInput, FileListing, FileMoveInput,
-    FileReadInput, FileSearchInput, FileWriteInput, FileWritten, GetInput, ListInput,
-    OperationView, OperationsPage, OutputPage, ProcessKillInput, ProcessKilled, ProcessListInput,
-    ProcessPage, ReadInput, Revision, SearchPage, StartInput, StartOutput, UrlContent,
-    UrlReadInput, WaitInput,
+    BridgeError, BrokerCapabilities, CapabilitiesInput, ChangesInput, ConfigGetInput,
+    ConfigSetInput, ConfigView, DirectoryInput, FileContent, FileEditInput, FileInfo,
+    FileInfoInput, FileListInput, FileListing, FileMoveInput, FileReadInput, FileSearchInput,
+    FileWriteInput, FileWritten, GetInput, ListInput, OperationView, OperationsPage, OutputPage,
+    ProcessKillInput, ProcessKilled, ProcessListInput, ProcessPage, ReadInput, Revision,
+    SearchPage, StartInput, StartOutput, UrlContent, UrlReadInput, WaitInput,
 };
 use schemars::{JsonSchema, generate::SchemaSettings};
 use serde_json::Value;
@@ -52,6 +52,8 @@ struct BrokerContracts {
     process_killed: ProcessKilled,
     url_read_input: UrlReadInput,
     url_content: UrlContent,
+    capabilities_input: CapabilitiesInput,
+    broker_capabilities: BrokerCapabilities,
     bridge_error: BridgeError,
 }
 

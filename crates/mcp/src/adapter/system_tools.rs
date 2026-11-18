@@ -1,9 +1,10 @@
-//! The machine beside its files: the broker's settings, the machine's processes, and a web
-//! address read from the machine, each one request to this user's broker.
+//! The machine beside its files: the broker's settings and what it answers, the machine's
+//! processes, and a web address read from the machine, each one request to this user's broker.
 
 use devagotchi_contracts::{
-    BridgeError, ConfigGetInput, ConfigSetInput, ConfigView, ProcessKillInput, ProcessKilled,
-    ProcessListInput, ProcessPage, RequestBody, ResponseBody, UrlContent, UrlReadInput, describe,
+    BridgeError, BrokerCapabilities, CapabilitiesInput, ConfigGetInput, ConfigSetInput, ConfigView,
+    ProcessKillInput, ProcessKilled, ProcessListInput, ProcessPage, RequestBody, ResponseBody,
+    UrlContent, UrlReadInput, describe,
 };
 use rmcp::{
     Json, RoleServer, handler::server::wrapper::Parameters, service::RequestContext, tool,
@@ -29,6 +30,29 @@ impl BridgeAdapter {
         match self.request(RequestBody::ConfigGet(input), context).await? {
             ResponseBody::Config(view) => Ok(Json(view)),
             other => Err(Json(unexpected("config", &other))),
+        }
+    }
+
+    #[tool(
+        name = "broker_capabilities",
+        description = describe::INSPECT,
+        title = "Ask the broker what it serves",
+        annotations(title = "Ask the broker what it serves", read_only_hint = true, open_world_hint = false)
+    )]
+    async fn broker_capabilities(
+        &self,
+        Parameters(input): Parameters<CapabilitiesInput>,
+        context: RequestContext<RoleServer>,
+    ) -> Result<Json<BrokerCapabilities>, Json<BridgeError>> {
+        let asked = async {
+            (self
+                .request(RequestBody::BrokerCapabilities(input), context)
+                .await)
+                .map_err(|Json(error)| error)
+        };
+        match crate::capabilities::response(asked).await.map_err(Json)? {
+            ResponseBody::Capabilities(capabilities) => Ok(Json(capabilities)),
+            other => Err(Json(unexpected("capabilities", &other))),
         }
     }
 

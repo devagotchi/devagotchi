@@ -2,6 +2,7 @@
 //! This library is its whole behaviour, `devagotchi mcp` its name. It never links the
 //! broker: `devagotchi mcp` runs only this code.
 
+pub mod capabilities;
 pub mod connect;
 pub mod files;
 pub mod image;

@@ -93,6 +93,8 @@ libraries): 19 never-used items in `devagotchi-hub` (for example `store::open`,
 | P10 | `write_pdf` | probes | waiting on the user: native, the machine's converter, or both |
 | P11 | File changes in order (increment 203, from the Nov 6 copy): one gate per broker for `write_file`, `edit_file`, `create_directory` and `move_file`, from path resolution to the answer, owned by the blocking worker; reads, operations and settings never take it; a wait past 3 s is refused `mutation_busy` with nothing changed, below the local client's 5 s IPC deadline, and at most 8 wait at once; an MCP cancellation (`request_cancelled`) does not withdraw a queued change, which can still land within those 3 s (`broker/files.rs`, contract in [the parity doc](../../docs/desktop-commander-parity.md#mutation-ordering)) | `broker/tests/file_mutations.rs`; `tests/file_mutation_concurrency.py` (two `devagotchi mcp` adapters, ten scenarios; passes when every check holds and every scenario overlapped at least once; the count is a measurement), in CI's e2e job on every OS | done (local; CI not run): on main 219e008 the harness reproduced two same-SHA writes both succeeding; with the gate, 160 of 160 pairs checked, every scenario overlapped (16 of 16 each), on Windows 11 and on Linux (rust:1.99.1-bookworm, after `chmod -R go-w` on the tree copy: the IPC state check refuses group- or world-writable ancestors); the 7 Rust tests pass on Windows, the first 6 also on Linux (before the review fixes); a gate released by the caller, an unbounded wait and no queue cap each fail them |
 
+| P11 | Readiness, as Desktop Commander's device is `online` only while its MCP child is alive ([teardown 3.5](../../../docs/desktop-commander-teardown.md)): a connected link is not a broker that answers. `broker_capabilities` (wire request, a newtype over `CapabilitiesInput` like `config_get`; `broker/settings.rs`) answers `api_version`, `version`, `os`, `arch`, `exec_policy`, `shell_commands`, `workspace_scope` and `supported_requests` (contracts `REQUEST_METHODS`, less what a `granted` broker always refuses: `config_set`, `process_list`, `process_kill`, `url_read`), no paths, grants, env or secrets; it admits no work, and a closing or faulted broker refuses with `shutting_down` or its fault. Local tool `broker_capabilities`, hub tool `machine_inspect {machine}` through the audited `Hub::call`, both bounded to 3 s (`devagotchi_mcp::capabilities`, `inspection_timeout`). Every "online means usable" wording corrected (hub instructions in `site.json`, the `machines` skill, `mcp/machines.rs`, `mcp/schema.rs`, `mcp/tools/machines.rs`, the landing catalog, docs and llms). Non-goals: no link protocol bump, no protocol-1 admission, no capability cache. Risk, accepted: a machine on an older build cannot parse `broker_capabilities`, and its link ends the session on a frame it does not understand (`crates/link/src/session.rs`, "hub sent a frame this link does not understand"), so its other in-flight calls fail as `broker_offline`; the stance is main's build-skew hint (`mcp/callers/mod.rs` `outdated`, which names `machine_update`) plus auto-update on connect (`machines/link/serve.rs`), not a gate. Also noted: AGENTS.md still says contracts belong in `contracts/src/lib.rs`; they live in its modules (`system.rs` here), as main already does | contracts, machine-engine, mcp and hub tests; probes | see Fix P11 below |
+
 ## Verification receipts
 
 Step 1 driver and logs: kept outside Git. `tests/e2e.py --bin-dir target/debug` with
@@ -190,6 +192,20 @@ exactly one test: the guard kept in the caller failed
 and skipping the queue cap failed `a_mutation_past_the_queue_cap_is_refused_at_once`. The
 harness now records `--source-commit`; its gated receipt is a fresh run on a build of 767ed7b
 (PASS, 160 pairs, 16 of 16 overlapping in each scenario). Linux was not re-run for this pass.
+
+Fix P11 (2026-11-18, Windows, branch `increment-204/machine-inspect` from `main` at `219e008`):
+contracts 8, machine-engine 96, mcp 30 unit tests passed; hub 455 on the test Postgres, with
+three tests failing once under parallel load (a connection reset by the shared Postgres, and a
+board page) that passed alone, `machines/tests/inspect.rs` and the link test among the passes;
+the layout ratchet passed (broker.rs 1199 after `no_caller` moved to `broker/input.rs`);
+`node scripts/generate-contracts.cjs --check` current after regenerating all three artifacts.
+`tests/e2e.py` on Windows against a throwaway Postgres: E2E PASSED. `broker_capabilities`
+through `devagotchi mcp` described both brokers (the granted one without `config_set`,
+`process_list`, `process_kill`, `url_read`) and changed no operation; `machine_inspect` answered
+for the granted and account brokers, refused an unknown machine, said `not_enrolled`,
+`broker_offline` and `device_revoked` with the link, and with the broker stopped behind a live
+link said `ipc_io` in 0.3 s while `machines` still said `online`; after the broker restarted on
+its state (same endpoint) it answered again. Linux: not run on this branch.
 
 Seen once: right after the broker was killed, `devagotchi mcp` reported "your broker is running
 but did not answer within 20 s" while the old one was still shutting down; the next start worked.

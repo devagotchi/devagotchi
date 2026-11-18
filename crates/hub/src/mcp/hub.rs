@@ -158,15 +158,26 @@ impl Hub {
         let subject = self.subject(&context)?;
         body.set_caller(&Self::caller(&subject, &context));
         let operation_id = body.target();
+        // An inspection waits at most its own bound, and its outcome (`inspection_timeout`,
+        // `api_version`) is what the audit records.
+        let inspection = matches!(body, RequestBody::BrokerCapabilities(_));
         let result = match self.route(&subject, broker).await {
             Ok(route) => {
+                let sent = self.send_hinted(&route, body);
+                let answer = async {
+                    if inspection {
+                        devagotchi_mcp::capabilities::response(sent).await
+                    } else {
+                        sent.await
+                    }
+                };
                 tokio::select! {
                     biased;
                     _ = context.ct.cancelled() => Err(Json(BridgeError::new(
                         "request_cancelled",
                         "stopped waiting for the broker response; admitted operations are not cancelled",
                     ))),
-                    response = self.send_hinted(&route, body) => response.map_err(Json),
+                    response = answer => response.map_err(Json),
                 }
             }
             Err(error) => Err(error),

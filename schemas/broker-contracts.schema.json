@@ -16,6 +16,63 @@
       ],
       "type": "object"
     },
+    "BrokerCapabilities": {
+      "additionalProperties": false,
+      "description": "What a live broker is and what it serves, read from its policy alone. Never a local path,\na grant, an environment value or a credential, and no permission to run anything.",
+      "properties": {
+        "api_version": {
+          "description": "The wire API version the broker speaks.",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "arch": {
+          "type": "string"
+        },
+        "exec_policy": {
+          "description": "`account`: anything this OS account can run. `granted`: only the operator's grants.",
+          "type": "string"
+        },
+        "os": {
+          "description": "`linux` or `windows`, and the CPU architecture.",
+          "type": "string"
+        },
+        "shell_commands": {
+          "description": "Whether a `command` line runs on the machine's shell (an `account` broker only).",
+          "type": "boolean"
+        },
+        "supported_requests": {
+          "description": "The request methods this broker answers under its policy; one it always refuses (a\n`granted` broker's processes, settings changes and web reads) is left out. Listed is\nnot granted: the broker still checks each request.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "version": {
+          "description": "The broker's build.",
+          "type": "string"
+        },
+        "workspace_scope": {
+          "description": "`account`: files and jobs anywhere the account reaches. `workspace`: only inside the\nbroker's workspace.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "api_version",
+        "version",
+        "os",
+        "arch",
+        "exec_policy",
+        "shell_commands",
+        "workspace_scope",
+        "supported_requests"
+      ],
+      "type": "object"
+    },
+    "CapabilitiesInput": {
+      "additionalProperties": false,
+      "type": "object"
+    },
     "ChangesInput": {
       "additionalProperties": false,
       "description": "Wait until the broker's operations change as a list shows them: one admitted, retired,\nor moved to another state (output alone is not a change here). For a view that\nre-lists only when something changed, instead of on a timer.",
@@ -1666,6 +1723,12 @@
     "bridge_error": {
       "$ref": "#/$defs/BridgeError"
     },
+    "broker_capabilities": {
+      "$ref": "#/$defs/BrokerCapabilities"
+    },
+    "capabilities_input": {
+      "$ref": "#/$defs/CapabilitiesInput"
+    },
     "changes_input": {
       "$ref": "#/$defs/ChangesInput"
     },
@@ -1800,6 +1863,8 @@
     "process_killed",
     "url_read_input",
     "url_content",
+    "capabilities_input",
+    "broker_capabilities",
     "bridge_error"
   ],
   "title": "BrokerContracts",

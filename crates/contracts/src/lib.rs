@@ -312,6 +312,7 @@ pub enum RequestBody {
     UrlRead(UrlReadInput),
     OperationInput(SendInput),
     OperationResize(ResizeInput),
+    BrokerCapabilities(CapabilitiesInput),
 }
 
 impl RequestBody {
@@ -358,6 +359,7 @@ pub enum ResponseBody {
     Processes(ProcessPage),
     Killed(ProcessKilled),
     Url(UrlContent),
+    Capabilities(BrokerCapabilities),
 }
 
 impl ResponseBody {
@@ -380,6 +382,7 @@ impl ResponseBody {
             Self::Processes(_) => "processes",
             Self::Killed(_) => "killed",
             Self::Url(_) => "url",
+            Self::Capabilities(_) => "capabilities",
         }
     }
 }

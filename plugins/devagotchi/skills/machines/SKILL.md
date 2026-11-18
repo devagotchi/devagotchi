@@ -10,8 +10,9 @@ and jobs belong to the machine's broker, so they outlive this conversation.
 
 ## Start
 
-- Call `machines` first: it says what you can reach and what is online right now. `whoami`
-  says who you are signed in as.
+- Call `machines` first: it says what you can reach and which machines are online. Online
+  means the machine's link is connected, not that its broker answers: `machine_inspect`
+  asks the broker itself, within 3 seconds. `whoami` says who you are signed in as.
 - No machine yet? Call `machine_add` and give the person its one line for their system (or
   run it yourself if you have a shell on that computer).
 
