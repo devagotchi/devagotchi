@@ -51,31 +51,6 @@ fn command_line(key: &str, line: &str, cwd: Option<String>) -> StartInput {
     }
 }
 
-fn limited_config(directory: &tempfile::TempDir, grants: &[&Path], max: usize) -> BrokerConfig {
-    BrokerConfig {
-        workspace: directory.path().display().to_string(),
-        allowed_executables: grants.iter().map(|g| g.display().to_string()).collect(),
-        output_limit_bytes: 8192,
-        max_operations: max,
-        max_concurrent: 1,
-        exec_policy: ExecPolicy::Granted,
-    }
-}
-
-fn input(key: &str, executable: &Path, args: Vec<String>) -> StartInput {
-    StartInput {
-        idempotency_key: key.into(),
-        executable: executable.display().to_string(),
-        args,
-        command: None,
-        cwd: None,
-        deadline_ms: 5_000,
-        interactive: None,
-        combined_output: false,
-        caller: None,
-    }
-}
-
 #[tokio::test]
 async fn the_account_policy_runs_a_command_line_in_the_machines_shell() {
     let directory = tempfile::tempdir().unwrap();

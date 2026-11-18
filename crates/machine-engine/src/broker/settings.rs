@@ -1,6 +1,7 @@
 //! `get_config` and `set_config_value`: the broker's settings, read whole, and its limits
-//! changed while it runs. A changed limit applies at once and is saved to the broker.json the
-//! broker was started from, so a restart keeps it. The workspace, the exec policy and the
+//! changed while it runs. A changed limit is saved to the broker.json the broker was started
+//! from, so a restart keeps it, and applies at once; one that cannot be saved is refused and
+//! changes nothing, so what runs is what the file says. The workspace, the exec policy and the
 //! grants decide what an agent may do, so only the machine's operator changes them, in
 //! broker.json; this refuses them with that reason.
 
@@ -150,34 +151,50 @@ impl Broker {
                 "This broker runs only granted programs, so its operator keeps every setting; ask them to change broker.json",
             ));
         }
-        let (before, after) = {
+        // Under the registry lock, so two changes are saved and applied in one order. Saved
+        // first and applied only once saved: the live limits never differ from broker.json.
+        let (before, after, saved, shrunk) = {
             let mut state = self.shared.lock();
             let before = state.limits;
             let after = before
                 .with(key, input.value)
                 .map_err(|message| BridgeError::new("invalid_request", message))?;
+            let saved = match &self.shared.config_file {
+                Some(file) => {
+                    save(file, key, input.value).map_err(|error| {
+                        BridgeError::new(
+                            "config_not_saved",
+                            format!(
+                                "{key} stays {}: it could not be saved to {}: {error}",
+                                before.get(key),
+                                file.display()
+                            ),
+                        )
+                    })?;
+                    format!("saved to {}", file.display())
+                }
+                None => "applies until the broker restarts (it was not started from a broker.json)"
+                    .into(),
+            };
             state.limits = after;
             // Fewer kept: retire finished jobs down to the new limit now, not one per start.
-            while state.operations.len() > after.max_operations
-                && state.retire_oldest_finished().is_ok()
-            {}
-            (before, after)
-        };
-        let saved = match &self.shared.config_file {
-            Some(file) => match save(file, key, input.value) {
-                Ok(()) => format!("saved to {}", file.display()),
-                Err(error) => format!(
-                    "applies until the broker restarts; it could not be saved to {}: {error}",
-                    file.display()
-                ),
-            },
-            None => {
-                "applies until the broker restarts (it was not started from a broker.json)".into()
-            }
+            // Their keys stay retired; a journal error is returned, not swallowed.
+            let shrunk = state.shrink();
+            (before, after, saved, shrunk)
         };
         let changed = format!("{key} {} -> {}, {saved}", before.get(key), after.get(key));
         trace::line("settings", &changed);
+        // The limit changed (and perhaps some operations retired) either way.
         self.shared.changed();
+        shrunk.map_err(|error| {
+            BridgeError::new(
+                &error.code,
+                format!(
+                    "{changed}; retiring finished operations down to it stopped: {}",
+                    error.message
+                ),
+            )
+        })?;
         self.config_view(Some(changed))
     }
 }
