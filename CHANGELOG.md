@@ -41,6 +41,8 @@ install, not a production promotion. The gap that is still open is in
 - `/admin` → Email sets the hub's mail server (any SMTP login, Resend with an API key), checked
   before it is saved and in force at once; a test email on request. The password is encrypted
   in the hub's Postgres.
+- `/admin` → Signal sinks adds, changes and removes where the hub pushes its signals (log
+  services, your own collector), each running the moment it is saved, its token encrypted.
 
 ### The license is the Functional Source License (FSL-1.1-ALv2)
 - Devagotchi moves from the Business Source License 1.1 to FSL-1.1-ALv2, held by AngryVibes LLC:

@@ -216,7 +216,6 @@ pub(crate) async fn run(
     }
     // Signals to the operator's sinks (`notify/signals/`, docs/signals.md): each on its own task,
     // reported in /healthz, never holding back the hub or another sink.
-    let mut sinks = Vec::new();
     for config in &config.signals.sinks {
         let sink = Arc::new(notify::signals::Sink::new(
             config,
@@ -224,16 +223,18 @@ pub(crate) async fn run(
             audit.clone(),
             |name| env::var(name).ok(),
         )?);
-        tokio::spawn(sink.clone().run());
+        boards.start_sink(&config.name, sink, true);
         eprintln!(
             "devagotchi hub: signals ({}) to sink {} at {}",
             notify::signals::SCHEMA,
             config.name,
             config.url
         );
-        sinks.push(sink);
     }
-    boards.set_sinks(sinks);
+    // And the ones the owner set on /admin.
+    if let Some(hub) = &passkeys {
+        web::start_saved_sinks(hub, &boards, &signals_store, &audit).await?;
+    }
     let listener = agenthub::mcp::Boards::postgres_listener(&url).await?;
     tokio::spawn(boards.clone().listen_postgres(listener));
     if !boards.is_empty() {

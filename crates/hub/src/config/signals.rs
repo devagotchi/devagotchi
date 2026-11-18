@@ -78,7 +78,7 @@ fn sink_url_ok(url: &str) -> bool {
 
 impl SignalsConfig {
     /// Each sink's name (once each), URL, secret variables and sources.
-    pub(super) fn check(&self) -> Result<(), String> {
+    pub(crate) fn check(&self) -> Result<(), String> {
         let mut sink_names = std::collections::BTreeSet::new();
         for sink in &self.sinks {
             if !valid_name(&sink.name) || !sink_names.insert(sink.name.clone()) {

@@ -48,6 +48,9 @@ mod hub_settings_mail;
 #[cfg(test)]
 mod hub_settings_mail_tests;
 mod hub_settings_owner;
+mod hub_settings_sinks;
+#[cfg(test)]
+mod hub_settings_sinks_tests;
 #[cfg(test)]
 mod hub_settings_tests;
 mod landing;
@@ -112,6 +115,7 @@ pub(crate) fn utc(secs: u64) -> String {
 pub use email::Mailer;
 pub(crate) use email::announce_admissions;
 pub use hub_settings_mail::apply_saved as apply_saved_mail;
+pub use hub_settings_sinks::start_saved as start_saved_sinks;
 pub(crate) use landing::render as landing_for;
 use nomen_login::LOGIN_TTL;
 pub use nomen_login::{Exchange, SessionToken, WebLogin};

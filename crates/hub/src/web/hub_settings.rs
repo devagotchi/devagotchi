@@ -197,7 +197,13 @@ pub async fn page(
         stored_clickhouse.as_ref(),
         health.as_ref(),
     );
-    let sinks = state.hub.boards.signal_sink_count();
+    let stored_sinks = match hub.accounts().stored_sinks().await {
+        Ok(stored) => stored,
+        Err(error) => {
+            eprintln!("devagotchi hub: signal sinks: {error}");
+            return unavailable();
+        }
+    };
     let stored_mail = match hub.accounts().stored_mail().await {
         Ok(stored) => stored,
         Err(error) => {
@@ -205,7 +211,6 @@ pub async fn page(
             return unavailable();
         }
     };
-    let install = "Set when the hub is installed. Re-run <code>install.sh</code> to change it.";
     let live = |group| hub_settings_live::card(&state, group);
     // Visits are counted only on a hosted hub, so only its owner sees how long they are kept.
     let visits = if state.hub.config.multi_tenant() {
@@ -226,7 +231,7 @@ Google, GitHub, Shippin, or any OpenID Connect provider. Shippin's switch is on 
 <section class=\"card\" id=\"people\"><h2>People</h2>{sign_up}<ul class=\"rows\">{orgs}</ul></section>\
 <section class=\"card\" id=\"running\"><h2>Machines and workflows</h2>{machines}{workflows}</section>\
 <section class=\"card\" id=\"data\"><h2>Data and signals</h2><p class=\"note help\">Where AgentHub keeps its boards, \
-and where it sends their events for statistics.</p>{database}{analytics}{visits}<ul class=\"rows\">{signals}</ul>{deploy_time}</section>",
+and where it sends their events for statistics.</p>{database}{analytics}{visits}{signals}{deploy_time}</section>",
         deploy_time = hub_settings_live::deploy_time_card(),
         passwords = live(Group::Passwords),
         sign_up = live(Group::SignUp),
@@ -248,7 +253,7 @@ and where it sends their events for statistics.</p>{database}{analytics}{visits}
             "Members, teams, roles and invites",
             "<a href=\"/orgs\">Manage organisations</a>"
         ),
-        signals = row("Signal sinks", &sinks.to_string(), install),
+        signals = super::hub_settings_sinks::card(&state, &stored_sinks),
     );
     let mut response = pages::app(StatusCode::OK, "Hub settings", &body, Tab::Me);
     response.headers_mut().insert(

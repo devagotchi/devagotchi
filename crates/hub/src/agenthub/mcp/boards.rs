@@ -27,7 +27,7 @@ impl Boards {
             orgs: Some(orgs::Orgs::new(store.clone())),
             preferences: Some(crate::identity::PreferenceStore::new(store)),
             warehouse: std::sync::RwLock::new(None),
-            sinks: std::sync::OnceLock::new(),
+            sinks: std::sync::RwLock::new(Vec::new()),
             configured: config.boards.iter().map(|b| b.project.clone()).collect(),
             accounts,
             site: config.site_cell(),
@@ -71,19 +71,50 @@ impl Boards {
         self.warehouse.read().expect("warehouse lock").clone()
     }
 
-    /// How many signal sinks this hub sends to.
-    pub(crate) fn signal_sink_count(&self) -> usize {
-        self.sinks.get().map_or(0, Vec::len)
+    /// Start a sink on its own task: the config file's (`from_config`) or one set on `/admin`.
+    pub(crate) fn start_sink(
+        &self,
+        name: &str,
+        sink: Arc<crate::notify::signals::Sink>,
+        from_config: bool,
+    ) {
+        let task = tokio::spawn(sink.clone().run()).abort_handle();
+        let running = super::RunningSink {
+            name: name.to_string(),
+            sink,
+            task,
+            from_config,
+        };
+        self.sinks.write().expect("sinks").push(running);
     }
 
-    /// The signal sinks (set once, at start).
-    pub(crate) fn set_sinks(&self, sinks: Vec<Arc<crate::notify::signals::Sink>>) {
-        let _ = self.sinks.set(sinks);
+    /// Stop every sink set on `/admin` (a save then starts them again as saved).
+    pub(crate) fn stop_page_sinks(&self) {
+        self.sinks.write().expect("sinks").retain(|running| {
+            if !running.from_config {
+                running.task.abort();
+            }
+            running.from_config
+        });
     }
 
-    /// The signal sinks, none when the hub has none.
-    pub(crate) fn sinks(&self) -> &[Arc<crate::notify::signals::Sink>] {
-        self.sinks.get().map(Vec::as_slice).unwrap_or_default()
+    /// The names of the sinks the config file names.
+    pub(crate) fn config_sink_names(&self) -> Vec<String> {
+        let sinks = self.sinks.read().expect("sinks");
+        sinks
+            .iter()
+            .filter(|r| r.from_config)
+            .map(|r| r.name.clone())
+            .collect()
+    }
+
+    /// The signal sinks running now, each with whether the config file names it.
+    pub(crate) fn sinks(&self) -> Vec<(Arc<crate::notify::signals::Sink>, bool)> {
+        let sinks = self.sinks.read().expect("sinks");
+        sinks
+            .iter()
+            .map(|r| (r.sink.clone(), r.from_config))
+            .collect()
     }
 
     /// Run a store call to the end from synchronous board code, as the hosted boards do.

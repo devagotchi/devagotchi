@@ -17,7 +17,7 @@
 | M2 | Google and GitHub stored sealed in Postgres, live without restart | M1 | `hub_settings_tests.rs` | done |
 | M3 | Email (SMTP) from the page, sealed | M2 | `web/hub_settings_mail_tests.rs` (checked before saving, sealed, live, a test reaches the stub inbox, off stops mail, the file's `auth.email` wins) | done (increment 199) |
 | M4 | ClickHouse connection from the page, sealed | M2 | `hub_settings_tests.rs` | done (increment 138, [AgentHub crate](agenthub-crate.md) A4) |
-| M5 | Signal sinks from the page, sealed | M2 | to write | pending |
+| M5 | Signal sinks from the page, sealed | M2 | `web/hub_settings_sinks_tests.rs` (refusals save nothing; runs at once with its bearer token; sealed; audited without it; kept on an empty field; removed stops it; a config file's sink is shown and its name refused) | done (increment 200) |
 | M6 | OpenID Connect from the page. The card does not prefill an issuer or a label; the operator types both. Any provider, including Nomen, is that | M2 | `hub_settings_tests.rs` (empty issuer, a typed one saves and appears on the sign-in page); `provider_tests.rs` (the code exchange) | done (increment 134; the prefilled issuer was removed so a self-hosted hub does not name one) |
 | M7 | Network providers | operator's decision | to write | pending |
 | M9 | The settings the hub reads while it runs, on the page and live: tenancy limits, anonymous connect, shortest password, machine auto-update, workflow link lifetime, visit retention; the file's value wins and is shown; every other key listed as set at deploy, with why; a test fails on a key in neither (free-edition U0) | M1 | `config/live/tests.rs`, `web/hub_settings_live_tests.rs` | done (increment 198) |
