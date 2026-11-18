@@ -80,6 +80,15 @@ install, not a production promotion. The gap that is still open is in
   already forgotten past 4096 retirements cannot be brought back. An earlier build run on a
   journal this one opened fails each retirement once the journal holds 4096 tombstones.
 
+### The phone checks tell the truth, and Android gets its own suite (increment 245)
+
+- The phone app's offline check in CI waited on a cache the service worker no longer fills,
+  and passed anyway. It now reads the cache name from `/sw.js` and waits until `/app/offline`
+  is really in it.
+- `tests/android_browser.py` is new: the one-user hub on a Pixel 7. The owner claims the hub
+  with a passkey, then `/app`, `/approvals` and `/app/me` open and none scrolls sideways at
+  412 px. CI runs it. Later phone checks go there.
+
 ### read_file works again in claude.ai after an update (increment 208)
 
 - Every tool's answer schema, through a hub and through `devagotchi mcp`, now allows fields

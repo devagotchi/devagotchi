@@ -504,6 +504,19 @@ Three more constraints shape the program:
 **Shared-file rule for this phase.** 246 makes the pure moves first: `manifest()` and `service_worker()` out of `site.rs` into `site/pwa.rs`, and the head and CSP builder out of `pages.rs` (lines 424-509) into `web/pages/head.rs`, with both ratchet entries lowered. It lands early so the other lanes rebase onto the split files.
 
 ### 245: Make the phone CI check honest, and start the Android browser suite (S)
+- **Delivered as (2026-11-18, branch `increment-245/honest-phone-ci`):** the offline wait was
+  passing whatever the cache held. `wait_for_function`'s first answer was a promise, which
+  counts as truthy, and its later polling is refused by the app's CSP (`'unsafe-eval'`).
+  `app_browser.py` now reads the cache name from `/sw.js` (`frame_cache`) and polls from
+  Python with an `evaluate` that must give `true` (`poll`, `wait_kept`). It never opens a
+  cache that is not there. `tests/android_browser.py` claims a single-tenancy hub on a
+  Pixel 7 with a virtual passkey and opens `/app`, `/approvals` and `/app/me` at 412 px. It
+  runs in CI beside `app_browser.py`, on its own `android` database.
+  - Run here (Windows, Chrome 157): `android_browser.py` passed. A scratch harness on the same
+    hub showed the old wait passing on `devagotchi-app-2` (a cache the worker never fills) and
+    the new wait failing on it, while passing on `/sw.js`'s `devagotchi-app-3`.
+  - Not run here: `app_browser.py` as a whole. It joins a Linux machine with
+    `install-devagotchi.sh`, so CI runs it.
 - **Scope:**
   - Map A0: `tests/app_browser.py:372` waits on cache `devagotchi-app-2`, but the service worker uses `-3`. Read the name from `/sw.js`. Fix the docstring (Postgres).
   - Create `tests/android_browser.py` (Pixel 7, **single tenancy**, claimed owner) as the home of later Android asserts, so lanes stop colliding in `app_browser.py`.
