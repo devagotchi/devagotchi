@@ -169,8 +169,11 @@ pub struct Accounts {
     pub(crate) store: Store,
     /// How long the hub's own AI tokens live (`auth.tokens`).
     pub(crate) tokens: crate::config::TokenConfig,
-    /// One owner's hub or a hosted one, and what an account not secured yet may hold.
+    /// One owner's hub or a hosted one (`tenancy.mode`). Its limits are read from `live`.
     pub(crate) tenancy: crate::config::TenancyConfig,
+    /// The `/admin` settings in force (`config/live.rs`): sign-up limits, what an account
+    /// not secured yet may hold, the shortest password. Read when each decision is made.
+    pub(crate) live: crate::config::Live,
     /// The identities whose sign-in is the hub's operator (`operators`).
     pub(crate) operators: Vec<String>,
     /// The site early access and plans are read from (`access.rs`), as the hub serves it.
@@ -292,6 +295,7 @@ impl Accounts {
             store,
             tokens: crate::config::TokenConfig::default(),
             tenancy: crate::config::TenancyConfig::default(),
+            live: crate::config::Live::default(),
             operators: Vec::new(),
             site: std::sync::Arc::new(crate::site::SiteCell::new(crate::site::builtin())),
             public_url: String::new(),
@@ -340,8 +344,21 @@ impl Accounts {
         tenancy: crate::config::TenancyConfig,
         operators: Vec<String>,
     ) -> Self {
+        // Its limits, until `with_live` hands over the config's own shared settings.
+        let mut limits = self.live.get();
+        limits.starts_per_hour = tenancy.starts_per_hour;
+        limits.max_unsecured = tenancy.max_unsecured;
+        limits.anonymous_connect = tenancy.anonymous_connect;
+        limits.unsecured = tenancy.unsecured;
+        self.live = crate::config::Live::new(limits);
         self.tenancy = tenancy;
         self.operators = operators;
+        self
+    }
+
+    /// These accounts reading the `/admin` settings through `live`, the config's handle.
+    pub fn with_live(mut self, live: crate::config::Live) -> Self {
+        self.live = live;
         self
     }
 

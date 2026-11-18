@@ -11,7 +11,6 @@ mod tests;
 use super::{email::normalize_email, identities::Proven, *};
 use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
 
-const MIN_LEN: usize = 8;
 const FAILURES_MAX: usize = 10; // per address in FAILURES_SECS
 const FAILURES_SECS: u64 = 15 * 60;
 
@@ -20,11 +19,6 @@ fn wrong() -> BridgeError {
 }
 fn taken() -> BridgeError {
     BridgeError::new("email_taken", "that email already has an account")
-}
-
-fn checked(password: &str) -> BridgeResult<()> {
-    let short = || BridgeError::new("password_short", "use at least 8 characters");
-    (password.len() >= MIN_LEN).then_some(()).ok_or_else(short)
 }
 
 fn hash_with(password: &[u8], salt: &[u8]) -> Option<String> {
@@ -64,6 +58,20 @@ async fn matches(hash: Option<String>, password: &str) -> bool {
 }
 
 impl Accounts {
+    /// A password at least as long as `/admin` → Passwords says (`passwords.min_length`, 8 by
+    /// default, never under 8), counted in characters.
+    fn checked(&self, password: &str) -> BridgeResult<()> {
+        let min = self.live.get().password_min.max(8) as usize;
+        if password.chars().count() >= min {
+            Ok(())
+        } else {
+            Err(BridgeError::new(
+                "password_short",
+                format!("use at least {min} characters"),
+            ))
+        }
+    }
+
     fn too_many_failures(&self, email: &str, now: u64) -> bool {
         let mut failures = self
             .password_failures
@@ -82,7 +90,7 @@ impl Accounts {
     pub async fn sign_up_password(&self, email: &str, password: &str) -> BridgeResult<Account> {
         let email = normalize_email(email)
             .ok_or_else(|| BridgeError::new("invalid_email", "not an email address"))?;
-        checked(password)?;
+        self.checked(password)?;
         let proven = Proven {
             provider: "email".into(),
             subject: email.clone(),
@@ -283,7 +291,7 @@ impl Accounts {
     ) -> BridgeResult<()> {
         let email = normalize_email(email)
             .ok_or_else(|| BridgeError::new("invalid_email", "not an email address"))?;
-        checked(password)?;
+        self.checked(password)?;
         let (hash, now) = (hash_of(password).await?, now_secs());
         transaction!(&self.store, |connection| {
             self.enter(connection, Lookup::Account(account)).await?;
@@ -347,7 +355,7 @@ impl Accounts {
     ) -> BridgeResult<Account> {
         let email = normalize_email(email)
             .ok_or_else(|| BridgeError::new("invalid_email", "not an email address"))?;
-        checked(password)?;
+        self.checked(password)?;
         let hash = hash_of(password).await?;
         let now = now_secs();
         transaction!(&self.store, |connection| {

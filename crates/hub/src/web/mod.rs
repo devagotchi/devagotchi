@@ -41,6 +41,9 @@ mod discovery_tests;
 mod email;
 mod hosted;
 mod hub_settings;
+mod hub_settings_live;
+#[cfg(test)]
+mod hub_settings_live_tests;
 mod hub_settings_owner;
 #[cfg(test)]
 mod hub_settings_tests;

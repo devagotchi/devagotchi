@@ -33,6 +33,11 @@ install, not a production promotion. The gap that is still open is in
   is still open is in the parity doc. `write_pdf` is not implemented.
 - A fresh `git clone` needs `git submodule update --init` before `cargo build`. AgentHub is
   the `crates/agenthub` submodule.
+- `/admin` changes the settings the hub reads while it runs, in force the moment they are
+  saved: the shortest password, sign-up rate and the limits of an account nobody has secured,
+  connecting an AI with no sign-in, machines updating themselves, how long a workflow link
+  works, and how long a hosted hub keeps visits. A value the config file sets is shown, not
+  changed. The page lists every key that is set at deploy, with why.
 
 ### The license is the Functional Source License (FSL-1.1-ALv2)
 - Devagotchi moves from the Business Source License 1.1 to FSL-1.1-ALv2, held by AngryVibes LLC:

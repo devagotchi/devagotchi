@@ -72,7 +72,7 @@ Nothing new is built until this phase has run once; what it finds is fixed first
 |---|---|---|---|
 | 1.1 | sign in with Google or a passkey after username, display name, email, and an Org from the name when none is given | partial: Google and passkey exist; sign-up asks only email and password; no "<name> Org" | a new person on the phone ends up with name, display name and "<name> Org" |
 | 1.2 | Desktop Commander's smooth sign-in; **no passkey on a new account, only after the machine is connected** | partial: "Secure it" with a passkey is shown on every page from the start | new account → machine online → only then a passkey offer |
-| 1.3 | password rules configurable in the UI, 8–12 to start, 15–18 shown as recommended, nothing hardcoded | absent: `MIN_LEN = 8` constant | the owner changes it on a page; sign-up follows it |
+| 1.3 | password rules configurable in the UI, 8–12 to start, 15–18 shown as recommended, nothing hardcoded | built: `/admin` → Sign-in → Passwords, 8 to 128, 15–18 recommended, in force at once (increment 198) | the owner changes it on a page; sign-up follows it |
 | 1.4 | change or reset the password from the panel | built (change does not ask for the current one; reset needs SMTP from config) | change and reset from the phone |
 | 1.5 | Google sign-in configured in the admin panel, saved to Postgres | built | the owner pastes a client on Texas's `/admin`; Google sign-in works |
 | 1.6 | Shippin.ai sign-in available from deployment, can be toggled off; Google always available; Nomen and other providers in admin | partial: a Shippin card on `/admin` → Sign-in from the first start, its switch on by default, off hides the button and keeps the issuer, the notice beside the button, `install.sh --nomen` (#238); no issuer is built in, so a fresh hub shows no Shippin button until one is set (S0, Nomen accepting Client ID Metadata Documents, is not done) | a Shippin card on `/admin`, on by default, off with one switch |
@@ -133,7 +133,7 @@ Nothing new is built until this phase has run once; what it finds is fixed first
 | # | Feature | In the code today | Proof |
 |---|---|---|---|
 | 6.1 | connectors as nested folders; mail first: custom self-hosted SMTP plus turnkey Resend and the other big providers; the top 10–15 with schemas | partial: 11 services in one flat file; SMTP only for sign-in links; no mail connector | send mail through Resend and through own SMTP from Texas |
-| 6.2 | every setting and configuration driven by the UI, grouped and guided | partial: config-only today: SMTP, signal sinks, all of `tenancy`, `machines.auto_update`, storage, `public_url`, owner, operators, grants, brokers, boards, downloads, token lifetimes, early access ([free-edition](free-edition.md) U0) | each one changed from a page on Texas |
+| 6.2 | every setting and configuration driven by the UI, grouped and guided | partial: on `/admin` and live since increment 198: tenancy limits and anonymous connect, the shortest password, `machines.auto_update`, `workflows.link_ttl_secs`, `analytics.retention_days`; every other key is listed on the page as set at deploy, with why, and a test fails on a key in neither ([free-edition](free-edition.md) U0). Still to come: SMTP (hub-settings M3), signal sinks (M5), token lifetimes | each one changed from a page on Texas |
 | 6.3 | browser-specific UI | partial: a CSS rail at 1024px, untested | the desktop layout reviewed |
 | 6.4 | "alpha = pre-release" obvious | built in `.ai`; nothing in the UI | an alpha badge in the hub |
 

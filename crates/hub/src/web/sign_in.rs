@@ -233,7 +233,12 @@ async fn answer(
         Err(error) => match error.code.as_str() {
             "slow_down" => (StatusCode::TOO_MANY_REQUESTS, words.slow_down),
             "email_taken" => (StatusCode::BAD_REQUEST, words.taken),
-            "password_short" => (StatusCode::BAD_REQUEST, words.short),
+            "password_short" => (
+                StatusCode::BAD_REQUEST,
+                words
+                    .short
+                    .replace("{n}", &state.hub.config.live().password_min.to_string()),
+            ),
             "password_wrong" | "invalid_email" => (StatusCode::BAD_REQUEST, words.wrong),
             "account_disabled" => (StatusCode::FORBIDDEN, error.message),
             _ => {

@@ -66,15 +66,7 @@ pub fn router(hub_authorization: bool) -> Router<AppState> {
         .route("/auth/password/set", post(set_password))
         .route("/api/v1/me", get(me))
         .route("/api/v1/machines", post(machines::add_json))
-        .route("/admin", get(super::hub_settings::page))
-        .route(
-            "/admin/sign-in/{name}",
-            post(super::hub_settings::save_sign_in),
-        )
-        .route(
-            "/admin/analytics",
-            post(super::hub_settings::save_analytics),
-        )
+        .merge(super::hub_settings_live::routes())
         .route("/operator", get(operator::page))
         .route("/operator/admit", post(operator::admit))
         .route("/operator/plan", post(operator::plan))
@@ -657,7 +649,9 @@ async fn set_password(
         Err(error) if error.code == "password_short" => pages::message(
             StatusCode::BAD_REQUEST,
             &words.set_password,
-            &words.short,
+            &words
+                .short
+                .replace("{n}", &state.hub.config.live().password_min.to_string()),
             Some(("/account", "Back")),
         ),
         Err(error) if error.code == "email_taken" => pages::message(

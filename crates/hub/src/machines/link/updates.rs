@@ -158,7 +158,8 @@ impl Links {
     /// Ask each connected machine that is due an update for one (`machines::update::select`),
     /// when `machines.auto_update` is on and this hub hands out a build.
     pub async fn auto_update_now(&self) {
-        let (true, Some(version)) = (self.auto_update, self.offered.as_deref()) else {
+        let (true, Some(version)) = (self.config.live().auto_update, self.offered.as_deref())
+        else {
             return;
         };
         let live: Vec<(String, Option<String>)> = {

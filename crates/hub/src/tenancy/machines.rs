@@ -151,7 +151,7 @@ impl Hub {
         Option<(crate::site::Plan, Cap)>,
     ) {
         let unsecured = (self.config.multi_tenant() && subject.provisional_until.is_some())
-            .then_some(self.config.tenancy.unsecured.machines as usize);
+            .then_some(self.config.live().unsecured.machines as usize);
         let plan = self.plan_cap(subject, "machines");
         let planned = match &plan {
             Some((_, Cap::AtMost(most))) => Some(*most as usize),

@@ -40,7 +40,8 @@ pub struct Offers {
     /// Whether this hub signs in with it: the one-tap link needs that.
     can_link: bool,
     nomen: Option<nomen::Nomen>,
-    link_ttl: u64,
+    /// The `/admin` settings, for `workflows.link_ttl_secs` when a link is made.
+    link_ttl: crate::config::Live,
 }
 
 impl Offers {
@@ -63,7 +64,7 @@ impl Offers {
             provider,
             can_link,
             nomen,
-            link_ttl: config.workflows.link_ttl_secs,
+            link_ttl: config.live_handle(),
         })
     }
 
@@ -112,7 +113,7 @@ impl Offers {
     }
 
     pub fn link_ttl(&self) -> u64 {
-        self.link_ttl
+        self.link_ttl.get().link_ttl_secs
     }
 }
 

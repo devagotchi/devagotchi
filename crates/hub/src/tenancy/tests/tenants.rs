@@ -84,18 +84,15 @@ pub(crate) async fn hosted_with_ingress(
         Some(url) => url.to_string(),
         None => store::testing::empty_postgres().await?,
     };
-    let accounts = Arc::new(
-        identity::accounts::Accounts::open(store::open(&store_url).await.unwrap())
-            .await
-            .unwrap()
-            .with_tokens(config.token_config())
-            .with_tenancy(config.tenancy.clone(), config.operators.clone())
-            .with_site(config.site_cell(), &url)
-            .with_analytics(config.counts_visits()),
-    );
+    // As `run` wires them, with what the owner saved on /admin over the file.
+    let store = store::open(&store_url).await.unwrap();
+    let accounts = Arc::new(identity::configured_accounts(store, &config).await.unwrap());
+    ops::hub_settings::apply_saved(&config, &accounts)
+        .await
+        .unwrap();
     // As `run` wires it: a hosted hub counts unless its config says not to.
     let analytics = config.counts_visits().then(|| {
-        ops::analytics::Analytics::start(accounts.store().clone(), config.analytics, &url)
+        ops::analytics::Analytics::start_with(accounts.store().clone(), config.live_handle(), &url)
     });
     let devices = crate::machines::devices::test_registry().await?;
     let audit = crate::ops::audit::test_audit().await?;
@@ -137,7 +134,7 @@ pub(crate) async fn hosted_with_ingress(
             workflows: Some(Arc::new(crate::workflows::Workflows::new(
                 accounts.clone(),
                 changes,
-                config.workflows.link_ttl_secs,
+                config.live_handle(),
             ))),
             offers: Some(Arc::new(
                 crate::offers::Offers::from_config(&config, accounts.clone()).unwrap(),

@@ -629,7 +629,7 @@ impl Accounts {
         .fetch_one(&mut *connection)
         .await?
         .try_get(0)?;
-        let limit = i64::from(self.tenancy.unsecured.clients);
+        let limit = i64::from(self.live.get().unsecured.clients);
         if live >= limit {
             return Err(BridgeError::new(
                 "client_limit",
