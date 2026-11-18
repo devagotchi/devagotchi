@@ -382,7 +382,7 @@ fn tools_of_a_fresh_adapter(env: &[(&str, std::ffi::OsString)]) -> Vec<String> {
 
 #[cfg(target_os = "linux")]
 #[test]
-fn start_then_mcp_then_board_from_one_binary() {
+fn start_then_mcp_from_one_binary() {
     use std::{
         io::{BufRead, BufReader, Write},
         path::Path,
@@ -393,8 +393,6 @@ fn start_then_mcp_then_board_from_one_binary() {
     let home = tempfile::tempdir().unwrap();
     let state = home.path().join("state");
     let config_dir = home.path().join("config");
-    let project = home.path().join("project");
-    std::fs::create_dir_all(&project).unwrap();
     let env = [
         ("DEVAGOTCHI_STATE_DIR", state.as_os_str().to_owned()),
         ("DEVAGOTCHI_CONFIG_DIR", config_dir.as_os_str().to_owned()),
@@ -570,40 +568,6 @@ fn start_then_mcp_then_board_from_one_binary() {
     drop(rpc);
     drop(stdin);
     let _ = adapter.wait();
-
-    // board: the same binary, the project's board, as an agent.
-    let out = devagotchi()
-        .args(["board", "init", "--project", "demo"])
-        .current_dir(&project)
-        .envs(env.iter().cloned())
-        .output()
-        .unwrap();
-    assert!(
-        out.status.success(),
-        "{}",
-        String::from_utf8_lossy(&out.stderr)
-    );
-    let out = devagotchi()
-        .args(["board", "new", "prove the one binary"])
-        .current_dir(&project)
-        .envs(env.iter().cloned())
-        .env("DEVAGOTCHI_ACTOR", "claude")
-        .output()
-        .unwrap();
-    assert!(
-        out.status.success(),
-        "{}",
-        String::from_utf8_lossy(&out.stderr)
-    );
-    let out = devagotchi()
-        .args(["board", "prime", "--json"])
-        .current_dir(&project)
-        .envs(env.iter().cloned())
-        .env("DEVAGOTCHI_ACTOR", "claude")
-        .output()
-        .unwrap();
-    let prime: serde_json::Value = serde_json::from_slice(&out.stdout).unwrap();
-    assert_eq!(prime["ready"].as_array().unwrap().len(), 1, "{prime}");
 
     // The account, from the same config directory: nothing on file, the local choice, forgotten.
     let whoami = |expect: &str| {

@@ -5,7 +5,7 @@
 588	crates/agenthub/src/clickhouse.rs
 912	crates/agenthub/src/hosted.rs
 736	crates/agenthub/src/hosted/operations.rs
-891	crates/devagotchi/tests/one_binary.rs
+855	crates/devagotchi/tests/one_binary.rs
 623	crates/hub/src/agenthub/issue_lifecycle/tests.rs
 590	crates/hub/src/agenthub/tests/served.rs
 647	crates/hub/src/identity/accounts/oauth/mod.rs

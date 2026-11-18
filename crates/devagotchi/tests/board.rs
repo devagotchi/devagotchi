@@ -60,6 +60,17 @@ async fn native_board_hooks_run_without_a_shell_with_spaces_and_never_complete_o
         .unwrap()["id"]
         .as_str()
         .unwrap();
+    // An agent named by DEVAGOTCHI_ACTOR primes and finds it ready (from one_binary.rs).
+    let out = devagotchi()
+        .args(["board", "prime", "--json"])
+        .current_dir(dir.path())
+        .env("DEVAGOTCHI_ACTOR", "claude")
+        .output()
+        .unwrap();
+    let prime: Value = serde_json::from_slice(&out.stdout).unwrap();
+    assert_eq!(prime["actor"], "claude", "{prime}");
+    assert_eq!(prime["ready"].as_array().unwrap().len(), 1, "{prime}");
+    assert_eq!(prime["ready"][0]["id"], id, "{prime}");
     let claimed = devagotchi()
         .args(["board", "claim", id, "--as", "claude"])
         .current_dir(dir.path())
