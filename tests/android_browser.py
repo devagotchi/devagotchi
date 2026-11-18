@@ -150,9 +150,15 @@ def main() -> int:
         assert len(printed) == 1, "the hub prints one claim link when it starts"
 
         with sync_playwright() as p:
-            browser = p.chromium.launch(channel=args.channel)
-            phone = browser.new_context(**device(p))
-            page = phone.new_page()
+            # A persistent profile, as a phone's Chrome has: Chrome never offers to install
+            # from an incognito context, which is what a plain `new_context` is
+            # (`Page.getInstallabilityErrors` answers `in-incognito` there).
+            def phone_profile(name: str):
+                return p.chromium.launch_persistent_context(
+                    str(work / name), channel=args.channel, **device(p))
+
+            phone = phone_profile("owner-profile")
+            page = phone.pages[0] if phone.pages else phone.new_page()
             passkey(page)
 
             # 1. The one owner claims the hub on the phone.
@@ -174,7 +180,8 @@ def main() -> int:
             # 3. Installable: from the app, and from the sign-in page a phone lands on.
             assert_installable(page, url, "/app")
             print(f"PASS /app is installable on a {PHONE} (no installability errors)")
-            stranger = browser.new_context(**device(p)).new_page()
+            stranger_profile = phone_profile("stranger-profile")
+            stranger = stranger_profile.pages[0] if stranger_profile.pages else stranger_profile.new_page()
             assert_installable(stranger, url, "/auth/login")
             print(f"PASS /auth/login is installable on a {PHONE} before signing in")
             icons = png_icons(url)
@@ -182,7 +189,8 @@ def main() -> int:
             sizes = {(purpose, listed) for purpose, listed, _ in icons}
             assert {("any", "192x192"), ("any", "512x512"), ("maskable", "512x512")} <= sizes, icons
             print("PASS the manifest's PNG icons (192, 512 and a maskable 512) decode at their listed sizes")
-            browser.close()
+            stranger_profile.close()
+            phone.close()
     finally:
         stop(hub)
     print("ANDROID BROWSER PASSED")
