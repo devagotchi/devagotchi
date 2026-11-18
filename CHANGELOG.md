@@ -49,6 +49,27 @@ install, not a production promotion. The gap that is still open is in
 - `/admin` → Signal sinks adds, changes and removes where the hub pushes its signals (log
   services, your own collector), each running the moment it is saved, its token encrypted.
 
+### Plans: three builds, the plugins on your machine, and the Go hub's last work (increment 206)
+- Plans and docs only; no behaviour changes. The operator's decisions of 2026-11-18 are in
+  [.ai/docs/editions.md](.ai/docs/editions.md): three builds under FSL-1.1-ALv2 (the Shippin
+  build, commercial and multi-tenant; the standalone GitHub release, free and for one user, with
+  no managing of other users or customers; managed deployments, which offer multi-tenancy);
+  organisations and roles move from the core row to the multi-tenant side; AgentHub comes from
+  Devagotchi or from a separate service Shippin hosts; LiftOffDB is recorded as an open
+  decision, not a commitment.
+- New milestones, all not started: the plugins for VS Code, Codex, Claude Code, the terminal,
+  Claude Desktop and ChatGPT Desktop with their UI on your machine (plugins G11 to G15); asking
+  whether a new project should be a Devagotchi project (factory F23); the 2026-11-06 project
+  delivery plan (repository binding, scan evidence, the reviewable import, the provider on a
+  designated host, SSH bootstrap, attempt provenance, the project overview) as factory F1b, F5b,
+  F5c, F8b and F19 to F22.
+- The Go hub's two unpushed branches are mapped capability by capability: what Rust already
+  has, with file and line, and the gaps as milestones, among them OpenID discovery and JWKS
+  without redirects and pinned to the issuer (free edition D1b), the hub's keys private on
+  Windows (D6), access that ends (D7) and a `/readyz` that is not the `/healthz` report with a
+  drain on SIGTERM (H1). `docs/devagotchi/README.md` now names the right source commit and
+  where each Go capability lives today.
+
 ### The license is the Functional Source License (FSL-1.1-ALv2)
 - Devagotchi moves from the Business Source License 1.1 to FSL-1.1-ALv2, held by AngryVibes LLC:
   self-hosting for yourself and your organization stays free; offering it to others as a
