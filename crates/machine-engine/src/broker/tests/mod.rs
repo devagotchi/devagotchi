@@ -51,6 +51,32 @@ fn open_broker(directory: &tempfile::TempDir, grants: &[&Path]) -> Arc<Broker> {
     .unwrap()
 }
 
+/// A granted broker's config holding `max` operations, one running at a time.
+fn limited_config(directory: &tempfile::TempDir, grants: &[&Path], max: usize) -> BrokerConfig {
+    BrokerConfig {
+        workspace: directory.path().display().to_string(),
+        allowed_executables: grants.iter().map(|g| g.display().to_string()).collect(),
+        output_limit_bytes: 8192,
+        max_operations: max,
+        max_concurrent: 1,
+        exec_policy: ExecPolicy::Granted,
+    }
+}
+
+fn input(key: &str, executable: &Path, args: Vec<String>) -> StartInput {
+    StartInput {
+        idempotency_key: key.into(),
+        executable: executable.display().to_string(),
+        args,
+        command: None,
+        cwd: None,
+        deadline_ms: 5_000,
+        interactive: None,
+        combined_output: false,
+        caller: None,
+    }
+}
+
 fn start(
     broker: &Broker,
     key: &str,
@@ -150,6 +176,9 @@ fn output_text(broker: &Broker, id: &str) -> String {
 }
 
 mod access;
+mod capabilities;
+mod file_mutations;
 mod interactive;
 mod lifecycle;
+mod retry;
 mod waits;

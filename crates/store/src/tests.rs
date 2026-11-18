@@ -70,4 +70,56 @@ async fn a_test_run_drops_the_test_databases_an_earlier_run_left() {
     assert_eq!(left, vec![fresh.clone()], "only the stale one goes");
 }
 
+/// The hub's role is the server's: the hub's tests make it while a standalone board's run on
+/// the same server, whose database never granted it anything. Taking it there hid the board's
+/// tables ("relation does not exist"); a database that grants it the schema still gets it.
+#[tokio::test(flavor = "multi_thread")]
+async fn the_hub_role_is_taken_only_where_the_database_granted_it() {
+    let Some(url) = testing::empty_postgres().await else {
+        return;
+    };
+    let mut admin = sqlx::AnyConnection::connect(&url).await.unwrap();
+    admin
+        .execute(
+            "DO $$ BEGIN
+               IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'devagotchi_hub') THEN
+                 BEGIN
+                   CREATE ROLE devagotchi_hub NOLOGIN NOSUPERUSER NOBYPASSRLS NOINHERIT;
+                 EXCEPTION WHEN duplicate_object OR unique_violation THEN NULL;
+                 END;
+               END IF;
+             END $$",
+        )
+        .await
+        .unwrap();
+    let store = Store::open(&url, &[]).await.unwrap();
+    admin
+        .execute("CREATE TABLE devagotchi.only_here (n INT)")
+        .await
+        .unwrap();
+    let mut connection = store.pool().acquire().await.unwrap();
+    let who: String = sqlx::query_scalar("SELECT current_user::text")
+        .fetch_one(&mut *connection)
+        .await
+        .unwrap();
+    assert_ne!(who, "devagotchi_hub", "not granted here, so not taken");
+    let rows: i64 = sqlx::query_scalar("SELECT count(*) FROM only_here")
+        .fetch_one(&mut *connection)
+        .await
+        .unwrap();
+    assert_eq!(rows, 0);
+    drop(connection);
+
+    admin
+        .execute("GRANT USAGE ON SCHEMA devagotchi TO devagotchi_hub")
+        .await
+        .unwrap();
+    let granted = Store::open(&url, &[]).await.unwrap();
+    let who: String = sqlx::query_scalar("SELECT current_user::text")
+        .fetch_one(granted.pool())
+        .await
+        .unwrap();
+    assert_eq!(who, "devagotchi_hub", "granted here, so taken");
+}
+
 static DRIVERS_FOR_TESTS: Once = Once::new();

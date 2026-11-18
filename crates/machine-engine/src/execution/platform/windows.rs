@@ -1,7 +1,8 @@
 //! Windows process ownership: a broker-owned Job Object per root.
 //!
 //! The root is created suspended, assigned to a new Job Object, and only then
-//! resumed, so it cannot run or create a child outside the job. The job permits
+//! resumed (`resume.rs`: only its own threads, from a snapshot of the root alone), so it
+//! cannot run or create a child outside the job. The job permits
 //! no breakaway and terminates its members when the broker's job handle
 //! closes. Observation and termination use that job handle, never a PID.
 //!
@@ -26,10 +27,7 @@ use std::time::Duration;
 use tokio::process::{Child, Command};
 use tokio::sync::watch;
 use tokio::time::timeout;
-use windows_sys::Win32::Foundation::{ERROR_NO_MORE_FILES, FALSE, INVALID_HANDLE_VALUE};
-use windows_sys::Win32::System::Diagnostics::ToolHelp::{
-    CreateToolhelp32Snapshot, TH32CS_SNAPTHREAD, THREADENTRY32, Thread32First, Thread32Next,
-};
+use windows_sys::Win32::Foundation::{FALSE, INVALID_HANDLE_VALUE};
 use windows_sys::Win32::System::IO::{
     CreateIoCompletionPort, GetQueuedCompletionStatus, OVERLAPPED, PostQueuedCompletionStatus,
 };
@@ -44,9 +42,7 @@ use windows_sys::Win32::System::SystemServices::{
     JOB_OBJECT_MSG_ABNORMAL_EXIT_PROCESS, JOB_OBJECT_MSG_ACTIVE_PROCESS_ZERO,
     JOB_OBJECT_MSG_EXIT_PROCESS,
 };
-use windows_sys::Win32::System::Threading::{
-    CREATE_NO_WINDOW, CREATE_SUSPENDED, INFINITE, OpenThread, ResumeThread, THREAD_SUSPEND_RESUME,
-};
+use windows_sys::Win32::System::Threading::{CREATE_NO_WINDOW, CREATE_SUSPENDED, INFINITE};
 
 pub(crate) const SCOPE: &str = "Windows root process and every process in the broker-owned Job Object it was assigned to before it ran. Breakaway is not permitted, and closing the broker's job handle terminates remaining members. Work a member hands to a service or another process outside the job is not owned. This is not OS containment.";
 pub(crate) const RUNNING_DETAIL: &str = "Root created suspended with exact argv (Microsoft C runtime quoting), an environment cleared except SystemRoot, null stdin, and no console window, then assigned to a broker-owned Job Object before it ran. Executable behavior is not sandboxed.";
@@ -228,7 +224,7 @@ impl OwnedTree {
         };
         let (job, notices) = job;
         let tree = Self { job, notices };
-        if let Err(error) = resume_threads(pid) {
+        if let Err(error) = resume::resume_threads(process, pid) {
             let termination = tree.terminate().await;
             let _ = timeout(crate::execution::ROOT_WAIT, child.wait()).await;
             return Err(match termination {
@@ -437,51 +433,8 @@ fn owned_job(process: RawHandle) -> io::Result<(OwnedHandle, JobNotices)> {
     Ok((job, notices))
 }
 
-/// Resumes the threads of a root created with `CREATE_SUSPENDED`. The broker
-/// holds the root's process handle, so `pid` cannot name another process.
-fn resume_threads(pid: u32) -> io::Result<()> {
-    let snapshot = unsafe { CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0) };
-    if snapshot == INVALID_HANDLE_VALUE {
-        return Err(io::Error::last_os_error());
-    }
-    let snapshot = unsafe { OwnedHandle::from_raw_handle(snapshot) };
-    let mut entry = THREADENTRY32 {
-        dwSize: size_of::<THREADENTRY32>() as u32,
-        ..Default::default()
-    };
-    let owner_field_end =
-        std::mem::offset_of!(THREADENTRY32, th32OwnerProcessID) + size_of::<u32>();
-    let mut resumed = 0_usize;
-    let mut more = unsafe { Thread32First(snapshot.as_raw_handle(), &mut entry) } != FALSE;
-    while more {
-        if entry.dwSize as usize >= owner_field_end && entry.th32OwnerProcessID == pid {
-            let thread = unsafe { OpenThread(THREAD_SUSPEND_RESUME, FALSE, entry.th32ThreadID) };
-            if thread.is_null() {
-                return Err(io::Error::last_os_error());
-            }
-            let thread = unsafe { OwnedHandle::from_raw_handle(thread) };
-            if unsafe { ResumeThread(thread.as_raw_handle()) } == u32::MAX {
-                return Err(io::Error::last_os_error());
-            }
-            resumed += 1;
-        }
-        entry.dwSize = size_of::<THREADENTRY32>() as u32;
-        more = unsafe { Thread32Next(snapshot.as_raw_handle(), &mut entry) } != FALSE;
-    }
-    let error = io::Error::last_os_error();
-    if error.raw_os_error() != Some(ERROR_NO_MORE_FILES as i32) {
-        return Err(error);
-    }
-    if resumed == 0 {
-        return Err(io::Error::new(
-            io::ErrorKind::NotFound,
-            "the suspended root had no thread to resume",
-        ));
-    }
-    Ok(())
-}
-
 mod process;
+mod resume;
 mod terminal;
 pub(crate) use process::{Root, piped};
 pub(crate) use terminal::{Signaller, Terminal, TerminalIo, configure_terminal, spawn};

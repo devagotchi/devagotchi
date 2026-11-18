@@ -4,8 +4,9 @@ This is the boundary. Check it before adding anything that only a hosted service
 
 | Lives in | What belongs there |
 |---|---|
-| **Core** (`devagotchi/devagotchi`, this repository, source-available under [FSL-1.1-ALv2](../../LICENSE)) | The hub, AgentHub boards, notes and approvals, the phone app, self-hosting, connectors for third-party AI clients, API keys, sign-in providers, organisations and roles, signals, statistics, and every setting a person running their own hub needs |
-| **Cloud** (a private repository, not created yet) | Hosted-service operations: billing, plan enforcement for a paid service, tenant provisioning at scale, hosted deployment configuration and secrets, and enterprise chat |
+| **Core** (`devagotchi/devagotchi`, this repository, source-available under [FSL-1.1-ALv2](../../LICENSE)) | For one user: the hub, AgentHub boards, notes and approvals, the phone app, self-hosting, connectors for third-party AI clients, API keys, sign-in providers, signals, statistics, and every setting a person running their own hub needs |
+| **Multi-tenant** (this repository, the `tenancy` domain; its own crate outside the default build once [free edition](../dev/plans/free-edition.md) R4 lands) | Many accounts on one hub: organisations, teams, members and roles (`crates/hub/src/tenancy/orgs/`), sign-up and its limits, `tenancy.mode multi`, `/operator`, plan limits. The Shippin build and managed deployments turn it on; the standalone release does not carry it |
+| **Cloud** (the private repository `shippinAI/devagotchi-cloud`) | Hosted-service operations: billing, plan enforcement for a paid service, tenant provisioning at scale, hosted deployment configuration and secrets, and enterprise chat |
 
 Rules:
 
@@ -50,3 +51,42 @@ Decided by the operator on 2026-11-14, and recorded so this repository does not 
   ([ADR 0005](../../docs/adr/0005-agenthub-postgres-everywhere.md)).
 - What the cloud replaces is `crates/hub/src/extensions.rs`: extra routes, plan limits, tenant
   lifecycle, and an in-process event hook. Each default is what a self-hosted hub already does.
+
+Decided by the operator on 2026-11-18:
+
+- **Three builds, one licence (FSL-1.1-ALv2 stays):**
+  - *The Shippin build*: commercial and multi-tenant. Today's multi-tenant `main` is its basis.
+  - *The standalone GitHub release*: free, and tailored to **one** user. It does not offer
+    managing other users or customers. The owner manages their own projects and their
+    startup's systems. The Core row above was corrected to match: organisations and roles were
+    listed there and now sit on the multi-tenant side. The standalone release gets there through
+    [free edition](../dev/plans/free-edition.md) R4 (tenancy as its own crate, out of the
+    default build). Until R4 lands, `/admin` shows a People section (sign-up limits and
+    organisations, `crates/hub/src/web/hub_settings.rs:224`, `:231`, `:251-255`) even on a
+    single-owner hub; R4 removes it from the single-user build.
+  - *Managed deployments*: offer multi-tenancy. [ADR 0003](../../docs/adr/0003-hosting-pooled-free-per-instance-paid.md)
+    describes a paid instance as running "no tenancy code"; that line needs the operator's
+    reconciliation with this decision (proposed: a managed instance runs the multi-tenant build
+    when its customer wants accounts of its own).
+- **AgentHub is provided either by Devagotchi** (the library inside the hub, as today) **or by
+  a separate service hosted by Shippin.** Both are the same AgentHub on Postgres
+  ([ADR 0005](../../docs/adr/0005-agenthub-postgres-everywhere.md)).
+- **What Devagotchi is for:** the central point for a solo builder working across tools and
+  customers (Replit, VS Code, Base44, Codex CLI, Figma) and services (Infisical, Qdrant,
+  SurrealDB Cloud, HydraDB). Integrations are set up once, not per project
+  ([connections](../dev/plans/connections-gateway.md)). It follows behaviour, state, intent and
+  history, and when the user starts a new project it asks whether that should be a Devagotchi
+  project (with AgentHub), which they can undo later from the project's settings
+  ([factory](../dev/plans/agenthub-factory.md) F23).
+- **Plugins** for VS Code, Codex, Claude Code, the terminal/CLI, Claude Desktop and ChatGPT
+  Desktop, with their UI on the user's machine, deterministic first: [plugins](../dev/plans/plugins.md)
+  G11 to G15.
+
+Open, not a commitment (operator, 2026-11-18): **LiftOffDB.** A planned fork of Turso (Turso
+joined Supabase, announced 2026-10-02, as the operator states it) built for concurrent writes.
+Tiers starter, then managed, then advanced, with no capability lost from one tier to the next;
+the starter tier accepts single points of failure in exchange for quick recovery, backups and
+virtualization. The plugin's dynamic components (plugins G12) are its first consumer. Postgres
+stays for the multi-tenant builds (the Shippin build and managed deployments). Whether the
+standalone release uses an embedded engine is undecided until a test port proves it; until
+then the standalone release stays on Postgres like every other build.

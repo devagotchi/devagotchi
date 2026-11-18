@@ -158,7 +158,7 @@ impl Hub {
 
     #[tool(
         name = "machines",
-        description = "Start here for anything on the user's own machines (servers, PCs, devspaces): every machine you can work on through this hub and whether it can be used right now. status is online, offline (the machine is off, asleep or its link is not running: tell the user rather than retrying), not_enrolled or revoked. Pass a machine's name as `broker` to operation_start, operation_get, operation_read and operation_cancel.",
+        description = "Start here for anything on the user's own machines (servers, PCs, devspaces): every machine you can work on through this hub and its status. status is online (its link is connected; that its broker answers too, machine_inspect asks within 3 seconds), offline (the machine is off, asleep or its link is not running: tell the user rather than retrying), not_enrolled or revoked. Pass a machine's name as `broker` to operation_start, operation_get, operation_read and operation_cancel.",
         title = "List my machines",
         annotations(
             title = "List my machines",

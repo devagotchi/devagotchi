@@ -1,0 +1,4823 @@
+{
+  "started_at_utc": "2026-11-18T17:29:18.207984+00:00",
+  "source_commit": "767ed7b5789e6e07db248e8870e170b307033a6d",
+  "binary": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\target-abs-mutation\\debug\\devagotchi.exe",
+  "binary_sha256": "f4e9cf08fdf87d0eb94d4b08b7eb9171cfe12784dcddddd7109a338a02749b4a",
+  "platform": "win32",
+  "work": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53",
+  "rounds": 16,
+  "diagnostic": false,
+  "interval_clock": "perf_counter_ns",
+  "clock_resolution_secs": 1e-07,
+  "cases": [
+    {
+      "case": "guarded-overwrite-absent-False-0",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": false,
+          "body": {
+            "code": "changed_since_read",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\overwrite-False-0.txt changed since that SHA-256 was taken; read it again before writing"
+          },
+          "client": 0,
+          "start_ns": 401623502091100,
+          "end_ns": 401623589000300
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\overwrite-False-0.txt",
+            "sha256": "cc42f66d1f55914f75015236a24a1337b670ce13940c804de3f5e14922777486",
+            "size": 17
+          },
+          "client": 1,
+          "start_ns": 401623501974000,
+          "end_ns": 401623588914600
+        }
+      ]
+    },
+    {
+      "case": "guarded-append-absent-False-0",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\append-False-0.txt",
+            "sha256": "4144821fd6daf0a181bb7babd6d0888c5e98df8c554c8299e4725352cb72f1b6",
+            "size": 4194331
+          },
+          "client": 0,
+          "start_ns": 401623594833000,
+          "end_ns": 401623781594200
+        },
+        {
+          "ok": false,
+          "body": {
+            "code": "changed_since_read",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\append-False-0.txt changed since that SHA-256 was taken; read it again before writing"
+          },
+          "client": 1,
+          "start_ns": 401623594752300,
+          "end_ns": 401623856668400
+        }
+      ]
+    },
+    {
+      "case": "guarded-overwrite-absent-True-0",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": false,
+          "body": {
+            "code": "changed_since_read",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\overwrite-True-0.txt changed since that SHA-256 was taken; read it again before writing"
+          },
+          "client": 0,
+          "start_ns": 401623863694300,
+          "end_ns": 401623870008600
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": true,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\overwrite-True-0.txt",
+            "sha256": "cc42f66d1f55914f75015236a24a1337b670ce13940c804de3f5e14922777486",
+            "size": 17
+          },
+          "client": 1,
+          "start_ns": 401623863656400,
+          "end_ns": 401623869863200
+        }
+      ]
+    },
+    {
+      "case": "create-0",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": false,
+          "body": {
+            "code": "already_exists",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\create-0.txt exists; use mode overwrite to replace it"
+          },
+          "client": 0,
+          "start_ns": 401623870566800,
+          "end_ns": 401623896874900
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": true,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\create-0.txt",
+            "sha256": "3856b8d080d86a6de480f6a02beede99a08e54b66f9b4b4131eae8de59f85e19",
+            "size": 8
+          },
+          "client": 1,
+          "start_ns": 401623870520900,
+          "end_ns": 401623874020900
+        }
+      ]
+    },
+    {
+      "case": "disjoint-edits-0",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\edit-disjoint-0.txt",
+            "replacements": 1,
+            "sha256": "4350a4bc1f287c22cbd79ecff4abcc865999c68584a40576068e3cb7c4962f75",
+            "size": 1048595
+          },
+          "client": 0,
+          "start_ns": 401623898397200,
+          "end_ns": 401623979510100
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\edit-disjoint-0.txt",
+            "replacements": 1,
+            "sha256": "2c666d8e5ad744c1b93d6223deab51f8329f1eb45a36f120911386280c7fcf4b",
+            "size": 1048595
+          },
+          "client": 1,
+          "start_ns": 401623898360100,
+          "end_ns": 401623924404900
+        }
+      ]
+    },
+    {
+      "case": "same-edits-0",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": false,
+          "body": {
+            "code": "edit_mismatch",
+            "message": "old_text occurs 0 times in D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\edit-same-0.txt, not 1; nothing was changed. Include more surrounding text to make it unique, or set expected_replacements."
+          },
+          "client": 0,
+          "start_ns": 401623982753500,
+          "end_ns": 401624021947400
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\edit-same-0.txt",
+            "replacements": 1,
+            "sha256": "8a1b1aee853fb3107bba2bc3e811f991c114e13c759668629c467c3159017aa8",
+            "size": 1048593
+          },
+          "client": 1,
+          "start_ns": 401623982719100,
+          "end_ns": 401624008880500
+        }
+      ]
+    },
+    {
+      "case": "mixed-write-edit-0",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\mixed-0.txt",
+            "sha256": "144a642e170a3e673570f6c2085656fe96b9990d661be39fdc15966b26bed017",
+            "size": 17
+          },
+          "client": 0,
+          "start_ns": 401624024312000,
+          "end_ns": 401624054814600
+        },
+        {
+          "ok": false,
+          "body": {
+            "code": "edit_mismatch",
+            "message": "old_text occurs 0 times in D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\mixed-0.txt, not 1; nothing was changed. Include more surrounding text to make it unique, or set expected_replacements."
+          },
+          "client": 1,
+          "start_ns": 401624024254600,
+          "end_ns": 401624055013600
+        }
+      ]
+    },
+    {
+      "case": "moves-0",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created_ms": 1795022959415,
+            "kind": "file",
+            "lines": 1,
+            "modified_ms": 1795022959415,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\moved-0.txt",
+            "readonly": false,
+            "replaced": false,
+            "size": 17
+          },
+          "client": 0,
+          "start_ns": 401624055890000,
+          "end_ns": 401624062281900
+        },
+        {
+          "ok": false,
+          "body": {
+            "code": "already_exists",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\moved-0.txt exists; pass overwrite to replace it"
+          },
+          "client": 1,
+          "start_ns": 401624055851300,
+          "end_ns": 401624081441100
+        }
+      ]
+    },
+    {
+      "case": "mkdir-0",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created_ms": 1795022959449,
+            "kind": "dir",
+            "made": true,
+            "modified_ms": 1795022959449,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\directories-0\\nested",
+            "readonly": false,
+            "size": 0
+          },
+          "client": 0,
+          "start_ns": 401624088555900,
+          "end_ns": 401624091078500
+        },
+        {
+          "ok": true,
+          "body": {
+            "created_ms": 1795022959449,
+            "kind": "dir",
+            "made": false,
+            "modified_ms": 1795022959449,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\directories-0\\nested",
+            "readonly": false,
+            "size": 0
+          },
+          "client": 1,
+          "start_ns": 401624088516700,
+          "end_ns": 401624112838000
+        }
+      ]
+    },
+    {
+      "case": "appends-0",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\directories-0\\nested\\append.txt",
+            "sha256": "967d485fec640662d0517bcbc7ccb4897cd2c6f0e6a39915182d163c8e537481",
+            "size": 18
+          },
+          "client": 0,
+          "start_ns": 401624113134200,
+          "end_ns": 401624151403700
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": true,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\directories-0\\nested\\append.txt",
+            "sha256": "0529a9efa8084199b3a4aa8348f7acf06f97ee23f714015c02c823b51766285d",
+            "size": 9
+          },
+          "client": 1,
+          "start_ns": 401624113096300,
+          "end_ns": 401624116987200
+        }
+      ]
+    },
+    {
+      "case": "guarded-overwrite-absent-False-1",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": false,
+          "body": {
+            "code": "changed_since_read",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\overwrite-False-1.txt changed since that SHA-256 was taken; read it again before writing"
+          },
+          "client": 0,
+          "start_ns": 401624157048400,
+          "end_ns": 401624236910400
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\overwrite-False-1.txt",
+            "sha256": "04d0887f69015fe251219d921bf1de6de6a89388b456b23f91c961e8aa337f49",
+            "size": 17
+          },
+          "client": 1,
+          "start_ns": 401624157011100,
+          "end_ns": 401624236772800
+        }
+      ]
+    },
+    {
+      "case": "guarded-append-absent-False-1",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\append-False-1.txt",
+            "sha256": "f05f19864df3d921a94d7ddb8b91ab25ed50b98faf4f9160f5ffc2da3ad4039d",
+            "size": 4194331
+          },
+          "client": 0,
+          "start_ns": 401624242567400,
+          "end_ns": 401624390592100
+        },
+        {
+          "ok": false,
+          "body": {
+            "code": "changed_since_read",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\append-False-1.txt changed since that SHA-256 was taken; read it again before writing"
+          },
+          "client": 1,
+          "start_ns": 401624242527800,
+          "end_ns": 401624458411000
+        }
+      ]
+    },
+    {
+      "case": "guarded-overwrite-absent-True-1",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": false,
+          "body": {
+            "code": "changed_since_read",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\overwrite-True-1.txt changed since that SHA-256 was taken; read it again before writing"
+          },
+          "client": 0,
+          "start_ns": 401624465065500,
+          "end_ns": 401624504038700
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": true,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\overwrite-True-1.txt",
+            "sha256": "04d0887f69015fe251219d921bf1de6de6a89388b456b23f91c961e8aa337f49",
+            "size": 17
+          },
+          "client": 1,
+          "start_ns": 401624465035300,
+          "end_ns": 401624469550600
+        }
+      ]
+    },
+    {
+      "case": "create-1",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created": true,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\create-1.txt",
+            "sha256": "7f1ef63ee3971e05a2400458b54f02753df9f248861db7f865d78c1a494716bf",
+            "size": 8
+          },
+          "client": 0,
+          "start_ns": 401624504560600,
+          "end_ns": 401624512292600
+        },
+        {
+          "ok": false,
+          "body": {
+            "code": "already_exists",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\create-1.txt exists; use mode overwrite to replace it"
+          },
+          "client": 1,
+          "start_ns": 401624504524800,
+          "end_ns": 401624534283200
+        }
+      ]
+    },
+    {
+      "case": "disjoint-edits-1",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\edit-disjoint-1.txt",
+            "replacements": 1,
+            "sha256": "e7f9a38c236124022b526b28301dfbe12303e05469a0d93af4d71d0c29fa99ff",
+            "size": 1048595
+          },
+          "client": 0,
+          "start_ns": 401624535546400,
+          "end_ns": 401624561988100
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\edit-disjoint-1.txt",
+            "replacements": 1,
+            "sha256": "4350a4bc1f287c22cbd79ecff4abcc865999c68584a40576068e3cb7c4962f75",
+            "size": 1048595
+          },
+          "client": 1,
+          "start_ns": 401624535514200,
+          "end_ns": 401624585258800
+        }
+      ]
+    },
+    {
+      "case": "same-edits-1",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": false,
+          "body": {
+            "code": "edit_mismatch",
+            "message": "old_text occurs 0 times in D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\edit-same-1.txt, not 1; nothing was changed. Include more surrounding text to make it unique, or set expected_replacements."
+          },
+          "client": 0,
+          "start_ns": 401624588665100,
+          "end_ns": 401624628526100
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\edit-same-1.txt",
+            "replacements": 1,
+            "sha256": "8a1b1aee853fb3107bba2bc3e811f991c114e13c759668629c467c3159017aa8",
+            "size": 1048593
+          },
+          "client": 1,
+          "start_ns": 401624588618800,
+          "end_ns": 401624615408700
+        }
+      ]
+    },
+    {
+      "case": "mixed-write-edit-1",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\mixed-1.txt",
+            "sha256": "144a642e170a3e673570f6c2085656fe96b9990d661be39fdc15966b26bed017",
+            "size": 17
+          },
+          "client": 0,
+          "start_ns": 401624630822200,
+          "end_ns": 401624656364900
+        },
+        {
+          "ok": false,
+          "body": {
+            "code": "edit_mismatch",
+            "message": "old_text occurs 0 times in D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\mixed-1.txt, not 1; nothing was changed. Include more surrounding text to make it unique, or set expected_replacements."
+          },
+          "client": 1,
+          "start_ns": 401624630775500,
+          "end_ns": 401624657391300
+        }
+      ]
+    },
+    {
+      "case": "moves-1",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": false,
+          "body": {
+            "code": "already_exists",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\moved-1.txt exists; pass overwrite to replace it"
+          },
+          "client": 0,
+          "start_ns": 401624658266500,
+          "end_ns": 401624688995700
+        },
+        {
+          "ok": true,
+          "body": {
+            "created_ms": 1795022960016,
+            "kind": "file",
+            "lines": 3,
+            "modified_ms": 1795022960017,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\moved-1.txt",
+            "readonly": false,
+            "replaced": false,
+            "size": 1048595
+          },
+          "client": 1,
+          "start_ns": 401624658221800,
+          "end_ns": 401624681888500
+        }
+      ]
+    },
+    {
+      "case": "mkdir-1",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created_ms": 1795022960052,
+            "kind": "dir",
+            "made": false,
+            "modified_ms": 1795022960052,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\directories-1\\nested",
+            "readonly": false,
+            "size": 0
+          },
+          "client": 0,
+          "start_ns": 401624690624500,
+          "end_ns": 401624719466900
+        },
+        {
+          "ok": true,
+          "body": {
+            "created_ms": 1795022960052,
+            "kind": "dir",
+            "made": true,
+            "modified_ms": 1795022960052,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\directories-1\\nested",
+            "readonly": false,
+            "size": 0
+          },
+          "client": 1,
+          "start_ns": 401624690595100,
+          "end_ns": 401624692663800
+        }
+      ]
+    },
+    {
+      "case": "appends-1",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\directories-1\\nested\\append.txt",
+            "sha256": "967d485fec640662d0517bcbc7ccb4897cd2c6f0e6a39915182d163c8e537481",
+            "size": 18
+          },
+          "client": 0,
+          "start_ns": 401624719730300,
+          "end_ns": 401624751645400
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": true,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\directories-1\\nested\\append.txt",
+            "sha256": "0529a9efa8084199b3a4aa8348f7acf06f97ee23f714015c02c823b51766285d",
+            "size": 9
+          },
+          "client": 1,
+          "start_ns": 401624719700500,
+          "end_ns": 401624723719500
+        }
+      ]
+    },
+    {
+      "case": "guarded-overwrite-absent-False-2",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": false,
+          "body": {
+            "code": "changed_since_read",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\overwrite-False-2.txt changed since that SHA-256 was taken; read it again before writing"
+          },
+          "client": 0,
+          "start_ns": 401624757264000,
+          "end_ns": 401624840510100
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\overwrite-False-2.txt",
+            "sha256": "292e577c292ec8c43d48018a82dcd8ff3b1d50853b8e077e4b83d72443c0ff17",
+            "size": 17
+          },
+          "client": 1,
+          "start_ns": 401624757221300,
+          "end_ns": 401624840350200
+        }
+      ]
+    },
+    {
+      "case": "guarded-append-absent-False-2",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\append-False-2.txt",
+            "sha256": "6ea16808f474a393170c00d8efa92a2088e00c47500adc09e7a838cd0a45b923",
+            "size": 4194331
+          },
+          "client": 0,
+          "start_ns": 401624846135100,
+          "end_ns": 401625000870200
+        },
+        {
+          "ok": false,
+          "body": {
+            "code": "changed_since_read",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\append-False-2.txt changed since that SHA-256 was taken; read it again before writing"
+          },
+          "client": 1,
+          "start_ns": 401624846100800,
+          "end_ns": 401625074339200
+        }
+      ]
+    },
+    {
+      "case": "guarded-overwrite-absent-True-2",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created": true,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\overwrite-True-2.txt",
+            "sha256": "1a4bc9639c99466632772b26d809b6a316e9f16197a9906f243a4d943d077371",
+            "size": 17
+          },
+          "client": 0,
+          "start_ns": 401625081481800,
+          "end_ns": 401625092517900
+        },
+        {
+          "ok": false,
+          "body": {
+            "code": "changed_since_read",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\overwrite-True-2.txt changed since that SHA-256 was taken; read it again before writing"
+          },
+          "client": 1,
+          "start_ns": 401625081429300,
+          "end_ns": 401625107501700
+        }
+      ]
+    },
+    {
+      "case": "create-2",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": false,
+          "body": {
+            "code": "already_exists",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\create-2.txt exists; use mode overwrite to replace it"
+          },
+          "client": 0,
+          "start_ns": 401625108012600,
+          "end_ns": 401625138403900
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": true,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\create-2.txt",
+            "sha256": "3856b8d080d86a6de480f6a02beede99a08e54b66f9b4b4131eae8de59f85e19",
+            "size": 8
+          },
+          "client": 1,
+          "start_ns": 401625107965600,
+          "end_ns": 401625112072600
+        }
+      ]
+    },
+    {
+      "case": "disjoint-edits-2",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\edit-disjoint-2.txt",
+            "replacements": 1,
+            "sha256": "e7f9a38c236124022b526b28301dfbe12303e05469a0d93af4d71d0c29fa99ff",
+            "size": 1048595
+          },
+          "client": 0,
+          "start_ns": 401625139877700,
+          "end_ns": 401625166354300
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\edit-disjoint-2.txt",
+            "replacements": 1,
+            "sha256": "4350a4bc1f287c22cbd79ecff4abcc865999c68584a40576068e3cb7c4962f75",
+            "size": 1048595
+          },
+          "client": 1,
+          "start_ns": 401625139837700,
+          "end_ns": 401625189601500
+        }
+      ]
+    },
+    {
+      "case": "same-edits-2",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\edit-same-2.txt",
+            "replacements": 1,
+            "sha256": "b83ca195951b77511e5ff6f386c24bf6f202d32b677deb3e0b18249299e8c450",
+            "size": 1048593
+          },
+          "client": 0,
+          "start_ns": 401625193143800,
+          "end_ns": 401625221835500
+        },
+        {
+          "ok": false,
+          "body": {
+            "code": "edit_mismatch",
+            "message": "old_text occurs 0 times in D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\edit-same-2.txt, not 1; nothing was changed. Include more surrounding text to make it unique, or set expected_replacements."
+          },
+          "client": 1,
+          "start_ns": 401625193082500,
+          "end_ns": 401625231242500
+        }
+      ]
+    },
+    {
+      "case": "mixed-write-edit-2",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": false,
+          "body": {
+            "code": "changed_since_read",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\mixed-2.txt changed since that SHA-256 was taken; read it again before writing"
+          },
+          "client": 0,
+          "start_ns": 401625233496200,
+          "end_ns": 401625277543100
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\mixed-2.txt",
+            "replacements": 1,
+            "sha256": "e7f9a38c236124022b526b28301dfbe12303e05469a0d93af4d71d0c29fa99ff",
+            "size": 1048595
+          },
+          "client": 1,
+          "start_ns": 401625233448600,
+          "end_ns": 401625259434500
+        }
+      ]
+    },
+    {
+      "case": "moves-2",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created_ms": 1795022960638,
+            "kind": "file",
+            "lines": 1,
+            "modified_ms": 1795022960638,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\moved-2.txt",
+            "readonly": false,
+            "replaced": false,
+            "size": 17
+          },
+          "client": 0,
+          "start_ns": 401625279187600,
+          "end_ns": 401625281957500
+        },
+        {
+          "ok": false,
+          "body": {
+            "code": "already_exists",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\moved-2.txt exists; pass overwrite to replace it"
+          },
+          "client": 1,
+          "start_ns": 401625279150400,
+          "end_ns": 401625306584300
+        }
+      ]
+    },
+    {
+      "case": "mkdir-2",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created_ms": 1795022960672,
+            "kind": "dir",
+            "made": true,
+            "modified_ms": 1795022960672,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\directories-2\\nested",
+            "readonly": false,
+            "size": 0
+          },
+          "client": 0,
+          "start_ns": 401625311792000,
+          "end_ns": 401625314095200
+        },
+        {
+          "ok": true,
+          "body": {
+            "created_ms": 1795022960672,
+            "kind": "dir",
+            "made": false,
+            "modified_ms": 1795022960672,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\directories-2\\nested",
+            "readonly": false,
+            "size": 0
+          },
+          "client": 1,
+          "start_ns": 401625311752100,
+          "end_ns": 401625336344500
+        }
+      ]
+    },
+    {
+      "case": "appends-2",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\directories-2\\nested\\append.txt",
+            "sha256": "967d485fec640662d0517bcbc7ccb4897cd2c6f0e6a39915182d163c8e537481",
+            "size": 18
+          },
+          "client": 0,
+          "start_ns": 401625336669200,
+          "end_ns": 401625368076600
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": true,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\directories-2\\nested\\append.txt",
+            "sha256": "0529a9efa8084199b3a4aa8348f7acf06f97ee23f714015c02c823b51766285d",
+            "size": 9
+          },
+          "client": 1,
+          "start_ns": 401625336597200,
+          "end_ns": 401625340177400
+        }
+      ]
+    },
+    {
+      "case": "guarded-overwrite-absent-False-3",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": false,
+          "body": {
+            "code": "changed_since_read",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\overwrite-False-3.txt changed since that SHA-256 was taken; read it again before writing"
+          },
+          "client": 0,
+          "start_ns": 401625374597900,
+          "end_ns": 401625453359500
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\overwrite-False-3.txt",
+            "sha256": "6df6ef3b4fcf89ef668581b52e0968eec8ffa5d6aee2478ba6b747da9407d092",
+            "size": 17
+          },
+          "client": 1,
+          "start_ns": 401625374533300,
+          "end_ns": 401625453311900
+        }
+      ]
+    },
+    {
+      "case": "guarded-append-absent-False-3",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\append-False-3.txt",
+            "sha256": "47cc6e344f661741bc48ec603e78a687cc76ac168038a500edb96766abe860e9",
+            "size": 4194331
+          },
+          "client": 0,
+          "start_ns": 401625458965700,
+          "end_ns": 401625607427000
+        },
+        {
+          "ok": false,
+          "body": {
+            "code": "changed_since_read",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\append-False-3.txt changed since that SHA-256 was taken; read it again before writing"
+          },
+          "client": 1,
+          "start_ns": 401625458927300,
+          "end_ns": 401625675673400
+        }
+      ]
+    },
+    {
+      "case": "guarded-overwrite-absent-True-3",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": false,
+          "body": {
+            "code": "changed_since_read",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\overwrite-True-3.txt changed since that SHA-256 was taken; read it again before writing"
+          },
+          "client": 0,
+          "start_ns": 401625682263600,
+          "end_ns": 401625709181600
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": true,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\overwrite-True-3.txt",
+            "sha256": "6df6ef3b4fcf89ef668581b52e0968eec8ffa5d6aee2478ba6b747da9407d092",
+            "size": 17
+          },
+          "client": 1,
+          "start_ns": 401625682227300,
+          "end_ns": 401625686464000
+        }
+      ]
+    },
+    {
+      "case": "create-3",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created": true,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\create-3.txt",
+            "sha256": "7f1ef63ee3971e05a2400458b54f02753df9f248861db7f865d78c1a494716bf",
+            "size": 8
+          },
+          "client": 0,
+          "start_ns": 401625709627200,
+          "end_ns": 401625712960500
+        },
+        {
+          "ok": false,
+          "body": {
+            "code": "already_exists",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\create-3.txt exists; use mode overwrite to replace it"
+          },
+          "client": 1,
+          "start_ns": 401625709585000,
+          "end_ns": 401625738937700
+        }
+      ]
+    },
+    {
+      "case": "disjoint-edits-3",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\edit-disjoint-3.txt",
+            "replacements": 1,
+            "sha256": "e7f9a38c236124022b526b28301dfbe12303e05469a0d93af4d71d0c29fa99ff",
+            "size": 1048595
+          },
+          "client": 0,
+          "start_ns": 401625740254000,
+          "end_ns": 401625765329900
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\edit-disjoint-3.txt",
+            "replacements": 1,
+            "sha256": "4350a4bc1f287c22cbd79ecff4abcc865999c68584a40576068e3cb7c4962f75",
+            "size": 1048595
+          },
+          "client": 1,
+          "start_ns": 401625740224200,
+          "end_ns": 401625787918100
+        }
+      ]
+    },
+    {
+      "case": "same-edits-3",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\edit-same-3.txt",
+            "replacements": 1,
+            "sha256": "b83ca195951b77511e5ff6f386c24bf6f202d32b677deb3e0b18249299e8c450",
+            "size": 1048593
+          },
+          "client": 0,
+          "start_ns": 401625791593800,
+          "end_ns": 401625817281000
+        },
+        {
+          "ok": false,
+          "body": {
+            "code": "edit_mismatch",
+            "message": "old_text occurs 0 times in D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\edit-same-3.txt, not 1; nothing was changed. Include more surrounding text to make it unique, or set expected_replacements."
+          },
+          "client": 1,
+          "start_ns": 401625791553700,
+          "end_ns": 401625818848100
+        }
+      ]
+    },
+    {
+      "case": "mixed-write-edit-3",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\mixed-3.txt",
+            "sha256": "144a642e170a3e673570f6c2085656fe96b9990d661be39fdc15966b26bed017",
+            "size": 17
+          },
+          "client": 0,
+          "start_ns": 401625821024200,
+          "end_ns": 401625846362000
+        },
+        {
+          "ok": false,
+          "body": {
+            "code": "edit_mismatch",
+            "message": "old_text occurs 0 times in D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\mixed-3.txt, not 1; nothing was changed. Include more surrounding text to make it unique, or set expected_replacements."
+          },
+          "client": 1,
+          "start_ns": 401625820984100,
+          "end_ns": 401625846469600
+        }
+      ]
+    },
+    {
+      "case": "moves-3",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created_ms": 1795022961205,
+            "kind": "file",
+            "lines": 1,
+            "modified_ms": 1795022961205,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\moved-3.txt",
+            "readonly": false,
+            "replaced": false,
+            "size": 17
+          },
+          "client": 0,
+          "start_ns": 401625847378500,
+          "end_ns": 401625849987600
+        },
+        {
+          "ok": false,
+          "body": {
+            "code": "already_exists",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\moved-3.txt exists; pass overwrite to replace it"
+          },
+          "client": 1,
+          "start_ns": 401625847346900,
+          "end_ns": 401625876857300
+        }
+      ]
+    },
+    {
+      "case": "mkdir-3",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created_ms": 1795022961244,
+            "kind": "dir",
+            "made": true,
+            "modified_ms": 1795022961244,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\directories-3\\nested",
+            "readonly": false,
+            "size": 0
+          },
+          "client": 0,
+          "start_ns": 401625883674300,
+          "end_ns": 401625885922100
+        },
+        {
+          "ok": true,
+          "body": {
+            "created_ms": 1795022961244,
+            "kind": "dir",
+            "made": false,
+            "modified_ms": 1795022961244,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\directories-3\\nested",
+            "readonly": false,
+            "size": 0
+          },
+          "client": 1,
+          "start_ns": 401625883644700,
+          "end_ns": 401625908326400
+        }
+      ]
+    },
+    {
+      "case": "appends-3",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created": true,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\directories-3\\nested\\append.txt",
+            "sha256": "cf8eae8c977ac361ce44ca5eec01b009878cf0df62a579e2f26e02eaed41ca62",
+            "size": 9
+          },
+          "client": 0,
+          "start_ns": 401625908610200,
+          "end_ns": 401625916470400
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\directories-3\\nested\\append.txt",
+            "sha256": "5ecc9303d4af4a415ef2fb60aa56331ae879702267faba586ef822a5b0868b73",
+            "size": 18
+          },
+          "client": 1,
+          "start_ns": 401625908578100,
+          "end_ns": 401625945774200
+        }
+      ]
+    },
+    {
+      "case": "guarded-overwrite-absent-False-4",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": false,
+          "body": {
+            "code": "changed_since_read",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\overwrite-False-4.txt changed since that SHA-256 was taken; read it again before writing"
+          },
+          "client": 0,
+          "start_ns": 401625951522800,
+          "end_ns": 401626031331000
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\overwrite-False-4.txt",
+            "sha256": "06267212ef07ddf4c20956e30ba2dc333f79c1abd0f810bc9ce03632e27168e6",
+            "size": 17
+          },
+          "client": 1,
+          "start_ns": 401625951480300,
+          "end_ns": 401626031133200
+        }
+      ]
+    },
+    {
+      "case": "guarded-append-absent-False-4",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\append-False-4.txt",
+            "sha256": "91a60de60f034d2b1599bdd9c063c5de7c86785a771e8df91727258e2bb99d0e",
+            "size": 4194331
+          },
+          "client": 0,
+          "start_ns": 401626037015800,
+          "end_ns": 401626185462400
+        },
+        {
+          "ok": false,
+          "body": {
+            "code": "changed_since_read",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\append-False-4.txt changed since that SHA-256 was taken; read it again before writing"
+          },
+          "client": 1,
+          "start_ns": 401626036982200,
+          "end_ns": 401626253561200
+        }
+      ]
+    },
+    {
+      "case": "guarded-overwrite-absent-True-4",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created": true,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\overwrite-True-4.txt",
+            "sha256": "ca053f879df499e08a5dc5d75cc6cbd0ba8c8d886562c0e98590b7dcea4bdf87",
+            "size": 17
+          },
+          "client": 0,
+          "start_ns": 401626260237800,
+          "end_ns": 401626269574200
+        },
+        {
+          "ok": false,
+          "body": {
+            "code": "changed_since_read",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\overwrite-True-4.txt changed since that SHA-256 was taken; read it again before writing"
+          },
+          "client": 1,
+          "start_ns": 401626260203900,
+          "end_ns": 401626297992100
+        }
+      ]
+    },
+    {
+      "case": "create-4",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": false,
+          "body": {
+            "code": "already_exists",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\create-4.txt exists; use mode overwrite to replace it"
+          },
+          "client": 0,
+          "start_ns": 401626298475300,
+          "end_ns": 401626328704800
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": true,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\create-4.txt",
+            "sha256": "3856b8d080d86a6de480f6a02beede99a08e54b66f9b4b4131eae8de59f85e19",
+            "size": 8
+          },
+          "client": 1,
+          "start_ns": 401626298435700,
+          "end_ns": 401626301761400
+        }
+      ]
+    },
+    {
+      "case": "disjoint-edits-4",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\edit-disjoint-4.txt",
+            "replacements": 1,
+            "sha256": "4350a4bc1f287c22cbd79ecff4abcc865999c68584a40576068e3cb7c4962f75",
+            "size": 1048595
+          },
+          "client": 0,
+          "start_ns": 401626330199700,
+          "end_ns": 401626377781600
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\edit-disjoint-4.txt",
+            "replacements": 1,
+            "sha256": "2c666d8e5ad744c1b93d6223deab51f8329f1eb45a36f120911386280c7fcf4b",
+            "size": 1048595
+          },
+          "client": 1,
+          "start_ns": 401626330124300,
+          "end_ns": 401626358198100
+        }
+      ]
+    },
+    {
+      "case": "same-edits-4",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": false,
+          "body": {
+            "code": "edit_mismatch",
+            "message": "old_text occurs 0 times in D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\edit-same-4.txt, not 1; nothing was changed. Include more surrounding text to make it unique, or set expected_replacements."
+          },
+          "client": 0,
+          "start_ns": 401626380847100,
+          "end_ns": 401626409101000
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\edit-same-4.txt",
+            "replacements": 1,
+            "sha256": "8a1b1aee853fb3107bba2bc3e811f991c114e13c759668629c467c3159017aa8",
+            "size": 1048593
+          },
+          "client": 1,
+          "start_ns": 401626380790100,
+          "end_ns": 401626407546700
+        }
+      ]
+    },
+    {
+      "case": "mixed-write-edit-4",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\mixed-4.txt",
+            "sha256": "144a642e170a3e673570f6c2085656fe96b9990d661be39fdc15966b26bed017",
+            "size": 17
+          },
+          "client": 0,
+          "start_ns": 401626411536100,
+          "end_ns": 401626437171700
+        },
+        {
+          "ok": false,
+          "body": {
+            "code": "edit_mismatch",
+            "message": "old_text occurs 0 times in D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\mixed-4.txt, not 1; nothing was changed. Include more surrounding text to make it unique, or set expected_replacements."
+          },
+          "client": 1,
+          "start_ns": 401626411490500,
+          "end_ns": 401626437328900
+        }
+      ]
+    },
+    {
+      "case": "moves-4",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": false,
+          "body": {
+            "code": "already_exists",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\moved-4.txt exists; pass overwrite to replace it"
+          },
+          "client": 0,
+          "start_ns": 401626438247400,
+          "end_ns": 401626463606800
+        },
+        {
+          "ok": true,
+          "body": {
+            "created_ms": 1795022961796,
+            "kind": "file",
+            "lines": 3,
+            "modified_ms": 1795022961798,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\moved-4.txt",
+            "readonly": false,
+            "replaced": false,
+            "size": 1048595
+          },
+          "client": 1,
+          "start_ns": 401626438211300,
+          "end_ns": 401626463469100
+        }
+      ]
+    },
+    {
+      "case": "mkdir-4",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created_ms": 1795022961826,
+            "kind": "dir",
+            "made": false,
+            "modified_ms": 1795022961826,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\directories-4\\nested",
+            "readonly": false,
+            "size": 0
+          },
+          "client": 0,
+          "start_ns": 401626465303900,
+          "end_ns": 401626498805300
+        },
+        {
+          "ok": true,
+          "body": {
+            "created_ms": 1795022961826,
+            "kind": "dir",
+            "made": true,
+            "modified_ms": 1795022961826,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\directories-4\\nested",
+            "readonly": false,
+            "size": 0
+          },
+          "client": 1,
+          "start_ns": 401626465246300,
+          "end_ns": 401626467446800
+        }
+      ]
+    },
+    {
+      "case": "appends-4",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created": true,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\directories-4\\nested\\append.txt",
+            "sha256": "cf8eae8c977ac361ce44ca5eec01b009878cf0df62a579e2f26e02eaed41ca62",
+            "size": 9
+          },
+          "client": 0,
+          "start_ns": 401626499059700,
+          "end_ns": 401626502994100
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\directories-4\\nested\\append.txt",
+            "sha256": "5ecc9303d4af4a415ef2fb60aa56331ae879702267faba586ef822a5b0868b73",
+            "size": 18
+          },
+          "client": 1,
+          "start_ns": 401626499024700,
+          "end_ns": 401626531978100
+        }
+      ]
+    },
+    {
+      "case": "guarded-overwrite-absent-False-5",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\overwrite-False-5.txt",
+            "sha256": "f8e68667e14b8c4ce65764fdc86ba6abce08d57b276b21ce4f908e078cdd0bcc",
+            "size": 17
+          },
+          "client": 0,
+          "start_ns": 401626538214600,
+          "end_ns": 401626622072800
+        },
+        {
+          "ok": false,
+          "body": {
+            "code": "changed_since_read",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\overwrite-False-5.txt changed since that SHA-256 was taken; read it again before writing"
+          },
+          "client": 1,
+          "start_ns": 401626538143500,
+          "end_ns": 401626622197500
+        }
+      ]
+    },
+    {
+      "case": "guarded-append-absent-False-5",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": false,
+          "body": {
+            "code": "changed_since_read",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\append-False-5.txt changed since that SHA-256 was taken; read it again before writing"
+          },
+          "client": 0,
+          "start_ns": 401626628299900,
+          "end_ns": 401626850693800
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\append-False-5.txt",
+            "sha256": "76924be7e74543ec9821ac3e4f72dcdc1ff12d9f7dd8f195cabbc0355c965cb9",
+            "size": 4194331
+          },
+          "client": 1,
+          "start_ns": 401626628240900,
+          "end_ns": 401626781594400
+        }
+      ]
+    },
+    {
+      "case": "guarded-overwrite-absent-True-5",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created": true,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\overwrite-True-5.txt",
+            "sha256": "f8e68667e14b8c4ce65764fdc86ba6abce08d57b276b21ce4f908e078cdd0bcc",
+            "size": 17
+          },
+          "client": 0,
+          "start_ns": 401626857402900,
+          "end_ns": 401626861648700
+        },
+        {
+          "ok": false,
+          "body": {
+            "code": "changed_since_read",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\overwrite-True-5.txt changed since that SHA-256 was taken; read it again before writing"
+          },
+          "client": 1,
+          "start_ns": 401626857307400,
+          "end_ns": 401626861812400
+        }
+      ]
+    },
+    {
+      "case": "create-5",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created": true,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\create-5.txt",
+            "sha256": "7f1ef63ee3971e05a2400458b54f02753df9f248861db7f865d78c1a494716bf",
+            "size": 8
+          },
+          "client": 0,
+          "start_ns": 401626862271500,
+          "end_ns": 401626865232000
+        },
+        {
+          "ok": false,
+          "body": {
+            "code": "already_exists",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\create-5.txt exists; use mode overwrite to replace it"
+          },
+          "client": 1,
+          "start_ns": 401626862243500,
+          "end_ns": 401626891613000
+        }
+      ]
+    },
+    {
+      "case": "disjoint-edits-5",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\edit-disjoint-5.txt",
+            "replacements": 1,
+            "sha256": "4350a4bc1f287c22cbd79ecff4abcc865999c68584a40576068e3cb7c4962f75",
+            "size": 1048595
+          },
+          "client": 0,
+          "start_ns": 401626892835300,
+          "end_ns": 401626941800000
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\edit-disjoint-5.txt",
+            "replacements": 1,
+            "sha256": "2c666d8e5ad744c1b93d6223deab51f8329f1eb45a36f120911386280c7fcf4b",
+            "size": 1048595
+          },
+          "client": 1,
+          "start_ns": 401626892802700,
+          "end_ns": 401626919096900
+        }
+      ]
+    },
+    {
+      "case": "same-edits-5",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\edit-same-5.txt",
+            "replacements": 1,
+            "sha256": "b83ca195951b77511e5ff6f386c24bf6f202d32b677deb3e0b18249299e8c450",
+            "size": 1048593
+          },
+          "client": 0,
+          "start_ns": 401626944820400,
+          "end_ns": 401626969567400
+        },
+        {
+          "ok": false,
+          "body": {
+            "code": "edit_mismatch",
+            "message": "old_text occurs 0 times in D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\edit-same-5.txt, not 1; nothing was changed. Include more surrounding text to make it unique, or set expected_replacements."
+          },
+          "client": 1,
+          "start_ns": 401626944763300,
+          "end_ns": 401626970962000
+        }
+      ]
+    },
+    {
+      "case": "mixed-write-edit-5",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": false,
+          "body": {
+            "code": "changed_since_read",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\mixed-5.txt changed since that SHA-256 was taken; read it again before writing"
+          },
+          "client": 0,
+          "start_ns": 401626973339700,
+          "end_ns": 401627018645700
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\mixed-5.txt",
+            "replacements": 1,
+            "sha256": "e7f9a38c236124022b526b28301dfbe12303e05469a0d93af4d71d0c29fa99ff",
+            "size": 1048595
+          },
+          "client": 1,
+          "start_ns": 401626973294600,
+          "end_ns": 401627000557900
+        }
+      ]
+    },
+    {
+      "case": "moves-5",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created_ms": 1795022962379,
+            "kind": "file",
+            "lines": 1,
+            "modified_ms": 1795022962379,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\moved-5.txt",
+            "readonly": false,
+            "replaced": false,
+            "size": 17
+          },
+          "client": 0,
+          "start_ns": 401627020174300,
+          "end_ns": 401627023602100
+        },
+        {
+          "ok": false,
+          "body": {
+            "code": "already_exists",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\moved-5.txt exists; pass overwrite to replace it"
+          },
+          "client": 1,
+          "start_ns": 401627020124800,
+          "end_ns": 401627046624600
+        }
+      ]
+    },
+    {
+      "case": "mkdir-5",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created_ms": 1795022962413,
+            "kind": "dir",
+            "made": true,
+            "modified_ms": 1795022962413,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\directories-5\\nested",
+            "readonly": false,
+            "size": 0
+          },
+          "client": 0,
+          "start_ns": 401627052420000,
+          "end_ns": 401627054879500
+        },
+        {
+          "ok": true,
+          "body": {
+            "created_ms": 1795022962413,
+            "kind": "dir",
+            "made": false,
+            "modified_ms": 1795022962413,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\directories-5\\nested",
+            "readonly": false,
+            "size": 0
+          },
+          "client": 1,
+          "start_ns": 401627052372600,
+          "end_ns": 401627077043400
+        }
+      ]
+    },
+    {
+      "case": "appends-5",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\directories-5\\nested\\append.txt",
+            "sha256": "967d485fec640662d0517bcbc7ccb4897cd2c6f0e6a39915182d163c8e537481",
+            "size": 18
+          },
+          "client": 0,
+          "start_ns": 401627077333100,
+          "end_ns": 401627110121800
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": true,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\directories-5\\nested\\append.txt",
+            "sha256": "0529a9efa8084199b3a4aa8348f7acf06f97ee23f714015c02c823b51766285d",
+            "size": 9
+          },
+          "client": 1,
+          "start_ns": 401627077291600,
+          "end_ns": 401627081386000
+        }
+      ]
+    },
+    {
+      "case": "guarded-overwrite-absent-False-6",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\overwrite-False-6.txt",
+            "sha256": "3b5c7f00a29d5b21eee93558742aae6763a1780a786454be3138f1ce91804b6d",
+            "size": 17
+          },
+          "client": 0,
+          "start_ns": 401627116154200,
+          "end_ns": 401627201630800
+        },
+        {
+          "ok": false,
+          "body": {
+            "code": "changed_since_read",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\overwrite-False-6.txt changed since that SHA-256 was taken; read it again before writing"
+          },
+          "client": 1,
+          "start_ns": 401627116110200,
+          "end_ns": 401627201770700
+        }
+      ]
+    },
+    {
+      "case": "guarded-append-absent-False-6",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": false,
+          "body": {
+            "code": "changed_since_read",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\append-False-6.txt changed since that SHA-256 was taken; read it again before writing"
+          },
+          "client": 0,
+          "start_ns": 401627207947900,
+          "end_ns": 401627425537200
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\append-False-6.txt",
+            "sha256": "50e80efeee638609b1371b7b26df0a4477dbcf48da7f839b2e76b486bab44340",
+            "size": 4194331
+          },
+          "client": 1,
+          "start_ns": 401627207902700,
+          "end_ns": 401627358130800
+        }
+      ]
+    },
+    {
+      "case": "guarded-overwrite-absent-True-6",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": false,
+          "body": {
+            "code": "changed_since_read",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\overwrite-True-6.txt changed since that SHA-256 was taken; read it again before writing"
+          },
+          "client": 0,
+          "start_ns": 401627432019400,
+          "end_ns": 401627462895300
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": true,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\overwrite-True-6.txt",
+            "sha256": "5df4f32a872603ce2d8fe6762f4b036c4dbbf114f28593981a341888425d6621",
+            "size": 17
+          },
+          "client": 1,
+          "start_ns": 401627431966700,
+          "end_ns": 401627443340500
+        }
+      ]
+    },
+    {
+      "case": "create-6",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created": true,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\create-6.txt",
+            "sha256": "7f1ef63ee3971e05a2400458b54f02753df9f248861db7f865d78c1a494716bf",
+            "size": 8
+          },
+          "client": 0,
+          "start_ns": 401627463360500,
+          "end_ns": 401627468050400
+        },
+        {
+          "ok": false,
+          "body": {
+            "code": "already_exists",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\create-6.txt exists; use mode overwrite to replace it"
+          },
+          "client": 1,
+          "start_ns": 401627463326700,
+          "end_ns": 401627493872900
+        }
+      ]
+    },
+    {
+      "case": "disjoint-edits-6",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\edit-disjoint-6.txt",
+            "replacements": 1,
+            "sha256": "4350a4bc1f287c22cbd79ecff4abcc865999c68584a40576068e3cb7c4962f75",
+            "size": 1048595
+          },
+          "client": 0,
+          "start_ns": 401627495178900,
+          "end_ns": 401627544912300
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\edit-disjoint-6.txt",
+            "replacements": 1,
+            "sha256": "2c666d8e5ad744c1b93d6223deab51f8329f1eb45a36f120911386280c7fcf4b",
+            "size": 1048595
+          },
+          "client": 1,
+          "start_ns": 401627495129300,
+          "end_ns": 401627523991100
+        }
+      ]
+    },
+    {
+      "case": "same-edits-6",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\edit-same-6.txt",
+            "replacements": 1,
+            "sha256": "b83ca195951b77511e5ff6f386c24bf6f202d32b677deb3e0b18249299e8c450",
+            "size": 1048593
+          },
+          "client": 0,
+          "start_ns": 401627548110500,
+          "end_ns": 401627574092400
+        },
+        {
+          "ok": false,
+          "body": {
+            "code": "edit_mismatch",
+            "message": "old_text occurs 0 times in D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\edit-same-6.txt, not 1; nothing was changed. Include more surrounding text to make it unique, or set expected_replacements."
+          },
+          "client": 1,
+          "start_ns": 401627548045400,
+          "end_ns": 401627575963000
+        }
+      ]
+    },
+    {
+      "case": "mixed-write-edit-6",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": false,
+          "body": {
+            "code": "changed_since_read",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\mixed-6.txt changed since that SHA-256 was taken; read it again before writing"
+          },
+          "client": 0,
+          "start_ns": 401627578255800,
+          "end_ns": 401627624641700
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\mixed-6.txt",
+            "replacements": 1,
+            "sha256": "e7f9a38c236124022b526b28301dfbe12303e05469a0d93af4d71d0c29fa99ff",
+            "size": 1048595
+          },
+          "client": 1,
+          "start_ns": 401627578221500,
+          "end_ns": 401627605648100
+        }
+      ]
+    },
+    {
+      "case": "moves-6",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": false,
+          "body": {
+            "code": "already_exists",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\moved-6.txt exists; pass overwrite to replace it"
+          },
+          "client": 0,
+          "start_ns": 401627626304200,
+          "end_ns": 401627665215300
+        },
+        {
+          "ok": true,
+          "body": {
+            "created_ms": 1795022962985,
+            "kind": "file",
+            "lines": 3,
+            "modified_ms": 1795022962985,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\moved-6.txt",
+            "readonly": false,
+            "replaced": false,
+            "size": 1048595
+          },
+          "client": 1,
+          "start_ns": 401627626261400,
+          "end_ns": 401627652152800
+        }
+      ]
+    },
+    {
+      "case": "mkdir-6",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created_ms": 1795022963027,
+            "kind": "dir",
+            "made": true,
+            "modified_ms": 1795022963027,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\directories-6\\nested",
+            "readonly": false,
+            "size": 0
+          },
+          "client": 0,
+          "start_ns": 401627666870700,
+          "end_ns": 401627669013900
+        },
+        {
+          "ok": true,
+          "body": {
+            "created_ms": 1795022963027,
+            "kind": "dir",
+            "made": false,
+            "modified_ms": 1795022963027,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\directories-6\\nested",
+            "readonly": false,
+            "size": 0
+          },
+          "client": 1,
+          "start_ns": 401627666824500,
+          "end_ns": 401627695543000
+        }
+      ]
+    },
+    {
+      "case": "appends-6",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created": true,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\directories-6\\nested\\append.txt",
+            "sha256": "cf8eae8c977ac361ce44ca5eec01b009878cf0df62a579e2f26e02eaed41ca62",
+            "size": 9
+          },
+          "client": 0,
+          "start_ns": 401627695841300,
+          "end_ns": 401627699727800
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\directories-6\\nested\\append.txt",
+            "sha256": "5ecc9303d4af4a415ef2fb60aa56331ae879702267faba586ef822a5b0868b73",
+            "size": 18
+          },
+          "client": 1,
+          "start_ns": 401627695786600,
+          "end_ns": 401627728190400
+        }
+      ]
+    },
+    {
+      "case": "guarded-overwrite-absent-False-7",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\overwrite-False-7.txt",
+            "sha256": "fb6c2792ba6bc31ec27392fbd00b4211d48461614186be94252b2758828becbf",
+            "size": 17
+          },
+          "client": 0,
+          "start_ns": 401627733684400,
+          "end_ns": 401627816176800
+        },
+        {
+          "ok": false,
+          "body": {
+            "code": "changed_since_read",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\overwrite-False-7.txt changed since that SHA-256 was taken; read it again before writing"
+          },
+          "client": 1,
+          "start_ns": 401627733614400,
+          "end_ns": 401627816244900
+        }
+      ]
+    },
+    {
+      "case": "guarded-append-absent-False-7",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\append-False-7.txt",
+            "sha256": "41bb671de8832c8e6296429b3e2e0a1ec1c3c20735406751bc32900b757735b6",
+            "size": 4194331
+          },
+          "client": 0,
+          "start_ns": 401627821808400,
+          "end_ns": 401627975843200
+        },
+        {
+          "ok": false,
+          "body": {
+            "code": "changed_since_read",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\append-False-7.txt changed since that SHA-256 was taken; read it again before writing"
+          },
+          "client": 1,
+          "start_ns": 401627821773700,
+          "end_ns": 401628044497900
+        }
+      ]
+    },
+    {
+      "case": "guarded-overwrite-absent-True-7",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created": true,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\overwrite-True-7.txt",
+            "sha256": "fb6c2792ba6bc31ec27392fbd00b4211d48461614186be94252b2758828becbf",
+            "size": 17
+          },
+          "client": 0,
+          "start_ns": 401628050993300,
+          "end_ns": 401628054709200
+        },
+        {
+          "ok": false,
+          "body": {
+            "code": "changed_since_read",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\overwrite-True-7.txt changed since that SHA-256 was taken; read it again before writing"
+          },
+          "client": 1,
+          "start_ns": 401628050940000,
+          "end_ns": 401628084745600
+        }
+      ]
+    },
+    {
+      "case": "create-7",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": false,
+          "body": {
+            "code": "already_exists",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\create-7.txt exists; use mode overwrite to replace it"
+          },
+          "client": 0,
+          "start_ns": 401628085213600,
+          "end_ns": 401628088916300
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": true,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\create-7.txt",
+            "sha256": "3856b8d080d86a6de480f6a02beede99a08e54b66f9b4b4131eae8de59f85e19",
+            "size": 8
+          },
+          "client": 1,
+          "start_ns": 401628085152000,
+          "end_ns": 401628088764400
+        }
+      ]
+    },
+    {
+      "case": "disjoint-edits-7",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\edit-disjoint-7.txt",
+            "replacements": 1,
+            "sha256": "4350a4bc1f287c22cbd79ecff4abcc865999c68584a40576068e3cb7c4962f75",
+            "size": 1048595
+          },
+          "client": 0,
+          "start_ns": 401628090139200,
+          "end_ns": 401628134687200
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\edit-disjoint-7.txt",
+            "replacements": 1,
+            "sha256": "2c666d8e5ad744c1b93d6223deab51f8329f1eb45a36f120911386280c7fcf4b",
+            "size": 1048595
+          },
+          "client": 1,
+          "start_ns": 401628090113000,
+          "end_ns": 401628114795100
+        }
+      ]
+    },
+    {
+      "case": "same-edits-7",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\edit-same-7.txt",
+            "replacements": 1,
+            "sha256": "b83ca195951b77511e5ff6f386c24bf6f202d32b677deb3e0b18249299e8c450",
+            "size": 1048593
+          },
+          "client": 0,
+          "start_ns": 401628137566400,
+          "end_ns": 401628162781600
+        },
+        {
+          "ok": false,
+          "body": {
+            "code": "edit_mismatch",
+            "message": "old_text occurs 0 times in D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\edit-same-7.txt, not 1; nothing was changed. Include more surrounding text to make it unique, or set expected_replacements."
+          },
+          "client": 1,
+          "start_ns": 401628137520800,
+          "end_ns": 401628164902500
+        }
+      ]
+    },
+    {
+      "case": "mixed-write-edit-7",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": false,
+          "body": {
+            "code": "changed_since_read",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\mixed-7.txt changed since that SHA-256 was taken; read it again before writing"
+          },
+          "client": 0,
+          "start_ns": 401628167189600,
+          "end_ns": 401628211124700
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\mixed-7.txt",
+            "replacements": 1,
+            "sha256": "e7f9a38c236124022b526b28301dfbe12303e05469a0d93af4d71d0c29fa99ff",
+            "size": 1048595
+          },
+          "client": 1,
+          "start_ns": 401628167149800,
+          "end_ns": 401628192263300
+        }
+      ]
+    },
+    {
+      "case": "moves-7",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created_ms": 1795022963570,
+            "kind": "file",
+            "lines": 1,
+            "modified_ms": 1795022963570,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\moved-7.txt",
+            "readonly": false,
+            "replaced": false,
+            "size": 17
+          },
+          "client": 0,
+          "start_ns": 401628212627000,
+          "end_ns": 401628215313600
+        },
+        {
+          "ok": false,
+          "body": {
+            "code": "already_exists",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\moved-7.txt exists; pass overwrite to replace it"
+          },
+          "client": 1,
+          "start_ns": 401628212584900,
+          "end_ns": 401628240160100
+        }
+      ]
+    },
+    {
+      "case": "mkdir-7",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created_ms": 1795022963606,
+            "kind": "dir",
+            "made": false,
+            "modified_ms": 1795022963606,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\directories-7\\nested",
+            "readonly": false,
+            "size": 0
+          },
+          "client": 0,
+          "start_ns": 401628245487800,
+          "end_ns": 401628271102300
+        },
+        {
+          "ok": true,
+          "body": {
+            "created_ms": 1795022963606,
+            "kind": "dir",
+            "made": true,
+            "modified_ms": 1795022963606,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\directories-7\\nested",
+            "readonly": false,
+            "size": 0
+          },
+          "client": 1,
+          "start_ns": 401628245454400,
+          "end_ns": 401628247916000
+        }
+      ]
+    },
+    {
+      "case": "appends-7",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\directories-7\\nested\\append.txt",
+            "sha256": "967d485fec640662d0517bcbc7ccb4897cd2c6f0e6a39915182d163c8e537481",
+            "size": 18
+          },
+          "client": 0,
+          "start_ns": 401628271391000,
+          "end_ns": 401628302949700
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": true,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\directories-7\\nested\\append.txt",
+            "sha256": "0529a9efa8084199b3a4aa8348f7acf06f97ee23f714015c02c823b51766285d",
+            "size": 9
+          },
+          "client": 1,
+          "start_ns": 401628271358300,
+          "end_ns": 401628275691800
+        }
+      ]
+    },
+    {
+      "case": "guarded-overwrite-absent-False-8",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\overwrite-False-8.txt",
+            "sha256": "4e672fbd4e39bd0d5665b64f76f7d2d6e9dccec8ffa4c1add4792328c0f5facf",
+            "size": 17
+          },
+          "client": 0,
+          "start_ns": 401628308580000,
+          "end_ns": 401628389598900
+        },
+        {
+          "ok": false,
+          "body": {
+            "code": "changed_since_read",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\overwrite-False-8.txt changed since that SHA-256 was taken; read it again before writing"
+          },
+          "client": 1,
+          "start_ns": 401628308534800,
+          "end_ns": 401628389716600
+        }
+      ]
+    },
+    {
+      "case": "guarded-append-absent-False-8",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\append-False-8.txt",
+            "sha256": "2d3e66944f26f86a50c30abaace40b0241f6d363d4e9575fb777b28edc8b5114",
+            "size": 4194331
+          },
+          "client": 0,
+          "start_ns": 401628395523300,
+          "end_ns": 401628543687100
+        },
+        {
+          "ok": false,
+          "body": {
+            "code": "changed_since_read",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\append-False-8.txt changed since that SHA-256 was taken; read it again before writing"
+          },
+          "client": 1,
+          "start_ns": 401628395488600,
+          "end_ns": 401628612063900
+        }
+      ]
+    },
+    {
+      "case": "guarded-overwrite-absent-True-8",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created": true,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\overwrite-True-8.txt",
+            "sha256": "4e672fbd4e39bd0d5665b64f76f7d2d6e9dccec8ffa4c1add4792328c0f5facf",
+            "size": 17
+          },
+          "client": 0,
+          "start_ns": 401628619088100,
+          "end_ns": 401628624173200
+        },
+        {
+          "ok": false,
+          "body": {
+            "code": "changed_since_read",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\overwrite-True-8.txt changed since that SHA-256 was taken; read it again before writing"
+          },
+          "client": 1,
+          "start_ns": 401628619047000,
+          "end_ns": 401628643539600
+        }
+      ]
+    },
+    {
+      "case": "create-8",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": false,
+          "body": {
+            "code": "already_exists",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\create-8.txt exists; use mode overwrite to replace it"
+          },
+          "client": 0,
+          "start_ns": 401628644052500,
+          "end_ns": 401628648443300
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": true,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\create-8.txt",
+            "sha256": "3856b8d080d86a6de480f6a02beede99a08e54b66f9b4b4131eae8de59f85e19",
+            "size": 8
+          },
+          "client": 1,
+          "start_ns": 401628644002700,
+          "end_ns": 401628648334100
+        }
+      ]
+    },
+    {
+      "case": "disjoint-edits-8",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\edit-disjoint-8.txt",
+            "replacements": 1,
+            "sha256": "e7f9a38c236124022b526b28301dfbe12303e05469a0d93af4d71d0c29fa99ff",
+            "size": 1048595
+          },
+          "client": 0,
+          "start_ns": 401628649891500,
+          "end_ns": 401628678401800
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\edit-disjoint-8.txt",
+            "replacements": 1,
+            "sha256": "4350a4bc1f287c22cbd79ecff4abcc865999c68584a40576068e3cb7c4962f75",
+            "size": 1048595
+          },
+          "client": 1,
+          "start_ns": 401628649823200,
+          "end_ns": 401628698702900
+        }
+      ]
+    },
+    {
+      "case": "same-edits-8",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": false,
+          "body": {
+            "code": "edit_mismatch",
+            "message": "old_text occurs 0 times in D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\edit-same-8.txt, not 1; nothing was changed. Include more surrounding text to make it unique, or set expected_replacements."
+          },
+          "client": 0,
+          "start_ns": 401628702044100,
+          "end_ns": 401628737103900
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\edit-same-8.txt",
+            "replacements": 1,
+            "sha256": "8a1b1aee853fb3107bba2bc3e811f991c114e13c759668629c467c3159017aa8",
+            "size": 1048593
+          },
+          "client": 1,
+          "start_ns": 401628702008300,
+          "end_ns": 401628730543700
+        }
+      ]
+    },
+    {
+      "case": "mixed-write-edit-8",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\mixed-8.txt",
+            "sha256": "144a642e170a3e673570f6c2085656fe96b9990d661be39fdc15966b26bed017",
+            "size": 17
+          },
+          "client": 0,
+          "start_ns": 401628739557500,
+          "end_ns": 401628766754700
+        },
+        {
+          "ok": false,
+          "body": {
+            "code": "edit_mismatch",
+            "message": "old_text occurs 0 times in D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\mixed-8.txt, not 1; nothing was changed. Include more surrounding text to make it unique, or set expected_replacements."
+          },
+          "client": 1,
+          "start_ns": 401628739523200,
+          "end_ns": 401628767820400
+        }
+      ]
+    },
+    {
+      "case": "moves-8",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": false,
+          "body": {
+            "code": "already_exists",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\moved-8.txt exists; pass overwrite to replace it"
+          },
+          "client": 0,
+          "start_ns": 401628768705900,
+          "end_ns": 401628794462100
+        },
+        {
+          "ok": true,
+          "body": {
+            "created_ms": 1795022964127,
+            "kind": "file",
+            "lines": 3,
+            "modified_ms": 1795022964127,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\moved-8.txt",
+            "readonly": false,
+            "replaced": false,
+            "size": 1048595
+          },
+          "client": 1,
+          "start_ns": 401628768665900,
+          "end_ns": 401628794193200
+        }
+      ]
+    },
+    {
+      "case": "mkdir-8",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created_ms": 1795022964158,
+            "kind": "dir",
+            "made": true,
+            "modified_ms": 1795022964158,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\directories-8\\nested",
+            "readonly": false,
+            "size": 0
+          },
+          "client": 0,
+          "start_ns": 401628795995300,
+          "end_ns": 401628798708300
+        },
+        {
+          "ok": true,
+          "body": {
+            "created_ms": 1795022964158,
+            "kind": "dir",
+            "made": false,
+            "modified_ms": 1795022964158,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\directories-8\\nested",
+            "readonly": false,
+            "size": 0
+          },
+          "client": 1,
+          "start_ns": 401628795953300,
+          "end_ns": 401628830128700
+        }
+      ]
+    },
+    {
+      "case": "appends-8",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\directories-8\\nested\\append.txt",
+            "sha256": "967d485fec640662d0517bcbc7ccb4897cd2c6f0e6a39915182d163c8e537481",
+            "size": 18
+          },
+          "client": 0,
+          "start_ns": 401628830411600,
+          "end_ns": 401628863221100
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": true,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\directories-8\\nested\\append.txt",
+            "sha256": "0529a9efa8084199b3a4aa8348f7acf06f97ee23f714015c02c823b51766285d",
+            "size": 9
+          },
+          "client": 1,
+          "start_ns": 401628830373100,
+          "end_ns": 401628834012900
+        }
+      ]
+    },
+    {
+      "case": "guarded-overwrite-absent-False-9",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": false,
+          "body": {
+            "code": "changed_since_read",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\overwrite-False-9.txt changed since that SHA-256 was taken; read it again before writing"
+          },
+          "client": 0,
+          "start_ns": 401628868752800,
+          "end_ns": 401628966618400
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\overwrite-False-9.txt",
+            "sha256": "3d68308fb55043844430df1380b95e98c4b322cb9026fdcec8c7fd9753fa0b1d",
+            "size": 17
+          },
+          "client": 1,
+          "start_ns": 401628868714300,
+          "end_ns": 401628966394600
+        }
+      ]
+    },
+    {
+      "case": "guarded-append-absent-False-9",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": false,
+          "body": {
+            "code": "changed_since_read",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\append-False-9.txt changed since that SHA-256 was taken; read it again before writing"
+          },
+          "client": 0,
+          "start_ns": 401628972318400,
+          "end_ns": 401629189739900
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\append-False-9.txt",
+            "sha256": "8dee06dd79db6414c830233318cd41300311cf10403b8258e74f4264288b21d7",
+            "size": 4194331
+          },
+          "client": 1,
+          "start_ns": 401628972263200,
+          "end_ns": 401629121477600
+        }
+      ]
+    },
+    {
+      "case": "guarded-overwrite-absent-True-9",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created": true,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\overwrite-True-9.txt",
+            "sha256": "c59b742c5800595287846e8e3732827655660b004aa964ccfbee4f26c8ddae5e",
+            "size": 17
+          },
+          "client": 0,
+          "start_ns": 401629197370500,
+          "end_ns": 401629206629400
+        },
+        {
+          "ok": false,
+          "body": {
+            "code": "changed_since_read",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\overwrite-True-9.txt changed since that SHA-256 was taken; read it again before writing"
+          },
+          "client": 1,
+          "start_ns": 401629197323000,
+          "end_ns": 401629232298000
+        }
+      ]
+    },
+    {
+      "case": "create-9",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created": true,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\create-9.txt",
+            "sha256": "7f1ef63ee3971e05a2400458b54f02753df9f248861db7f865d78c1a494716bf",
+            "size": 8
+          },
+          "client": 0,
+          "start_ns": 401629232846700,
+          "end_ns": 401629236894900
+        },
+        {
+          "ok": false,
+          "body": {
+            "code": "already_exists",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\create-9.txt exists; use mode overwrite to replace it"
+          },
+          "client": 1,
+          "start_ns": 401629232811200,
+          "end_ns": 401629263116400
+        }
+      ]
+    },
+    {
+      "case": "disjoint-edits-9",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\edit-disjoint-9.txt",
+            "replacements": 1,
+            "sha256": "4350a4bc1f287c22cbd79ecff4abcc865999c68584a40576068e3cb7c4962f75",
+            "size": 1048595
+          },
+          "client": 0,
+          "start_ns": 401629264606900,
+          "end_ns": 401629313796600
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\edit-disjoint-9.txt",
+            "replacements": 1,
+            "sha256": "2c666d8e5ad744c1b93d6223deab51f8329f1eb45a36f120911386280c7fcf4b",
+            "size": 1048595
+          },
+          "client": 1,
+          "start_ns": 401629264507400,
+          "end_ns": 401629291747300
+        }
+      ]
+    },
+    {
+      "case": "same-edits-9",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": false,
+          "body": {
+            "code": "edit_mismatch",
+            "message": "old_text occurs 0 times in D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\edit-same-9.txt, not 1; nothing was changed. Include more surrounding text to make it unique, or set expected_replacements."
+          },
+          "client": 0,
+          "start_ns": 401629316958700,
+          "end_ns": 401629346029600
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\edit-same-9.txt",
+            "replacements": 1,
+            "sha256": "8a1b1aee853fb3107bba2bc3e811f991c114e13c759668629c467c3159017aa8",
+            "size": 1048593
+          },
+          "client": 1,
+          "start_ns": 401629316916400,
+          "end_ns": 401629344373000
+        }
+      ]
+    },
+    {
+      "case": "mixed-write-edit-9",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": false,
+          "body": {
+            "code": "changed_since_read",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\mixed-9.txt changed since that SHA-256 was taken; read it again before writing"
+          },
+          "client": 0,
+          "start_ns": 401629348502600,
+          "end_ns": 401629394926700
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\mixed-9.txt",
+            "replacements": 1,
+            "sha256": "e7f9a38c236124022b526b28301dfbe12303e05469a0d93af4d71d0c29fa99ff",
+            "size": 1048595
+          },
+          "client": 1,
+          "start_ns": 401629348466800,
+          "end_ns": 401629376940000
+        }
+      ]
+    },
+    {
+      "case": "moves-9",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": false,
+          "body": {
+            "code": "already_exists",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\moved-9.txt exists; pass overwrite to replace it"
+          },
+          "client": 0,
+          "start_ns": 401629396795400,
+          "end_ns": 401629435363400
+        },
+        {
+          "ok": true,
+          "body": {
+            "created_ms": 1795022964755,
+            "kind": "file",
+            "lines": 3,
+            "modified_ms": 1795022964755,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\moved-9.txt",
+            "readonly": false,
+            "replaced": false,
+            "size": 1048595
+          },
+          "client": 1,
+          "start_ns": 401629396706300,
+          "end_ns": 401629420983400
+        }
+      ]
+    },
+    {
+      "case": "mkdir-9",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created_ms": 1795022964798,
+            "kind": "dir",
+            "made": true,
+            "modified_ms": 1795022964798,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\directories-9\\nested",
+            "readonly": false,
+            "size": 0
+          },
+          "client": 0,
+          "start_ns": 401629437010200,
+          "end_ns": 401629439527300
+        },
+        {
+          "ok": true,
+          "body": {
+            "created_ms": 1795022964798,
+            "kind": "dir",
+            "made": false,
+            "modified_ms": 1795022964798,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\directories-9\\nested",
+            "readonly": false,
+            "size": 0
+          },
+          "client": 1,
+          "start_ns": 401629436977500,
+          "end_ns": 401629466108800
+        }
+      ]
+    },
+    {
+      "case": "appends-9",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created": true,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\directories-9\\nested\\append.txt",
+            "sha256": "cf8eae8c977ac361ce44ca5eec01b009878cf0df62a579e2f26e02eaed41ca62",
+            "size": 9
+          },
+          "client": 0,
+          "start_ns": 401629466395200,
+          "end_ns": 401629469641000
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\directories-9\\nested\\append.txt",
+            "sha256": "5ecc9303d4af4a415ef2fb60aa56331ae879702267faba586ef822a5b0868b73",
+            "size": 18
+          },
+          "client": 1,
+          "start_ns": 401629466357300,
+          "end_ns": 401629499546300
+        }
+      ]
+    },
+    {
+      "case": "guarded-overwrite-absent-False-10",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\overwrite-False-10.txt",
+            "sha256": "33f8d6f9df0bd66154579d8e7862a1b46b4e8d6e3c9f3c4489dc0bf928113384",
+            "size": 18
+          },
+          "client": 0,
+          "start_ns": 401629505208500,
+          "end_ns": 401629587836200
+        },
+        {
+          "ok": false,
+          "body": {
+            "code": "changed_since_read",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\overwrite-False-10.txt changed since that SHA-256 was taken; read it again before writing"
+          },
+          "client": 1,
+          "start_ns": 401629505159100,
+          "end_ns": 401629587922100
+        }
+      ]
+    },
+    {
+      "case": "guarded-append-absent-False-10",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": false,
+          "body": {
+            "code": "changed_since_read",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\append-False-10.txt changed since that SHA-256 was taken; read it again before writing"
+          },
+          "client": 0,
+          "start_ns": 401629593604300,
+          "end_ns": 401629810063700
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\append-False-10.txt",
+            "sha256": "6db4a1a7cbb3c93616531a9a4b9b18a96e2893f7e718f91549fdc872caadcc55",
+            "size": 4194332
+          },
+          "client": 1,
+          "start_ns": 401629593562700,
+          "end_ns": 401629743105900
+        }
+      ]
+    },
+    {
+      "case": "guarded-overwrite-absent-True-10",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": false,
+          "body": {
+            "code": "changed_since_read",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\overwrite-True-10.txt changed since that SHA-256 was taken; read it again before writing"
+          },
+          "client": 0,
+          "start_ns": 401629816388100,
+          "end_ns": 401629840684300
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": true,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\overwrite-True-10.txt",
+            "sha256": "140024ea55424d22e98f628787e86f0a09a96459768267f921a93b1965ddbecc",
+            "size": 18
+          },
+          "client": 1,
+          "start_ns": 401629816348800,
+          "end_ns": 401629823421100
+        }
+      ]
+    },
+    {
+      "case": "create-10",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": false,
+          "body": {
+            "code": "already_exists",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\create-10.txt exists; use mode overwrite to replace it"
+          },
+          "client": 0,
+          "start_ns": 401629841182400,
+          "end_ns": 401629871394600
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": true,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\create-10.txt",
+            "sha256": "3856b8d080d86a6de480f6a02beede99a08e54b66f9b4b4131eae8de59f85e19",
+            "size": 8
+          },
+          "client": 1,
+          "start_ns": 401629841112600,
+          "end_ns": 401629845646200
+        }
+      ]
+    },
+    {
+      "case": "disjoint-edits-10",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\edit-disjoint-10.txt",
+            "replacements": 1,
+            "sha256": "4350a4bc1f287c22cbd79ecff4abcc865999c68584a40576068e3cb7c4962f75",
+            "size": 1048595
+          },
+          "client": 0,
+          "start_ns": 401629872771500,
+          "end_ns": 401629921265500
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\edit-disjoint-10.txt",
+            "replacements": 1,
+            "sha256": "2c666d8e5ad744c1b93d6223deab51f8329f1eb45a36f120911386280c7fcf4b",
+            "size": 1048595
+          },
+          "client": 1,
+          "start_ns": 401629872721100,
+          "end_ns": 401629899191100
+        }
+      ]
+    },
+    {
+      "case": "same-edits-10",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\edit-same-10.txt",
+            "replacements": 1,
+            "sha256": "b83ca195951b77511e5ff6f386c24bf6f202d32b677deb3e0b18249299e8c450",
+            "size": 1048593
+          },
+          "client": 0,
+          "start_ns": 401629924366800,
+          "end_ns": 401629950972400
+        },
+        {
+          "ok": false,
+          "body": {
+            "code": "edit_mismatch",
+            "message": "old_text occurs 0 times in D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\edit-same-10.txt, not 1; nothing was changed. Include more surrounding text to make it unique, or set expected_replacements."
+          },
+          "client": 1,
+          "start_ns": 401629924333600,
+          "end_ns": 401629952586100
+        }
+      ]
+    },
+    {
+      "case": "mixed-write-edit-10",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\mixed-10.txt",
+            "sha256": "144a642e170a3e673570f6c2085656fe96b9990d661be39fdc15966b26bed017",
+            "size": 17
+          },
+          "client": 0,
+          "start_ns": 401629954969900,
+          "end_ns": 401629981615800
+        },
+        {
+          "ok": false,
+          "body": {
+            "code": "edit_mismatch",
+            "message": "old_text occurs 0 times in D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\mixed-10.txt, not 1; nothing was changed. Include more surrounding text to make it unique, or set expected_replacements."
+          },
+          "client": 1,
+          "start_ns": 401629954920200,
+          "end_ns": 401629981780100
+        }
+      ]
+    },
+    {
+      "case": "moves-10",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created_ms": 1795022965341,
+            "kind": "file",
+            "lines": 1,
+            "modified_ms": 1795022965342,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\moved-10.txt",
+            "readonly": false,
+            "replaced": false,
+            "size": 17
+          },
+          "client": 0,
+          "start_ns": 401629982962700,
+          "end_ns": 401629985918100
+        },
+        {
+          "ok": false,
+          "body": {
+            "code": "already_exists",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\moved-10.txt exists; pass overwrite to replace it"
+          },
+          "client": 1,
+          "start_ns": 401629982923400,
+          "end_ns": 401630012860200
+        }
+      ]
+    },
+    {
+      "case": "mkdir-10",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created_ms": 1795022965380,
+            "kind": "dir",
+            "made": true,
+            "modified_ms": 1795022965380,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\directories-10\\nested",
+            "readonly": false,
+            "size": 0
+          },
+          "client": 0,
+          "start_ns": 401630019426400,
+          "end_ns": 401630022031100
+        },
+        {
+          "ok": true,
+          "body": {
+            "created_ms": 1795022965380,
+            "kind": "dir",
+            "made": false,
+            "modified_ms": 1795022965380,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\directories-10\\nested",
+            "readonly": false,
+            "size": 0
+          },
+          "client": 1,
+          "start_ns": 401630019378600,
+          "end_ns": 401630043462600
+        }
+      ]
+    },
+    {
+      "case": "appends-10",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\directories-10\\nested\\append.txt",
+            "sha256": "967d485fec640662d0517bcbc7ccb4897cd2c6f0e6a39915182d163c8e537481",
+            "size": 18
+          },
+          "client": 0,
+          "start_ns": 401630043749800,
+          "end_ns": 401630076435700
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": true,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\directories-10\\nested\\append.txt",
+            "sha256": "0529a9efa8084199b3a4aa8348f7acf06f97ee23f714015c02c823b51766285d",
+            "size": 9
+          },
+          "client": 1,
+          "start_ns": 401630043715400,
+          "end_ns": 401630046997600
+        }
+      ]
+    },
+    {
+      "case": "guarded-overwrite-absent-False-11",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": false,
+          "body": {
+            "code": "changed_since_read",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\overwrite-False-11.txt changed since that SHA-256 was taken; read it again before writing"
+          },
+          "client": 0,
+          "start_ns": 401630082161700,
+          "end_ns": 401630162690500
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\overwrite-False-11.txt",
+            "sha256": "b7a1a52929f5f48b1eea2798e1a8af2a81cffdfe809a46e5fcc64e9747a184aa",
+            "size": 18
+          },
+          "client": 1,
+          "start_ns": 401630082110200,
+          "end_ns": 401630162547400
+        }
+      ]
+    },
+    {
+      "case": "guarded-append-absent-False-11",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": false,
+          "body": {
+            "code": "changed_since_read",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\append-False-11.txt changed since that SHA-256 was taken; read it again before writing"
+          },
+          "client": 0,
+          "start_ns": 401630168216300,
+          "end_ns": 401630384534000
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\append-False-11.txt",
+            "sha256": "4bea68b13e5b132b5ecde65db8ed57b0e6a7fd5761e6fda7f83af4d24f6f075e",
+            "size": 4194332
+          },
+          "client": 1,
+          "start_ns": 401630168157900,
+          "end_ns": 401630317474400
+        }
+      ]
+    },
+    {
+      "case": "guarded-overwrite-absent-True-11",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created": true,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\overwrite-True-11.txt",
+            "sha256": "c6512941b0d1d00ec4319a5abf424201e086a876c52ab4a06875b5931ccdaaea",
+            "size": 18
+          },
+          "client": 0,
+          "start_ns": 401630391799000,
+          "end_ns": 401630401034400
+        },
+        {
+          "ok": false,
+          "body": {
+            "code": "changed_since_read",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\overwrite-True-11.txt changed since that SHA-256 was taken; read it again before writing"
+          },
+          "client": 1,
+          "start_ns": 401630391749800,
+          "end_ns": 401630417614600
+        }
+      ]
+    },
+    {
+      "case": "create-11",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": false,
+          "body": {
+            "code": "already_exists",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\create-11.txt exists; use mode overwrite to replace it"
+          },
+          "client": 0,
+          "start_ns": 401630418038800,
+          "end_ns": 401630447887500
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": true,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\create-11.txt",
+            "sha256": "3856b8d080d86a6de480f6a02beede99a08e54b66f9b4b4131eae8de59f85e19",
+            "size": 8
+          },
+          "client": 1,
+          "start_ns": 401630418006000,
+          "end_ns": 401630421396400
+        }
+      ]
+    },
+    {
+      "case": "disjoint-edits-11",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\edit-disjoint-11.txt",
+            "replacements": 1,
+            "sha256": "e7f9a38c236124022b526b28301dfbe12303e05469a0d93af4d71d0c29fa99ff",
+            "size": 1048595
+          },
+          "client": 0,
+          "start_ns": 401630449266000,
+          "end_ns": 401630475679500
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\edit-disjoint-11.txt",
+            "replacements": 1,
+            "sha256": "4350a4bc1f287c22cbd79ecff4abcc865999c68584a40576068e3cb7c4962f75",
+            "size": 1048595
+          },
+          "client": 1,
+          "start_ns": 401630449219700,
+          "end_ns": 401630499600800
+        }
+      ]
+    },
+    {
+      "case": "same-edits-11",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": false,
+          "body": {
+            "code": "edit_mismatch",
+            "message": "old_text occurs 0 times in D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\edit-same-11.txt, not 1; nothing was changed. Include more surrounding text to make it unique, or set expected_replacements."
+          },
+          "client": 0,
+          "start_ns": 401630502953700,
+          "end_ns": 401630533597000
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\edit-same-11.txt",
+            "replacements": 1,
+            "sha256": "8a1b1aee853fb3107bba2bc3e811f991c114e13c759668629c467c3159017aa8",
+            "size": 1048593
+          },
+          "client": 1,
+          "start_ns": 401630502890000,
+          "end_ns": 401630531993500
+        }
+      ]
+    },
+    {
+      "case": "mixed-write-edit-11",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": false,
+          "body": {
+            "code": "changed_since_read",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\mixed-11.txt changed since that SHA-256 was taken; read it again before writing"
+          },
+          "client": 0,
+          "start_ns": 401630536022100,
+          "end_ns": 401630591693100
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\mixed-11.txt",
+            "replacements": 1,
+            "sha256": "e7f9a38c236124022b526b28301dfbe12303e05469a0d93af4d71d0c29fa99ff",
+            "size": 1048595
+          },
+          "client": 1,
+          "start_ns": 401630535980200,
+          "end_ns": 401630566531900
+        }
+      ]
+    },
+    {
+      "case": "moves-11",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created_ms": 1795022965952,
+            "kind": "file",
+            "lines": 1,
+            "modified_ms": 1795022965952,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\moved-11.txt",
+            "readonly": false,
+            "replaced": false,
+            "size": 17
+          },
+          "client": 0,
+          "start_ns": 401630593345000,
+          "end_ns": 401630596881300
+        },
+        {
+          "ok": false,
+          "body": {
+            "code": "already_exists",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\moved-11.txt exists; pass overwrite to replace it"
+          },
+          "client": 1,
+          "start_ns": 401630593301100,
+          "end_ns": 401630620831100
+        }
+      ]
+    },
+    {
+      "case": "mkdir-11",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created_ms": 1795022965989,
+            "kind": "dir",
+            "made": true,
+            "modified_ms": 1795022965989,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\directories-11\\nested",
+            "readonly": false,
+            "size": 0
+          },
+          "client": 0,
+          "start_ns": 401630627479600,
+          "end_ns": 401630630976100
+        },
+        {
+          "ok": true,
+          "body": {
+            "created_ms": 1795022965989,
+            "kind": "dir",
+            "made": false,
+            "modified_ms": 1795022965989,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\directories-11\\nested",
+            "readonly": false,
+            "size": 0
+          },
+          "client": 1,
+          "start_ns": 401630627441000,
+          "end_ns": 401630651704500
+        }
+      ]
+    },
+    {
+      "case": "appends-11",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created": true,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\directories-11\\nested\\append.txt",
+            "sha256": "cf8eae8c977ac361ce44ca5eec01b009878cf0df62a579e2f26e02eaed41ca62",
+            "size": 9
+          },
+          "client": 0,
+          "start_ns": 401630652028300,
+          "end_ns": 401630655914800
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\directories-11\\nested\\append.txt",
+            "sha256": "5ecc9303d4af4a415ef2fb60aa56331ae879702267faba586ef822a5b0868b73",
+            "size": 18
+          },
+          "client": 1,
+          "start_ns": 401630651977300,
+          "end_ns": 401630684423300
+        }
+      ]
+    },
+    {
+      "case": "guarded-overwrite-absent-False-12",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\overwrite-False-12.txt",
+            "sha256": "f50f0eb3ddf123ea9e5c92bb09edf1f740d948ebb2f8f74ae92504803418cb19",
+            "size": 18
+          },
+          "client": 0,
+          "start_ns": 401630689845200,
+          "end_ns": 401630775446300
+        },
+        {
+          "ok": false,
+          "body": {
+            "code": "changed_since_read",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\overwrite-False-12.txt changed since that SHA-256 was taken; read it again before writing"
+          },
+          "client": 1,
+          "start_ns": 401630689798000,
+          "end_ns": 401630775534200
+        }
+      ]
+    },
+    {
+      "case": "guarded-append-absent-False-12",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": false,
+          "body": {
+            "code": "changed_since_read",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\append-False-12.txt changed since that SHA-256 was taken; read it again before writing"
+          },
+          "client": 0,
+          "start_ns": 401630781260600,
+          "end_ns": 401630998255000
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\append-False-12.txt",
+            "sha256": "0087473786175001b2682fdc7cd612315590194340392c8bb3b66007e0f9e2c5",
+            "size": 4194332
+          },
+          "client": 1,
+          "start_ns": 401630781211000,
+          "end_ns": 401630931421800
+        }
+      ]
+    },
+    {
+      "case": "guarded-overwrite-absent-True-12",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": false,
+          "body": {
+            "code": "changed_since_read",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\overwrite-True-12.txt changed since that SHA-256 was taken; read it again before writing"
+          },
+          "client": 0,
+          "start_ns": 401631004602800,
+          "end_ns": 401631036239600
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": true,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\overwrite-True-12.txt",
+            "sha256": "6c34ded93fb5eeb7e9ce07aabe9c702111ecfc5fbb48b376dde9a1ee593b1e26",
+            "size": 18
+          },
+          "client": 1,
+          "start_ns": 401631004555600,
+          "end_ns": 401631014276800
+        }
+      ]
+    },
+    {
+      "case": "create-12",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created": true,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\create-12.txt",
+            "sha256": "7f1ef63ee3971e05a2400458b54f02753df9f248861db7f865d78c1a494716bf",
+            "size": 8
+          },
+          "client": 0,
+          "start_ns": 401631036694200,
+          "end_ns": 401631039923700
+        },
+        {
+          "ok": false,
+          "body": {
+            "code": "already_exists",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\create-12.txt exists; use mode overwrite to replace it"
+          },
+          "client": 1,
+          "start_ns": 401631036645500,
+          "end_ns": 401631068094500
+        }
+      ]
+    },
+    {
+      "case": "disjoint-edits-12",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\edit-disjoint-12.txt",
+            "replacements": 1,
+            "sha256": "4350a4bc1f287c22cbd79ecff4abcc865999c68584a40576068e3cb7c4962f75",
+            "size": 1048595
+          },
+          "client": 0,
+          "start_ns": 401631069348200,
+          "end_ns": 401631117287300
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\edit-disjoint-12.txt",
+            "replacements": 1,
+            "sha256": "2c666d8e5ad744c1b93d6223deab51f8329f1eb45a36f120911386280c7fcf4b",
+            "size": 1048595
+          },
+          "client": 1,
+          "start_ns": 401631069305000,
+          "end_ns": 401631094869100
+        }
+      ]
+    },
+    {
+      "case": "same-edits-12",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": false,
+          "body": {
+            "code": "edit_mismatch",
+            "message": "old_text occurs 0 times in D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\edit-same-12.txt, not 1; nothing was changed. Include more surrounding text to make it unique, or set expected_replacements."
+          },
+          "client": 0,
+          "start_ns": 401631120199000,
+          "end_ns": 401631148546000
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\edit-same-12.txt",
+            "replacements": 1,
+            "sha256": "8a1b1aee853fb3107bba2bc3e811f991c114e13c759668629c467c3159017aa8",
+            "size": 1048593
+          },
+          "client": 1,
+          "start_ns": 401631120161400,
+          "end_ns": 401631147077400
+        }
+      ]
+    },
+    {
+      "case": "mixed-write-edit-12",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\mixed-12.txt",
+            "sha256": "144a642e170a3e673570f6c2085656fe96b9990d661be39fdc15966b26bed017",
+            "size": 17
+          },
+          "client": 0,
+          "start_ns": 401631150769200,
+          "end_ns": 401631175137500
+        },
+        {
+          "ok": false,
+          "body": {
+            "code": "edit_mismatch",
+            "message": "old_text occurs 0 times in D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\mixed-12.txt, not 1; nothing was changed. Include more surrounding text to make it unique, or set expected_replacements."
+          },
+          "client": 1,
+          "start_ns": 401631150741300,
+          "end_ns": 401631176437000
+        }
+      ]
+    },
+    {
+      "case": "moves-12",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created_ms": 1795022966536,
+            "kind": "file",
+            "lines": 1,
+            "modified_ms": 1795022966536,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\moved-12.txt",
+            "readonly": false,
+            "replaced": false,
+            "size": 17
+          },
+          "client": 0,
+          "start_ns": 401631177437700,
+          "end_ns": 401631180105800
+        },
+        {
+          "ok": false,
+          "body": {
+            "code": "already_exists",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\moved-12.txt exists; pass overwrite to replace it"
+          },
+          "client": 1,
+          "start_ns": 401631177402500,
+          "end_ns": 401631180298600
+        }
+      ]
+    },
+    {
+      "case": "mkdir-12",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created_ms": 1795022966546,
+            "kind": "dir",
+            "made": false,
+            "modified_ms": 1795022966546,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\directories-12\\nested",
+            "readonly": false,
+            "size": 0
+          },
+          "client": 0,
+          "start_ns": 401631185931300,
+          "end_ns": 401631223970100
+        },
+        {
+          "ok": true,
+          "body": {
+            "created_ms": 1795022966546,
+            "kind": "dir",
+            "made": true,
+            "modified_ms": 1795022966546,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\directories-12\\nested",
+            "readonly": false,
+            "size": 0
+          },
+          "client": 1,
+          "start_ns": 401631185894600,
+          "end_ns": 401631188042500
+        }
+      ]
+    },
+    {
+      "case": "appends-12",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created": true,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\directories-12\\nested\\append.txt",
+            "sha256": "cf8eae8c977ac361ce44ca5eec01b009878cf0df62a579e2f26e02eaed41ca62",
+            "size": 9
+          },
+          "client": 0,
+          "start_ns": 401631224270800,
+          "end_ns": 401631228082800
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\directories-12\\nested\\append.txt",
+            "sha256": "5ecc9303d4af4a415ef2fb60aa56331ae879702267faba586ef822a5b0868b73",
+            "size": 18
+          },
+          "client": 1,
+          "start_ns": 401631224233100,
+          "end_ns": 401631229254200
+        }
+      ]
+    },
+    {
+      "case": "guarded-overwrite-absent-False-13",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": false,
+          "body": {
+            "code": "changed_since_read",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\overwrite-False-13.txt changed since that SHA-256 was taken; read it again before writing"
+          },
+          "client": 0,
+          "start_ns": 401631234712600,
+          "end_ns": 401631316020200
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\overwrite-False-13.txt",
+            "sha256": "616ed6af1df484f6cf9246b61b2b6e40e6a7ffe344ff5d1991335f9318deb06d",
+            "size": 18
+          },
+          "client": 1,
+          "start_ns": 401631234658200,
+          "end_ns": 401631315918700
+        }
+      ]
+    },
+    {
+      "case": "guarded-append-absent-False-13",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": false,
+          "body": {
+            "code": "changed_since_read",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\append-False-13.txt changed since that SHA-256 was taken; read it again before writing"
+          },
+          "client": 0,
+          "start_ns": 401631321587400,
+          "end_ns": 401631543269600
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\append-False-13.txt",
+            "sha256": "3efcc5113015389620ee38db8a49ea7db43ebc457f8688bb2cd3f8464b816cb0",
+            "size": 4194332
+          },
+          "client": 1,
+          "start_ns": 401631321549200,
+          "end_ns": 401631473223400
+        }
+      ]
+    },
+    {
+      "case": "guarded-overwrite-absent-True-13",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": false,
+          "body": {
+            "code": "changed_since_read",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\overwrite-True-13.txt changed since that SHA-256 was taken; read it again before writing"
+          },
+          "client": 0,
+          "start_ns": 401631550346500,
+          "end_ns": 401631585101600
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": true,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\overwrite-True-13.txt",
+            "sha256": "616ed6af1df484f6cf9246b61b2b6e40e6a7ffe344ff5d1991335f9318deb06d",
+            "size": 18
+          },
+          "client": 1,
+          "start_ns": 401631550304800,
+          "end_ns": 401631554651300
+        }
+      ]
+    },
+    {
+      "case": "create-13",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created": true,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\create-13.txt",
+            "sha256": "7f1ef63ee3971e05a2400458b54f02753df9f248861db7f865d78c1a494716bf",
+            "size": 8
+          },
+          "client": 0,
+          "start_ns": 401631585547600,
+          "end_ns": 401631588729900
+        },
+        {
+          "ok": false,
+          "body": {
+            "code": "already_exists",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\create-13.txt exists; use mode overwrite to replace it"
+          },
+          "client": 1,
+          "start_ns": 401631585508100,
+          "end_ns": 401631615262900
+        }
+      ]
+    },
+    {
+      "case": "disjoint-edits-13",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\edit-disjoint-13.txt",
+            "replacements": 1,
+            "sha256": "e7f9a38c236124022b526b28301dfbe12303e05469a0d93af4d71d0c29fa99ff",
+            "size": 1048595
+          },
+          "client": 0,
+          "start_ns": 401631616526500,
+          "end_ns": 401631641186500
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\edit-disjoint-13.txt",
+            "replacements": 1,
+            "sha256": "4350a4bc1f287c22cbd79ecff4abcc865999c68584a40576068e3cb7c4962f75",
+            "size": 1048595
+          },
+          "client": 1,
+          "start_ns": 401631616488200,
+          "end_ns": 401631664256400
+        }
+      ]
+    },
+    {
+      "case": "same-edits-13",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": false,
+          "body": {
+            "code": "edit_mismatch",
+            "message": "old_text occurs 0 times in D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\edit-same-13.txt, not 1; nothing was changed. Include more surrounding text to make it unique, or set expected_replacements."
+          },
+          "client": 0,
+          "start_ns": 401631667638900,
+          "end_ns": 401631695642600
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\edit-same-13.txt",
+            "replacements": 1,
+            "sha256": "8a1b1aee853fb3107bba2bc3e811f991c114e13c759668629c467c3159017aa8",
+            "size": 1048593
+          },
+          "client": 1,
+          "start_ns": 401631667607000,
+          "end_ns": 401631693807300
+        }
+      ]
+    },
+    {
+      "case": "mixed-write-edit-13",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": false,
+          "body": {
+            "code": "changed_since_read",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\mixed-13.txt changed since that SHA-256 was taken; read it again before writing"
+          },
+          "client": 0,
+          "start_ns": 401631697881300,
+          "end_ns": 401631741202000
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\mixed-13.txt",
+            "replacements": 1,
+            "sha256": "e7f9a38c236124022b526b28301dfbe12303e05469a0d93af4d71d0c29fa99ff",
+            "size": 1048595
+          },
+          "client": 1,
+          "start_ns": 401631697844600,
+          "end_ns": 401631723383500
+        }
+      ]
+    },
+    {
+      "case": "moves-13",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": false,
+          "body": {
+            "code": "already_exists",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\moved-13.txt exists; pass overwrite to replace it"
+          },
+          "client": 0,
+          "start_ns": 401631742685900,
+          "end_ns": 401631771015300
+        },
+        {
+          "ok": true,
+          "body": {
+            "created_ms": 1795022967101,
+            "kind": "file",
+            "lines": 3,
+            "modified_ms": 1795022967101,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\moved-13.txt",
+            "readonly": false,
+            "replaced": false,
+            "size": 1048595
+          },
+          "client": 1,
+          "start_ns": 401631742644500,
+          "end_ns": 401631768281600
+        }
+      ]
+    },
+    {
+      "case": "mkdir-13",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created_ms": 1795022967132,
+            "kind": "dir",
+            "made": true,
+            "modified_ms": 1795022967132,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\directories-13\\nested",
+            "readonly": false,
+            "size": 0
+          },
+          "client": 0,
+          "start_ns": 401631772366500,
+          "end_ns": 401631774429500
+        },
+        {
+          "ok": true,
+          "body": {
+            "created_ms": 1795022967132,
+            "kind": "dir",
+            "made": false,
+            "modified_ms": 1795022967132,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\directories-13\\nested",
+            "readonly": false,
+            "size": 0
+          },
+          "client": 1,
+          "start_ns": 401631772336900,
+          "end_ns": 401631802509100
+        }
+      ]
+    },
+    {
+      "case": "appends-13",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\directories-13\\nested\\append.txt",
+            "sha256": "967d485fec640662d0517bcbc7ccb4897cd2c6f0e6a39915182d163c8e537481",
+            "size": 18
+          },
+          "client": 0,
+          "start_ns": 401631802773500,
+          "end_ns": 401631834421300
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": true,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\directories-13\\nested\\append.txt",
+            "sha256": "0529a9efa8084199b3a4aa8348f7acf06f97ee23f714015c02c823b51766285d",
+            "size": 9
+          },
+          "client": 1,
+          "start_ns": 401631802739600,
+          "end_ns": 401631806319800
+        }
+      ]
+    },
+    {
+      "case": "guarded-overwrite-absent-False-14",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": false,
+          "body": {
+            "code": "changed_since_read",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\overwrite-False-14.txt changed since that SHA-256 was taken; read it again before writing"
+          },
+          "client": 0,
+          "start_ns": 401631840259500,
+          "end_ns": 401631920872500
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\overwrite-False-14.txt",
+            "sha256": "5f0e1e84ef2b5b08d99f3a237a299201a3c12be76fec40b35e90d4e2cd86b565",
+            "size": 18
+          },
+          "client": 1,
+          "start_ns": 401631840220900,
+          "end_ns": 401631920654900
+        }
+      ]
+    },
+    {
+      "case": "guarded-append-absent-False-14",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\append-False-14.txt",
+            "sha256": "e16d533421661ae2403ba244a9b2781b63d94276c2eb0314b05bd150eec123d0",
+            "size": 4194332
+          },
+          "client": 0,
+          "start_ns": 401631926621000,
+          "end_ns": 401632073487000
+        },
+        {
+          "ok": false,
+          "body": {
+            "code": "changed_since_read",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\append-False-14.txt changed since that SHA-256 was taken; read it again before writing"
+          },
+          "client": 1,
+          "start_ns": 401631926577800,
+          "end_ns": 401632142219200
+        }
+      ]
+    },
+    {
+      "case": "guarded-overwrite-absent-True-14",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": false,
+          "body": {
+            "code": "changed_since_read",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\overwrite-True-14.txt changed since that SHA-256 was taken; read it again before writing"
+          },
+          "client": 0,
+          "start_ns": 401632148734900,
+          "end_ns": 401632173788700
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": true,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\overwrite-True-14.txt",
+            "sha256": "5f0e1e84ef2b5b08d99f3a237a299201a3c12be76fec40b35e90d4e2cd86b565",
+            "size": 18
+          },
+          "client": 1,
+          "start_ns": 401632148699700,
+          "end_ns": 401632153357700
+        }
+      ]
+    },
+    {
+      "case": "create-14",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created": true,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\create-14.txt",
+            "sha256": "7f1ef63ee3971e05a2400458b54f02753df9f248861db7f865d78c1a494716bf",
+            "size": 8
+          },
+          "client": 0,
+          "start_ns": 401632174198400,
+          "end_ns": 401632178217300
+        },
+        {
+          "ok": false,
+          "body": {
+            "code": "already_exists",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\create-14.txt exists; use mode overwrite to replace it"
+          },
+          "client": 1,
+          "start_ns": 401632174164100,
+          "end_ns": 401632204420900
+        }
+      ]
+    },
+    {
+      "case": "disjoint-edits-14",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\edit-disjoint-14.txt",
+            "replacements": 1,
+            "sha256": "4350a4bc1f287c22cbd79ecff4abcc865999c68584a40576068e3cb7c4962f75",
+            "size": 1048595
+          },
+          "client": 0,
+          "start_ns": 401632205862300,
+          "end_ns": 401632255148900
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\edit-disjoint-14.txt",
+            "replacements": 1,
+            "sha256": "2c666d8e5ad744c1b93d6223deab51f8329f1eb45a36f120911386280c7fcf4b",
+            "size": 1048595
+          },
+          "client": 1,
+          "start_ns": 401632205832700,
+          "end_ns": 401632231825100
+        }
+      ]
+    },
+    {
+      "case": "same-edits-14",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": false,
+          "body": {
+            "code": "edit_mismatch",
+            "message": "old_text occurs 0 times in D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\edit-same-14.txt, not 1; nothing was changed. Include more surrounding text to make it unique, or set expected_replacements."
+          },
+          "client": 0,
+          "start_ns": 401632257966500,
+          "end_ns": 401632285796600
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\edit-same-14.txt",
+            "replacements": 1,
+            "sha256": "8a1b1aee853fb3107bba2bc3e811f991c114e13c759668629c467c3159017aa8",
+            "size": 1048593
+          },
+          "client": 1,
+          "start_ns": 401632257926300,
+          "end_ns": 401632284294500
+        }
+      ]
+    },
+    {
+      "case": "mixed-write-edit-14",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": false,
+          "body": {
+            "code": "changed_since_read",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\mixed-14.txt changed since that SHA-256 was taken; read it again before writing"
+          },
+          "client": 0,
+          "start_ns": 401632287980800,
+          "end_ns": 401632331032800
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\mixed-14.txt",
+            "replacements": 1,
+            "sha256": "e7f9a38c236124022b526b28301dfbe12303e05469a0d93af4d71d0c29fa99ff",
+            "size": 1048595
+          },
+          "client": 1,
+          "start_ns": 401632287950800,
+          "end_ns": 401632314439400
+        }
+      ]
+    },
+    {
+      "case": "moves-14",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created_ms": 1795022967690,
+            "kind": "file",
+            "lines": 1,
+            "modified_ms": 1795022967690,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\moved-14.txt",
+            "readonly": false,
+            "replaced": false,
+            "size": 17
+          },
+          "client": 0,
+          "start_ns": 401632332781800,
+          "end_ns": 401632335647100
+        },
+        {
+          "ok": false,
+          "body": {
+            "code": "already_exists",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\moved-14.txt exists; pass overwrite to replace it"
+          },
+          "client": 1,
+          "start_ns": 401632332750300,
+          "end_ns": 401632335855500
+        }
+      ]
+    },
+    {
+      "case": "mkdir-14",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created_ms": 1795022967702,
+            "kind": "dir",
+            "made": true,
+            "modified_ms": 1795022967702,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\directories-14\\nested",
+            "readonly": false,
+            "size": 0
+          },
+          "client": 0,
+          "start_ns": 401632341432600,
+          "end_ns": 401632344025200
+        },
+        {
+          "ok": true,
+          "body": {
+            "created_ms": 1795022967702,
+            "kind": "dir",
+            "made": false,
+            "modified_ms": 1795022967702,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\directories-14\\nested",
+            "readonly": false,
+            "size": 0
+          },
+          "client": 1,
+          "start_ns": 401632341389600,
+          "end_ns": 401632376038800
+        }
+      ]
+    },
+    {
+      "case": "appends-14",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\directories-14\\nested\\append.txt",
+            "sha256": "967d485fec640662d0517bcbc7ccb4897cd2c6f0e6a39915182d163c8e537481",
+            "size": 18
+          },
+          "client": 0,
+          "start_ns": 401632376301900,
+          "end_ns": 401632381180200
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": true,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\directories-14\\nested\\append.txt",
+            "sha256": "0529a9efa8084199b3a4aa8348f7acf06f97ee23f714015c02c823b51766285d",
+            "size": 9
+          },
+          "client": 1,
+          "start_ns": 401632376267200,
+          "end_ns": 401632379914900
+        }
+      ]
+    },
+    {
+      "case": "guarded-overwrite-absent-False-15",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\overwrite-False-15.txt",
+            "sha256": "598989de8137fa3914a0968b3d6f0f9b7e4693cc045c29611a659fb37ca85747",
+            "size": 18
+          },
+          "client": 0,
+          "start_ns": 401632386686600,
+          "end_ns": 401632469740600
+        },
+        {
+          "ok": false,
+          "body": {
+            "code": "changed_since_read",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\overwrite-False-15.txt changed since that SHA-256 was taken; read it again before writing"
+          },
+          "client": 1,
+          "start_ns": 401632386649200,
+          "end_ns": 401632469817100
+        }
+      ]
+    },
+    {
+      "case": "guarded-append-absent-False-15",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": false,
+          "body": {
+            "code": "changed_since_read",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\append-False-15.txt changed since that SHA-256 was taken; read it again before writing"
+          },
+          "client": 0,
+          "start_ns": 401632475435300,
+          "end_ns": 401632693368900
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\append-False-15.txt",
+            "sha256": "8bc54a7f7425e802869a365be06857af848d411e32c2762d350b07b8e1d03ccd",
+            "size": 4194332
+          },
+          "client": 1,
+          "start_ns": 401632475401300,
+          "end_ns": 401632623533300
+        }
+      ]
+    },
+    {
+      "case": "guarded-overwrite-absent-True-15",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": false,
+          "body": {
+            "code": "changed_since_read",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\overwrite-True-15.txt changed since that SHA-256 was taken; read it again before writing"
+          },
+          "client": 0,
+          "start_ns": 401632700247400,
+          "end_ns": 401632736308500
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": true,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\overwrite-True-15.txt",
+            "sha256": "a9da7ec53ae15bd66779de2256b92c1fd39a260ec00666b6a8acfb289ef52b4a",
+            "size": 18
+          },
+          "client": 1,
+          "start_ns": 401632700176800,
+          "end_ns": 401632709881500
+        }
+      ]
+    },
+    {
+      "case": "create-15",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created": true,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\create-15.txt",
+            "sha256": "7f1ef63ee3971e05a2400458b54f02753df9f248861db7f865d78c1a494716bf",
+            "size": 8
+          },
+          "client": 0,
+          "start_ns": 401632736865200,
+          "end_ns": 401632740582100
+        },
+        {
+          "ok": false,
+          "body": {
+            "code": "already_exists",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\create-15.txt exists; use mode overwrite to replace it"
+          },
+          "client": 1,
+          "start_ns": 401632736794200,
+          "end_ns": 401632768027800
+        }
+      ]
+    },
+    {
+      "case": "disjoint-edits-15",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\edit-disjoint-15.txt",
+            "replacements": 1,
+            "sha256": "4350a4bc1f287c22cbd79ecff4abcc865999c68584a40576068e3cb7c4962f75",
+            "size": 1048595
+          },
+          "client": 0,
+          "start_ns": 401632769286700,
+          "end_ns": 401632817147100
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\edit-disjoint-15.txt",
+            "replacements": 1,
+            "sha256": "2c666d8e5ad744c1b93d6223deab51f8329f1eb45a36f120911386280c7fcf4b",
+            "size": 1048595
+          },
+          "client": 1,
+          "start_ns": 401632769248700,
+          "end_ns": 401632796262300
+        }
+      ]
+    },
+    {
+      "case": "same-edits-15",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\edit-same-15.txt",
+            "replacements": 1,
+            "sha256": "b83ca195951b77511e5ff6f386c24bf6f202d32b677deb3e0b18249299e8c450",
+            "size": 1048593
+          },
+          "client": 0,
+          "start_ns": 401632820020700,
+          "end_ns": 401632846203700
+        },
+        {
+          "ok": false,
+          "body": {
+            "code": "edit_mismatch",
+            "message": "old_text occurs 0 times in D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\edit-same-15.txt, not 1; nothing was changed. Include more surrounding text to make it unique, or set expected_replacements."
+          },
+          "client": 1,
+          "start_ns": 401632819975400,
+          "end_ns": 401632847753600
+        }
+      ]
+    },
+    {
+      "case": "mixed-write-edit-15",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": false,
+          "body": {
+            "code": "changed_since_read",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\mixed-15.txt changed since that SHA-256 was taken; read it again before writing"
+          },
+          "client": 0,
+          "start_ns": 401632850334600,
+          "end_ns": 401632893208500
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\mixed-15.txt",
+            "replacements": 1,
+            "sha256": "e7f9a38c236124022b526b28301dfbe12303e05469a0d93af4d71d0c29fa99ff",
+            "size": 1048595
+          },
+          "client": 1,
+          "start_ns": 401632850290300,
+          "end_ns": 401632876153500
+        }
+      ]
+    },
+    {
+      "case": "moves-15",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created_ms": 1795022968253,
+            "kind": "file",
+            "lines": 1,
+            "modified_ms": 1795022968253,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\moved-15.txt",
+            "readonly": false,
+            "replaced": false,
+            "size": 17
+          },
+          "client": 0,
+          "start_ns": 401632895076800,
+          "end_ns": 401632898236900
+        },
+        {
+          "ok": false,
+          "body": {
+            "code": "already_exists",
+            "message": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\moved-15.txt exists; pass overwrite to replace it"
+          },
+          "client": 1,
+          "start_ns": 401632895023000,
+          "end_ns": 401632898360200
+        }
+      ]
+    },
+    {
+      "case": "mkdir-15",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created_ms": 1795022968265,
+            "kind": "dir",
+            "made": false,
+            "modified_ms": 1795022968265,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\directories-15\\nested",
+            "readonly": false,
+            "size": 0
+          },
+          "client": 0,
+          "start_ns": 401632904329400,
+          "end_ns": 401632938062200
+        },
+        {
+          "ok": true,
+          "body": {
+            "created_ms": 1795022968265,
+            "kind": "dir",
+            "made": true,
+            "modified_ms": 1795022968265,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\directories-15\\nested",
+            "readonly": false,
+            "size": 0
+          },
+          "client": 1,
+          "start_ns": 401632904281800,
+          "end_ns": 401632906905100
+        }
+      ]
+    },
+    {
+      "case": "appends-15",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\directories-15\\nested\\append.txt",
+            "sha256": "967d485fec640662d0517bcbc7ccb4897cd2c6f0e6a39915182d163c8e537481",
+            "size": 18
+          },
+          "client": 0,
+          "start_ns": 401632938358400,
+          "end_ns": 401632970208400
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": true,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-1bou3x53\\workspace\\directories-15\\nested\\append.txt",
+            "sha256": "0529a9efa8084199b3a4aa8348f7acf06f97ee23f714015c02c823b51766285d",
+            "size": 9
+          },
+          "client": 1,
+          "start_ns": 401632938321000,
+          "end_ns": 401632941517800
+        }
+      ]
+    }
+  ],
+  "overlap_by_scenario": {
+    "guarded-overwrite-absent-False": 16,
+    "guarded-append-absent-False": 16,
+    "guarded-overwrite-absent-True": 16,
+    "create": 16,
+    "disjoint-edits": 16,
+    "same-edits": 16,
+    "mixed-write-edit": 16,
+    "moves": 16,
+    "mkdir": 16,
+    "appends": 16
+  },
+  "status": "passed",
+  "finished_at_utc": "2026-11-18T17:29:28.399015+00:00",
+  "binary_sha256_end": "f4e9cf08fdf87d0eb94d4b08b7eb9171cfe12784dcddddd7109a338a02749b4a",
+  "binary_changed": false
+}

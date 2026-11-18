@@ -29,6 +29,10 @@ impl Broker {
                 "get_config",
                 self.config_view(None).map(ResponseBody::Config),
             ),
+            RequestBody::BrokerCapabilities(_) => (
+                "broker_capabilities",
+                self.capabilities().map(ResponseBody::Capabilities),
+            ),
             RequestBody::ConfigSet(input) => (
                 "set_config_value",
                 self.set_config(input).map(ResponseBody::Config),

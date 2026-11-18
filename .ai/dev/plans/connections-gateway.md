@@ -56,7 +56,8 @@
 | X6 | Nomen: the hub as a Nomen client (`client_credentials`) for services that accept Nomen tokens, and token exchange so a call can carry the person's delegated identity (`act`) | X2 | stand-in token endpoint test | not started |
 | X7 | The big ones: Stripe, GitHub, Slack, Vercel, Supabase, Linear, OpenAI, Anthropic, Postmark, Notion as templates (the same 36 Vaultix ships, where they apply); OAuth connections for those that need a person's account (GitHub, Slack, Linear) | X2 | template tests | not started |
 | X8 | **Lovable, both ways**: (a) the hub as a custom MCP server in Lovable's chat, so a person's Lovable builder reaches their boards, machines and connections; (b) a Lovable app calls through the hub with its own limited key (X3), from a server function or an Edge Function, with the snippet for each; (c) **import from Lovable**: a project's GitHub repo cloned onto the person's machine or devspace, a board started from its README and TODOs (factory F5), and its secrets' *names* listed for the person to fill into Vaultix or the hub, never their values | X3, X5, factory F5 | a real Lovable project on the operator's account: chat reaches the hub, the app sends through Resend via the hub, the import makes the board and the secret list | not started |
-| X9 | **Shippin.ai**: Sign in with Shippin (free-edition S0, D1) and a person's Shippin devspace as one of their machines, joined without a line (the devspace is provisioned already) | free-edition S0, D2; cloud C10 | a devspace appears in `machines` after sign-in and runs `echo ok` | not started |
+| X9 | **Shippin.ai**: Sign in with Shippin (free-edition S0, D1) and a person's Shippin devspace as one of their machines, joined without a line (the devspace is provisioned already). The devspace is a client of the person's hub, never a hub of its own; Shippin's access to the devspace and the hub's machine grant are separate (agent-hub `34b15b9`, absorbed 2026-11-18) | free-edition S0, D2; cloud C10 | a devspace appears in `machines` after sign-in and runs `echo ok` | not started |
+| X10 | **A person's own endpoint as a connection** (agent-hub `3ca781f`, `docs/devagotchi/26-connectivity.md` "Hosted resource attachment contract"; absorbed 2026-11-18): an HTTPS model API or MCP server the person runs (a Spark, a GPU box) is added like a catalog service: exact origin and allowed paths, its key sealed or a Vaultix reference (X5); no redirect followed; a hostname is not a grant; on a multi-tenant hub the resolved address is checked at call time against private, loopback, link-local and metadata ranges, with the address check AgentHub uses for webhooks (`crates/agenthub/src/wake.rs:80-143`, `is_public`), exported from that crate or mirrored in the hub (the hub has none of its own); an endpoint that is down stays registered and shows offline, distinct from permission denied and TLS failed; a management page and a model API are separate connections; revoking one closes its open streams | X2 | stand-in tests: a redirect to another host reaches nothing; a name resolving to 169.254.169.254 refused on a multi-tenant hub; offline, denied and TLS failure are three states; another tenant can neither list nor call it | not started |
 
 ## Risks and approved decisions
 
@@ -65,6 +66,10 @@
 - An agent can only reach a template's host: no open proxy (SSRF), private addresses refused
   unless the hub is single-tenant and the person allows it, as webhooks are (`wake.rs`).
 - Every call is audited with the agent's seat, the connection and the path, never the body.
+- A person's own compute and subscriptions are used first when set; the hub never falls back
+  on its own to a paid API key, a new subscription or another person's quota; a provider limit
+  pauses the work and says what the person can do next (agent-hub agent guide, 2026-10-21,
+  absorbed 2026-11-18).
 
 ## Verification receipts
 
@@ -84,4 +89,4 @@ X1 and X2, 2026-11-14, Windows 11, Postgres 18 (docker), branch `increment-140/c
 ## Delivery
 
 Implementation: X1 and X2 done. Push: not_verified. PR: not_created. Main: not_verified.
-**DELIVERY INCOMPLETE: X3 TO X7 NOT STARTED**
+**DELIVERY INCOMPLETE: X3 TO X10 NOT STARTED**

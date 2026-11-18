@@ -12,8 +12,9 @@ use crate::{
 };
 
 impl Hub {
-    /// The machines `subject` reaches, each with whether it can be used right now, named
-    /// as it knows them (on a hosted hub, its tenant's names: `tenancy/machines.rs`).
+    /// The machines `subject` reaches, each with its status (a linked machine is `online` while
+    /// its link is connected, which does not show its broker answers: `machine_inspect` asks
+    /// it), named as it knows them (on a hosted hub, its tenant's names: `tenancy/machines.rs`).
     pub async fn machine_status(&self, subject: &Subject) -> Vec<Machine> {
         let configured = self.config.brokers_for(&subject.id);
         let owned: Vec<Machine> = self

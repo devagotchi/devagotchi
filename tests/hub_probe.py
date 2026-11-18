@@ -3,14 +3,17 @@
 
     python3 tests/hub_probe.py http://127.0.0.1:8787 --token <bearer> --broker <name> [--git /usr/bin/git] [--cwd DIR]
     python3 tests/hub_probe.py http://127.0.0.1:8787 --token <bearer> --broker <name> --expect-error broker_offline
+    python3 tests/hub_probe.py http://127.0.0.1:8787 --token <bearer> --broker <name> --expect-inspect-error ipc_io
 
 Checks, in order: an unauthenticated call is refused with a 401 that names the
 protected-resource metadata; /healthz answers; initialize and tools/list; whoami names
-the broker and `machines` lists it online; operation_start of `git --version` on that
-broker succeeds and its output reads back; a broker the subject holds no grant for is
-refused with `not_granted`.
-With --expect-error CODE it instead checks that one routed call to the broker fails
-with exactly CODE (a linked machine that is offline or revoked). Exit 0 only when every
+the broker and `machines` lists it online; `machine_inspect` gets the broker's own
+capabilities for its policy; operation_start of `git --version` on that broker succeeds and
+its output reads back; a broker the subject holds no grant for is refused with `not_granted`.
+With --expect-error CODE it instead checks that `machine_inspect` and one routed call to the
+broker fail with exactly CODE (a linked machine that is offline or revoked). With
+--expect-inspect-error CODE the machine's link is up but its broker is not: `machines` still
+says online, and `machine_inspect` fails with CODE, within its bound. Exit 0 only when every
 step holds.
 """
 import argparse
@@ -33,6 +36,8 @@ parser.add_argument("--ungranted", default="nobody-has-this")
 parser.add_argument("--git", default="/usr/bin/git")
 parser.add_argument("--cwd", default=None)
 parser.add_argument("--expect-error", default=None)
+# The machine's link is up and its broker stopped: what machine_inspect says instead.
+parser.add_argument("--expect-inspect-error", default=None)
 # A broker under the `account` policy to exercise `run` on (one call: start, wait, output).
 parser.add_argument("--run-broker", default=None)
 # An absolute directory on that broker's machine (this host in the harness) for the file tools.
@@ -117,15 +122,37 @@ def check(name, ok, detail=""):
 status, headers, _ = http("POST", "/mcp", {"jsonrpc": "2.0", "id": 0, "method": "ping"}, token=None)
 www = headers.get("WWW-Authenticate", "")
 check("unauthenticated refused", status == 401 and "resource_metadata=" in www, f"HTTP {status} {www}")
+status, _, _ = http("POST", "/mcp", {"jsonrpc": "2.0", "id": 0, "method": "tools/call", "params": {
+    "name": "machine_inspect", "arguments": {"machine": args.broker}}}, token=None)
+check("unauthenticated machine_inspect refused", status == 401, f"HTTP {status}")
 
 status, _, raw = http("GET", "/healthz", token=None)
 health = json.loads(raw or b"{}")
-check("healthz", status == 200 and health.get("ok") is True, json.dumps(health)[:200])
+if args.expect_inspect_error:
+    # The harness's hub reaches the same stopped broker on its own host too: healthz says so.
+    check("healthz names the stopped broker", status == 503 and health.get("ok") is False
+          and any(b.get("reachable") is False for b in health.get("brokers", [])), json.dumps(health)[:200])
+else:
+    check("healthz", status == 200 and health.get("ok") is True, json.dumps(health)[:200])
 
 init = rpc("initialize", {"protocolVersion": "2025-06-18", "capabilities": {}, "clientInfo": {"name": "hub-probe", "version": "0"}})
 check("initialize", init["serverInfo"]["name"] == "devagotchi-hub", f"{init['serverInfo']} protocol {init['protocolVersion']}")
 http("POST", "/mcp", {"jsonrpc": "2.0", "method": "notifications/initialized"})
+if args.expect_inspect_error:
+    began = time.monotonic()
+    is_error, answer = call("machine_inspect", {"machine": args.broker})
+    check(f"machine_inspect says {args.expect_inspect_error}", is_error and answer.get("code") == args.expect_inspect_error,
+          json.dumps(answer)[:200])
+    check("machine_inspect is bounded", time.monotonic() - began < 6, f"{time.monotonic() - began:.1f}s")
+    is_error, seen = call("machines", {})
+    mine = [m for m in seen.get("machines", []) if m.get("name") == args.broker] if not is_error else []
+    check("machines still says online: the link is up", len(mine) == 1 and mine[0].get("status") == "online",
+          json.dumps(seen)[:200])
+    sys.exit(1 if failures else 0)
 if args.expect_error:
+    is_error, answer = call("machine_inspect", {"machine": args.broker})
+    check(f"machine_inspect fails with {args.expect_error}", is_error and answer.get("code") == args.expect_error,
+          json.dumps(answer)[:200])
     is_error, answer = call("operation_get", {"broker": args.broker, "input": {"operation_id": "probe-" + uuid.uuid4().hex}})
     check(f"routed call fails with {args.expect_error}", is_error and answer.get("code") == args.expect_error, json.dumps(answer)[:200])
     sys.exit(1 if failures else 0)
@@ -138,7 +165,7 @@ unannotated = [t["name"] for t in listed if not t.get("title") or not (
     and (t["annotations"]["readOnlyHint"] or "destructiveHint" in t["annotations"]))]
 check("every tool has a title and annotations", not unannotated, ", ".join(unannotated))
 broker_tools = ["approval_request", "approval_wait", "connection_call", "connections", "create_directory", "dictionary_get", "edit_file", "get_config", "get_file_info", "get_recent_tool_calls",
-                "get_usage_stats", "kill_process", "lexicon_handoff", "lexicon_propose", "lexicon_resolve", "lexicon_review", "list_directory", "list_processes", "machine_add", "machine_update", "machines", "move_file", "operation_cancel", "operation_get", "operation_input",
+                "get_usage_stats", "kill_process", "lexicon_handoff", "lexicon_propose", "lexicon_resolve", "lexicon_review", "list_directory", "list_processes", "machine_add", "machine_inspect", "machine_update", "machines", "move_file", "operation_cancel", "operation_get", "operation_input",
                 "operation_list", "operation_read", "operation_resize", "operation_start", "operation_wait", "read_file", "read_image", "read_multiple_files", "read_url", "run", "search_files", "set_config_value", "whoami",
                 "workflow_cancel", "workflow_list", "workflow_start", "workflow_status", "workflow_wait",
                 "write_file"]
@@ -152,6 +179,32 @@ check("whoami", not is_error and args.broker in me.get("brokers", []), json.dump
 is_error, seen = call("machines", {})
 mine = [m for m in seen.get("machines", []) if m.get("name") == args.broker] if not is_error else []
 check("machines lists the broker online", len(mine) == 1 and mine[0].get("status") == "online", json.dumps(seen)[:200])
+
+# Online is the link; machine_inspect asks the broker itself, which says only what its policy serves.
+fields = {"api_version", "version", "os", "arch", "exec_policy", "shell_commands", "workspace_scope", "supported_requests"}
+account_only = {"config_set", "process_list", "process_kill", "url_read"}
+is_error, caps = call("machine_inspect", {"machine": args.broker})
+served = set(caps.get("supported_requests", [])) if not is_error else set()
+# The broker named by --broker may run either policy (e2e starts a granted one; the one-line
+# join installs an account one), so the answer is checked against the policy it reports.
+policy = caps.get("exec_policy") if not is_error else None
+check("machine_inspect: the broker's own capabilities", not is_error and set(caps) == fields
+      and policy in ("granted", "account")
+      and caps.get("shell_commands") is (policy == "account")
+      and caps.get("workspace_scope") == ("account" if policy == "account" else "workspace"),
+      json.dumps(caps)[:300])
+check(f"machine_inspect lists what a {policy} broker answers, and nothing it refuses",
+      {"broker_capabilities", "operation_start", "file_read"} <= served
+      and (account_only <= served if policy == "account" else not served & account_only),
+      json.dumps(caps)[:300])
+is_error, denied = call("machine_inspect", {"machine": args.ungranted})
+check("machine_inspect refuses an unknown or ungranted machine", is_error
+      and denied.get("code") in ("unknown_broker", "not_granted"), json.dumps(denied)[:200])
+if args.run_broker:
+    is_error, caps = call("machine_inspect", {"machine": args.run_broker})
+    check("machine_inspect: an account broker", not is_error and caps.get("exec_policy") == "account"
+          and caps.get("shell_commands") is True and caps.get("workspace_scope") == "account"
+          and account_only <= set(caps.get("supported_requests", [])), json.dumps(caps)[:300])
 
 is_error, started = call("operation_start", {"broker": args.broker, "input": {
     "idempotency_key": str(uuid.uuid4()), "executable": args.git, "args": ["--version"],

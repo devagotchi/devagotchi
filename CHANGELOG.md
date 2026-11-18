@@ -38,6 +38,21 @@ install, not a production promotion. The gap that is still open is in
   (kept in `.devagotchi/config.json`, refused with a password in it). With neither, every
   `board` command says so and names `board bind`. The SQLite `board.sqlite3` is gone, and nothing
   is moved from one: `board init` makes a new board (ADR 0005).
+- An importer names where a ticket comes from: `board_create` takes `origin`
+  (`{path, item, revision?, content_sha256?}`), so does `devagotchi board new --origin JSON`.
+  One ticket per origin on a board: creating it again with the same inputs returns the ticket
+  as it is now (its edits, holder and lease kept, nothing written); changed inputs, a new
+  revision included, are refused as `source_conflict` naming that ticket (exit 2). The
+  machine, repo, agent and session anchors are never compared, so a repeat from another
+  session or naming another repo is still a repeat. Who recorded it and when are the board's,
+  never the caller's; `board_get`, `board show` (its time in UTC) and the export show it as
+  `provenance`. AgentHub migration 0002 adds `board_sources`. `board scan --import` does not
+  pass an origin yet (increment 205; the scanner's evidence, manifest and review are factory
+  F5b and F5c).
+- A store takes the hub's Postgres role (`devagotchi_hub`) only in a database that granted it the
+  tables' schema. Roles belong to the server, so a standalone AgentHub board on a server that
+  also holds a hub took a role its own database never granted and could not see its tables
+  (`relation "board_projects" does not exist`; seen in CI, increment 207).
 - `/admin` changes the settings the hub reads while it runs, in force the moment they are
   saved: the shortest password, sign-up rate and the limits of an account nobody has secured,
   connecting an AI with no sign-in, machines updating themselves, how long a workflow link
@@ -48,6 +63,88 @@ install, not a production promotion. The gap that is still open is in
   in the hub's Postgres.
 - `/admin` → Signal sinks adds, changes and removes where the hub pushes its signals (log
   services, your own collector), each running the moment it is saved, its token encrypted.
+- A broker remembers every retired idempotency key for good, not only the newest 4096 that
+  "Bounded history" (increment 24a) below describes: past 4096 retirements the oldest key was
+  forgotten, and a late retry with it ran its work again. A retired key is a compact
+  tombstone in the journal that nothing deletes, changes or replaces (DG-RETRY-1,
+  [.ai/docs/retry-lifecycle.md](.ai/docs/retry-lifecycle.md)). A key is bound to the
+  workspace and exec policy and to the executable, arguments, cwd, deadline and `interactive`
+  it ran with; changing a limit or an unrelated grant keeps every retry, and a revoked grant
+  still refuses one. A start refused with `concurrency_limit_reached` or
+  `operation_limit_reached` no longer retires finished history first; a `max_operations`
+  lowered in broker.json retires down to it on the next start after a restart, and every
+  retired key stays retired. `set_config_value` saves a limit first and applies it only once
+  saved (`config_not_saved` otherwise), and a journal error while retiring down to a lower
+  `max_operations` is returned instead of ignored. A key admitted by an earlier build
+  (bound with the grant list) is `idempotency_conflict` on this one. Keys an earlier build had
+  already forgotten past 4096 retirements cannot be brought back. An earlier build run on a
+  journal this one opened fails each retirement once the journal holds 4096 tombstones.
+
+### A command on Windows starts without walking every thread on the machine (increment 201)
+- The broker still creates each root suspended, puts it in its Job Object, and only then
+  resumes it. It now finds the root's threads from a snapshot of the root alone
+  (`PssCaptureSnapshot`, Windows 8.1 or later) instead of a ToolHelp walk of every thread on
+  the machine. That walk took 6.2 s under a parallel test run (Dabo, 2026-11-06), past a
+  5-second deadline, so commands timed out before they ran. On a loaded machine the first
+  input to a new interactive operation could also be refused as `input_blocked`.
+- Every thread is checked before any is resumed: its process ID and creation time must match
+  the snapshot, and `ResumeThread` must report the initial suspend count of one, so another
+  caller's suspension is never consumed. Any mismatch fails the start and terminates the job.
+  This is not sandboxing; the residual limits are in `windows/resume.rs`.
+
+### File changes on one machine happen one at a time (increment 203)
+- `write_file`, `edit_file`, `create_directory` and `move_file` on one broker wait for each
+  other, from resolving the path to the answer. Two writes guarded by the same
+  `expected_sha256` no longer both succeed: the second answers `changed_since_read`. Two creates
+  or two moves onto one path give one `already_exists`, two edits of the same text one
+  `edit_mismatch`. Reads, searches, operations and settings never wait for a file change.
+- New error `mutation_busy`: a file change that waited 3 s for another one is refused having
+  changed nothing, before a local client's 5 s deadline, so it never lands after that client
+  reported `ipc_timeout`. At most 8 changes wait at once; one more gets `mutation_busy` at
+  once, so waiting changes never take every broker connection. Try it again.
+- An MCP cancellation (`request_cancelled`, from `devagotchi mcp` or a hub) only stops the
+  caller's wait: a change it cancelled while queued can still land within those 3 s, with no
+  answer. Read the file before assuming it did not.
+- External editors, commands and a second broker are not ordered by this; it is not a
+  filesystem-wide compare-and-swap. `tests/file_mutation_concurrency.py` races two
+  `devagotchi mcp` adapters on one broker in CI's e2e job on every OS.
+
+### Ask a machine's broker whether it answers (increment 204)
+- `machine_inspect` (through a hub, by machine name) and `broker_capabilities` (through
+  `devagotchi mcp`) ask the broker itself what it is: its build, OS and architecture, exec
+  policy, whether shell lines run, whether files stay in its workspace, and the requests it
+  answers under that policy (a broker that runs only granted programs leaves out the
+  settings change, processes and web reads it always refuses). No paths, grants, environment
+  or secrets, and nothing is started. A closing or faulted broker says `shutting_down` or its
+  fault.
+- It waits at most 3 seconds: `inspection_timeout` means readiness is unknown. Every other
+  error is the link's or the broker's own, and the hub's audit records each as it happened.
+- `online` in `machines` now says what it means: a linked machine's link is connected, not
+  that its broker answers. The hub's instructions, the `machines` skill, its docs and the
+  landing page's tool list say so and name `machine_inspect`.
+- A machine on an older build does not know this request: asking it ends that machine's link
+  (it reconnects), and the hub's usual update hint names `machine_update`.
+
+### Plans: three builds, the plugins on your machine, and the Go hub's last work (increment 206)
+- Plans and docs only; no behaviour changes. The operator's decisions of 2026-11-18 are in
+  [.ai/docs/editions.md](.ai/docs/editions.md): three builds under FSL-1.1-ALv2 (the Shippin
+  build, commercial and multi-tenant; the standalone GitHub release, free and for one user, with
+  no managing of other users or customers; managed deployments, which offer multi-tenancy);
+  organisations and roles move from the core row to the multi-tenant side; AgentHub comes from
+  Devagotchi or from a separate service Shippin hosts; LiftOffDB is recorded as an open
+  decision, not a commitment.
+- New milestones, all not started: the plugins for VS Code, Codex, Claude Code, the terminal,
+  Claude Desktop and ChatGPT Desktop with their UI on your machine (plugins G11 to G15); asking
+  whether a new project should be a Devagotchi project (factory F23); the 2026-11-06 project
+  delivery plan (repository binding, scan evidence, the reviewable import, the provider on a
+  designated host, SSH bootstrap, attempt provenance, the project overview) as factory F1b, F5b,
+  F5c, F8b and F19 to F22.
+- The Go hub's two unpushed branches are mapped capability by capability: what Rust already
+  has, with file and line, and the gaps as milestones, among them OpenID discovery and JWKS
+  without redirects and pinned to the issuer (free edition D1b), the hub's keys private on
+  Windows (D6), access that ends (D7) and a `/readyz` that is not the `/healthz` report with a
+  drain on SIGTERM (H1). `docs/devagotchi/README.md` now names the right source commit and
+  where each Go capability lives today.
 
 ### The license is the Functional Source License (FSL-1.1-ALv2)
 - Devagotchi moves from the Business Source License 1.1 to FSL-1.1-ALv2, held by AngryVibes LLC:

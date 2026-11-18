@@ -29,6 +29,7 @@ its versioned contracts, not another agent or task engine.
 | DG-DELIVERY-1 | [Planning, validation, autonomy and delivery](dev/workflow.md) |
 | DG-CAPTURE-1 | [Consent, local journal, evidence and dataset eligibility](docs/capture.md) |
 | DG-ADAPTER-1 | [Harness-specific adapters and capability limits](docs/adapters.md) |
+| DG-RETRY-1 | [The broker's retry lifecycle: permanent retired keys, retry identity, refusal and history size](docs/retry-lifecycle.md) |
 
 - [Plans](dev/plans/README.md): maintained task/PR plans, with [template](dev/plans/TEMPLATE.md).
 - [Editions](docs/editions.md): what is core, what is cloud, and the license.

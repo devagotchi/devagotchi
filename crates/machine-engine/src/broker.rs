@@ -34,16 +34,6 @@ const INPUT_WAIT: Duration = Duration::from_secs(5);
 /// Input requests queued for one operation at once.
 const INPUT_QUEUE: usize = 8;
 
-fn default_output_limit() -> usize {
-    262_144
-}
-fn default_max_operations() -> usize {
-    64
-}
-fn default_max_concurrent() -> usize {
-    4
-}
-
 /// What a broker will run. `granted` (the default): only the operator's
 /// `allowed_executables`, with exact arguments, in the workspace. `account`: anything its
 /// own OS account can run, including a `command` line for the machine's shell, in any
@@ -64,11 +54,11 @@ pub struct BrokerConfig {
     pub allowed_executables: Vec<String>,
     #[serde(default)]
     pub exec_policy: ExecPolicy,
-    #[serde(default = "default_output_limit")]
+    #[serde(default = "settings::default_output_limit")]
     pub output_limit_bytes: usize,
-    #[serde(default = "default_max_operations")]
+    #[serde(default = "settings::default_max_operations")]
     pub max_operations: usize,
-    #[serde(default = "default_max_concurrent")]
+    #[serde(default = "settings::default_max_concurrent")]
     pub max_concurrent: usize,
 }
 
@@ -115,6 +105,7 @@ pub(crate) struct Shared {
     /// does not. A list (the inspector's) waits on it to re-read only when it changed.
     roster: watch::Sender<u64>,
     waiters: Semaphore,
+    file_mutations: files::MutationGate,
 }
 
 pub struct Broker {
@@ -218,17 +209,12 @@ impl Broker {
             }
             executables.insert(executable);
         }
-        let mut grants = executables
-            .iter()
-            .map(|path| path_string(path))
-            .collect::<BridgeResult<Vec<_>>>()?;
-        grants.sort();
-        // What decides how a request runs: where, what may run, and as whom. The limits are
-        // left out: they change while the broker runs and never change what a job does.
+        // A retry key's broker half: where (the workspace) and as whom (the exec policy). The
+        // limits and the grant list are left out, so tuning them never turns a retry into a
+        // conflict; normalize() checks the grant and cwd live on every start, replays included.
         let identity_bytes = serde_json::to_vec(&(
-            "desktop-bridge-execution-v2",
+            "machine-engine-execution",
             path_string(&workspace)?,
-            grants,
             config.exec_policy,
         ))
         .map_err(|error| BridgeError::new("invalid_config", error.to_string()))?;
@@ -254,6 +240,7 @@ impl Broker {
                 changes: watch::channel(0).0,
                 roster: watch::channel(0).0,
                 waiters: Semaphore::new(MAX_WAITERS),
+                file_mutations: Default::default(),
             }),
         }))
     }
@@ -315,7 +302,8 @@ impl Broker {
             | RequestBody::ConfigSet(_)
             | RequestBody::ProcessList(_)
             | RequestBody::ProcessKill(_)
-            | RequestBody::UrlRead(_)) => self.on_system(request).await,
+            | RequestBody::UrlRead(_)
+            | RequestBody::BrokerCapabilities(_)) => self.on_system(request).await,
         }
     }
 
@@ -424,19 +412,16 @@ impl Broker {
                 ));
             }
         }
-        let canonical = (
+        // The request half: what runs, with which arguments, where, for how long, and whether
+        // it takes input.
+        let bytes = serde_json::to_vec(&(
             &self.shared.config_identity,
             path_string(&canonical_executable)?,
             &args,
             path_string(&cwd)?,
             input.deadline_ms,
-        );
-        // An interactive start is another request than the same command without input; a
-        // plain one keeps the digest it always had.
-        let bytes = match &input.interactive {
-            None => serde_json::to_vec(&canonical),
-            Some(interactive) => serde_json::to_vec(&(canonical, interactive)),
-        }
+            &input.interactive,
+        ))
         .map_err(|error| invalid(error.to_string()))?;
         Ok((
             ExecutionSpec {
@@ -492,17 +477,15 @@ impl Broker {
                 "Broker admission is closed",
             ));
         }
-        if state.operations.len() >= state.limits.max_operations {
-            // History is bounded, not a lifetime quota: the oldest finished operation makes
-            // room. Only when every retained operation is still running is admission refused.
-            state.retire_oldest_finished()?;
-        }
+        // Every refusal comes before anything is retired: a refused start evicts no history.
+        state.room_for_one()?;
         if state.active_count >= state.limits.max_concurrent {
             return Err(BridgeError::new(
                 "concurrency_limit_reached",
                 "The active operation limit has been reached",
             ));
         }
+        state.make_room()?;
         let timestamp = now_ms();
         let id = uuid::Uuid::new_v4().to_string();
         let view = OperationView {
@@ -927,40 +910,7 @@ fn check_size(cols: u16, rows: u16) -> BridgeResult<()> {
     Ok(())
 }
 
-fn no_caller() -> BridgeError {
-    invalid("Input needs a caller: send it through devagotchi mcp or a hub")
-}
-
 impl State {
-    /// Make room for one admission by retiring the operation that finished longest ago.
-    /// A retired operation's ID is no longer found and its key is never run again.
-    fn retire_oldest_finished(&mut self) -> BridgeResult<()> {
-        let oldest = self
-            .operations
-            .iter()
-            .filter(|(_, operation)| !operation.active && operation.record.view.state.terminal())
-            .min_by_key(|(_, operation)| {
-                (
-                    operation.record.view.updated_at_ms,
-                    operation.record.view.created_at_ms,
-                )
-            })
-            .map(|(id, _)| id.clone());
-        let Some(id) = oldest else {
-            return Err(BridgeError::new(
-                "operation_limit_reached",
-                "Every operation the broker holds is still running; wait for one to finish or cancel one",
-            ));
-        };
-        let record = &self.operations[&id].record;
-        self.journal
-            .retire(&id, &record.key, &record.request_digest, now_ms())?;
-        if let Some(operation) = self.operations.remove(&id) {
-            self.keys.remove(&operation.record.key);
-        }
-        Ok(())
-    }
-
     fn fault(&mut self, error: BridgeError) {
         if self.persistence_fault.is_none() {
             eprintln!("Broker admission blocked: {error}");
@@ -1193,10 +1143,11 @@ mod tests;
 
 mod access;
 mod files;
+mod history;
 mod input;
 mod output;
 mod recover;
 mod settings;
 mod system;
-use input::{deliver, input_closed, input_steps};
+use input::{deliver, input_closed, input_steps, no_caller};
 use settings::Limits;

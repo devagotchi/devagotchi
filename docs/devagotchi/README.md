@@ -1,29 +1,40 @@
 # The Devagotchi product design, absorbed from shippinAI/agent-hub
 
-The public home is `devagotchi/devagotchi`; enterprise work belongs in the private
-`devagotchi/devagotchi-enterprise` repository. Enterprise code, secrets, and hosted-service
-deployment configurations must never go in the public repository.
+The public home is `devagotchi/devagotchi`; hosted-service work belongs in the private
+`shippinAI/devagotchi-cloud` repository ([editions](../../.ai/docs/editions.md)). Enterprise
+code, secrets, and hosted-service deployment configurations must never go in the public
+repository.
 
 The 2026-10-21 ruling put the agents' board in this hub; this directory puts the design beside
-the code. The source is `shippinAI/agent-hub` at `ca626db` (its last push, 2026-10-20):
-`docs/devagotchi/01`–`39g` and `adr/`, its `docs/devagotchi-spec.md` (the index; keep it at
-`../devagotchi-spec.md` so the links inside the files still resolve), `docs/spec.md` (keep as
-`go-hub-spec.md`) and `docs/connect.md` (`go-hub-connect.md`).
+the code. The source is `shippinAI/agent-hub` at `97172d9`, the head of its local branch
+`feat/devspace-bridge-contract` (2026-10-22, never pushed; its last push, `ca626db` of
+2026-10-20, lacks that branch's changes to `08-threat-model.md`, `26-connectivity.md`,
+`27-gap-tracking.md` and `39c-architecture-on-gold.md`): `docs/devagotchi/01`–`39g` and `adr/`,
+its `docs/devagotchi-spec.md` (the index; keep it at `../devagotchi-spec.md` so the links
+inside the files still resolve), `docs/spec.md` (keep as `go-hub-spec.md`) and
+`docs/connect.md` (`go-hub-connect.md`). Nothing has been copied yet: this README is the only
+file here.
 
 **The copy itself is one command, run by the operator** (a session may not move one
 repository's files into another on its own):
 
 ```bash
-# both clones side by side
+# both clones side by side, ../agent-hub checked out at 97172d9
 cp -r ../agent-hub/docs/devagotchi/. docs/devagotchi/
 cp ../agent-hub/docs/devagotchi-spec.md docs/devagotchi-spec.md
 cp ../agent-hub/docs/spec.md docs/devagotchi/go-hub-spec.md
 cp ../agent-hub/docs/connect.md docs/devagotchi/go-hub-connect.md
-git add docs && git commit -m "docs: import the Devagotchi design from shippinAI/agent-hub@ca626db"
+git add docs && git commit -m "docs: import the Devagotchi design from shippinAI/agent-hub@97172d9"
 ```
 
-Branches from the 2026-10-21 pass (Dockerfiles/compose, approvals inbox, release configs) were
-never pushed there; if they carry doc changes, bring those too.
+What that branch and the later `preserve/packaging-2026-10-25` (`adca8b7`) changed is absorbed
+into the plans, capability by capability, on 2026-11-18
+([factory](../../.ai/dev/plans/agenthub-factory.md), "The Go hub's last branches"). The
+packaging branch's two notes (`docs/agenthub-packaging-slice.md`,
+`docs/windows-private-storage-next-packet.md`) are not part of the copy; their content is in
+those plan rows. `39c` at `97172d9` names one domain as "the central hub": that was the Go
+hub's hardcoded origin and is not carried over; here a hub's origin is its own setting and no
+hostname is a default ([cloud edition](../../.ai/dev/plans/cloud-edition.md) C11).
 
 ## What governs what
 
@@ -47,34 +58,34 @@ never pushed there; if they carry doc changes, bring those too.
 
 | Go capability (package · tables) | Here | Status | Lands in |
 |---|---|---|---|
-| Tasks, deps, notes, leases, fences, events chain (`store` · `tasks task_deps notes events idempotency_keys`) | `crates/hub/src/board/` | **ported**, extended (hash ids, epics, six dep kinds, per-project SQLite) | PR #19, increment 7 |
-| Workflows, settings, presets as data (`workflows settings`, `presets`) | board `workflow.rs`, settings rows | ported | increment 7 |
-| MCP tools (13: whoami … wait_for_updates, review_ticket) (`mcptools`) | hub `/mcp` tool router | not yet | increment 8 |
-| `hub` CLI with claim cache; `GET /api/v1/protocol` AGENTS.md snippet | `devagotchi-hub board …`, `board prime/onboard` | not yet | increment 8 |
-| REST `/api/v1` + SSE `/stream` (`httpapi`, `stream`) | hub axum routes | `/api/v1/me`, `/healthz` only | increments 8 (API), 10 (SSE) |
-| Web UI: Board, TaskDetail, NewTask, Agents, Tokens, Connect, Policies, Roles, Workflows, Settings, Audit, Actions, Retention, Login (React Aria SPA) | server-rendered pages in `crates/hub/src/web/` + the approvals PWA (39e) | `/account` only | increment 10; **decision**: port the SPA or stay server-rendered + PWA |
-| Principals and per-agent bearer tokens (`principals tokens`, `auth`) | subjects from Nomen JWT; static `auth.tokens_file` | partial: no issue/revoke UI, Nomen only | increment 12: identity sources (per-agent tokens, any OIDC, Cloudflare Access, Tailscale) |
-| Machines, enrollment codes, presence (`machines`, `bridgehub`) | `devices.rs` (enroll/revoke), `link.rs` (outbound WebSocket) | ported | PRs #7, #12 |
+| Tasks, deps, notes, leases, fences, events chain (`store` · `tasks task_deps notes events idempotency_keys`) | `crates/agenthub` (the `devagotchi/agenthub` submodule): `board_` tables on Postgres, its own migrations, a project's standalone board on Postgres too | **ported**, extended (hash ids, epics, six dep kinds) | PR #19, increment 7; Postgres in increments 147, 148 and 197 |
+| Workflows, settings, presets as data (`workflows settings`, `presets`) | `crates/agenthub/src/workflow.rs`, `settings.rs` | ported | increment 7 |
+| MCP tools (13: whoami … wait_for_updates, review_ticket) (`mcptools`) | the hub's `/mcp`: board tools in `crates/hub/src/agenthub/mcp/` (`board_prime` …), `whoami` in `crates/hub/src/mcp/tools/` | ported | increment 8 |
+| `hub` CLI with claim cache; `GET /api/v1/protocol` AGENTS.md snippet | `devagotchi board …` (`crates/agenthub/src/cli/`), `board prime`, `board onboard` | the CLI ported; no `/api/v1/protocol` route | increment 8 |
+| REST `/api/v1` + SSE `/stream` (`httpapi`, `stream`) | hub axum routes | partial: `/api/v1/me`, organisations (`crates/hub/src/tenancy/orgs/api/`), project statistics (`ops/warehouse`); no SSE | increments 8 (API), 10 (SSE) |
+| Web UI: Board, TaskDetail, NewTask, Agents, Tokens, Connect, Policies, Roles, Workflows, Settings, Audit, Actions, Retention, Login (React Aria SPA) | server-rendered pages in `crates/hub/src/web/` and the installable phone app (`web/app/`: Overview, AgentHub, Approvals, Machines, You) | server-rendered, the SPA not ported; no Agents, Policies or Retention pages | [factory](../../.ai/dev/plans/agenthub-factory.md) F13 (Agents page) |
+| Principals and per-agent bearer tokens (`principals tokens`, `auth`) | `crates/hub/src/identity/`: accounts, email and password, Google, GitHub, any OpenID Connect provider, Nomen, passkeys, API keys with scopes and expiry (`/app/keys`) | ported; Cloudflare Access and Tailscale sign-in not | [path](../../.ai/dev/plans/path.md) 9.3 |
+| Machines, enrollment codes, presence (`machines`, `bridgehub`) | `crates/hub/src/machines/` (`devices/` enroll and revoke, `link/` the hub's side) and `crates/link` (the machine's outbound WebSocket) | ported | PRs #7, #12 |
 | Machine operations through the bridge (`machineops`, `proc_leases`) | hub routes `operation_*` to brokers by name over the link | ported (process operations) | — |
-| Grants, access requests, presets, sandbox policies, capability risks (`access`, `grants access_requests grant_presets sandbox_policies capabilities capability_risks`) | hub config `grants` (static) | partial: data tables and the one-tap request/approve flow missing | increment 14 (bridge plan step 2) |
+| Grants, access requests, presets, sandbox policies, capability risks (`access`, `grants access_requests grant_presets sandbox_policies capabilities capability_risks`) | hub config `grants` (static, `crates/hub/src/machines/link/presence.rs`); AgentHub's standing approvals (`crates/agenthub/src/approval.rs`: expiring, revocable, on the chain, but advisory) | partial: no enforced grant that ends | [free edition](../../.ai/dev/plans/free-edition.md) D7 |
 | Policy rules, deny by default (`policy`, `policyrules`, `policies`) and the gold-policy PDP client (`policygate`) | — | not ported | increment 13 (with factory-board F1, the actuation gateway) |
 | Change policy: policy docs, change tickets, evidence, reviews, reviewer agents (`changepolicy`, `policy_docs change_tickets ticket_evidence ticket_reviews`) | board review lane (reviewer ≠ author) | partial | increments 10 (Approve with hash) and 13 |
-| Action feed and audit retention (`actionfeed`, `auditkeep`, `action_events audit_categories audit_archives`) | `audit.rs` chain of routed calls | partial: no per-action feed, no retention policy | increment 18 |
+| Action feed and audit retention (`actionfeed`, `auditkeep`, `action_events audit_categories audit_archives`) | `crates/hub/src/ops/audit.rs` chain of routed calls | partial: no per-action feed, no retention policy | increment 18 |
 | Catalog CRUD with JSON-Schema validation (`catalog`, `schemacheck`, `docker_runtime_presets shell_profiles router_endpoints …`) | — | not ported | increment 15 |
 | Guides (`guides`, `guidekit`, `guides guide_versions guide_runs guide_updates`) | — | not ported | increment 16 |
 | Subscriptions, role bindings, write-only secrets (`subs`, `secretbox`, `subscriptions role_bindings secrets`) | — | not ported; Vaultix (36) is the secret home | increment 17 |
 | Provider schema v1 and the 18-row matrix (`providers`, `providers provider_models`, docs 29/34) | — | not ported; the board's B06 ACP driver is its runtime half | increment 17 |
-| Tenants, chat apps, resume acks (`tenants chat_apps resume_acks`) | — | hosted tier; not ported | with Shippin's Bundled Stack row |
-| Bridge: 28 Desktop Commander-parity tools (files, search, processes, PDF/DOCX/XLSX, config) in Go | `crates/core` broker: process execution + journal; files/search/terminal are G3/G4 packets | **partial** | G3 (files), G4 (terminal); format tools after |
-| Bridge sandbox, grants, doctor, install, GUI control (docs 02/03/11) | Linux cgroup ladder + Windows Job Objects in `core`; installers in `deploy/` | partial; GUI control **conflict** (below) | G2; decision |
-| Approvals PWA, push, passkey signing, self-update (39a, 39e, 39g) | — | not ported; the "phone bridge" packet | increment 19 |
+| Tenants, chat apps, resume acks (`tenants chat_apps resume_acks`) | tenants: `crates/hub/src/tenancy/` (`tenancy.mode multi`; its own crate outside the default build at free edition R4); chat apps and resume acks: none | tenants ported for the multi-tenant builds; the rest not ported | with Shippin's Bundled Stack row |
+| Bridge: 28 Desktop Commander-parity tools (files, search, processes, PDF/DOCX/XLSX, config) in Go | `crates/machine-engine`: process execution and its journal, files, search, interactive processes | **partial**, tool by tool in [.ai/docs/desktop-commander-parity.md](../../.ai/docs/desktop-commander-parity.md) | free edition D3 |
+| Bridge sandbox, grants, doctor, install, GUI control (docs 02/03/11) | Linux cgroup ladder and Windows Job Objects in `crates/machine-engine/src/execution/platform/`; installers in `deploy/` and the join scripts in `crates/hub/src/machines/join/` | partial; GUI control **conflict** (below) | G2; decision |
+| Approvals PWA, push, passkey signing, self-update (39a, 39e, 39g) | approvals on the phone app (`crates/hub/src/web/approvals.rs`), Web Push with the hub's own key (`crates/hub/src/notify/push/`), machines updated by the hub (`machine_update`) | partial: no passkey signing of a decision; no notification outbox | [factory](../../.ai/dev/plans/agenthub-factory.md) F18; [path](../../.ai/dev/plans/path.md) 3.2 |
 | Chat page, rooms, routines (24, 39d) | chatmaton (separate repo) | out of this repo | chatmaton board |
 
 **Conflicts to rule on (plan row D19):**
 
 1. GUI control — Go D7 "yes, from v0.1" versus plan D18 "DEFERRED: screen/input automation".
 2. The bridge binary — Go `bridge/cmd/devagotchi` (28 tools, Go) versus this workspace's
-   `broker` + `link` + `mcp` (Rust, process operations). The 2026-10-21 bridge plan already names
+   `machine-engine` + `link` + `mcp` (Rust; the broker is the machine engine's `service`). The 2026-10-21 bridge plan already names
    the Go bridge as "what it replaces"; its tool list is the parity target, not its code.
 
 ## Reading order, once imported

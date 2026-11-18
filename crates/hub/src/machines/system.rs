@@ -1,10 +1,13 @@
 //! A machine beside its files: its broker's settings (`get_config`, `set_config_value`) and its
 //! processes (`list_processes`, `kill_process`), and a web address read from it (`read_url`). The broker on the machine decides what each
-//! may do; the hub only names the machine and passes the request on.
+//! may do; the hub only names the machine and passes the request on. `machine_inspect` asks
+//! the broker itself whether it answers: a machine `online` in `machines` has its link up,
+//! which says nothing yet about the broker behind it.
 
 use devagotchi_contracts::{
-    BridgeError, ConfigGetInput, ConfigSetInput, ConfigView, ProcessKillInput, ProcessKilled,
-    ProcessListInput, ProcessPage, RequestBody, ResponseBody, UrlContent, UrlReadInput, describe,
+    BridgeError, BrokerCapabilities, CapabilitiesInput, ConfigGetInput, ConfigSetInput, ConfigView,
+    ProcessKillInput, ProcessKilled, ProcessListInput, ProcessPage, RequestBody, ResponseBody,
+    UrlContent, UrlReadInput, describe,
 };
 use rmcp::{
     Json, RoleServer, handler::server::wrapper::Parameters, service::RequestContext, tool,
@@ -92,6 +95,27 @@ impl Hub {
         {
             ResponseBody::Config(view) => Ok(Json(view)),
             other => Err(unexpected_response("config", &other)),
+        }
+    }
+
+    #[tool(
+        name = "machine_inspect",
+        description = describe::INSPECT,
+        title = "Check a machine's broker",
+        annotations(title = "Check a machine's broker", read_only_hint = true, open_world_hint = false)
+    )]
+    async fn machine_inspect(
+        &self,
+        Parameters(input): Parameters<MachineInput>,
+        context: RequestContext<RoleServer>,
+    ) -> Result<Json<BrokerCapabilities>, Json<BridgeError>> {
+        let body = RequestBody::BrokerCapabilities(CapabilitiesInput {});
+        match self
+            .call("machine_inspect", &input.machine, body, context)
+            .await?
+        {
+            ResponseBody::Capabilities(capabilities) => Ok(Json(capabilities)),
+            other => Err(unexpected_response("capabilities", &other)),
         }
     }
 

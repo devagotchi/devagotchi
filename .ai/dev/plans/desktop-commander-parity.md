@@ -91,6 +91,9 @@ libraries): 19 never-used items in `devagotchi-hub` (for example `store::open`,
 | P8 | Processes and settings (`get_config`, `set_config_value`, `list_processes`, `kill_process`; `broker/settings.rs`, `broker/system.rs`). The workspace, exec policy and grants stay the operator's; the three limits change live and are saved to broker.json; processes only on an `account` broker; never Devagotchi's own processes; a job's root goes to `operation_cancel` | probes | done: get_config named the file, policy, account (`root`, from the OS, not `USER`) and home; `max_concurrent` 4 to 6 applied, was written to broker.json and survived a broker restart; `workspace`, `colour` and 99 refused with the reason; lowering `max_operations` to 5 retired 36 kept jobs to 5 at once; list_processes tagged a job's `bash` and both `sleep`s with its `operation_id`; kill_process refused the job's root (pointing to operation_cancel), the broker and the adapter, stopped a job's child with SIGKILL and an outside `sleep` with SIGTERM (exit -15), and said `process_not_found` for a missing PID; a granted broker refused list_processes; broker.log traces each change, stop and refusal |
 | P9 | `read_url` (`broker/system/web.rs`: the machine fetches, so its localhost is reachable; http and https only; paged with `Range`, skipped by hand when a server ignores it; only on an `account` broker), `get_recent_tool_calls` and `get_usage_stats` (shapes in `contracts/history.rs`; through a hub from the audit by subject, migration 0031 indexes it; through `devagotchi mcp` from the connection's last 1000 calls) | probes, e2e | done: read_url read a 55 KB UTF-8 page in 3 pages byte for byte, after a redirect and with a 206 server and a plain 200 server; binary came back as base64; a 404 came back with its body; `file:`, a closed port and a non-address were refused with the reason; HTTPS worked direct and through the container's proxy; a granted broker refused it; broker.log traces each read. Recent calls listed a missing file as `path_not_found`, a still-running `run` as `running`, and two paths as `/etc/hostname and 1 more`; usage tallied per tool and failure. Through the hub only the caller's own machines count as machines (another tenant's name or a board's project never does) |
 | P10 | `write_pdf` | probes | waiting on the user: native, the machine's converter, or both |
+| P11 | File changes in order (increment 203, from the Nov 6 copy): one gate per broker for `write_file`, `edit_file`, `create_directory` and `move_file`, from path resolution to the answer, owned by the blocking worker; reads, operations and settings never take it; a wait past 3 s is refused `mutation_busy` with nothing changed, below the local client's 5 s IPC deadline, and at most 8 wait at once; an MCP cancellation (`request_cancelled`) does not withdraw a queued change, which can still land within those 3 s (`broker/files.rs`, contract in [the parity doc](../../docs/desktop-commander-parity.md#mutation-ordering)) | `broker/tests/file_mutations.rs`; `tests/file_mutation_concurrency.py` (two `devagotchi mcp` adapters, ten scenarios; passes when every check holds and every scenario overlapped at least once; the count is a measurement), in CI's e2e job on every OS | done (local; CI not run): on main 219e008 the harness reproduced two same-SHA writes both succeeding; with the gate, 160 of 160 pairs checked, every scenario overlapped (16 of 16 each), on Windows 11 and on Linux (rust:1.99.1-bookworm, after `chmod -R go-w` on the tree copy: the IPC state check refuses group- or world-writable ancestors); the 7 Rust tests pass on Windows, the first 6 also on Linux (before the review fixes); a gate released by the caller, an unbounded wait and no queue cap each fail them |
+
+| P11 | Readiness, as Desktop Commander's device is `online` only while its MCP child is alive ([teardown 3.5](../../../docs/desktop-commander-teardown.md)): a connected link is not a broker that answers. `broker_capabilities` (wire request, a newtype over `CapabilitiesInput` like `config_get`; `broker/settings.rs`) answers `api_version`, `version`, `os`, `arch`, `exec_policy`, `shell_commands`, `workspace_scope` and `supported_requests` (contracts `REQUEST_METHODS`, less what a `granted` broker always refuses: `config_set`, `process_list`, `process_kill`, `url_read`), no paths, grants, env or secrets; it admits no work, and a closing or faulted broker refuses with `shutting_down` or its fault. Local tool `broker_capabilities`, hub tool `machine_inspect {machine}` through the audited `Hub::call`, both bounded to 3 s (`devagotchi_mcp::capabilities`, `inspection_timeout`). Every "online means usable" wording corrected (hub instructions in `site.json`, the `machines` skill, `mcp/machines.rs`, `mcp/schema.rs`, `mcp/tools/machines.rs`, the landing catalog, docs and llms). Non-goals: no link protocol bump, no protocol-1 admission, no capability cache. Risk, accepted: a machine on an older build cannot parse `broker_capabilities`, and its link ends the session on a frame it does not understand (`crates/link/src/session.rs`, "hub sent a frame this link does not understand"), so its other in-flight calls fail as `broker_offline`; the stance is main's build-skew hint (`mcp/callers/mod.rs` `outdated`, which names `machine_update`) plus auto-update on connect (`machines/link/serve.rs`), not a gate. Also noted: AGENTS.md still says contracts belong in `contracts/src/lib.rs`; they live in its modules (`system.rs` here), as main already does | contracts, machine-engine, mcp and hub tests; probes | see Fix P11 below |
 
 ## Verification receipts
 
@@ -132,12 +135,87 @@ caller's own calls. Splits for the size cap: `operation_read` to `broker/output.
 capture types to `contracts/ai.rs`, three hosted-account tests to `tenancy/tests/accounts.rs`,
 and `machine_names` (what whoami lists) to `tenancy/machines.rs`.
 
+Retry lifecycle (increment 202, branch `increment-202/retry-history` from `main` at `219e008`,
+2026-11-18, Windows): the Nov 6 retry work, ported to `crates/machine-engine` without its
+legacy pieces (contract [DG-RETRY-1](../../docs/retry-lifecycle.md)). A retired key is a
+permanent tombstone: the 4096 prune is gone and triggers refuse any delete, update or replace
+of one. The grant list left the execution identity too (the limits left it in P8), so, as in
+P8, retrying a key admitted before this build is `idempotency_conflict`; grants and cwd are
+still checked live on every start. A refused start (`concurrency_limit_reached`,
+`operation_limit_reached`) retires nothing; a smaller `max_operations` after a restart retires
+down to it on the next start; `set_config_value` saves before it applies (`config_not_saved`
+otherwise) and returns a journal error while retiring instead of ignoring it. Retirement moved
+to `broker/history.rs` (broker.rs 1202 -> 1164 lines in the ratchet). Not ported: the pre-v2
+replay, its `legacy_config_identity` and `v2:` prefix, and the harness's baseline mode
+(docs/product-and-platform-plan.md S08 resolved as alpha). Evidence (Windows 11, this
+branch): `cargo test -p devagotchi-machine-engine` 99 passed, with four new tests in
+`broker/tests/retry.rs` and `journal::tests::retry_evidence_is_permanent_and_immutable`, all
+five of which fail against `main`'s broker, settings and journal; the layout ratchet passed;
+`tests/retry_lifecycle.py` (ported, baseline mode dropped) passed the full gate with 4097 real
+retirements through `devagotchi broker run` and `devagotchi mcp` (4119 child effects, each
+once) and `--quick` on the final build; `tests/e2e.py --no-hub` passed. Linux and the hub e2e
+were not run for this increment, and the harness is not wired into CI. The full 4097 gate ran
+on the binary built before the last `set_config_value` edit; only `--quick` ran on the final
+one. Review fix: the contract said an older build fails every retirement on a journal this
+build opened; it retires normally below 4096 tombstones and fails only once a prune would
+forget one, now stated and tested (`journal::tests::a_pruning_build_fails_only_once_it_would_forget_a_key`).
+After it, `cargo test -p devagotchi-machine-engine` 100 passed, and with `main`'s
+`journal.rs`, `broker.rs` and `broker/settings.rs` swapped in, those six tests failed (94
+passed) before the branch's files were restored.
+
+Fix P11 (2026-11-18, Windows 11 and Linux in Docker): machine-engine 100 unit tests (Windows; 6 new
+in `broker/tests/file_mutations.rs`, which also pass on Linux), ipc 4 and the layout ratchet
+(`broker.rs` lowered to 1194: the broker.json defaults moved to `broker/settings.rs`) passed.
+Two deliberate breaks were each caught: dropping the gate in the caller instead of the worker
+failed `cancelled_caller_cannot_release_a_running_mutation`, and an hour-long gate wait failed
+`a_mutation_that_waits_past_the_bound_is_refused_and_never_lands`. `tests/file_mutation_concurrency.py`
+`--expect-race` on a build of 219e008 reproduced the lost update on its first pair, and the normal
+mode failed on that build at its first pair (two winners); on this code it printed PASS with 160
+pairs on Windows and on Linux. The Linux run (rust:1.99.1-bookworm, a copy of the tree) first
+failed twice with "State directory has an untrusted or symbolic-link ancestor" and passed after
+`chmod -R go-w` on the copy (`crates/ipc/src/unix.rs` refuses group- or world-writable
+ancestors of the broker's state). Receipts: [verification](../../../verification/README.md#file-mutation-ordering-increment-203)
+(Windows; the Linux receipt is kept outside Git). CI has not run the new step yet; it uses
+`--work-root target` inside the checkout.
+
+Fix P11 review (2026-11-18, Windows 11 only): the "never lands late" promise now covers only
+the IPC deadline (`ipc_timeout`), and the module docs, the parity doc and the CHANGELOG say
+that an MCP cancellation (`request_cancelled`, from `devagotchi mcp` or a hub) does not
+withdraw a queued change, which the Nov 6 copy had documented. At most 8 mutations queue
+(`MAX_QUEUED_MUTATIONS`; one more is refused `mutation_busy` at once), so queued changes and
+the 16 held waits never take all 32 broker connections. `mutation()` names every request
+variant. machine-engine 101 unit tests passed (7 in `broker/tests/file_mutations.rs`, one new
+for the queue cap) and the layout ratchet passed. Three deliberate breaks were each caught by
+exactly one test: the guard kept in the caller failed
+`cancelled_caller_cannot_release_a_running_mutation`, an hour-long gate wait failed
+`a_mutation_that_waits_past_the_bound_is_refused_and_never_lands` at its 10 s outer timeout,
+and skipping the queue cap failed `a_mutation_past_the_queue_cap_is_refused_at_once`. The
+harness now records `--source-commit`; its gated receipt is a fresh run on a build of 767ed7b
+(PASS, 160 pairs, 16 of 16 overlapping in each scenario). Linux was not re-run for this pass.
+
+Fix P11 (2026-11-18, Windows, branch `increment-204/machine-inspect` from `main` at `219e008`):
+contracts 8, machine-engine 96, mcp 30 unit tests passed; hub 455 on the test Postgres, with
+three tests failing once under parallel load (a connection reset by the shared Postgres, and a
+board page) that passed alone, `machines/tests/inspect.rs` and the link test among the passes;
+the layout ratchet passed (broker.rs 1199 after `no_caller` moved to `broker/input.rs`);
+`node scripts/generate-contracts.cjs --check` current after regenerating all three artifacts.
+`tests/e2e.py` on Windows against a throwaway Postgres: E2E PASSED. `broker_capabilities`
+through `devagotchi mcp` described both brokers (the granted one without `config_set`,
+`process_list`, `process_kill`, `url_read`) and changed no operation; `machine_inspect` answered
+for the granted and account brokers, refused an unknown machine, said `not_enrolled`,
+`broker_offline` and `device_revoked` with the link, and with the broker stopped behind a live
+link said `ipc_io` in 0.3 s while `machines` still said `online`; after the broker restarted on
+its state (same endpoint) it answered again. Linux: not run on this branch.
+
 Seen once: right after the broker was killed, `devagotchi mcp` reported "your broker is running
 but did not answer within 20 s" while the old one was still shutting down; the next start worked.
 
 ## Delivery
 
-Implementation: map, and fixes P1 to P9. Validation: run here, Linux; Windows not run.
-Push: increment-179/desktop-commander-parity, and main fast-forwarded to it after each fix.
-PR: none (no PR ceremony, by the user's instruction). Main: each fix is on main.
+Implementation: map, and fixes P1 to P9 and P11. Validation: P1 to P9 run here on Linux,
+Windows not run; P11 run on Windows 11 and on Linux in Docker.
+Push: P1 to P9 on increment-179/desktop-commander-parity, and main fast-forwarded to it after
+each fix; P11 on `increment-203/file-mutation-order`.
+PR: none for P1 to P9 (no PR ceremony, by the user's instruction). Main: P1 to P9 are on
+main; P11 reaches main when its branch merges.
 **DELIVERY INCOMPLETE: P10 (write_pdf, waiting on a choice) and step 3 remain**

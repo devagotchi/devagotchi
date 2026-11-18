@@ -119,6 +119,17 @@ impl Links {
         received
     }
 
+    /// Answer call `id` on `device`'s session as its link would, for tests elsewhere in the hub.
+    #[cfg(test)]
+    pub(crate) fn answer_for_test(&self, device: &str, id: u64, response: WireResponse) {
+        let session = self.sessions.lock().expect("links").get(device).cloned();
+        let waiter =
+            session.and_then(|session| session.pending.lock().expect("pending").remove(&id));
+        if let Some(waiter) = waiter {
+            let _ = waiter.send(response);
+        }
+    }
+
     pub fn connected(&self, device: &str) -> bool {
         self.sessions.lock().expect("links").contains_key(device)
     }

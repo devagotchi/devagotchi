@@ -1,0 +1,47 @@
+{
+  "started_at_utc": "2026-11-18T16:57:36.981205+00:00",
+  "binary": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-baseline\\devagotchi-219e008.exe",
+  "binary_sha256": "e4389999766993da915b14a21db23b368dcd5bf268f0dde25f456ba6f832ffdc",
+  "platform": "win32",
+  "work": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-lmyzjgw8",
+  "rounds": 16,
+  "diagnostic": true,
+  "interval_clock": "perf_counter_ns",
+  "clock_resolution_secs": 1e-07,
+  "cases": [
+    {
+      "case": "guarded-overwrite-absent-False-0",
+      "overlapped": true,
+      "results": [
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-lmyzjgw8\\workspace\\overwrite-False-0.txt",
+            "sha256": "b9351f2009a8767cfcc1e8c40f5ded7c969f938e0400b8d8ea6eabda101b1735",
+            "size": 17
+          },
+          "client": 0,
+          "start_ns": 399722418096800,
+          "end_ns": 399722530888800
+        },
+        {
+          "ok": true,
+          "body": {
+            "created": false,
+            "path": "D:\\.usr\\Temp\\claude\\277b3ea28979a061\\66bf7535-5021-47fe-a4ba-46483c7a93e2\\scratchpad\\mutation-runs\\file-mutations-lmyzjgw8\\workspace\\overwrite-False-0.txt",
+            "sha256": "cc42f66d1f55914f75015236a24a1337b670ce13940c804de3f5e14922777486",
+            "size": 17
+          },
+          "client": 1,
+          "start_ns": 399722417671600,
+          "end_ns": 399722544651100
+        }
+      ]
+    }
+  ],
+  "status": "baseline-race-reproduced",
+  "finished_at_utc": "2026-11-18T16:57:37.975931+00:00",
+  "binary_sha256_end": "e4389999766993da915b14a21db23b368dcd5bf268f0dde25f456ba6f832ffdc",
+  "binary_changed": false
+}

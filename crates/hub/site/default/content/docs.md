@@ -55,7 +55,8 @@ server; [/llms-full.txt](/llms-full.txt) is that with every page inlined.
 
 | Tool | What it does |
 |---|---|
-| `machines` | The machines you can use and whether each is online now. Start here. |
+| `machines` | The machines you can use and whether each one's link is connected. Start here. |
+| `machine_inspect` | Asks a machine's broker itself, within 3 seconds, whether it answers and what it serves. No paths or secrets, and it starts nothing. |
 | `workflow_list`, `workflow_start`, `workflow_status`, `workflow_wait`, `workflow_cancel` | The setups the AI can hand you as one link (a machine, your phone, another AI app), and how it follows each to the end. |
 | `machine_add` | A one-time code and the one line that joins a machine to your account. |
 | `run` | Runs a command on a machine and returns its output in one call. |

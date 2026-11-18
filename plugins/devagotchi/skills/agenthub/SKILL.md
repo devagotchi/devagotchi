@@ -25,7 +25,12 @@ next agent sees. All of it goes through the Devagotchi connector's `board_*` too
    with a note saying where it stands and what is next. Never end a session still holding a
    ticket.
 6. **Work you discover goes on the board** with `board_create` (set `discovered_from` to the
-   ticket you were on). Do not quietly do unplanned work.
+   ticket you were on). Do not quietly do unplanned work. When you turn a document into
+   tickets (a roadmap, a plan, a checklist), give each `board_create` an `origin`: `path`
+   (repository-relative), `item` (the item's stable id there, not a line number), and the
+   `revision` and `content_sha256` you read if you have them. Creating it again with the same
+   inputs returns the ticket as it is, so re-running an import is safe; changed inputs come
+   back as `source_conflict` naming the ticket: reconcile that one, never invent a new item id.
 
 ## Waiting and asking
 

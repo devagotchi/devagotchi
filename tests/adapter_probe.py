@@ -19,6 +19,7 @@ import argparse
 import os
 import json
 import subprocess
+import sys
 import time
 import uuid
 
@@ -82,9 +83,29 @@ rpc("notifications/initialized", notify=True)
 tools = rpc("tools/list")["result"]["tools"]
 print("tools:", ", ".join(sorted(t["name"] for t in tools)))
 missing = {"run", "read_file", "list_directory", "write_file", "edit_file", "operation_list",
-           "operation_start", "operation_wait", "operation_input", "operation_resize"} - {t["name"] for t in tools}
+           "operation_start", "operation_wait", "operation_input", "operation_resize",
+           "broker_capabilities"} - {t["name"] for t in tools}
 if missing:
     raise SystemExit(f"tools missing: {sorted(missing)}")
+
+# The broker itself says what it is and what it answers, without paths, and starts nothing.
+before = call("operation_list", {})
+caps = call("broker_capabilities", {})
+print("capabilities:", json.dumps(caps))
+fields = {"api_version", "version", "os", "arch", "exec_policy", "shell_commands", "workspace_scope",
+          "supported_requests"}
+policy = "account" if args.account else "granted"
+if set(caps) != fields or caps["exec_policy"] != policy or caps["shell_commands"] != args.account         or caps["workspace_scope"] != ("account" if args.account else "workspace"):
+    raise SystemExit(f"broker_capabilities does not describe this broker: {caps}")
+this_os = {"win32": "windows", "darwin": "macos"}.get(sys.platform, sys.platform)
+served = set(caps["supported_requests"])
+account_only = {"config_set", "process_list", "process_kill", "url_read"}
+if caps["os"] != this_os or not {"broker_capabilities", "operation_start", "file_read"} <= served         or (account_only <= served) != args.account or (account_only & served and not args.account):
+    raise SystemExit(f"broker_capabilities lists the wrong requests for a {policy} broker: {caps}")
+if args.cwd and args.cwd in json.dumps(caps):
+    raise SystemExit("broker_capabilities named a path")
+if call("operation_list", {}) != before:
+    raise SystemExit("broker_capabilities changed the broker's operations")
 
 started = call("operation_start", {
     "idempotency_key": str(uuid.uuid4()), "executable": args.git, "args": ["--version"],

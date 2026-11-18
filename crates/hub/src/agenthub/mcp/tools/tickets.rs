@@ -21,7 +21,7 @@ use crate::{
 impl Hub {
     #[tool(
         name = "board_create",
-        description = "Create a ticket. Work you discover while holding another ticket goes on the board with discovered_from set, never silently done. parent makes a child with a `parent.n` id.",
+        description = "Create a ticket. Work you discover while holding another ticket goes on the board with discovered_from set, never silently done. parent makes a child with a `parent.n` id. origin names the document item it is imported from: the same create again returns the ticket as it is, changed inputs are source_conflict.",
         title = "Create a ticket",
         annotations(
             title = "Create a ticket",
@@ -66,6 +66,7 @@ impl Hub {
                 session: given_or(input.session, || mcp_session(&context)),
                 fingerprint: input.fingerprint,
             },
+            source: input.origin,
             ..NewTicket::default()
         };
         self.board_call(

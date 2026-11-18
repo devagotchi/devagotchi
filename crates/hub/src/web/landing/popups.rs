@@ -66,7 +66,11 @@ pub const TOOLS: [(&str, &[(&[&str], &str)]); 7] = [
         &[
             (
                 &["machines"],
-                "Every machine your AI can work on, and whether each is online now. It starts here.",
+                "Every machine your AI can work on, and whether its link is connected. It starts here.",
+            ),
+            (
+                &["machine_inspect"],
+                "Asks a machine's broker itself whether it answers and what it serves, within 3 seconds. No paths or secrets, and nothing started.",
             ),
             (
                 &["machine_add"],

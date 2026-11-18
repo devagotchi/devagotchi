@@ -33,7 +33,9 @@ needs to be truly built and setup in this project so we can finally focus on the
 admin/shippin module that would allow us to either deploy a managed instance, or offer a
 tailored commercial signup offering free tier and more".
 
-1. **The standalone edition**, free, self-hosted from GitHub. Done when these rows are done:
+1. **The standalone edition**, free, self-hosted from GitHub, tailored to one user (operator,
+   2026-11-18: it does not offer managing other users or customers; [editions](../../docs/editions.md),
+   free-edition R4). Done when these rows are done:
    - first, the dev build and the conformance run that prove every tool call works, the same
      way every time, and covers everything Desktop Commander offers and more: rows 5.8, 5.9
      (operator, 2026-11-17: "a true dev build that allows me to track our toolcalling ... not
@@ -104,7 +106,7 @@ Nothing new is built until this phase has run once; what it finds is fixed first
 
 | # | Feature | In the code today | Proof |
 |---|---|---|---|
-| 4.1 | **scan the project folders and get tickets**: a library of the plans and TODOs AI tools write, preview, then import | built: `devagotchi board scan [PATH] [--import]` (increment 189, #240, agenthub #4): rule files for Kiro, spec-kit, Cursor, Claude, `.ai/` plan tables, plan files, checklists and code markers; preview, import once by fingerprint, on a local board and a hub's Postgres board (proven in CI's `hub (postgres)`). Not yet: closing a ticket when its checkbox is ticked, an MCP `board_scan` tool | `devagotchi board scan` on a real repo on Texas, preview, import, tickets on the phone; a second scan imports nothing twice ([factory](agenthub-factory.md) F5) |
+| 4.1 | **scan the project folders and get tickets**: a library of the plans and TODOs AI tools write, preview, then import | built: `devagotchi board scan [PATH] [--import]` (increment 189, #240, agenthub #4): rule files for Kiro, spec-kit, Cursor, Claude, `.ai/` plan tables, plan files, checklists and code markers; preview, import once by fingerprint, on a local board and a hub's Postgres board (proven in CI's `hub (postgres)`). An importer's `origin` (`{path, item, revision?, content_sha256?}`) makes a ticket once per board, atomically, with immutable provenance; a changed import is `source_conflict` (increment 205, [factory](agenthub-factory.md) F5a); `board scan` does not pass one yet ([factory](agenthub-factory.md) F5b, F5c). Not yet: closing a ticket when its checkbox is ticked, an MCP `board_scan` tool. Next (absorbed 2026-11-18 from the 2026-11-06 project plan): the scan's evidence and `board_scan` ([factory](agenthub-factory.md) F5b), a reviewable import on the pages (F5c, where a ticked box proposes a completion and never makes one silently), a project bound to its verified repository (F1b) | `devagotchi board scan` on a real repo on Texas, preview, import, tickets on the phone; a second scan imports nothing twice ([factory](agenthub-factory.md) F5) |
 | 4.2 | import from GitHub Issues/Projects, Linear, Jira, CSV, Notion | partial: live GitHub webhook only, no backfill | a repo's open issues imported once |
 | 4.3 | assign agents | built (roster worked out, not editable per board) | assign from the phone; the agent is told |
 | 4.4 | hierarchy configurable in the UI (Org → Project → Area → Epic → Ticket by default) | absent | switch baselines on a board's settings |
@@ -123,10 +125,10 @@ Nothing new is built until this phase has run once; what it finds is fixed first
 | 5.3 | the Codex plugin, as complete as Claude's | partial: a manifest only; its connector file (`plugins/devagotchi/.mcp.json`) names the placeholder `https://hub.example.com/mcp`, the hub address cannot be set, no hooks, and `plugins/README.md` says it uses the hosted hub | `codex plugin add`, signed in, reaches Texas; the hooks fire in a Codex session |
 | 5.4 | the plugins work with no hub: Devagotchi on this computer alone, as Desktop Commander does (`devagotchi mcp` over stdio, the local broker) | absent from the plugins: only `devagotchi connect` writes that setup (Claude Code, Codex, Claude Desktop) | install the plugin on a computer with no hub; Claude runs a command there |
 | 5.5 | Grok, through the Claude marketplace format | unchecked: "Not yet checked in a real Grok session" (`plugins/README.md`) | install in Grok Build; it reaches Texas |
-| 5.6 | a local UI the person opens themselves, not the server | absent | the operator's review |
+| 5.6 | a local UI the person opens themselves, not the server | absent. Planned as [plugins](plugins.md) G11 to G15 (operator, 2026-11-18): plugins for VS Code, Codex, Claude Code, the terminal, Claude Desktop and ChatGPT Desktop, optimised visual components on the person's machine, cues from local signals, deterministic before any model call, the person's own hub shown on connect | the operator's review |
 | 5.7 | API keys with granular control and durations | built | a key limited to one machine and one hour |
 | 5.8 | **a dev build that tracks every tool call**: each call, local (`devagotchi mcp`) and through the hub, kept with its tool, machine, target, AI client, duration, outcome, error code and the sizes in and out; a page and a command that show, per tool, calls, failures, and how long they take (median and slowest) | partial: the hub's audit chain keeps who, tool, machine, operation and outcome (`ops/audit.rs`), with no duration, error code, sizes or client; the local adapter keeps the last 1,000 calls in memory only, without durations (`mcp/src/adapter/history.rs`); the broker's log keeps refusals and settlements (`machine-engine/src/trace.rs`) | the conformance run (5.9) on Texas, then the page shows every tool it called, with its numbers |
-| 5.9 | **the conformance run**: every tool, and every Desktop Commander capability in [desktop-commander-parity](../../docs/desktop-commander-parity.md), called the way an AI calls it, many times over, locally and through a hub, on Linux and Windows; each answer checked, a call that fails once in a hundred reported as such; and a check that fails when a tool exists with no conformance case, or a Desktop Commander capability has none | partial: `tests/adapter_probe.py` calls 18 tools once each through the local adapter; it misses `search_files`, `read_url`, `get_config`, `set_config_value`, `list_processes`, `kill_process`, `operation_cancel`, the history tools and every hub-only tool, repeats nothing, and is not compared with Desktop Commander's list | the run's report from Texas and from CI, every tool consistent across its repetitions |
+| 5.9 | **the conformance run**: every tool, and every Desktop Commander capability in [desktop-commander-parity](../../docs/desktop-commander-parity.md), called the way an AI calls it, many times over, locally and through a hub, on Linux and Windows; each answer checked, a call that fails once in a hundred reported as such; and a check that fails when a tool exists with no conformance case, or a Desktop Commander capability has none | partial: `tests/adapter_probe.py` calls 19 tools once each through the local adapter, `broker_capabilities` under both policies among them (increment 204); it misses `search_files`, `read_url`, `get_config`, `set_config_value`, `list_processes`, `kill_process`, `operation_cancel`, the history tools and every hub-only tool but `machine_inspect` (granted, account, unknown, not enrolled, offline, revoked and a stopped broker behind a live link, in `tests/hub_probe.py` through `tests/e2e.py`; its audit in `machines/tests/inspect.rs`), repeats nothing, and is not compared with Desktop Commander's list; `tests/mcp_protocol.py`'s catalog still lacks the P7 to P9 tools. Windows start no longer stalls under load (increment 201): the broker resumes a root from a snapshot of its own threads, not a ToolHelp walk of every thread on the machine (6.2 s against a 5 s deadline, 2026-11-06); on this Windows machine, 2026-11-18, `cargo test -p devagotchi-machine-engine` at default parallelism failed 5 of 8 runs on `main` (`input_blocked`: the first input reached a root not yet running, in both Windows interactive tests); with the change, 14 runs had no startup failure and 6 more passed with three copies of the suite running at once, but 2 of the 14 failed later in the console test, a Ctrl-C typed into `ping -t` never showing "Control-C" (open, not startup). CI's nextest runs one process per test and does not reproduce the contention | the run's report from Texas and from CI, every tool consistent across its repetitions |
 
 ## Phase 6: connectors and every setting in the UI
 
@@ -168,6 +170,24 @@ Nothing new is built until this phase has run once; what it finds is fixed first
 
 Only after Phase 9 is proven: the cloud edition ([cloud-edition](cloud-edition.md)).
 
+## Decided by the operator, 2026-11-18
+
+Recorded in [editions](../../docs/editions.md), and placed where the work lands:
+
+- Three builds under FSL-1.1-ALv2: the Shippin build (commercial, multi-tenant, today's
+  multi-tenant `main` its basis), the standalone GitHub release (free, one user, no managing of
+  other users or customers: free-edition R4 takes `/admin`'s People section and `/orgs` out of
+  it), and managed deployments (they offer multi-tenancy).
+- AgentHub is provided either by Devagotchi or by a separate service Shippin hosts.
+- Devagotchi is the central point for a solo builder across tools, customers and services:
+  integrations set up once, not per project; it follows behaviour, state, intent and history;
+  a new project is offered as a Devagotchi project with AgentHub, undoable from its settings
+  ([factory](agenthub-factory.md) F23).
+- The plugins and their local UI: [plugins](plugins.md) G11 to G15 (row 5.6).
+- Absorbed the same day: the Go hub's last two branches (free-edition D1b, D2b, D6, D7, H1;
+  self-hosted S3; connections X10; cloud C9 to C11; plugins G10; factory F18) and the
+  2026-11-06 project delivery plan's M0 and M2 to M9 (factory F1b, F5b, F5c, F8b, F19 to F22).
+
 ## Decisions for the operator
 
 1. **SQLite that remains.** The hub and the link are Postgres only, and so is AgentHub: its
@@ -194,3 +214,12 @@ Only after Phase 9 is proven: the cloud edition ([cloud-edition](cloud-edition.m
    teams and shared machines (4.5), the configurable hierarchy (4.4), statistics in ClickHouse
    (4.7), importers beyond `board scan` (4.2), AgentHub on its own Postgres (4.8). Nothing is
    removed from the code for this; the commercial build turns it on.
+8. **LiftOffDB** (open, operator 2026-11-18; not a commitment): a planned fork of Turso, built
+   for concurrent writes, in tiers starter, managed and advanced with no capability lost per
+   tier, the starter tier accepting single points of failure with quick recovery, backups and
+   virtualization. The plugin's dynamic components are its first consumer; Postgres stays for
+   the multi-tenant builds. Whether the standalone release uses an embedded engine is undecided
+   until a test port proves it ([editions](../../docs/editions.md)).
+9. **Managed deployments and ADR 0003**: the 2026-11-18 decision says managed deployments offer
+   multi-tenancy; ADR 0003 describes a paid instance as running no tenancy code. Proposed: a
+   managed instance runs the multi-tenant build when its customer wants accounts of its own.

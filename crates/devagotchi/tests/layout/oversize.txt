@@ -3,11 +3,10 @@
 # not listed may not exceed the cap. Never add a line or raise a number to make the test
 # pass: see .ai/patterns/layout.md.
 588	crates/agenthub/src/clickhouse.rs
-912	crates/agenthub/src/hosted.rs
-736	crates/agenthub/src/hosted/operations.rs
+823	crates/agenthub/src/hosted.rs
+709	crates/agenthub/src/hosted/operations.rs
 855	crates/devagotchi/tests/one_binary.rs
 623	crates/hub/src/agenthub/issue_lifecycle/tests.rs
-590	crates/hub/src/agenthub/tests/served.rs
 647	crates/hub/src/identity/accounts/oauth/mod.rs
 683	crates/hub/src/identity/accounts/oauth/tests.rs
 506	crates/hub/src/identity/accounts/tenants/mod.rs
@@ -26,7 +25,7 @@
 842	crates/hub/src/site/tests.rs
 564	crates/hub/src/site/workflows.rs
 521	crates/hub/src/tenancy/orgs/api/mod.rs
-775	crates/hub/src/tenancy/tests/tenants.rs
+773	crates/hub/src/tenancy/tests/tenants.rs
 607	crates/hub/src/web/analytics.rs
 509	crates/hub/src/web/app/agenthub/ticket_tests.rs
 713	crates/hub/src/web/approvals.rs
@@ -39,7 +38,7 @@
 1534	crates/hub/src/web/passkey_tests.rs
 1112	crates/hub/src/web/passkeys.rs
 937	crates/hub/src/web/providers.rs
-686	crates/hub/src/web/routes.rs
+680	crates/hub/src/web/routes.rs
 1204	crates/hub/src/web/tests/mod.rs
 1086	crates/hub/src/web/workflow.rs
 531	crates/hub/src/workflows/mcp.rs
@@ -49,8 +48,8 @@
 516	crates/ipc/src/windows/security.rs
 1017	crates/kernel/src/capture/mod.rs
 647	crates/kernel/src/capture/tests.rs
-1202	crates/machine-engine/src/broker.rs
+1153	crates/machine-engine/src/broker.rs
 519	crates/machine-engine/src/execution/platform/linux.rs
-630	crates/machine-engine/src/execution/platform/windows.rs
+583	crates/machine-engine/src/execution/platform/windows.rs
 802	crates/mcp/src/connect.rs
-523	crates/store/src/lib.rs
+522	crates/store/src/lib.rs
