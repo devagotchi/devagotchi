@@ -48,6 +48,22 @@ install, not a production promotion. The gap that is still open is in
   in the hub's Postgres.
 - `/admin` → Signal sinks adds, changes and removes where the hub pushes its signals (log
   services, your own collector), each running the moment it is saved, its token encrypted.
+- A broker remembers every retired idempotency key for good, not only the newest 4096 that
+  "Bounded history" (increment 24a) below describes: past 4096 retirements the oldest key was
+  forgotten, and a late retry with it ran its work again. A retired key is a compact
+  tombstone in the journal that nothing deletes, changes or replaces (DG-RETRY-1,
+  [.ai/docs/retry-lifecycle.md](.ai/docs/retry-lifecycle.md)). A key is bound to the
+  workspace and exec policy and to the executable, arguments, cwd, deadline and `interactive`
+  it ran with; changing a limit or an unrelated grant keeps every retry, and a revoked grant
+  still refuses one. A start refused with `concurrency_limit_reached` or
+  `operation_limit_reached` no longer retires finished history first; a `max_operations`
+  lowered in broker.json retires down to it on the next start after a restart, and every
+  retired key stays retired. `set_config_value` saves a limit first and applies it only once
+  saved (`config_not_saved` otherwise), and a journal error while retiring down to a lower
+  `max_operations` is returned instead of ignored. A key admitted by an earlier build
+  (bound with the grant list) is `idempotency_conflict` on this one. Keys an earlier build had
+  already forgotten past 4096 retirements cannot be brought back. An earlier build run on a
+  journal this one opened fails each retirement once the journal holds 4096 tombstones.
 
 ### A command on Windows starts without walking every thread on the machine (increment 201)
 - The broker still creates each root suspended, puts it in its Job Object, and only then

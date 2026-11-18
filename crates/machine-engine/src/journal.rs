@@ -31,9 +31,6 @@ pub(crate) struct JournalOperation {
     pub frames: VecDeque<JournalFrame>,
 }
 
-/// How many retired idempotency keys the journal remembers (refused, never rerun).
-pub(crate) const RETIRED_KEYS: i64 = 4096;
-
 pub(crate) struct Journal {
     connection: Connection,
 }
@@ -150,11 +147,29 @@ impl Journal {
                  idempotency_key TEXT PRIMARY KEY NOT NULL,
                  request_digest TEXT NOT NULL,
                  retired_at_ms INTEGER NOT NULL
-             );",
+             );
+             -- A retired key is a tombstone for good: forgetting one would let a late retry
+             -- run its work again. No statement on any connection deletes, changes or
+             -- replaces one; the transaction that tries fails and rolls back whole.
+             CREATE TRIGGER IF NOT EXISTS retired_keys_no_delete
+             BEFORE DELETE ON retired_keys BEGIN
+                 SELECT RAISE(ABORT, 'a retired idempotency key is never forgotten');
+             END;
+             CREATE TRIGGER IF NOT EXISTS retired_keys_no_update
+             BEFORE UPDATE ON retired_keys BEGIN
+                 SELECT RAISE(ABORT, 'a retired idempotency key is immutable');
+             END;
+             -- INSERT OR REPLACE skips the delete trigger unless recursive_triggers is on.
+             CREATE TRIGGER IF NOT EXISTS retired_keys_no_replace
+             BEFORE INSERT ON retired_keys
+             WHEN EXISTS(SELECT 1 FROM retired_keys WHERE idempotency_key=NEW.idempotency_key)
+             BEGIN
+                 SELECT RAISE(ABORT, 'a retired idempotency key is immutable');
+             END;",
             )
             .map_err(persistence)?;
-        // Added with interactive operations (increment 54). Kept out of view_json, so a broker
-        // from before reads a newer journal as it always did.
+        // Added with interactive operations (increment 54); a journal created before then gains
+        // them here. Folding them into CREATE TABLE is left to its own change.
         let columns: Vec<String> = connection
             .prepare("SELECT name FROM pragma_table_info('operations')")
             .and_then(|mut statement| {
@@ -345,7 +360,8 @@ impl Journal {
 
     /// Retire a finished operation: its record and output go, and its idempotency key is
     /// kept in `retired_keys` so a retry with that key is refused rather than run again.
-    /// The newest `RETIRED_KEYS` retirements are kept; history is bounded either way.
+    /// That tombstone is permanent (the table's triggers refuse any change to it): only
+    /// operation records and their output are bounded; tombstones grow with finished work.
     pub(crate) fn retire(
         &mut self,
         operation_id: &str,
@@ -373,14 +389,8 @@ impl Journal {
         }
         transaction
             .execute(
-                "INSERT OR REPLACE INTO retired_keys(idempotency_key,request_digest,retired_at_ms) VALUES(?1,?2,?3)",
+                "INSERT INTO retired_keys(idempotency_key,request_digest,retired_at_ms) VALUES(?1,?2,?3)",
                 params![key, request_digest, at_ms],
-            )
-            .map_err(persistence)?;
-        transaction
-            .execute(
-                "DELETE FROM retired_keys WHERE rowid NOT IN (SELECT rowid FROM retired_keys ORDER BY retired_at_ms DESC, rowid DESC LIMIT ?1)",
-                [RETIRED_KEYS],
             )
             .map_err(persistence)?;
         transaction.commit().map_err(persistence)
@@ -408,8 +418,8 @@ impl Journal {
     }
 }
 
-/// A view as the journal stores it: everything but `interactive` in view_json, which an
-/// older broker reads unchanged, and `interactive` beside it.
+/// A view as the journal stores it: everything but `interactive` in view_json, and
+/// `interactive` in its own column beside it.
 fn stored(view: &OperationView) -> BridgeResult<(String, Option<String>)> {
     let interactive = view
         .interactive

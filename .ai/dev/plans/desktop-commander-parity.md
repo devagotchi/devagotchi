@@ -132,6 +132,34 @@ caller's own calls. Splits for the size cap: `operation_read` to `broker/output.
 capture types to `contracts/ai.rs`, three hosted-account tests to `tenancy/tests/accounts.rs`,
 and `machine_names` (what whoami lists) to `tenancy/machines.rs`.
 
+Retry lifecycle (increment 202, branch `increment-202/retry-history` from `main` at `219e008`,
+2026-11-18, Windows): the Nov 6 retry work, ported to `crates/machine-engine` without its
+legacy pieces (contract [DG-RETRY-1](../../docs/retry-lifecycle.md)). A retired key is a
+permanent tombstone: the 4096 prune is gone and triggers refuse any delete, update or replace
+of one. The grant list left the execution identity too (the limits left it in P8), so, as in
+P8, retrying a key admitted before this build is `idempotency_conflict`; grants and cwd are
+still checked live on every start. A refused start (`concurrency_limit_reached`,
+`operation_limit_reached`) retires nothing; a smaller `max_operations` after a restart retires
+down to it on the next start; `set_config_value` saves before it applies (`config_not_saved`
+otherwise) and returns a journal error while retiring instead of ignoring it. Retirement moved
+to `broker/history.rs` (broker.rs 1202 -> 1164 lines in the ratchet). Not ported: the pre-v2
+replay, its `legacy_config_identity` and `v2:` prefix, and the harness's baseline mode
+(docs/product-and-platform-plan.md S08 resolved as alpha). Evidence (Windows 11, this
+branch): `cargo test -p devagotchi-machine-engine` 99 passed, with four new tests in
+`broker/tests/retry.rs` and `journal::tests::retry_evidence_is_permanent_and_immutable`, all
+five of which fail against `main`'s broker, settings and journal; the layout ratchet passed;
+`tests/retry_lifecycle.py` (ported, baseline mode dropped) passed the full gate with 4097 real
+retirements through `devagotchi broker run` and `devagotchi mcp` (4119 child effects, each
+once) and `--quick` on the final build; `tests/e2e.py --no-hub` passed. Linux and the hub e2e
+were not run for this increment, and the harness is not wired into CI. The full 4097 gate ran
+on the binary built before the last `set_config_value` edit; only `--quick` ran on the final
+one. Review fix: the contract said an older build fails every retirement on a journal this
+build opened; it retires normally below 4096 tombstones and fails only once a prune would
+forget one, now stated and tested (`journal::tests::a_pruning_build_fails_only_once_it_would_forget_a_key`).
+After it, `cargo test -p devagotchi-machine-engine` 100 passed, and with `main`'s
+`journal.rs`, `broker.rs` and `broker/settings.rs` swapped in, those six tests failed (94
+passed) before the branch's files were restored.
+
 Seen once: right after the broker was killed, `devagotchi mcp` reported "your broker is running
 but did not answer within 20 s" while the old one was still shutting down; the next start worked.
 
