@@ -34,8 +34,8 @@ use devagotchi_contracts::{BridgeError, BridgeResult};
 
 use crate::ops::analytics::funnel;
 use crate::{
-    identity::Subject,
-    identity::accounts::Accounts,
+    config::Live,
+    identity::{Subject, accounts::Accounts},
     mcp::Hub,
     site::{
         Ctx, Site,
@@ -49,14 +49,14 @@ use crate::{
 pub struct Workflows {
     accounts: Arc<Accounts>,
     changes: Arc<tokio::sync::Notify>,
-    link_ttl: u64,
+    link_ttl: Live, // `/admin`'s workflows.link_ttl_secs, read when a link is made
     /// When this hub last wrote each (tenant, family) of AI client's call, so a busy client
     /// costs a write an hour at most.
     noted: std::sync::Mutex<std::collections::HashMap<(String, &'static str), u64>>,
 }
 
 impl Workflows {
-    pub fn new(accounts: Arc<Accounts>, changes: Arc<tokio::sync::Notify>, link_ttl: u64) -> Self {
+    pub fn new(accounts: Arc<Accounts>, changes: Arc<tokio::sync::Notify>, link_ttl: Live) -> Self {
         Self {
             accounts,
             changes,
@@ -100,7 +100,7 @@ impl Workflows {
     }
 
     pub fn link_ttl(&self) -> u64 {
-        self.link_ttl
+        self.link_ttl.get().link_ttl_secs
     }
 
     /// Something a workflow may be waiting on changed on this hub.

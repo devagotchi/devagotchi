@@ -20,6 +20,7 @@
 | M5 | Signal sinks from the page, sealed | M2 | to write | pending |
 | M6 | OpenID Connect from the page. The card does not prefill an issuer or a label; the operator types both. Any provider, including Nomen, is that | M2 | `hub_settings_tests.rs` (empty issuer, a typed one saves and appears on the sign-in page); `provider_tests.rs` (the code exchange) | done (increment 134; the prefilled issuer was removed so a self-hosted hub does not name one) |
 | M7 | Network providers | operator's decision | to write | pending |
+| M9 | The settings the hub reads while it runs, on the page and live: tenancy limits, anonymous connect, shortest password, machine auto-update, workflow link lifetime, visit retention; the file's value wins and is shown; every other key listed as set at deploy, with why; a test fails on a key in neither (free-edition U0) | M1 | `config/live/tests.rs`, `web/hub_settings_live_tests.rs` | done (increment 198) |
 | M8 | Review and merge to main | operator approval | merged PR | pending |
 
 ## Risks and approved decisions

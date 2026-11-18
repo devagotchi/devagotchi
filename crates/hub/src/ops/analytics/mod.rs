@@ -46,7 +46,9 @@ use std::{
 use aws_lc_rs::hmac;
 use tokio::sync::mpsc;
 
-use crate::{config::AnalyticsConfig, store::Store};
+#[cfg(test)]
+use crate::config::AnalyticsConfig;
+use crate::store::Store;
 
 pub use visit::View;
 
@@ -99,35 +101,41 @@ pub struct Analytics {
     /// Milestones already queued, and the day they were: each is sent once (an operation
     /// once a day, for its latest).
     sent: Mutex<HashMap<(String, &'static str), i64>>,
-    retention_days: u32,
+    /// `analytics.retention_days` as `/admin` has it now.
+    retention: crate::config::Live,
     /// This hub's own host, lowercase, never counted as a referrer.
     own_host: String,
 }
 
 impl std::fmt::Debug for Analytics {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Analytics(retention {} days)", self.retention_days)
+        write!(f, "Analytics(retention {} days)", self.retention_days())
     }
 }
 
 impl Analytics {
     /// Count for the hub at `public_url` into `store`: the writer runs on this runtime
     /// until the last handle is dropped.
+    #[cfg(test)]
     pub fn start(store: Store, config: AnalyticsConfig, public_url: &str) -> Arc<Self> {
+        let live = crate::config::Live::default();
+        let mut settings = live.get();
+        settings.retention_days = config.retention_days;
+        live.replace(settings);
+        Self::start_with(store, live, public_url)
+    }
+
+    /// `start`, keeping raw visits as long as `/admin` says when each day is tidied.
+    pub fn start_with(store: Store, live: crate::config::Live, public_url: &str) -> Arc<Self> {
         let (queue, received) = mpsc::channel(QUEUE);
         let dropped = Arc::new(AtomicU64::new(0));
-        tokio::spawn(writer::run(
-            store,
-            received,
-            config.retention_days,
-            dropped.clone(),
-        ));
+        tokio::spawn(writer::run(store, received, live.clone(), dropped.clone()));
         Arc::new(Self {
             queue,
             dropped,
             salt: Mutex::new(None),
             sent: Mutex::new(HashMap::new()),
-            retention_days: config.retention_days,
+            retention: live,
             own_host: visit::host_of(public_url).unwrap_or_default(),
         })
     }
@@ -139,7 +147,7 @@ impl Analytics {
 
     /// Days raw visits are kept (`analytics.retention_days`).
     pub fn retention_days(&self) -> u32 {
-        self.retention_days
+        self.retention.get().retention_days
     }
 
     pub(crate) fn own_host(&self) -> &str {

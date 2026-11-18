@@ -23,6 +23,7 @@ pub(crate) mod analytics;
 mod auth;
 mod file;
 pub(crate) mod github;
+pub(crate) mod live;
 pub(crate) mod machines;
 pub(crate) mod providers;
 pub(crate) mod shippin;
@@ -38,6 +39,7 @@ pub(crate) use auth::valid_subject;
 pub use auth::{AuthConfig, TokenConfig, TrustedIssuer, WebConfig};
 pub(crate) use file::{prepare_state_dir, read};
 pub use github::GithubConfig;
+pub use live::{Live, LiveSettings, Pinned};
 pub use machines::MachinesConfig;
 pub use providers::{EmailConfig, ProviderConfig, ProviderKind};
 pub use shippin::ShippinConfig;
@@ -160,6 +162,14 @@ pub struct HubConfig {
     /// a file leaves the core defaults (`extensions.rs`).
     #[serde(skip, default)]
     pub extensions: crate::extensions::Extensions,
+    /// The settings the owner changes on `/admin` (`config/live.rs`), shared by every holder
+    /// of this config: the file's values at parse, the saved ones over them once the hub
+    /// reads its store (`serve`), a save replacing them at once.
+    #[serde(skip)]
+    live: Live,
+    /// The settings the file or the environment set, which the page shows but leaves.
+    #[serde(skip)]
+    pinned: Pinned,
 }
 
 impl HubConfig {
@@ -174,7 +184,9 @@ impl HubConfig {
     /// them from `.env` or the secret store. The site directory is read and checked here, so a
     /// bad one stops the start.
     pub fn parse_with(text: &str, env: impl Fn(&str) -> Option<String>) -> BridgeResult<Self> {
-        let mut config: HubConfig = serde_json::from_str(text)
+        let raw: serde_json::Value = serde_json::from_str(text)
+            .map_err(|error| BridgeError::new("invalid_config", error.to_string()))?;
+        let mut config: HubConfig = serde_json::from_value(raw.clone())
             .map_err(|error| BridgeError::new("invalid_config", error.to_string()))?;
         let invalid = |message: String| BridgeError::new("invalid_config", message);
         if let Some(mode) = env(TENANCY_ENV).filter(|mode| !mode.trim().is_empty()) {
@@ -216,6 +228,8 @@ impl HubConfig {
         if let Some(owner) = &config.owner {
             let _ = config.owner_cell.set(owner.clone());
         }
+        config.live = Live::new(LiveSettings::from_config(&config));
+        config.pinned = Pinned::from(&raw, &env);
         Ok(config)
     }
 
@@ -268,6 +282,21 @@ impl HubConfig {
         self.check_web()?;
         self.check_access()?;
         Ok(())
+    }
+
+    /// The `/admin` settings in force now (`config/live.rs`).
+    pub fn live(&self) -> LiveSettings {
+        self.live.get()
+    }
+
+    /// The handle to them, for what reads them later than now.
+    pub fn live_handle(&self) -> Live {
+        self.live.clone()
+    }
+
+    /// The settings the file or the environment set.
+    pub fn pinned(&self) -> &Pinned {
+        &self.pinned
     }
 
     /// Whether this subject is the hub's owner.

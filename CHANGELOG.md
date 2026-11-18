@@ -38,6 +38,11 @@ install, not a production promotion. The gap that is still open is in
   (kept in `.devagotchi/config.json`, refused with a password in it). With neither, every
   `board` command says so and names `board bind`. The SQLite `board.sqlite3` is gone, and nothing
   is moved from one: `board init` makes a new board (ADR 0005).
+- `/admin` changes the settings the hub reads while it runs, in force the moment they are
+  saved: the shortest password, sign-up rate and the limits of an account nobody has secured,
+  connecting an AI with no sign-in, machines updating themselves, how long a workflow link
+  works, and how long a hosted hub keeps visits. A value the config file sets is shown, not
+  changed. The page lists every key that is set at deploy, with why.
 
 ### The license is the Functional Source License (FSL-1.1-ALv2)
 - Devagotchi moves from the Business Source License 1.1 to FSL-1.1-ALv2, held by AngryVibes LLC:

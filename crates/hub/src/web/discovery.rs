@@ -45,7 +45,7 @@ pub async fn llms_full(State(state): State<AppState>) -> Response {
             &state.hub.config.public_url,
             kind(&state),
             switch(&state),
-            state.hub.config.analytics.retention_days,
+            state.hub.config.live().retention_days,
         ),
         "text/plain; charset=utf-8",
     )

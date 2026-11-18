@@ -34,7 +34,7 @@ fn page(state: &AppState, name: &str) -> Response {
         .with("updated", page.updated.clone())
         .with(
             "retention_days",
-            state.hub.config.analytics.retention_days.to_string(),
+            state.hub.config.live().retention_days.to_string(),
         );
     let body = page.render(&ctx, &[kind(state), switch(state)]);
     let title = ctx.plain(&page.title);
