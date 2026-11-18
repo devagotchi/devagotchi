@@ -112,6 +112,10 @@ pub async fn connect(config: &LinkConfig, key: &SigningKey, mode: Mode<'_>) -> E
             Mode::Serve { updater, .. } => Some(updater.build().to_string()),
             Mode::Enroll { .. } => None,
         },
+        kind: match &mode {
+            Mode::Serve { updater, .. } => updater.kind().map(str::to_string),
+            Mode::Enroll { .. } => None,
+        },
     };
     if let Err(why) = send(&mut sink, &hello).await {
         return Ended::Retry(why);

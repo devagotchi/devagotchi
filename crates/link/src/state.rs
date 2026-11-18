@@ -168,6 +168,11 @@ pub fn load_config(dir: &Path) -> BridgeResult<LinkConfig> {
     Ok(config)
 }
 
+/// Whether the device key exists, without creating it.
+pub fn has_key(dir: &Path) -> bool {
+    key_path(dir).exists()
+}
+
 /// The device key, created on first use. Only its public half ever leaves this machine.
 pub fn device_key(dir: &Path) -> BridgeResult<SigningKey> {
     let path = key_path(dir);

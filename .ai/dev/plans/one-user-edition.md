@@ -106,6 +106,29 @@ Three more constraints shape the program:
 - **Depends on:** nothing.
 
 ### 209: Docker machine join that leaves a running machine (M)
+- **Delivered as (2026-11-18, branch `increment-209/docker-join`):** the compose file is
+  `crates/hub/src/machines/join/compose.yml`, served by `join/compose.rs`. Where it
+  departs from the scope, and why:
+  - The broker cannot run on the hub's image as is: it is distroless, so `run` would have no
+    shell. The broker service builds `FROM` the hub's image onto `debian:stable-slim`
+    (`dockerfile_inline`: the binary and the CA bundle copied over). `enroll` and `link` run
+    the hub's image unchanged. All three run as root in their containers, so the IPC peer
+    check matches across them; the state is a named volume at `/state`.
+  - The broker runs `devagotchi start --state-dir … --config … --workspace /work`, which
+    already writes its config on first run, so `broker run` was not changed.
+  - The update refusal says "change the image tag, then `docker compose up -d --build`",
+    since a built service does not move with `docker compose pull`.
+  - The hub refuses before sending anything (`update_unsupported`, starting `container:`),
+    even when the machine is on the hub's build. The link refuses too, as a backstop.
+  - Tests: `the_compose_file_names_the_builds_image_and_holds_the_code_only_in_its_environment`,
+    `the_image_follows_the_tags_image_yml_publishes`,
+    `the_docker_line_gets_a_compose_file_for_the_builds_image_until_the_code_is_spent`
+    (the route: 200, then 410 once spent, and 409 for an unpublished build),
+    `a_container_is_never_asked_to_update_and_is_told_how_to_move`,
+    `re_enrolling_with_an_existing_key_exits_0_without_a_network_call`,
+    `a_container_refuses_every_update_and_says_so`.
+  - The Docker leg of `tests/compose_join.py` (`--docker`) runs in image.yml only. It was
+    not run on the Windows workstation where this was written.
 - **Why:** The `docker` line `machine_add` hands out cannot succeed, and even if it did it would leave nothing running (see the blocker table).
 - **Scope:**
   - Replace the compose template with three services, all on the hub's own image `ghcr.io/devagotchi/devagotchi:<tag>`. The tag comes from the downloads VERSION: `main-<sha7>` becomes `:sha-<sha7>`, `X.Y.Z` becomes `:X.Y.Z` (image.yml:211-214). A `dev` build refuses with a plain message.

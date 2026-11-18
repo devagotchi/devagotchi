@@ -120,3 +120,30 @@ fn the_windows_updater_runs_detached_and_logs_to_a_file() {
     assert!(text.contains("autostart=True"), "{text}");
     assert!(text.contains("devagotchi update to ci-test done"), "{text}");
 }
+
+/// A machine in a container moves with its image: every update the hub sends is answered
+/// `failed` with the reason at once, nothing is downloaded, and its hello says `container`.
+#[tokio::test]
+async fn a_container_refuses_every_update_and_says_so() {
+    let state = tempfile::tempdir().unwrap();
+    let config = crate::state::LinkConfig {
+        hub: "http://127.0.0.1:9".into(),
+        device: "docked".into(),
+        broker: "/state/broker/broker.sock".into(),
+    };
+    let docked = crate::update::Updater::new(&config, state.path(), "main-abc1234", true);
+    assert_eq!(docked.kind(), Some("container"));
+    for force in [false, true] {
+        let status = docked.request("main-def5678".into(), force).unwrap();
+        assert_eq!(status.state, "failed");
+        let detail = status.detail.unwrap();
+        assert!(detail.starts_with("container:"), "{detail}");
+        assert!(detail.contains("docker compose up -d --build"), "{detail}");
+    }
+    assert!(
+        !state.path().join("updates").exists(),
+        "nothing was downloaded"
+    );
+    let plain = crate::update::Updater::new(&config, state.path(), "main-abc1234", false);
+    assert_eq!(plain.kind(), None);
+}

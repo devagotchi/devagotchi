@@ -129,10 +129,26 @@ jobs:
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.13"
-      - name: A machine joins with the line an AI hands over
-        run: python tests/compose_join.py --hub http://localhost:8787 --version "$VERSION"
+      # The Docker line's compose file names the hub image of this build (`:sha-<short>`, or a
+      # release's version: machines/join/compose.rs). A pull request's image is never pushed,
+      # so the image just built stands in for it under that name.
+      - name: Name the image as the Docker line asks for it
+        run: |
+          case $VERSION in
+            main-*|ci-*) tag="sha-${VERSION#*-}" ;;
+            *) tag=$VERSION ;;
+          esac
+          docker tag devagotchi-hub:ci "ghcr.io/devagotchi/devagotchi:$tag"
         env:
           VERSION: ${{ needs.downloads.outputs.version }}
+      # The Linux line on this runner, then the Docker line (increment 209). The compose file
+      # builds its broker FROM the image above, which only the daemon's own builder can see:
+      # setup-buildx made a container builder the default.
+      - name: A machine joins with the line an AI hands over
+        run: python tests/compose_join.py --hub http://localhost:8787 --version "$VERSION" --docker
+        env:
+          VERSION: ${{ needs.downloads.outputs.version }}
+          BUILDX_BUILDER: default
       - name: Logs
         if: failure()
         working-directory: deploy/compose

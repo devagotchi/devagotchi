@@ -47,6 +47,8 @@ struct Session {
     pending: Pending,
     /// The build the device's hello said it runs; None from a link too old to say.
     build: Option<String>,
+    /// Its hello said it runs in a container: it updates with its image, never on request.
+    container: bool,
     /// Frames the hub sends on its own: `update` (`machine_update.rs`).
     control: mpsc::Sender<HubFrame>,
 }
@@ -148,6 +150,7 @@ struct Admitted {
     key: String,
     joined_for: Option<String>,
     build: Option<String>,
+    container: bool,
 }
 
 fn offline(device: &str) -> BridgeError {
