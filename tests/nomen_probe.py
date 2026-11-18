@@ -302,8 +302,9 @@ try:
     code2, prime = board(machines[1], "codex", "prime")
     check("machine B binds the same board and sees the claim at once", code == 0 and bound_b.get("created") is False
           and code2 == 0 and prime.get("actor") == "codex" and prime.get("ready") == [], json.dumps(prime)[:160])
-    check("no local store is written for a bound project", not (machines[0] / ".devagotchi" / "board.sqlite3").exists()
-          and not (machines[1] / ".devagotchi" / "board.sqlite3").exists())
+    configs = [json.loads((m / ".devagotchi" / "config.json").read_text()) for m in machines]
+    check("a bound project names the hub and no standalone board", all(c.get("hub") == base and "storage" not in c for c in configs),
+          json.dumps(configs)[:200])
     logout = subprocess.run([args.devagotchi, "logout"], capture_output=True, text=True, timeout=30, env=env)
     check("logout revokes both tokens and removes the file", logout.returncode == 0
           and nomen.revoked == ["tok-device", "rt-device"] and not account_file.exists(),

@@ -1,5 +1,5 @@
 //! The one binary, driven as a person would: `devagotchi start` with nothing but an
-//! environment, then `devagotchi mcp` finding that broker on its own, then the board.
+//! environment, then `devagotchi mcp` finding that broker on its own (the board: `board.rs`).
 //! Linux only for the broker (the macOS provider is pending; Windows has its own install
 //! check); the help tree runs everywhere.
 
@@ -7,263 +7,6 @@ use std::process::Command;
 
 fn devagotchi() -> Command {
     Command::new(env!("CARGO_BIN_EXE_devagotchi"))
-}
-
-#[test]
-fn native_board_hooks_run_without_a_shell_with_spaces_and_never_complete_on_stop() {
-    use serde_json::{Value, json};
-    use std::{io::Write, process::Stdio};
-    let dir = tempfile::Builder::new()
-        .prefix("native hook path with spaces ")
-        .tempdir()
-        .unwrap();
-    for args in [
-        vec!["board", "init", "--project", "native"],
-        vec!["board", "new", "Carry evidence", "--as", "claude"],
-    ] {
-        let out = devagotchi()
-            .args(args)
-            .current_dir(dir.path())
-            .output()
-            .unwrap();
-        assert!(
-            out.status.success(),
-            "{}",
-            String::from_utf8_lossy(&out.stderr)
-        );
-    }
-    let listed = devagotchi()
-        .args(["board", "ls", "--json"])
-        .current_dir(dir.path())
-        .output()
-        .unwrap();
-    let tickets: Value = serde_json::from_slice(&listed.stdout).unwrap();
-    let id = tickets
-        .as_array()
-        .unwrap()
-        .iter()
-        .find(|t| t["title"] == "Carry evidence")
-        .unwrap()["id"]
-        .as_str()
-        .unwrap();
-    let claimed = devagotchi()
-        .args(["board", "claim", id, "--as", "claude"])
-        .current_dir(dir.path())
-        .output()
-        .unwrap();
-    assert!(
-        claimed.status.success(),
-        "{}",
-        String::from_utf8_lossy(&claimed.stderr)
-    );
-    let env = dir.path().join("client environment");
-    let hook = |phase: &str, body: Value| {
-        let mut child = devagotchi()
-            .args(["board", "hook", phase, "--as", "claude"])
-            .current_dir(dir.path())
-            .env("CLAUDE_ENV_FILE", &env)
-            .stdin(Stdio::piped())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .spawn()
-            .unwrap();
-        child
-            .stdin
-            .take()
-            .unwrap()
-            .write_all(&serde_json::to_vec(&body).unwrap())
-            .unwrap();
-        child.wait_with_output().unwrap()
-    };
-    let start = hook(
-        "session-start",
-        json!({
-            "hook_event_name":"SessionStart","session_id":"native-session-1",
-            "cwd":dir.path(),"source":"resume"
-        }),
-    );
-    assert!(
-        start.status.success(),
-        "{}",
-        String::from_utf8_lossy(&start.stderr)
-    );
-    let context: Value = serde_json::from_slice(&start.stdout).unwrap();
-    assert!(
-        context["hookSpecificOutput"]["additionalContext"]
-            .as_str()
-            .unwrap()
-            .contains(id)
-    );
-    assert_eq!(
-        std::fs::read_to_string(&env).unwrap(),
-        "export DEVAGOTCHI_SESSION=native-session-1\n"
-    );
-    let stop = hook(
-        "stop",
-        json!({"hook_event_name":"Stop","stop_hook_active":false}),
-    );
-    assert_eq!(stop.status.code(), Some(2));
-    assert!(String::from_utf8_lossy(&stop.stderr).contains(id));
-    let repeated = hook(
-        "stop",
-        json!({"hook_event_name":"Stop","stop_hook_active":true}),
-    );
-    assert_eq!(repeated.status.code(), Some(5));
-    assert!(
-        String::from_utf8_lossy(&repeated.stderr).contains("No completion or automatic release")
-    );
-    let ended = hook("session-end", json!({"hook_event_name":"SessionEnd"}));
-    assert_eq!(ended.status.code(), Some(5));
-    let view = devagotchi()
-        .args(["board", "show", id, "--json"])
-        .current_dir(dir.path())
-        .output()
-        .unwrap();
-    let view: Value = serde_json::from_slice(&view.stdout).unwrap();
-    assert_eq!(view["ticket"]["holder"], "claude");
-    assert_ne!(view["ticket"]["state"], "done");
-    let bad = hook(
-        "session-start",
-        json!({"hook_event_name":"SessionStart","session_id":"bad;command"}),
-    );
-    assert!(!bad.status.success());
-    assert!(bad.stdout.is_empty());
-}
-
-/// What the `devagotchi-agenthub` plugin runs: silent where there is no board, and the
-/// agent is whichever client's plugin started the hook.
-#[test]
-fn plugin_hooks_are_silent_without_a_board_and_name_the_client_that_runs_them() {
-    use serde_json::{Value, json};
-    use std::{io::Write, process::Stdio};
-    const HOSTS: [&str; 4] = [
-        "CLAUDE_PLUGIN_ROOT",
-        "PLUGIN_ROOT",
-        "GROK_PLUGIN_ROOT",
-        "DEVAGOTCHI_ACTOR",
-    ];
-    let hook = |dir: &std::path::Path, args: &[&str], env: &[(&str, &str)], body: Value| {
-        let mut command = devagotchi();
-        command
-            .args(["board", "hook"])
-            .args(args)
-            .current_dir(dir)
-            .stdin(Stdio::piped())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped());
-        for name in HOSTS {
-            command.env_remove(name);
-        }
-        for (name, value) in env {
-            command.env(name, value);
-        }
-        let mut child = command.spawn().unwrap();
-        child
-            .stdin
-            .take()
-            .unwrap()
-            .write_all(&serde_json::to_vec(&body).unwrap())
-            .unwrap();
-        child.wait_with_output().unwrap()
-    };
-    let stop = json!({"hook_event_name":"Stop","stop_hook_active":false});
-
-    // No board here or above: the plugin's hooks answer {} and let the client go on.
-    let bare = tempfile::tempdir().unwrap();
-    let quiet = hook(
-        bare.path(),
-        &["stop", "--as", "auto", "--if-board"],
-        &[("CLAUDE_PLUGIN_ROOT", "/plugins/devagotchi-agenthub")],
-        stop.clone(),
-    );
-    assert!(
-        quiet.status.success(),
-        "{}",
-        String::from_utf8_lossy(&quiet.stderr)
-    );
-    assert_eq!(String::from_utf8_lossy(&quiet.stdout).trim(), "{}");
-    let start = hook(
-        bare.path(),
-        &["session-start", "--as", "auto", "--if-board"],
-        &[("CLAUDE_PLUGIN_ROOT", "/plugins/devagotchi-agenthub")],
-        json!({"hook_event_name":"SessionStart","session_id":"plugin-1","cwd":bare.path()}),
-    );
-    assert!(start.status.success());
-    assert_eq!(String::from_utf8_lossy(&start.stdout).trim(), "{}");
-    // Without --if-board, no board is still an error, as before.
-    let loud = hook(bare.path(), &["stop", "--as", "claude"], &[], stop.clone());
-    assert!(!loud.status.success());
-    assert!(String::from_utf8_lossy(&loud.stderr).contains("no_board"));
-    // --as auto with no plugin host and no DEVAGOTCHI_ACTOR says so instead of guessing.
-    let nobody = hook(
-        bare.path(),
-        &["stop", "--as", "auto", "--if-board"],
-        &[],
-        stop.clone(),
-    );
-    assert_eq!(nobody.status.code(), Some(64));
-    assert!(String::from_utf8_lossy(&nobody.stderr).contains("--as auto"));
-
-    // A board where Grok holds a ticket: Grok's Stop is held, Claude's is not.
-    let dir = tempfile::tempdir().unwrap();
-    let board = |args: &[&str]| {
-        let out = devagotchi()
-            .arg("board")
-            .args(args)
-            .current_dir(dir.path())
-            .output()
-            .unwrap();
-        assert!(
-            out.status.success(),
-            "{}",
-            String::from_utf8_lossy(&out.stderr)
-        );
-        out
-    };
-    board(&["init", "--project", "plugin"]);
-    board(&["new", "Held by Grok", "--as", "grok"]);
-    let listed: Value = serde_json::from_slice(&board(&["ls", "--json"]).stdout).unwrap();
-    let id = listed
-        .as_array()
-        .unwrap()
-        .iter()
-        .find(|t| t["title"] == "Held by Grok")
-        .unwrap()["id"]
-        .as_str()
-        .unwrap()
-        .to_string();
-    board(&["claim", &id, "--as", "grok"]);
-    let auto = ["stop", "--as", "auto", "--if-board"];
-    let grok = hook(
-        dir.path(),
-        &auto,
-        &[("GROK_PLUGIN_ROOT", "/plugins/devagotchi-agenthub")],
-        stop.clone(),
-    );
-    assert_eq!(grok.status.code(), Some(2));
-    assert!(String::from_utf8_lossy(&grok.stderr).contains(&id));
-    let claude = hook(
-        dir.path(),
-        &auto,
-        &[("CLAUDE_PLUGIN_ROOT", "/plugins/devagotchi-agenthub")],
-        stop.clone(),
-    );
-    assert!(
-        claude.status.success(),
-        "{}",
-        String::from_utf8_lossy(&claude.stderr)
-    );
-    // DEVAGOTCHI_ACTOR still wins over the plugin's client.
-    let named = hook(
-        dir.path(),
-        &auto,
-        &[
-            ("CLAUDE_PLUGIN_ROOT", "/plugins/devagotchi-agenthub"),
-            ("DEVAGOTCHI_ACTOR", "grok"),
-        ],
-        stop,
-    );
-    assert_eq!(named.status.code(), Some(2));
 }
 
 #[test]
@@ -639,7 +382,7 @@ fn tools_of_a_fresh_adapter(env: &[(&str, std::ffi::OsString)]) -> Vec<String> {
 
 #[cfg(target_os = "linux")]
 #[test]
-fn start_then_mcp_then_board_from_one_binary() {
+fn start_then_mcp_from_one_binary() {
     use std::{
         io::{BufRead, BufReader, Write},
         path::Path,
@@ -650,8 +393,6 @@ fn start_then_mcp_then_board_from_one_binary() {
     let home = tempfile::tempdir().unwrap();
     let state = home.path().join("state");
     let config_dir = home.path().join("config");
-    let project = home.path().join("project");
-    std::fs::create_dir_all(&project).unwrap();
     let env = [
         ("DEVAGOTCHI_STATE_DIR", state.as_os_str().to_owned()),
         ("DEVAGOTCHI_CONFIG_DIR", config_dir.as_os_str().to_owned()),
@@ -827,40 +568,6 @@ fn start_then_mcp_then_board_from_one_binary() {
     drop(rpc);
     drop(stdin);
     let _ = adapter.wait();
-
-    // board: the same binary, the project's board, as an agent.
-    let out = devagotchi()
-        .args(["board", "init", "--project", "demo"])
-        .current_dir(&project)
-        .envs(env.iter().cloned())
-        .output()
-        .unwrap();
-    assert!(
-        out.status.success(),
-        "{}",
-        String::from_utf8_lossy(&out.stderr)
-    );
-    let out = devagotchi()
-        .args(["board", "new", "prove the one binary"])
-        .current_dir(&project)
-        .envs(env.iter().cloned())
-        .env("DEVAGOTCHI_ACTOR", "claude")
-        .output()
-        .unwrap();
-    assert!(
-        out.status.success(),
-        "{}",
-        String::from_utf8_lossy(&out.stderr)
-    );
-    let out = devagotchi()
-        .args(["board", "prime", "--json"])
-        .current_dir(&project)
-        .envs(env.iter().cloned())
-        .env("DEVAGOTCHI_ACTOR", "claude")
-        .output()
-        .unwrap();
-    let prime: serde_json::Value = serde_json::from_slice(&out.stdout).unwrap();
-    assert_eq!(prime["ready"].as_array().unwrap().len(), 1, "{prime}");
 
     // The account, from the same config directory: nothing on file, the local choice, forgotten.
     let whoami = |expect: &str| {

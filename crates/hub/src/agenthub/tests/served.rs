@@ -2,18 +2,18 @@
 //! new board's getting-started steps from the hub's site. The protocol itself is AgentHub's
 //! own tests (`crates/agenthub/src/tests/`).
 
-use crate::agenthub::{Actor, Board, Filter, NewTicket, welcome};
+use crate::agenthub::{Actor, Board, Filter, NewTicket, open_board, welcome};
 
-/// A local board in a directory of its own, for the getting-started tests.
+/// A new board in a Postgres database of its own, for the getting-started tests.
 pub(super) struct Fixture {
     pub(super) board: Board,
-    _dir: tempfile::TempDir,
+    _db: devagotchi_store::testing::TestStore,
 }
 
-pub(super) fn fixture() -> Fixture {
-    let dir = tempfile::tempdir().expect("tempdir");
-    let board = Board::open(&dir.path().join("board.sqlite3"), "devagotchi").expect("open board");
-    Fixture { board, _dir: dir }
+pub(super) async fn fixture() -> Option<Fixture> {
+    let test = crate::store::testing::postgres().await?;
+    let board = open_board(&test.url, "devagotchi", true).await.unwrap();
+    Some(Fixture { board, _db: test })
 }
 
 impl Fixture {
@@ -130,6 +130,7 @@ pub(super) mod bound {
                 stdout_is_terminal: false,
                 account_file: Some(account.to_path_buf()),
                 plugin_host: None,
+                storage_env: None,
                 hub: Some(std::sync::Arc::new(crate::login::client::AccountHub)),
             },
             &mut out,
@@ -176,16 +177,13 @@ pub(super) mod bound {
                 assert_eq!(code, EXIT_OK, "{err}");
                 assert_eq!(bound["project"], "demo");
                 assert_eq!(bound["created"], true);
-                assert!(
-                    !machine_a.join(".devagotchi").join("board.sqlite3").exists(),
-                    "no local store for a bound project"
-                );
                 let config: Value = serde_json::from_str(
                     &std::fs::read_to_string(machine_a.join(".devagotchi").join("config.json"))
                         .unwrap(),
                 )
                 .unwrap();
                 assert_eq!(config["hub"], url);
+                assert!(config.get("storage").is_none(), "{config}");
                 let (code, ticket, err) = run(
                     &machine_a,
                     &account_a,
@@ -266,7 +264,7 @@ pub(super) mod bound {
             .unwrap();
         }
 
-        // Machine A: the stale fence is refused by the hub, as the local store would.
+        // Machine A: the stale fence is refused by the hub, as a standalone board would.
         {
             let (machine_a, account_a, id) = (machine_a.clone(), account_a.clone(), id.clone());
             tokio::task::spawn_blocking(move || {
@@ -276,12 +274,12 @@ pub(super) mod bound {
                 let (code, status, err) = run(&machine_a, &account_a, Some("claude"), &["verify"]);
                 assert_eq!(code, EXIT_OK, "{err}");
                 assert_eq!(status["ok"], true);
-                // Unbind: the local store is the board again, and there is none yet.
+                // Unbind: the standalone board is the board again, and no Postgres names one.
                 let (code, _, err) = run(&machine_a, &account_a, None, &["unbind"]);
                 assert_eq!(code, EXIT_OK, "{err}");
                 let (code, _, err) = run(&machine_a, &account_a, None, &["ls"]);
                 assert_eq!(code, EXIT_UNAVAILABLE, "{err}");
-                assert!(err.contains("no_board"), "{err}");
+                assert!(err.contains("no_storage"), "{err}");
             })
             .await
             .unwrap();
@@ -535,9 +533,9 @@ pub(super) mod bound {
     }
 }
 
-#[test]
-fn a_new_board_starts_with_the_getting_started_steps_once() {
-    let f = fixture();
+#[tokio::test(flavor = "multi_thread")]
+async fn a_new_board_starts_with_the_getting_started_steps_once() {
+    let f = or_skip!(fixture());
     let hub = Actor::agent("devagotchi");
     let (title, steps) = crate::site::builtin().welcome("https://app.devagotchi.com/");
     let id = f
@@ -579,7 +577,7 @@ fn a_new_board_starts_with_the_getting_started_steps_once() {
         f.board.welcome_if_new(&hub, &title, &steps).expect("again"),
         None
     );
-    let used = fixture();
+    let used = or_skip!(fixture());
     used.new_ticket(&claude, "real work");
     assert_eq!(
         used.board

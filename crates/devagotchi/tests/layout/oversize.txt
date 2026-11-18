@@ -2,16 +2,12 @@
 # <lines><TAB><path>, sorted by path. A listed file may shrink, never grow; a file that is
 # not listed may not exceed the cap. Never add a line or raise a number to make the test
 # pass: see .ai/patterns/layout.md.
-607	crates/agenthub/src/approval.rs
-1432	crates/agenthub/src/cli/mod.rs
 588	crates/agenthub/src/clickhouse.rs
 912	crates/agenthub/src/hosted.rs
 736	crates/agenthub/src/hosted/operations.rs
-527	crates/agenthub/src/lease.rs
-2240	crates/agenthub/src/lib.rs
-1148	crates/devagotchi/tests/one_binary.rs
-626	crates/hub/src/agenthub/issue_lifecycle/tests.rs
-592	crates/hub/src/agenthub/tests/served.rs
+855	crates/devagotchi/tests/one_binary.rs
+623	crates/hub/src/agenthub/issue_lifecycle/tests.rs
+590	crates/hub/src/agenthub/tests/served.rs
 647	crates/hub/src/identity/accounts/oauth/mod.rs
 683	crates/hub/src/identity/accounts/oauth/tests.rs
 506	crates/hub/src/identity/accounts/tenants/mod.rs
@@ -32,7 +28,7 @@
 521	crates/hub/src/tenancy/orgs/api/mod.rs
 775	crates/hub/src/tenancy/tests/tenants.rs
 607	crates/hub/src/web/analytics.rs
-510	crates/hub/src/web/app/agenthub/ticket_tests.rs
+509	crates/hub/src/web/app/agenthub/ticket_tests.rs
 713	crates/hub/src/web/approvals.rs
 633	crates/hub/src/web/discovery_tests.rs
 542	crates/hub/src/web/hub_settings_tests.rs

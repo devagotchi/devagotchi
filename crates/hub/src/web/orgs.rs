@@ -318,7 +318,7 @@ async fn events_week(state: &AppState, subject: &Subject, name: &str) -> Option<
     let name = name.to_string();
     let (tenant, board) = tokio::task::spawn_blocking(move || {
         let (board, _, _) = hub.board_access(&who, &name).ok()?;
-        let hosted = board.hosted_backend().ok()?;
+        let hosted = board.hosted();
         Some((hosted.tenant().to_string(), hosted.board_id().to_string()))
     })
     .await

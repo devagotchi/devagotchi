@@ -170,8 +170,8 @@ impl Boards {
     pub(super) fn wake_hosted(&self, notification: Option<&(String, String)>) {
         let open = self.open.lock().expect("boards lock");
         for board in open.values() {
-            if let Some(hosted) = board.hosted()
-                && notification.is_none_or(|(tenant, id)| hosted.matches_notification(tenant, id))
+            if notification
+                .is_none_or(|(tenant, id)| board.hosted().matches_notification(tenant, id))
             {
                 board.mark_changed();
             }

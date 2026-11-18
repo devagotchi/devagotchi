@@ -20,6 +20,7 @@ fn run(cwd: &Path, account: &Path, args: &[&str]) -> (u8, Value) {
             stdout_is_terminal: false,
             account_file: Some(account.to_path_buf()),
             plugin_host: None,
+            storage_env: None,
             hub: Some(std::sync::Arc::new(crate::login::client::AccountHub)),
         },
         &mut out,

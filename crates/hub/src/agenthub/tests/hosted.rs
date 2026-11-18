@@ -46,8 +46,11 @@ async fn shared_runtime_resolver_uses_postgres_without_board_files_and_observes_
         boards.bind("bob", "demo", &[]).unwrap();
         let alice = boards.open_account("alice", "demo").unwrap().unwrap();
         let bob = boards.open_account("bob", "demo").unwrap().unwrap();
-        assert!(!alice.is_local());
-        assert!(!bob.is_local());
+        assert_ne!(
+            alice.hosted().board_id(),
+            bob.hosted().board_id(),
+            "each account's board of the name is its own"
+        );
         let actor = Actor::agent("cli");
         let ticket = alice
             .create(
@@ -111,7 +114,6 @@ async fn shared_runtime_resolver_uses_postgres_without_board_files_and_observes_
         );
         assert_ne!(one.unwrap().unwrap().created, two.unwrap().unwrap().created);
         let shared = boards.open("shared").unwrap();
-        assert!(!shared.is_local());
         assert_eq!(shared.project(), "shared");
         assert!(!dir.path().join("never-created-shared").exists());
         assert!(!dir.path().join("never-created-accounts").exists());
