@@ -148,7 +148,7 @@ class SkipRest(Exception):
 ok = False
 try:
     print(f"work dir {work}; git {git}", flush=True)
-    _, ready = start([*broker_cmd, "--state-dir", str(state), "--config", str(config)], "ready:", "broker")
+    broker, ready = start([*broker_cmd, "--state-dir", str(state), "--config", str(config)], "ready:", "broker")
     endpoint = ready.split("ready:", 1)[1].strip()
     print(f"broker endpoint {endpoint}", flush=True)
     _, ready = start([*broker_cmd, "--state-dir", str(account_state), "--config", str(account_config)], "ready:", "account broker")
@@ -274,6 +274,16 @@ try:
     steps.append(run_probe(probe + ["--broker", "remote", "--expect-error", "broker_offline"], "linked broker after the link stops"))
     link, _ = start([*link_cmd, "run", "--state-dir", str(link_state)], "ready:", "link")
     steps.append(run_probe(probe + ["--broker", "remote"], "hub probe after the link restarts"))
+    # A link that is up is not a broker that answers: with the broker stopped behind a live
+    # link, machine_inspect says so from the broker's side; once it is back on the same state,
+    # the same route answers again.
+    broker.terminate()
+    broker.wait(10)
+    steps.append(run_probe(probe + ["--broker", "remote", "--expect-inspect-error", "ipc_io"],
+                           "live link, stopped broker"))
+    broker, ready = start([*broker_cmd, "--state-dir", str(state), "--config", str(config)], "ready:", "broker restarted")
+    steps.append(ready.split("ready:", 1)[1].strip() == endpoint)
+    steps.append(run_probe(probe + ["--broker", "remote"], "hub probe after the broker restarts"))
     steps.append(run_cmd([*hub_cmd, "revoke", "--state-dir", hub_state, "--device", "remote"], "hub revoke")[0])
     try:
         exit_code = link.wait(20)

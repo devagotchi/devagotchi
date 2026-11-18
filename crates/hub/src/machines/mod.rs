@@ -14,8 +14,9 @@
 //!   (`join`); `/dist`: the builds machines install and update from (`downloads`).
 //! - MCP tools, through `crate::hub`: `machines`, `machine_add`, `machine_update`, `run`,
 //!   `operation_*` and the file tools (`run`, `files`, `search`, `update`), and a machine's
-//!   settings and processes (`system`), and the caller's own calls to them (`history`, from
-//!   the audit); `machine_router` puts the routers here together.
+//!   settings, processes and whether its broker answers (`system`: `machine_inspect`), and
+//!   the caller's own calls to them (`history`, from the audit); `machine_router` puts the
+//!   routers here together.
 //! - Pages: Machines and a machine's page (`crate::web::machines`, `crate::web::app::machine`).
 //!
 //! # Settings
@@ -41,6 +42,8 @@ mod routes;
 pub mod run;
 pub mod search;
 pub mod system;
+#[cfg(test)]
+mod tests;
 pub mod update;
 
 pub(crate) use routes::routes;

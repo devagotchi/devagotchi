@@ -49,6 +49,22 @@ install, not a production promotion. The gap that is still open is in
 - `/admin` → Signal sinks adds, changes and removes where the hub pushes its signals (log
   services, your own collector), each running the moment it is saved, its token encrypted.
 
+### Ask a machine's broker whether it answers (increment 204)
+- `machine_inspect` (through a hub, by machine name) and `broker_capabilities` (through
+  `devagotchi mcp`) ask the broker itself what it is: its build, OS and architecture, exec
+  policy, whether shell lines run, whether files stay in its workspace, and the requests it
+  answers under that policy (a broker that runs only granted programs leaves out the
+  settings change, processes and web reads it always refuses). No paths, grants, environment
+  or secrets, and nothing is started. A closing or faulted broker says `shutting_down` or its
+  fault.
+- It waits at most 3 seconds: `inspection_timeout` means readiness is unknown. Every other
+  error is the link's or the broker's own, and the hub's audit records each as it happened.
+- `online` in `machines` now says what it means: a linked machine's link is connected, not
+  that its broker answers. The hub's instructions, the `machines` skill, its docs and the
+  landing page's tool list say so and name `machine_inspect`.
+- A machine on an older build does not know this request: asking it ends that machine's link
+  (it reconnects), and the hub's usual update hint names `machine_update`.
+
 ### The license is the Functional Source License (FSL-1.1-ALv2)
 - Devagotchi moves from the Business Source License 1.1 to FSL-1.1-ALv2, held by AngryVibes LLC:
   self-hosting for yourself and your organization stays free; offering it to others as a

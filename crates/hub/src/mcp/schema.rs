@@ -12,8 +12,10 @@ pub struct Machine {
     pub name: String,
     /// `local`: a broker on the hub's own host. `linked`: a machine that dials in.
     pub kind: &'static str,
-    /// `online`, `offline` (off, asleep, or its link is not running), `not_enrolled` (a linked
-    /// machine that never enrolled) or `revoked`.
+    /// `online` (a linked machine's link is connected, a local broker's endpoint answers; that
+    /// a linked machine's broker answers too, `machine_inspect` asks), `offline` (off, asleep,
+    /// or its link is not running), `not_enrolled` (a linked machine that never enrolled) or
+    /// `revoked`.
     pub status: &'static str,
     /// When the machine enrolled, in seconds since the Unix epoch (linked machines).
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -35,7 +37,7 @@ pub struct Machine {
 
 #[derive(Debug, Serialize, JsonSchema)]
 pub struct Machines {
-    /// Every machine this identity can work on, each with whether it can be used now.
+    /// Every machine this identity can work on, each with its status.
     pub machines: Vec<Machine>,
 }
 

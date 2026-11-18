@@ -315,7 +315,8 @@ impl Broker {
             | RequestBody::ConfigSet(_)
             | RequestBody::ProcessList(_)
             | RequestBody::ProcessKill(_)
-            | RequestBody::UrlRead(_)) => self.on_system(request).await,
+            | RequestBody::UrlRead(_)
+            | RequestBody::BrokerCapabilities(_)) => self.on_system(request).await,
         }
     }
 
@@ -927,10 +928,6 @@ fn check_size(cols: u16, rows: u16) -> BridgeResult<()> {
     Ok(())
 }
 
-fn no_caller() -> BridgeError {
-    invalid("Input needs a caller: send it through devagotchi mcp or a hub")
-}
-
 impl State {
     /// Make room for one admission by retiring the operation that finished longest ago.
     /// A retired operation's ID is no longer found and its key is never run again.
@@ -1198,5 +1195,5 @@ mod output;
 mod recover;
 mod settings;
 mod system;
-use input::{deliver, input_closed, input_steps};
+use input::{deliver, input_closed, input_steps, no_caller};
 use settings::Limits;

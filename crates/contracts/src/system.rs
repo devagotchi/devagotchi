@@ -5,6 +5,9 @@
 //! are the machine operator's and change only in broker.json; an agent reads them and may
 //! change only the limits in [`CHANGEABLE_SETTINGS`]. Processes are the account's, so only a
 //! broker that runs what its account can (exec policy `account`) lists or stops them.
+//!
+//! `broker_capabilities` asks a live broker what it is and what it serves, without paths,
+//! grants, environment or secrets: a link that is connected is not yet a broker that answers.
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -15,9 +18,66 @@ pub const CHANGEABLE_SETTINGS: [&str; 3] =
 /// Most processes one `list_processes` returns.
 pub const MAX_PROCESS_RESULTS: u32 = 1000;
 
+/// Every request method this build's broker serves, in `RequestBody`'s order: what
+/// `broker_capabilities` starts from before a broker's policy removes what it always refuses.
+pub const REQUEST_METHODS: [&str; 23] = [
+    "operation_start",
+    "operation_get",
+    "operation_read",
+    "operation_cancel",
+    "operation_list",
+    "operation_wait",
+    "operations_changed",
+    "file_read",
+    "file_list",
+    "file_write",
+    "file_edit",
+    "file_info",
+    "file_mkdir",
+    "file_move",
+    "file_search",
+    "config_get",
+    "config_set",
+    "process_list",
+    "process_kill",
+    "url_read",
+    "operation_input",
+    "operation_resize",
+    "broker_capabilities",
+];
+
 #[derive(Debug, Clone, Default, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ConfigGetInput {}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct CapabilitiesInput {}
+
+/// What a live broker is and what it serves, read from its policy alone. Never a local path,
+/// a grant, an environment value or a credential, and no permission to run anything.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct BrokerCapabilities {
+    /// The wire API version the broker speaks.
+    pub api_version: u32,
+    /// The broker's build.
+    pub version: String,
+    /// `linux` or `windows`, and the CPU architecture.
+    pub os: String,
+    pub arch: String,
+    /// `account`: anything this OS account can run. `granted`: only the operator's grants.
+    pub exec_policy: String,
+    /// Whether a `command` line runs on the machine's shell (an `account` broker only).
+    pub shell_commands: bool,
+    /// `account`: files and jobs anywhere the account reaches. `workspace`: only inside the
+    /// broker's workspace.
+    pub workspace_scope: String,
+    /// The request methods this broker answers under its policy; one it always refuses (a
+    /// `granted` broker's processes, settings changes and web reads) is left out. Listed is
+    /// not granted: the broker still checks each request.
+    pub supported_requests: Vec<String>,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
@@ -138,3 +198,6 @@ pub struct ProcessKilled {
     /// Whether it was gone within a few seconds.
     pub exited: bool,
 }
+
+#[cfg(test)]
+mod tests;

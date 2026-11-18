@@ -28,6 +28,8 @@ INITIALIZE_VERSION = "2025-11-25"
 UNSUPPORTED_VERSION = "2099-01-01"
 CLIENT_INFO = {"name": "desktop-bridge-raw-protocol-probe", "version": "0.1.0"}
 TOOL_SCHEMAS = {
+    "broker_capabilities": (set(), {"api_version", "version", "os", "arch", "exec_policy", "shell_commands",
+                                    "workspace_scope", "supported_requests"}),
     "operation_start": (
         {"idempotency_key", "executable", "args", "command", "cwd", "deadline_ms", "interactive"},
         {"operation", "replayed"},

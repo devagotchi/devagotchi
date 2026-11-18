@@ -619,6 +619,7 @@ async fn isolation(hub: Hosted) {
         // unknown to A by either name.
         for (tool, arguments) in [
             ("run", json!({ "machine": broker, "command": "id" })),
+            ("machine_inspect", json!({ "machine": broker })),
             (
                 "read_file",
                 json!({ "machine": broker, "path": "/etc/hostname" }),

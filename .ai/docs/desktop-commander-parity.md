@@ -47,10 +47,25 @@ That is a different shape, not a missing stop or read.
 
 ## What Devagotchi has that this list does not
 
-`run` (one call), `operation_get`, `operation_wait`, `operation_resize`, `read_image`, and
-`read_url` as its own tool. Through a hub: `whoami`, `machines`, `machine_add`,
-`machine_update`, plus the board, connections and kernel tools, which are not a desktop
-shell.
+`run` (one call), `operation_get`, `operation_wait`, `operation_resize`, `read_image`,
+`read_url` as its own tool, and `broker_capabilities`. Through a hub: `whoami`, `machines`,
+`machine_add`, `machine_update`, `machine_inspect`, plus the board, connections and kernel
+tools, which are not a desktop shell.
+
+## Readiness
+
+Desktop Commander's remote device shows `online` only while its channel is joined and its
+local MCP child is alive ([teardown 3.5](../../docs/desktop-commander-teardown.md),
+`src/remote-device/remote-channel.ts:627-679`). Devagotchi's `machines` says `online` while a
+machine's link is connected, which does not show that its broker answers. That is a separate
+call: `machine_inspect` through a hub, `broker_capabilities` through `devagotchi mcp`. It asks
+the broker itself, waits at most 3 seconds (`inspection_timeout`: readiness unknown), and
+returns its build, OS, policy and the requests it answers under that policy, with no paths or
+grants.
+
+| Capability | Devagotchi | Conformance case |
+|---|---|---|
+| Is the machine there and answering | `machines` (link), then `machine_inspect` / `broker_capabilities` (broker) | `tests/adapter_probe.py` (granted and account brokers); `tests/hub_probe.py` through `tests/e2e.py` (granted, account, unknown, not enrolled, offline, revoked, a stopped broker behind a live link, and after it restarts); `crates/hub/src/machines/tests/inspect.rs` (each outcome audited) |
 
 ## Not in this document's work
 

@@ -27,6 +27,8 @@ export type OperationState =
  */
 export interface BrokerContracts {
   bridge_error: BridgeError;
+  broker_capabilities: BrokerCapabilities;
+  capabilities_input: CapabilitiesInput;
   changes_input: ChangesInput;
   config_get_input: ConfigGetInput;
   config_set_input: ConfigSetInput;
@@ -65,6 +67,45 @@ export interface BridgeError {
   code: string;
   message: string;
 }
+/**
+ * What a live broker is and what it serves, read from its policy alone. Never a local path,
+ * a grant, an environment value or a credential, and no permission to run anything.
+ */
+export interface BrokerCapabilities {
+  /**
+   * The wire API version the broker speaks.
+   */
+  api_version: number;
+  arch: string;
+  /**
+   * `account`: anything this OS account can run. `granted`: only the operator's grants.
+   */
+  exec_policy: string;
+  /**
+   * `linux` or `windows`, and the CPU architecture.
+   */
+  os: string;
+  /**
+   * Whether a `command` line runs on the machine's shell (an `account` broker only).
+   */
+  shell_commands: boolean;
+  /**
+   * The request methods this broker answers under its policy; one it always refuses (a
+   * `granted` broker's processes, settings changes and web reads) is left out. Listed is
+   * not granted: the broker still checks each request.
+   */
+  supported_requests: string[];
+  /**
+   * The broker's build.
+   */
+  version: string;
+  /**
+   * `account`: files and jobs anywhere the account reaches. `workspace`: only inside the
+   * broker's workspace.
+   */
+  workspace_scope: string;
+}
+export interface CapabilitiesInput {}
 /**
  * Wait until the broker's operations change as a list shows them: one admitted, retired,
  * or moved to another state (output alone is not a change here). For a view that

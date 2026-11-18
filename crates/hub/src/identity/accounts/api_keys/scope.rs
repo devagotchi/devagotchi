@@ -88,7 +88,7 @@ pub fn scope_for(tool: &str) -> Option<Scope> {
     Some(match tool {
         "machines" | "operation_get" | "operation_read" => Scope::MachinesRead,
         "operation_wait" | "operation_list" => Scope::MachinesRead,
-        "get_config" | "list_processes" => Scope::MachinesRead,
+        "get_config" | "list_processes" | "machine_inspect" => Scope::MachinesRead,
         "get_recent_tool_calls" | "get_usage_stats" => Scope::MachinesRead,
         "run" | "operation_start" | "operation_cancel" => Scope::MachinesRun,
         "operation_input" | "operation_resize" => Scope::MachinesRun,

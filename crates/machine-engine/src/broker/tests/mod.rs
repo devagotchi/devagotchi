@@ -150,6 +150,7 @@ fn output_text(broker: &Broker, id: &str) -> String {
 }
 
 mod access;
+mod capabilities;
 mod interactive;
 mod lifecycle;
 mod waits;
