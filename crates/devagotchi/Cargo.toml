@@ -25,7 +25,9 @@ dunce = { workspace = true }
 serde_json = { workspace = true }
 
 [dev-dependencies]
+devagotchi-store = { workspace = true, features = ["testing"] }
 tempfile = { workspace = true }
+tokio = { workspace = true }
 
 [package.metadata.dist]
 dist = true
