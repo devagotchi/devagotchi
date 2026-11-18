@@ -185,11 +185,18 @@ fields = {"api_version", "version", "os", "arch", "exec_policy", "shell_commands
 account_only = {"config_set", "process_list", "process_kill", "url_read"}
 is_error, caps = call("machine_inspect", {"machine": args.broker})
 served = set(caps.get("supported_requests", [])) if not is_error else set()
-check("machine_inspect: the granted broker's own capabilities", not is_error and set(caps) == fields
-      and caps.get("exec_policy") == "granted" and caps.get("shell_commands") is False
-      and caps.get("workspace_scope") == "workspace", json.dumps(caps)[:300])
-check("machine_inspect lists what a granted broker answers, and not what it refuses",
-      {"broker_capabilities", "operation_start", "file_read"} <= served and not served & account_only, json.dumps(caps)[:300])
+# The broker named by --broker may run either policy (e2e starts a granted one; the one-line
+# join installs an account one), so the answer is checked against the policy it reports.
+policy = caps.get("exec_policy") if not is_error else None
+check("machine_inspect: the broker's own capabilities", not is_error and set(caps) == fields
+      and policy in ("granted", "account")
+      and caps.get("shell_commands") is (policy == "account")
+      and caps.get("workspace_scope") == ("account" if policy == "account" else "workspace"),
+      json.dumps(caps)[:300])
+check(f"machine_inspect lists what a {policy} broker answers, and nothing it refuses",
+      {"broker_capabilities", "operation_start", "file_read"} <= served
+      and (account_only <= served if policy == "account" else not served & account_only),
+      json.dumps(caps)[:300])
 is_error, denied = call("machine_inspect", {"machine": args.ungranted})
 check("machine_inspect refuses an unknown or ungranted machine", is_error
       and denied.get("code") in ("unknown_broker", "not_granted"), json.dumps(denied)[:200])
