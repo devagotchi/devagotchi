@@ -191,7 +191,7 @@ pub const DEPLOY_TIME: &[(&str, &str)] = &[
     ),
     (
         "auth",
-        "how callers prove who they are and how long tokens live; sign-in providers are on /admin, email (SMTP) is next (hub-settings M3)",
+        "how callers prove who they are and how long tokens live; sign-in providers and email are on /admin (an auth.email here pins the Email card)",
     ),
     (
         "trusted_issuers",

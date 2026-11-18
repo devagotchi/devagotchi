@@ -44,6 +44,9 @@ mod hub_settings;
 mod hub_settings_live;
 #[cfg(test)]
 mod hub_settings_live_tests;
+mod hub_settings_mail;
+#[cfg(test)]
+mod hub_settings_mail_tests;
 mod hub_settings_owner;
 #[cfg(test)]
 mod hub_settings_tests;
@@ -51,6 +54,7 @@ mod landing;
 #[cfg(test)]
 mod landing_tests;
 mod machines;
+mod mail_cell;
 mod media;
 #[cfg(test)]
 mod media_tests;
@@ -107,6 +111,7 @@ pub(crate) fn utc(secs: u64) -> String {
 
 pub use email::Mailer;
 pub(crate) use email::announce_admissions;
+pub use hub_settings_mail::apply_saved as apply_saved_mail;
 pub(crate) use landing::render as landing_for;
 use nomen_login::LOGIN_TTL;
 pub use nomen_login::{Exchange, SessionToken, WebLogin};
