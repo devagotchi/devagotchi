@@ -1,0 +1,57 @@
+# Devagotchi: the machine "@NAME@" in Docker, joined to @HUB@ (build @VERSION@).
+# The hub wrote this file for one single-use join code. Start it with:
+#   docker compose -f compose.yml up -d
+#
+# - enroll binds this machine's new key to "@NAME@" with the code, once, and exits. Brought
+#   up again, it finds the key already enrolled and does nothing.
+# - broker runs what your AI asks, as root inside its own container, starting in ./work
+#   (/work inside). Its state, the link's key and the config stay in the volume.
+# - link holds the one outbound connection to the hub; nothing here listens on a port.
+#
+# This machine updates with its image, never by itself. To move it to a newer build, change
+# the tag of @IMAGE@ in the three places below to the hub's build, then run
+#   docker compose -f compose.yml up -d --build
+name: devagotchi-@NAME@
+services:
+  broker:
+    build:
+      dockerfile_inline: |
+        FROM @IMAGE@ AS hub
+        FROM docker.io/library/debian:stable-slim
+        COPY --from=hub /usr/local/bin/devagotchi /usr/local/bin/devagotchi
+        COPY --from=hub /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
+        WORKDIR /work
+        ENTRYPOINT ["/usr/local/bin/devagotchi"]
+    command: [start, --state-dir, /state/broker, --config, /state/broker.json, --workspace, /work]
+    init: true
+    restart: unless-stopped
+    volumes:
+      - state:/state
+      - ./work:/work
+  enroll:
+    image: @IMAGE@
+    user: "0:0"
+    network_mode: host
+    environment:
+      DEVAGOTCHI_ENROLL_CODE: "@CODE@"
+    command: [link, enroll, --state-dir, /state/link, --hub, "@HUB@", --device, "@DEVICE@", --broker, /state/broker/broker.sock]
+    restart: "no"
+    volumes:
+      - state:/state
+  link:
+    image: @IMAGE@
+    user: "0:0"
+    network_mode: host
+    environment:
+      DEVAGOTCHI_MACHINE_KIND: container
+    command: [link, run, --state-dir, /state/link]
+    restart: unless-stopped
+    depends_on:
+      enroll:
+        condition: service_completed_successfully
+      broker:
+        condition: service_started
+    volumes:
+      - state:/state
+volumes:
+  state: {}

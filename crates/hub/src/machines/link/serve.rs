@@ -121,6 +121,7 @@ impl Links {
             key,
             joined_for,
             build,
+            container,
         } = match self.admit(hello, &nonce).await {
             Ok(admitted) => admitted,
             Err(error) => {
@@ -143,6 +144,7 @@ impl Links {
                 calls: calls_tx,
                 pending: pending.clone(),
                 build: build.clone(),
+                container,
                 control: control_tx,
             },
         );

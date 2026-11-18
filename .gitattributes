@@ -4,3 +4,5 @@
 # - shell scripts run in Linux containers and on Linux hosts, where a CR breaks them.
 *.sql text eol=lf
 *.sh  text eol=lf
+# - the compose file a Docker machine joins with is served as its bytes are.
+crates/hub/src/machines/join/*.yml text eol=lf

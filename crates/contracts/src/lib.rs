@@ -455,6 +455,10 @@ pub enum LinkFrame {
         /// release version, or `dev`). An older device leaves it out.
         #[serde(default)]
         build: Option<String>,
+        /// `container` for a machine in a container, which updates with its image and never
+        /// by itself; left out on any other machine (and by an older device).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        kind: Option<String>,
     },
     Result {
         id: u64,

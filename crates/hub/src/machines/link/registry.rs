@@ -7,7 +7,6 @@ use devagotchi_contracts::{BridgeError, BridgeResult};
 use super::Links;
 use crate::machines::{
     devices::{Device, OWNED_LIMIT},
-    join::Shell,
     random,
 };
 
@@ -96,21 +95,18 @@ impl Links {
     }
 
     /// The machine a live code is for, so `/join` can write its script; audited with
-    /// the machine's name, never the code. Looking does not spend the code.
-    pub async fn join_script(&self, code: &str, shell: Shell) -> BridgeResult<Option<String>> {
+    /// the machine's name and `way` (`sh`, `powershell`, `compose`), never the code. Looking
+    /// does not spend the code.
+    pub async fn join_script(&self, code: &str, way: &str) -> BridgeResult<Option<String>> {
         let device = self.devices.live_code(code).await?;
         if let Some(device) = &device {
-            let shell = match shell {
-                Shell::Sh => "sh",
-                Shell::PowerShell => "powershell",
-            };
             self.event(
                 &format!("device:{device}"),
                 "join",
                 "link.join_script",
                 device,
                 "",
-                shell,
+                way,
             )
             .await;
         }
