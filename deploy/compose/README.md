@@ -134,6 +134,16 @@ ref and installs nothing; `deploy/proxmox/hub-up.sh` pushes the files of the sam
 
 ClickHouse is started with the stack and never waited for, so a sick ClickHouse cannot undo a
 healthy deploy. The boards work without it and `/healthz` reports `analytics` as degraded.
+On a stack where ClickHouse was never started (or stopped), start it from the stack's directory
+with its own `.env`; the events waiting in Postgres go out once it answers:
+
+```bash
+docker compose up -d --wait --wait-timeout 120 clickhouse
+docker compose ps clickhouse
+```
+
+A healthy container is not proof the export runs: `/healthz` (`analytics`, the pending count)
+and `check.sh` are.
 
 To restore a backup, on a stack `install.sh` made (on a new server, run `install.sh` first):
 
