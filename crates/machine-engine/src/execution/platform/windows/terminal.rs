@@ -210,7 +210,8 @@ impl Terminal {
             return Err(io::Error::last_os_error());
         }
         // SAFETY: both handles were just returned by CreateProcessW and are owned here; the
-        // thread's is not needed (the root is resumed through its process id, `adopt`).
+        // thread's is not needed (`adopt` resumes the root through a thread snapshot of its
+        // process handle).
         let process = unsafe {
             drop(OwnedHandle::from_raw_handle(info.hThread as RawHandle));
             OwnedHandle::from_raw_handle(info.hProcess as RawHandle)
