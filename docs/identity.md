@@ -157,7 +157,7 @@ A join code is `dvg-` plus 32 lowercase hex, 15 minutes, single-use, bound to th
 |---|---|
 | Linux | `curl -fsSL {hub}/join/{code} \| sudo sh` — systemd user units, root once for the install |
 | Windows | `irm {hub}/join/{code}.ps1 \| iex` — current-user install, no administrator |
-| Docker Compose | `curl -fsSL {hub}/join/{code}.compose.yml -o compose.yml && docker compose -f compose.yml up -d` � a machine that stays running: `broker` (the hub's binary on Debian, so it has a shell, working in `./work`), `link`, and a one-shot `enroll` with the code only in its environment, all from the image of the hub's build (`ghcr.io/devagotchi/devagotchi:sha-<short>` for `main-<short>`, the version for a release; a `dev` hub has none and answers 409). A second `up -d` is harmless: `link enroll` succeeds without the code when its key is already enrolled. It updates with its image, never by itself: `machine_update` refuses it, and the hourly round passes it by (`machines/join/compose.rs`) |
+| Docker Compose | A compose file from `{hub}/join/{code}.compose.yml` that runs the same enrollment against a volume for the state directory |
 | Proxmox or Incus host | `{hub}/join/{code}.host.sh` — the Linux installer on the host itself, not inside a guest, so the broker is the host's |
 | Manual | The tarball URL under `{hub}/dist/…`, the checksum, and `devagotchi link enroll` with the code on stdin |
 

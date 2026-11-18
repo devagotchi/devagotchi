@@ -9,17 +9,11 @@ fn hello_carries_its_build_and_an_old_hello_without_one_still_parses() {
         signature: "cd".into(),
         enroll_code: None,
         build: Some("main-abc1234".into()),
-        kind: None,
     };
     let text = serde_json::to_string(&hello).unwrap();
     assert!(text.contains(r#""build":"main-abc1234""#), "{text}");
-    // An ordinary machine says nothing about its kind, so an older hub still reads it.
-    assert!(!text.contains("kind"), "{text}");
     let back: LinkFrame = serde_json::from_str(&text).unwrap();
     assert!(matches!(back, LinkFrame::Hello { build: Some(ref b), .. } if b == "main-abc1234"));
-    let docked = text.replace(r#""build""#, r#""kind":"container","build""#);
-    let back: LinkFrame = serde_json::from_str(&docked).unwrap();
-    assert!(matches!(back, LinkFrame::Hello { kind: Some(ref k), .. } if k == "container"));
     // What a device from before builds had a name sends.
     let old = r#"{"type":"hello","version":1,"device":"dabo","public_key":"ab","signature":"cd"}"#;
     let parsed: LinkFrame = serde_json::from_str(old).unwrap();
@@ -28,7 +22,6 @@ fn hello_carries_its_build_and_an_old_hello_without_one_still_parses() {
         LinkFrame::Hello {
             build: None,
             enroll_code: None,
-            kind: None,
             ..
         }
     ));

@@ -112,7 +112,6 @@ impl Links {
                 calls,
                 pending: std::sync::Arc::default(),
                 build: None,
-                container: false,
                 control: mpsc::channel(1).0,
             },
         );

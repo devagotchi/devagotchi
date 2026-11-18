@@ -58,9 +58,6 @@ impl Links {
             .get(device)
             .cloned()
             .ok_or_else(|| offline(device))?;
-        if session.container {
-            return Err(container_refusal(device, &version));
-        }
         let Some(build) = session.build else {
             return Err(BridgeError::new(
                 "update_unsupported",
@@ -165,12 +162,10 @@ impl Links {
         else {
             return;
         };
-        // A machine in a container moves with its image; it is never asked.
         let live: Vec<(String, Option<String>)> = {
             let sessions = self.sessions.lock().expect("links");
             sessions
                 .iter()
-                .filter(|(_, s)| !s.container)
                 .map(|(name, s)| (name.clone(), s.build.clone()))
                 .collect()
         };
@@ -191,17 +186,4 @@ impl Links {
             self.auto_update_now().await;
         }
     }
-}
-
-/// Why a machine in a container is not asked to update: its compose file names its image,
-/// and that is what moves it (`machines/join/compose.rs`). Nothing is sent to it.
-fn container_refusal(device: &str, version: &str) -> BridgeError {
-    let image = crate::machines::join::compose::image(version)
-        .unwrap_or_else(|| format!("the image of {version}"));
-    BridgeError::new(
-        "update_unsupported",
-        format!(
-            "container: {device} runs in Docker and updates with its image, never by itself; set the image in its compose.yml to {image} and run `docker compose up -d --build`"
-        ),
-    )
 }

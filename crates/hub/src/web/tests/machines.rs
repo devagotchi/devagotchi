@@ -202,14 +202,6 @@ async fn the_one_line_joins_once_and_downloads_only_what_the_hub_vouches_for() {
         .await
         .unwrap();
     assert!(ps.contains("$device = 'platinum'"), "{ps}");
-    // A build never published as an image has no Docker machine to hand out, and says so.
-    let docker = w.get(&format!("/join/{code}.compose.yml"), None).await;
-    assert_eq!(docker.status(), StatusCode::CONFLICT);
-    let said = docker.text().await.unwrap();
-    assert!(
-        said.contains("no published image") && !said.contains(&code),
-        "{said}"
-    );
 
     // Only what SHA256SUMS lists is served, plus the checksum list itself.
     let file = w
@@ -360,82 +352,4 @@ async fn api_add_machine_is_bearer_only_and_the_code_joins_for_that_account() {
         !theirs["machines"].to_string().contains("laptop"),
         "another account never sees it: {theirs}"
     );
-}
-
-/// The Docker line's file (increment 209): the image of the hub's build, the code in the
-/// enroll service's environment only, any number of fetches until enrolling spends it, and
-/// then a refusal that is never a 200, so `curl -f` stops the line before `docker compose`.
-#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn the_docker_line_gets_a_compose_file_for_the_builds_image_until_the_code_is_spent() {
-    use sha2::{Digest, Sha256};
-    let dist = tempfile::tempdir().unwrap();
-    let bytes = b"#!/usr/bin/env bash
-"
-    .as_slice();
-    std::fs::write(dist.path().join("install-devagotchi.sh"), bytes).unwrap();
-    std::fs::write(
-        dist.path().join("SHA256SUMS"),
-        format!(
-            "{}  install-devagotchi.sh
-",
-            hex::encode(Sha256::digest(bytes))
-        ),
-    )
-    .unwrap();
-    std::fs::write(
-        dist.path().join("VERSION"),
-        "main-abc1234
-",
-    )
-    .unwrap();
-    let downloads = Arc::new(crate::machines::downloads::Downloads::open(dist.path()).unwrap());
-    let w = or_skip!(world_with(Some(downloads)));
-    let other = w.sign_in("tok-other").await;
-    let page = w
-        .http
-        .post(format!("{}/machines/add", w.url))
-        .header(header::COOKIE, &other)
-        .header("sec-fetch-site", "same-origin")
-        .form(&[("name", "docked")])
-        .send()
-        .await
-        .unwrap()
-        .text()
-        .await
-        .unwrap();
-    let code = page
-        .split(|c: char| !(c.is_ascii_alphanumeric() || c == '-'))
-        .find(|word| word.starts_with("dvg-") && word.len() == 36)
-        .unwrap()
-        .to_string();
-    for _ in 0..2 {
-        let file = w.get(&format!("/join/{code}.compose.yml"), None).await;
-        assert_eq!(file.status(), StatusCode::OK);
-        assert_eq!(file.headers()[header::CACHE_CONTROL], "no-store");
-        let file = file.text().await.unwrap();
-        assert!(
-            file.contains("FROM ghcr.io/devagotchi/devagotchi:sha-abc1234 AS hub"),
-            "{file}"
-        );
-        assert!(file.contains(&format!("DEVAGOTCHI_ENROLL_CODE: \"{code}\"")));
-        assert_eq!(file.matches(&code).count(), 1, "{file}");
-        assert!(file.contains(&format!("--hub, \"{}\", --device, \"docked\"", w.url)));
-    }
-    w.devices
-        .enroll("docked", &code, "docked-key", false)
-        .await
-        .unwrap();
-    for asked in [
-        code.as_str(),
-        "dvg-00000000000000000000000000000000",
-        "nope",
-    ] {
-        let spent = w.get(&format!("/join/{asked}.compose.yml"), None).await;
-        assert_eq!(spent.status(), StatusCode::GONE, "{asked}");
-        let said = spent.text().await.unwrap();
-        assert!(
-            said.contains("already used, has expired or is unknown"),
-            "{said}"
-        );
-    }
 }

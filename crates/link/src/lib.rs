@@ -19,13 +19,10 @@ use crate::{
     state::LinkConfig,
 };
 
-pub const USAGE: &str = "Usage:\n  devagotchi link enroll --state-dir ABS_PATH --hub URL --device NAME --broker ENDPOINT\n  devagotchi link run --state-dir ABS_PATH\n  devagotchi link --help\n\nenroll binds this machine's key to NAME on the hub with a one-time code from the hub\noperator (devagotchi hub enroll), then exits. The code is read from the\nDEVAGOTCHI_ENROLL_CODE environment variable, or else from the first line of stdin, never\nfrom the command line where other users could see it. Run again for the same hub and\ndevice with the key already here, enroll does nothing and succeeds. run holds the link open and\nreconnects on its own; start it at login. URL is the hub's https public URL. ENDPOINT is\nthe local broker's ready line (Unix socket path or named pipe). In a container, set\nDEVAGOTCHI_MACHINE_KIND=container: the machine then updates with its image, never by itself.";
+pub const USAGE: &str = "Usage:\n  devagotchi link enroll --state-dir ABS_PATH --hub URL --device NAME --broker ENDPOINT\n  devagotchi link run --state-dir ABS_PATH\n  devagotchi link --help\n\nenroll binds this machine's key to NAME on the hub with a one-time code from the hub\noperator (devagotchi hub enroll), then exits. The code is read from the\nDEVAGOTCHI_ENROLL_CODE environment variable, or else from the first line of stdin, never\nfrom the command line where other users could see it. run holds the link open and\nreconnects on its own; start it at login. URL is the hub's https public URL. ENDPOINT is\nthe local broker's ready line (Unix socket path or named pipe).";
 
 /// Where `enroll` reads the one-time code from first.
 const CODE_ENV: &str = "DEVAGOTCHI_ENROLL_CODE";
-/// `container` on a machine that runs in a container (the hub's compose file sets it): the
-/// hub learns it from the hello, and this link refuses to update itself.
-const KIND_ENV: &str = "DEVAGOTCHI_MACHINE_KIND";
 
 #[derive(Debug, PartialEq, Eq)]
 enum Command {
@@ -112,12 +109,8 @@ pub fn cli(args: Vec<OsString>, build: &str) -> ExitCode {
 
 async fn dispatch(command: Command, build: &str) -> ExitCode {
     let result = match command {
-        Command::Enroll { state, config } => match already_enrolled(&state, &config) {
-            Ok(true) => Ok(()),
-            Ok(false) => match enrollment_code() {
-                Ok(code) => enroll(state, config, code).await,
-                Err(error) => Err(error),
-            },
+        Command::Enroll { state, config } => match enrollment_code() {
+            Ok(code) => enroll(state, config, code).await,
             Err(error) => Err(error),
         },
         Command::Run { state } => run(state, build).await,
@@ -155,28 +148,6 @@ fn enrollment_code() -> BridgeResult<String> {
     Ok(code)
 }
 
-/// Whether this state directory already holds a key enrolled for the same hub and device,
-/// with no network call and no code: then a second `enroll` (a compose file brought up
-/// again) changes nothing but the broker endpoint, and succeeds.
-fn already_enrolled(state_dir: &std::path::Path, config: &LinkConfig) -> BridgeResult<bool> {
-    state::prepare(state_dir)?;
-    let Ok(saved) = state::load_config(state_dir) else {
-        return Ok(false);
-    };
-    if saved.hub != config.hub || saved.device != config.device || !state::has_key(state_dir) {
-        return Ok(false);
-    }
-    state::device_key(state_dir)?;
-    if saved.broker != config.broker {
-        state::save_config(state_dir, config)?;
-    }
-    eprintln!(
-        "devagotchi link: {} is already enrolled on {}; nothing to do",
-        config.device, config.hub
-    );
-    Ok(true)
-}
-
 async fn enroll(state_dir: PathBuf, config: LinkConfig, code: String) -> BridgeResult<()> {
     state::prepare(&state_dir)?;
     let key = state::device_key(&state_dir)?;
@@ -203,8 +174,7 @@ async fn run(state_dir: PathBuf, build: &str) -> BridgeResult<()> {
     state::prepare(&state_dir)?;
     let config = state::load_config(&state_dir)?;
     let key = state::device_key(&state_dir)?;
-    let container = env::var(KIND_ENV).is_ok_and(|kind| kind == "container");
-    let updater = update::Updater::new(&config, &state_dir, build, container);
+    let updater = update::Updater::new(&config, &state_dir, build);
     let mut delay = Duration::from_secs(1);
     loop {
         let started = tokio::time::Instant::now();
@@ -305,57 +275,6 @@ mod tests {
         assert!(parse_args(args(&["run", "--state-dir", "relative"])).is_err());
         assert!(parse_args(args(&["run", "--state-dir", STATE, "--hub", "x"])).is_err());
         assert_eq!(parse_args(args(&["--help"])).unwrap(), Command::Help);
-    }
-
-    /// A compose file brought up a second time runs `enroll` again with a code already
-    /// spent: a key enrolled for the same hub and device makes that a success, decided before
-    /// any code is read or any connection made (this hub's port answers nothing).
-    #[tokio::test]
-    async fn re_enrolling_with_an_existing_key_exits_0_without_a_network_call() {
-        let parent = tempfile::tempdir().unwrap();
-        #[cfg(unix)]
-        let parent_path = std::fs::canonicalize(parent.path()).unwrap();
-        #[cfg(windows)]
-        let parent_path = parent.path().to_path_buf();
-        let dir = parent_path.join("link");
-        let config = LinkConfig {
-            hub: "http://127.0.0.1:9".into(),
-            device: "docked".into(),
-            broker: BROKER.into(),
-        };
-        // Nothing enrolled yet: the code and the hub are needed.
-        assert!(!already_enrolled(&dir, &config).unwrap());
-        // A key and this very config on disk, as the first enroll leaves them.
-        state::device_key(&dir).unwrap();
-        state::save_config(&dir, &config).unwrap();
-        assert!(already_enrolled(&dir, &config).unwrap());
-        let started = std::time::Instant::now();
-        let exit = dispatch(
-            Command::Enroll {
-                state: dir.clone(),
-                config: config.clone(),
-            },
-            "test",
-        )
-        .await;
-        assert_eq!(exit, ExitCode::SUCCESS);
-        assert!(
-            started.elapsed() < Duration::from_secs(1),
-            "no connection was tried"
-        );
-        // Another device or hub is a new enrollment, never a silent success.
-        for other in [
-            LinkConfig {
-                device: "other".into(),
-                ..config.clone()
-            },
-            LinkConfig {
-                hub: "https://hub.example".into(),
-                ..config.clone()
-            },
-        ] {
-            assert!(!already_enrolled(&dir, &other).unwrap());
-        }
     }
 
     #[test]

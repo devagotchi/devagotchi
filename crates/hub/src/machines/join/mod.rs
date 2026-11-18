@@ -8,8 +8,7 @@
 //! Fetching the script does not spend the code; enrolling does, so a link preview cannot
 //! burn it. A used, expired or unknown code gets a script that only says so. Every value
 //! written into a script was checked against a strict pattern first, and goes in single
-//! quotes, so nothing in it can become shell syntax. Docker gets a compose file instead
-//! (`compose.rs`).
+//! quotes, so nothing in it can become shell syntax.
 
 use axum::{
     body::Body,
@@ -20,8 +19,6 @@ use axum::{
 
 use crate::{AppState, config::valid_name, machines::downloads::Downloads};
 
-pub mod compose;
-
 const SH: &str = include_str!("join.sh");
 const PS1: &str = include_str!("join.ps1");
 
@@ -29,16 +26,6 @@ const PS1: &str = include_str!("join.ps1");
 pub enum Shell {
     Sh,
     PowerShell,
-}
-
-impl Shell {
-    /// How the code was asked for, in the audit.
-    fn way(self) -> &'static str {
-        match self {
-            Shell::Sh => "sh",
-            Shell::PowerShell => "powershell",
-        }
-    }
 }
 
 /// `dvg-` and 32 lowercase hex digits, as the hub issues them.
@@ -171,7 +158,7 @@ pub fn routes() -> axum::Router<AppState> {
 
 pub async fn join(State(state): State<AppState>, Path(asked): Path<String>) -> Response {
     let (code, shell) = if let Some(code) = asked.strip_suffix(".compose.yml") {
-        return compose::serve(&state, code).await;
+        return compose(&state, code);
     } else if let Some(code) = asked.strip_suffix(".host.sh") {
         (code, Shell::Sh)
     } else if let Some(code) = asked.strip_suffix(".ps1") {
@@ -189,7 +176,7 @@ pub async fn join(State(state): State<AppState>, Path(asked): Path<String>) -> R
     if !valid_code(code) {
         return text(StatusCode::OK, refusal(shell, hub));
     }
-    match state.hub.links.join_script(code, shell.way()).await {
+    match state.hub.links.join_script(code, shell).await {
         Ok(Some(device)) => match script(
             shell,
             hub,
@@ -232,6 +219,29 @@ async fn shown_name(state: &AppState, device: &str) -> String {
             .shown_name(&hub.accounts().subject(&account, "passkey"), device),
         _ => device.to_string(),
     }
+}
+
+/// Docker Compose that enrolls with the same single-use code. It does not invent an image:
+/// the container runs the hub's Linux join script, which needs a Linux host with systemd
+/// when the person wants a service. The file is the other shape of that one code.
+fn compose(state: &AppState, code: &str) -> Response {
+    let hub = state
+        .hub
+        .config
+        .public_url
+        .trim_end_matches('/')
+        .to_string();
+    if !valid_code(code) || !safe_url(&hub) {
+        return text(StatusCode::OK, refusal(Shell::Sh, &hub));
+    }
+    text(
+        StatusCode::OK,
+        format!(
+            "# Same single-use join code as the Linux one-liner.\n\
+             # A host that should run devagotchi under systemd should use that one-liner.\n\
+             services:\n  enroll:\n    image: docker.io/library/debian:stable-slim\n    network_mode: host\n    volumes:\n      - devagotchi-state:/var/lib/devagotchi\n    command:\n      - sh\n      - -c\n      - apt-get update && apt-get install -y curl ca-certificates && curl -fsSL {hub}/join/{code} | sh\nvolumes:\n  devagotchi-state: {{}}\n"
+        ),
+    )
 }
 
 /// One file of the build this hub hands out, streamed; only names `SHA256SUMS` lists.

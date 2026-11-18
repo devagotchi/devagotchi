@@ -80,23 +80,6 @@ install, not a production promotion. The gap that is still open is in
   already forgotten past 4096 retirements cannot be brought back. An earlier build run on a
   journal this one opened fails each retirement once the journal holds 4096 tombstones.
 
-### The Docker line leaves a running machine (increment 209)
-
-- `machine_add`'s Docker line now brings up a machine that stays: a broker, its link to the
-  hub, and a one-shot enroll. Before, the compose file ran the Linux join script in a slim
-  Debian container, which stopped at its first check and left nothing running.
-- The link and enroll run the hub's own image, of the hub's own build (`:sha-<short>` for a
-  main build, the version for a release). The broker runs the same binary on Debian, so a
-  command has a shell. The join code is only in the enroll service's environment.
-- Running `docker compose up -d` again is harmless: `devagotchi link enroll` succeeds without
-  a code when its key is already enrolled for the same hub and machine.
-- A machine in Docker updates with its image, not by itself. `machine_update` says how
-  (change the image tag, then `docker compose up -d --build`), and the hourly update round
-  passes it by. Its link tells the hub it is a container.
-- A hub on a `dev` build has no published image, so its Docker line answers 409 and says to
-  use the Linux line. A used or unknown code answers 410, so the line stops before
-  `docker compose` runs.
-
 ### read_file works again in claude.ai after an update (increment 208)
 
 - Every tool's answer schema, through a hub and through `devagotchi mcp`, now allows fields

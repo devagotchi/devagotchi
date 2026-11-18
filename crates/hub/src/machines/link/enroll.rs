@@ -61,12 +61,10 @@ impl Links {
             signature,
             enroll_code,
             build,
-            kind,
         }) = hello
         else {
             return refuse("protocol_error", "expected a hello frame".into());
         };
-        let container = kind.as_deref() == Some("container");
         if version != LINK_PROTOCOL_VERSION {
             return refuse(
                 "protocol_version",
@@ -128,7 +126,6 @@ impl Links {
                 key: public_key,
                 joined_for: bound.owner,
                 build,
-                container,
             });
         }
         match self.devices.get(&device).await? {
@@ -151,7 +148,6 @@ impl Links {
                 key: public_key,
                 joined_for: None,
                 build,
-                container,
             }),
         }
     }
