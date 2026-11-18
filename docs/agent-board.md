@@ -106,7 +106,8 @@ rows in the board, validated before they land; state *kinds* (`queue`, `active`,
 Error codes are stable across CLI, MCP and REST: `not_found`, `invalid`, `held_by_other`,
 `not_claimable`, `blocked`, `distinct_required`, `wip_limit`, `stale_fence`, `not_holder`,
 `lease_expired`, `version_conflict`, `transition_not_allowed`, `use_lease_ops`, `humans_only`,
-`dependency_cycle`, `parent_closed`, `no_board`, `no_storage`, `invalid_storage`.
+`dependency_cycle`, `parent_closed`, `source_conflict` (§10), `no_board`, `no_storage`,
+`invalid_storage`.
 
 ## 5. Where the board lives and how an agent starts it (increment 8)
 
@@ -350,7 +351,7 @@ user-authorized direct-recording exception, limited to hosted storage and offlin
 | B12 | RULED 2026-10-24 (chat, 17:13 EDT; ADR pending through the component) | Connecting never lands on an empty board: a board the hub opens for the first time with no tickets gets a Getting started ticket in the attention state (the steps: machines, phone notifications with a one-tap test approval, one small job, close it). Account boards (B11) get it too, when `board_bind` first makes them. |
 | B13 | RULED 2026-10-24 (chat; ADR pending through the component) | Multi-tenant by default: a project's board belongs to the org (tenant) the identity provider proves the account belongs to, and the org manages it. Every member and the members' agents work it; another org never sees it. Tokens are least-privilege: a sign-in asks only for who the person is, a refresh token, the org and the hub's audience; roles and per-tool scopes follow (21e). The Shippin identity works with PAM on the machines (21f). |
 | B14 | RULED 2026-10-24 (chat; ADR pending through the component) | A project starts when an AI or a person names it, and it must be linked to a real repository (GitHub, GitLab, or wherever the person's code lives). All notes and all chats of the work are saved to that project, so every session has its context (21c, 21d). |
-| B15 | ACCEPTED 2026-11-18 (increment 205) | A ticket imported from a document names its origin `{path, item, revision?, content_sha256?}`; `(path, item)` is unique per board and recorded once with who and when. An exact repeat returns the ticket as it is; changed inputs, a new revision included, are `source_conflict` with nothing written (§10). The wire field is `origin` (the tenant probe fills every `source` argument with a path string). Rescans at a later commit therefore conflict until the scanner's own increment decides how a moved revision is reconciled. |
+| B15 | ACCEPTED 2026-11-18 (increment 205) | A ticket imported from a document names its origin `{path, item, revision?, content_sha256?}`; `(path, item)` is unique per board and recorded once with who and when. An exact repeat returns the ticket as it is; changed inputs, a new revision included, are `source_conflict` with nothing written (§10). The wire field is `origin` (the tenant probe fills every `source` argument with a path string). Rescans at a later commit therefore conflict until the scanner's increment ([factory plan](../.ai/dev/plans/agenthub-factory.md) F5b) decides how a moved revision is reconciled. |
 
 ## 9. Packets
 
@@ -392,9 +393,12 @@ taken from the origin) and `recorded_at` (the database clock), and `request_sha2
 the normalized creation inputs, format version 1: the title trimmed, description, kind with its
 default spelled out, priority as given (left out stays left out, so a changed board default is
 no conflict), cleaned labels, parent, assignee, discovered-from, environment, fingerprint and
-the whole origin, revision included. The anchors the hub fills from the connection or the
-board's settings (machine, repo, agent, session) and the sightings (`occurrences`,
-`last_seen_at`) are not counted: a retry from another session is still a retry.
+the whole origin, revision included. The machine, repo, agent and session anchors never
+count, whether the caller gave them or the hub filled them from the connection or the board's
+settings, and neither do the sightings (`occurrences`, `last_seen_at`): a retry from another
+session is still a retry, and a repeat that names another repo returns the ticket as it is.
+The digested form is compact JSON with its keys sorted, fixed in the code, not left to a JSON
+library's feature flags.
 
 Creating it again:
 
@@ -410,4 +414,5 @@ winner's ticket. The row is append-only (`board_append_only()` refuses UPDATE, D
 INSERT … ON CONFLICT DO UPDATE). `board_get`, `board show` and `board export` carry it as
 `provenance`. Tests: `crates/agenthub/src/tests/sources.rs`,
 `crates/agenthub/src/cli/tests/sources.rs`, `crates/hub/src/agenthub/tests/sourced.rs`, and six
-concurrent processes in `crates/devagotchi/tests/board.rs`.
+concurrent processes, then the lifecycle a process per step, in
+`crates/devagotchi/tests/board.rs`.

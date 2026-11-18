@@ -33,7 +33,7 @@ impl Fixture {
 
 /// A bound project (B11): the command line against the real hub, in process, as one
 /// account from two machines; the hub arbitrates, the agents are seats.
-pub(super) mod bound {
+mod bound {
     use serde_json::{Value, json};
 
     use crate::agenthub::cli::{EXIT_OK, EXIT_REFUSED, EXIT_UNAVAILABLE};

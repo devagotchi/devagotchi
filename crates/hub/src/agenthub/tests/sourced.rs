@@ -78,12 +78,23 @@ async fn each_account_imports_its_own_and_a_repeat_from_another_session_is_the_s
         );
         made.push((token, id, ticket["created_by"].clone()));
     }
-    // Two tickets, one per account: neither account's board holds the other's.
+    // Two tickets, one per account: neither account's board holds the other's, by list or by id.
     let [(member, member_id, member_by), (other, other_id, other_by)] = &made[..] else {
         unreachable!()
     };
     assert_ne!(member_by, other_by);
-    for (token, own, by) in [(member, member_id, member_by), (other, other_id, other_by)] {
+    let accounts = [
+        (member, member_id, member_by, other_id),
+        (other, other_id, other_by, member_id),
+    ];
+    for (token, own, by, theirs) in accounts {
+        // Ids are random per board; on the 1 in 65536 chance both drew one, it is our own.
+        if theirs != own {
+            let read = json!({ "project": "demo", "id": theirs });
+            let read = tool(&url, token, "board_get", read).await;
+            assert_eq!(read["isError"], true, "{read}");
+            assert_eq!(read["structuredContent"]["code"], "not_found", "{read}");
+        }
         let listed = tool(&url, token, "board_list", json!({ "project": "demo" })).await;
         let sourced: Vec<&Value> = listed["structuredContent"]["tickets"]
             .as_array()
