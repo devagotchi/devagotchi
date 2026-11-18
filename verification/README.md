@@ -26,20 +26,31 @@ hub leaves out). Claude and Grok were not run: they need Jesse's accounts and a 
 
 [file-mutation-ordering.json](file-mutation-ordering.json) and
 [file-mutation-ordering-baseline.json](file-mutation-ordering-baseline.json) are the unmodified
-receipts of `tests/file_mutation_concurrency.py` (line endings made LF), run on Windows 11 on
-2026-11-18 with a disposable broker and two `devagotchi mcp` adapters under a scratch directory.
-The baseline is `--expect-race` against a build of `main` at 219e008, before the broker's
-mutation gate (binary `e4389999...`): the first barrier-released pair of writes guarded by the
-same SHA-256 overlapped and both succeeded. The other is the gated build (binary `35b4a6cd...`,
-built from this increment's code before its commit): 16 rounds, 160 pairs over ten scenarios,
-status `passed`, every check held; `overlap_by_scenario` counts 16 of 16 overlapping pairs in
-each scenario. The pass criterion is that every scenario overlapped at least once; the count
-is a measurement of this machine, not a requirement. The baseline build also fails the normal
-mode at its first pair (two winners). Both receipts record the binary hash at start and end
-(unchanged). Paths inside them describe the scratch directory of that run. The same gated
-harness passed on Linux too (rust:1.99.1-bookworm in Docker, a copy of this tree: 160 pairs, 16 of
-16 overlapping in each scenario); that receipt is kept outside Git. Scope: one broker's
-own file tools; not external writers, a second broker, or a filesystem-wide compare-and-swap.
+receipts of `tests/file_mutation_concurrency.py`, run on Windows 11 on 2026-11-18 with a
+disposable broker and two `devagotchi mcp` adapters under a scratch directory. The baseline is
+`--expect-race` against a build of `main` at 219e008, before the broker's mutation gate (binary
+`e4389999...`; line endings made LF by hand, as the harness then wrote CRLF on Windows): the
+first barrier-released pair of writes guarded by the same SHA-256 overlapped and both
+succeeded. The baseline build also fails the normal mode at its first pair (two winners).
+
+The gated receipt is a debug build of the clean commit 767ed7b (its `source_commit`; binary
+`f4e9cf08...`, the gate with the queue cap): 16 rounds, 160 pairs over ten scenarios, status
+`passed`, every check held; `overlap_by_scenario` counts 16 of 16 overlapping pairs in each
+scenario. The pass criterion is that every scenario overlapped at least once; the count is a
+measurement of this machine, not a requirement. It replaces the first gated receipt (binary
+`35b4a6cd...`, built from fe7287c's code before that commit, without a source commit, and
+with the same result). Windows debug builds are not byte-reproducible, so a rebuild of the
+same commit can hash differently. Both receipts record the binary hash at start and end
+(unchanged). Paths inside them describe the scratch directory of that run.
+
+Linux: the harness on fe7287c's code (before the queue cap) passed in rust:1.99.1-bookworm in
+Docker, on a copy of this tree: 160 pairs, 16 of 16 overlapping in each scenario; that receipt
+is kept outside Git. It first failed twice with "State directory has an untrusted or
+symbolic-link ancestor": the copy's directories were group- and world-writable, which
+`crates/ipc/src/unix.rs` refuses for the broker's state, and it passed after `chmod -R go-w`
+on the copy. CI's step runs with `--work-root target` inside the checkout and has not run yet.
+Scope: one broker's own file tools; not external writers, a second broker, a filesystem-wide
+compare-and-swap, or an MCP client's cancellation (which does not withdraw a queued change).
 
 ## Devspace provisioning
 
