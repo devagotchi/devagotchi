@@ -37,6 +37,7 @@ pub(super) fn routes() -> Router<AppState> {
             post(super::hub_settings::save_analytics),
         )
         .route("/admin/settings/{group}", post(save))
+        .route("/admin/mail", post(super::hub_settings_mail::save))
 }
 
 /// The card for `group`, with the values in force.

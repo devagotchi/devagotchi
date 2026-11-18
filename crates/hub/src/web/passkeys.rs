@@ -74,7 +74,7 @@ impl HubSignIn {
 
     /// `/healthz` `mail`: whether this hub can send email, and how the last send went.
     pub fn mail_status(&self) -> serde_json::Value {
-        match &self.providers.email {
+        match self.providers.email.get() {
             Some(mailer) => mailer.status(),
             None => serde_json::json!({ "configured": false }),
         }
@@ -123,7 +123,7 @@ impl HubSignIn {
                 "<p class=\"ways\">Or add a sign-in you already have: {buttons}</p>"
             ));
         }
-        if self.providers.email.is_some() {
+        if self.providers.email.get().is_some() {
             ways.push_str(&super::email::form("/account", true));
         }
         ways
@@ -441,7 +441,7 @@ pub fn login_page(hub: &HubSignIn, return_to: &str) -> Response {
     } else {
         format!("<p class=\"ways\">{others}</p><p class=\"meta\">or</p>")
     };
-    let email = if hub.providers.email.is_some() {
+    let email = if hub.providers.email.get().is_some() {
         format!(
             "<p class=\"meta\">or sign in with an email link</p>{}",
             super::email::form(return_to, false)

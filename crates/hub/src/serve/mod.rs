@@ -64,14 +64,13 @@ pub(crate) async fn run(
     } else {
         None
     };
-    // A tenant let in hears so by email when the hub can send mail (early access).
-    if let (Some(accounts), Some(mailer)) = (
-        &accounts,
-        providers
-            .as_ref()
-            .and_then(|providers| providers.email.clone()),
-    ) {
-        accounts.on_admitted(web::announce_admissions(mailer, config.clone()));
+    // A tenant let in hears so by email when the hub can send mail (early access): the mail
+    // server at the moment it is let in, the file's or the one saved on /admin.
+    if let (Some(accounts), Some(providers)) = (&accounts, &providers) {
+        accounts.on_admitted(web::announce_admissions(
+            providers.email.clone(),
+            config.clone(),
+        ));
     }
     let passkeys = accounts.clone().and_then(|accounts| {
         web::HubSignIn::new(config.clone(), accounts)
@@ -84,6 +83,7 @@ pub(crate) async fn run(
     // What the owner set on the settings page, over what the config file says.
     if let Some(hub) = &passkeys {
         hub.reload_providers().await?;
+        web::apply_saved_mail(hub).await?;
     }
     if let Some(accounts) = &accounts {
         ops::hub_settings::apply_saved(&config, accounts).await?;
