@@ -49,7 +49,7 @@
 516	crates/ipc/src/windows/security.rs
 1017	crates/kernel/src/capture/mod.rs
 647	crates/kernel/src/capture/tests.rs
-1164	crates/machine-engine/src/broker.rs
+1156	crates/machine-engine/src/broker.rs
 519	crates/machine-engine/src/execution/platform/linux.rs
 583	crates/machine-engine/src/execution/platform/windows.rs
 802	crates/mcp/src/connect.rs

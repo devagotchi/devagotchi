@@ -34,16 +34,6 @@ const INPUT_WAIT: Duration = Duration::from_secs(5);
 /// Input requests queued for one operation at once.
 const INPUT_QUEUE: usize = 8;
 
-fn default_output_limit() -> usize {
-    262_144
-}
-fn default_max_operations() -> usize {
-    64
-}
-fn default_max_concurrent() -> usize {
-    4
-}
-
 /// What a broker will run. `granted` (the default): only the operator's
 /// `allowed_executables`, with exact arguments, in the workspace. `account`: anything its
 /// own OS account can run, including a `command` line for the machine's shell, in any
@@ -64,11 +54,11 @@ pub struct BrokerConfig {
     pub allowed_executables: Vec<String>,
     #[serde(default)]
     pub exec_policy: ExecPolicy,
-    #[serde(default = "default_output_limit")]
+    #[serde(default = "settings::default_output_limit")]
     pub output_limit_bytes: usize,
-    #[serde(default = "default_max_operations")]
+    #[serde(default = "settings::default_max_operations")]
     pub max_operations: usize,
-    #[serde(default = "default_max_concurrent")]
+    #[serde(default = "settings::default_max_concurrent")]
     pub max_concurrent: usize,
 }
 
@@ -115,6 +105,7 @@ pub(crate) struct Shared {
     /// does not. A list (the inspector's) waits on it to re-read only when it changed.
     roster: watch::Sender<u64>,
     waiters: Semaphore,
+    file_mutations: files::MutationGate,
 }
 
 pub struct Broker {
@@ -249,6 +240,7 @@ impl Broker {
                 changes: watch::channel(0).0,
                 roster: watch::channel(0).0,
                 waiters: Semaphore::new(MAX_WAITERS),
+                file_mutations: Default::default(),
             }),
         }))
     }

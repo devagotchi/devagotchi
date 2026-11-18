@@ -19,7 +19,9 @@ pub use windows::security;
 pub use windows::*;
 
 pub const MAX_RESPONSE_BYTES: usize = 256 * 1024;
-const IO_TIMEOUT: Duration = Duration::from_secs(5);
+/// How long a client waits for each frame, and for the broker's answer beyond the request's
+/// own `held_for`: a broker that may queue a request bounds that queue below it.
+pub const IO_TIMEOUT: Duration = Duration::from_secs(5);
 
 pub async fn read_frame<R: AsyncRead + Unpin>(
     reader: &mut R,

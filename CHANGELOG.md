@@ -77,6 +77,23 @@ install, not a production promotion. The gap that is still open is in
   caller's suspension is never consumed. Any mismatch fails the start and terminates the job.
   This is not sandboxing; the residual limits are in `windows/resume.rs`.
 
+### File changes on one machine happen one at a time (increment 203)
+- `write_file`, `edit_file`, `create_directory` and `move_file` on one broker wait for each
+  other, from resolving the path to the answer. Two writes guarded by the same
+  `expected_sha256` no longer both succeed: the second answers `changed_since_read`. Two creates
+  or two moves onto one path give one `already_exists`, two edits of the same text one
+  `edit_mismatch`. Reads, searches, operations and settings never wait for a file change.
+- New error `mutation_busy`: a file change that waited 3 s for another one is refused having
+  changed nothing, before a local client's 5 s deadline, so it never lands after that client
+  reported `ipc_timeout`. At most 8 changes wait at once; one more gets `mutation_busy` at
+  once, so waiting changes never take every broker connection. Try it again.
+- An MCP cancellation (`request_cancelled`, from `devagotchi mcp` or a hub) only stops the
+  caller's wait: a change it cancelled while queued can still land within those 3 s, with no
+  answer. Read the file before assuming it did not.
+- External editors, commands and a second broker are not ordered by this; it is not a
+  filesystem-wide compare-and-swap. `tests/file_mutation_concurrency.py` races two
+  `devagotchi mcp` adapters on one broker in CI's e2e job on every OS.
+
 ### The license is the Functional Source License (FSL-1.1-ALv2)
 - Devagotchi moves from the Business Source License 1.1 to FSL-1.1-ALv2, held by AngryVibes LLC:
   self-hosting for yourself and your organization stays free; offering it to others as a
