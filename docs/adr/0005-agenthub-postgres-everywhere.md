@@ -63,4 +63,7 @@ What a board needs from its store:
 - AgentHub's `src/lib.rs` SQLite board and its file-based tests move to Postgres. Its tests
   already run on Postgres in its own CI.
 - `devagotchi board` (the command line) talks to a hub or an AgentHub server, never to a file.
+  Note, 2026-11-17 (increment 197): until the AgentHub server exists (A8), a project's own board
+  is opened by the command line in the Postgres `DEVAGOTCHI_BOARD_STORAGE_URL` names, under one
+  fixed local tenant; no file, and no SQLite, is involved.
 - A new image and release archives come from the agenthub repository's own release workflow.

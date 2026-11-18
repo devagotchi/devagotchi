@@ -33,6 +33,11 @@ install, not a production promotion. The gap that is still open is in
   is still open is in the parity doc. `write_pdf` is not implemented.
 - A fresh `git clone` needs `git submodule update --init` before `cargo build`. AgentHub is
   the `crates/agenthub` submodule.
+- A project's own board (`devagotchi board init`, no hub bound) is in Postgres: set
+  `DEVAGOTCHI_BOARD_STORAGE_URL` to a `postgres://` URL, or pass `board init --storage URL`
+  (kept in `.devagotchi/config.json`, refused with a password in it). With neither, every
+  `board` command says so and names `board bind`. The SQLite `board.sqlite3` is gone, and nothing
+  is moved from one: `board init` makes a new board (ADR 0005).
 - `/admin` changes the settings the hub reads while it runs, in force the moment they are
   saved: the shortest password, sign-up rate and the limits of an account nobody has secured,
   connecting an AI with no sign-in, machines updating themselves, how long a workflow link

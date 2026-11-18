@@ -4,6 +4,15 @@ Status: accepted. Date: 2026-11-09. Superseded in part on 2026-11-15 by
 [ADR 0005](0005-agenthub-postgres-everywhere.md): there is no standalone SQLite board; the
 offline queue below, when built, is a pending-operation queue, never a board.
 
+Note, 2026-11-17 (increment 197): done in the code. A standalone board is in Postgres: `devagotchi
+board init` makes it in the database `DEVAGOTCHI_BOARD_STORAGE_URL` names (or a `storage` URL with
+no password in `.devagotchi/config.json`), under one fixed local tenant, and every board command
+opens it there; with neither named and no hub bound, the command says so. The SQLite board, its
+schema and its upgrades are deleted from AgentHub, and so is `rusqlite`. Nothing is migrated
+from an old `board.sqlite3` (pre-release; there is no importer). "Standalone local boards"
+below means these Postgres boards; the client's offline cache, when built, is still its own
+store.
+
 ## Authority and scope
 
 The user selected client-initiated offline synchronization and explicitly allowed discovery,

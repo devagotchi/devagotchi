@@ -36,7 +36,7 @@ fn next_for(code: &str, id: Option<&str>) -> String {
         "not_owner" => "only the account that owns this board, a person granted on it, or that account's AI changes its settings; ask them".into(),
         "not_found" => "board_list with open_only to see the ids on this board".into(),
         "not_granted" | "unknown_board" => "whoami lists the boards your identity may work on".into(),
-        "no_board" | "board_mismatch" | "board_version" => "the hub's operator must initialise or fix this board; nothing an agent can do".into(),
+        "no_board" => "the hub's operator must initialise or fix this board; nothing an agent can do".into(),
         "nothing_ready" => "board_create what you found, or wait with board_wait".into(),
         "unknown_environment" => "pass one of the board's environments the message lists, or leave environment out".into(),
         _ => "board_prime to re-orient".into(),

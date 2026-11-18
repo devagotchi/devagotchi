@@ -25,6 +25,8 @@ dunce = { workspace = true }
 serde_json = { workspace = true }
 
 [dev-dependencies]
+# `tests/board.rs` (a standalone board) and `tests/hub_recovery.rs` (the hub's accounts): a
+# Postgres database of their own per test.
 devagotchi-store = { workspace = true, features = ["testing"] }
 tempfile = { workspace = true }
 tokio = { workspace = true }

@@ -1,6 +1,6 @@
 # Devagotchi agent board: tickets any subscription can claim, work, annotate and hand off
 
-Revision: **2026-11-09 UTC**. Status: **hosted CLI/MCP/web use native Postgres; standalone SQLite retained; offline queue pending**.
+Revision: **2026-11-17 UTC**. Status: **every board is in Postgres: hosted CLI/MCP/web, and standalone boards since 2026-11-17 (ADR 0005); offline queue pending**.
 Owner: `crates/hub/src/agenthub/`. This document owns the board contract; the
 [architecture master](product-and-platform-plan.md) owns product decisions and sequencing; the
 [task-graph contract](task-graph-and-mesh-contract.md) owns execution graphs, which are a different thing.
@@ -10,8 +10,10 @@ puts hosted authority in scoped Postgres with required ClickHouse analytics;
 [ADR 0002](adr/0002-bound-board-offline-cache-and-queued-drafts.md) allows explicitly pending
 offline discovery/new tickets/notes/drafts, never offline shared ownership or completion.
 The user authorized direct recording of these two ADRs while the component was unavailable.
-Live hub boards still use SQLite: migrations/import are implemented, runtime cutover is not.
-Earlier packet receipts below describe the legacy backend, not completed amended scope.
+Hub boards run on Postgres (ADR 0001); standalone boards too (ADR 0005, done 2026-11-17): the
+SQLite board is deleted, and nothing is migrated from an old `board.sqlite3` (pre-release; there
+is no importer). Earlier packet receipts below describe the legacy backend, not completed
+amended scope.
 
 ## 1. What a ticket is, and is not
 
@@ -29,7 +31,7 @@ on machine Z", recorded after the fact by the agent or the broker.
 The Go `agent-hub` (shippinAI/agent-hub, Postgres) proved this shape on one box in October 2026:
 leases with fences, a ready queue over dependencies, reviewer ≠ author as data, notes and handoffs,
 an append-only chain. The protocol lives in this Rust hub, per project. ADR 0001 supersedes
-the original hosted-SQLite placement; standalone local boards retain SQLite. What the
+the original hosted-SQLite placement; ADR 0005 moved standalone boards to Postgres too. What the
 protocol adds comes from what works elsewhere (§7).
 
 ## 2. Boundary test (master §4)
@@ -40,8 +42,8 @@ protocol adds comes from what works elsewhere (§7).
 | Existing owner inspected | `crates/hub` (bastion: subjects, audit chain, MCP surface, web); `crates/core/journal` (operations). The Go `agent-hub` store (`server/internal/store`, `docs/spec.md`). |
 | Why extension is adequate | The hub already authenticates actors, owns account/tenant storage and RLS, keeps audit history and serves MCP/web. Board transactions extend that Postgres owner; no second task service. ClickHouse is the explicitly selected analytics dependency, never a coordination authority. |
 | What it replaces | The Go hub's tasks/notes/deps/leases/events, ported not run beside; the Go hub freezes behind a superseded banner once parity tests pass (increment 11). |
-| Authoritative state | Hosted boards: tenant/project-scoped Postgres tables in the existing hub `Store` (ADR 0001). Standalone boards: `<project>/.devagotchi/board.sqlite3`. Bound client SQLite is cache/pending operations only (ADR 0002). `board.jsonl` is an export, never authority. Live hosted routing remains SQLite until verified cutover. |
-| Dependencies and failure | Existing SQLx Postgres storage for hosted transactions; rusqlite for standalone/cache. No silent local fallback when the hub/database is down. Durable outbox to required ClickHouse exposes export lag/backpressure. Broken chains are reported, never silently repaired. |
+| Authoritative state | Hosted boards: tenant/project-scoped Postgres tables in the existing hub `Store` (ADR 0001). Standalone boards: the same tables in the Postgres `DEVAGOTCHI_BOARD_STORAGE_URL` names (or `storage` in `.devagotchi/config.json`), under one fixed local tenant (ADR 0005). A bound client's future offline cache holds cache/pending operations only (ADR 0002). `board.jsonl` is an export, never authority. |
+| Dependencies and failure | SQLx Postgres storage for every board's transactions. No silent local fallback when the hub/database is down; a standalone board with no Postgres named is refused (`no_storage`). Durable outbox to required ClickHouse exposes export lag/backpressure. Broken chains are reported, never silently repaired. |
 | Acceptance | `crates/hub/src/agenthub/tests.rs`: lanes, fencing after expiry, reaper → attention, readiness through `blocks`, assignee priority, WIP, handoff, force-release, version conflicts, transitions, filters, append-only triggers, chain tampering, workflow replacement, discovered work. |
 
 Rejected: a board per machine (tickets outlive machines), Dolt or another versioned database.
@@ -104,23 +106,28 @@ rows in the board, validated before they land; state *kinds* (`queue`, `active`,
 Error codes are stable across CLI, MCP and REST: `not_found`, `invalid`, `held_by_other`,
 `not_claimable`, `blocked`, `distinct_required`, `wip_limit`, `stale_fence`, `not_holder`,
 `lease_expired`, `version_conflict`, `transition_not_allowed`, `use_lease_ops`, `humans_only`,
-`dependency_cycle`, `parent_closed`, `board_mismatch`, `board_version`.
+`dependency_cycle`, `parent_closed`, `no_board`, `no_storage`, `invalid_storage`.
 
 ## 5. Where the board lives and how an agent starts it (increment 8)
 
 ```text
 <project>/
   .devagotchi/
-    board.sqlite3        the truth (git-ignored; one writer at a time: the CLI as the OS user, or the hub)
     board.jsonl          `board export`: one JSON line per ticket with its deps and notes (commit it if you want diffs)
-    config.json          project name and id prefix; later the hub endpoint and which seats may claim here
+    config.json          project name and id prefix; the hub it is bound to (`board bind`); the Postgres it is in, if named here (`storage`, never with a password)
     claims/<actor>.json  the CLI's claim cache ({id → fence, version, lease expiry}) so agents never copy fences
-    .gitignore           ignores the database, its WAL and the claim caches
+    .gitignore           ignores the claim caches and the hooks' beat markers
   AGENTS.md              gains one fenced block (markers `devagotchi-board:start/end`) pointing at `board prime`
 ```
 
-`devagotchi board init [--project NAME] [--prefix P] [--agents-md]` (increment 8a, built; `devagotchi board` since 13b) creates
-the directory and, with `--agents-md`, appends the block once. `board prime` is what an agent
+`devagotchi board init [--project NAME] [--prefix P] [--storage URL] [--agents-md]` (increment 8a, built; `devagotchi board` since 13b;
+in Postgres since increment 197) makes the board, under one fixed local tenant with the project's
+name as its id (a name from the directory is lowercased to `[a-z0-9-]`), in the Postgres
+`DEVAGOTCHI_BOARD_STORAGE_URL` names, or else `--storage URL` (kept in `config.json` and refused
+if it carries a password: `PGPASSWORD` or `~/.pgpass` holds that). AgentHub's migrations run on
+every open. With neither named and no hub bound, every command is refused with `no_storage`,
+naming the variable and `board bind`. It creates the directory and, with `--agents-md`, appends
+the block once. `board prime` is what an agent
 runs, or has run for it, at session start: under fifty lines — the tickets it holds (fence, lease
 left), what is ready for it, tickets that need a person, notes addressed to it, and the one-line
 protocol. `board onboard` prints the block for pasting elsewhere; `board agent` prints the whole
@@ -133,9 +140,9 @@ the MCP snippets for each CLI, and `--hooks` for the hook pack (§7).
 ## 6. Surfaces (increment 8)
 
 Two faces, one store. The command line (§5) is for agents on the host that holds the project;
-the hub's MCP tools are for agents anywhere. Both open `<project>/.devagotchi/board.sqlite3`
-(WAL, five-second busy timeout), so an agent on the hub's host and one across the world see one
-board, one chain.
+the hub's MCP tools are for agents anywhere. A hub's boards are in its own Postgres (ADR 0001);
+the command line reaches them by `board bind` (below), so an agent on the hub's host and one
+across the world see one board, one chain. (Before ADR 0001 both faces opened one SQLite file.)
 
 **MCP tools on the hub's `/mcp` (8b, built).** The hub config names the boards it serves and who
 may work on them, the way it names brokers:
@@ -240,7 +247,7 @@ because history is append-only. A managed archive/cleanup surface remains pendin
 
 Committed events notify other hub instances transactionally. Board waiters refresh after
 listener reconnect, and persisted leases are reaped after restart without opening each
-board first. No hosted board creates or falls back to a local SQLite connection.
+board first. No board opens or falls back to a SQLite file.
 
 A caller may name its **seat** with the header `X-Devagotchi-Seat: claude` — the account's own
 agent on that machine (the CLI face sets it from `DEVAGOTCHI_ACTOR`; `devagotchi mcp --hub` will
@@ -261,8 +268,8 @@ here runs on the hub as the account on file (`devagotchi login`), through one MC
 user is the account itself. The command line renders the hub's records exactly as the local
 store's — one `Face` trait (`agenthub/face.rs`), two implementations (`Board`, `remote::Remote`) —
 and the hub's refusals keep their codes and the CLI's `next` hints; `not_signed_in`,
-`signed_out` and `hub_unreachable` say what to run. No local store is written for a bound
-project; `board unbind` makes the local store the board again (the hub keeps its board). A
+`signed_out` and `hub_unreachable` say what to run. No standalone board is made for a bound
+project; `board unbind` makes the standalone board the board again (the hub keeps its board). A
 project is found by `.devagotchi/config.json`, bound or local. `devagotchi hub board …` is gone:
 `devagotchi board` is the one command line. Proof: `board::tests::bound` runs the real hub in
 process — two machines of one account, a claim on one held on the other at once, the stale fence
@@ -329,8 +336,8 @@ user-authorized direct-recording exception, limited to hosted storage and offlin
 
 | ID | Status | Decision |
 |---|---|---|
-| B01 | LOCKED; storage amended by ADR 0001 | The Rust hub owns per-project coordination, never jobs. Hosted boards use the existing scoped Postgres boundary; ClickHouse analytics is required. Standalone boards retain SQLite. |
-| B02 | ACCEPTED, ADR 0001 | Hosted storage is tenant/project-scoped Postgres. Existing project/account SQLite files are explicit migration sources; standalone local files stay supported. `board.jsonl` remains an export. Never two authoritative copies of a bound board. |
+| B01 | LOCKED; storage amended by ADR 0001 | The Rust hub owns per-project coordination, never jobs. Hosted boards use the existing scoped Postgres boundary; ClickHouse analytics is required. Standalone boards are in Postgres too (ADR 0005, 2026-11-17). |
+| B02 | ACCEPTED, ADR 0001 | Hosted storage is tenant/project-scoped Postgres. Existing project/account SQLite files were migration sources; standalone boards are in Postgres since 2026-11-17 (ADR 0005), with no importer from `board.sqlite3`. `board.jsonl` remains an export. Never two authoritative copies of a bound board. |
 | B03 | PROPOSED | Ids: prefix + hash for roots, hierarchical for children. Alternative: counters (the Go hub), rejected for multi-machine creation. |
 | B04 | PROPOSED | Dependency kinds `blocks | parent | related | discovered-from | duplicates | supersedes`; only `blocks` gates readiness. |
 | B05 | PROPOSED | Liveness by broker: an operation working a ticket keeps its lease alive; settlement releases or hands off. |

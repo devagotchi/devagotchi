@@ -79,9 +79,9 @@ pub struct HubConfig {
     pub brokers: Vec<BrokerEntry>,
     /// Which authenticated subject may use which brokers and boards. No grant, no route.
     pub grants: Vec<Grant>,
-    /// Project boards this hub serves over `/mcp` (`board_*` tools): each is a project
-    /// directory on this host that `devagotchi board init` prepared, so the same
-    /// store answers the command line here and agents anywhere.
+    /// Project boards this hub serves over `/mcp` (`board_*` tools), in the hub's Postgres;
+    /// the command line reaches one with `devagotchi board bind --shared`, so the same board
+    /// answers the command line and agents anywhere.
     #[serde(default)]
     pub boards: Vec<BoardEntry>,
     /// GitHub repositories admitted to configured project boards. Disabled when empty.

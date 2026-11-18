@@ -160,7 +160,7 @@ Nothing new is built until this phase has run once; what it finds is fixed first
 | # | Feature | In the code today | Proof |
 |---|---|---|---|
 | 9.1 | no legacy in the schema: one baseline migration with the final table names in place of 0001 to 0030, migration history tables in schema `devagotchi` with prefixes, stale SQLite comments gone ([texas-baseline](texas-baseline.md) M5; its own plan, since it changes every existing hub's database) | absent | a fresh install on Texas from the one migration |
-| 9.2 | AgentHub's standalone board on Postgres too (decision 1 below; [structure-cleanup](structure-cleanup.md) S11) | absent: `.devagotchi/board.sqlite3` when no hub is bound | `rusqlite` gone from AgentHub's `Cargo.toml` |
+| 9.2 | AgentHub's standalone board on Postgres too (decision 1 below; [structure-cleanup](structure-cleanup.md) S11) | done, increment 197 (2026-11-17): `board init` makes the board in the Postgres `DEVAGOTCHI_BOARD_STORAGE_URL` names, under a fixed local tenant; the SQLite board, its schema and upgrades are deleted; no importer (pre-release) | `rusqlite` gone from AgentHub's `Cargo.toml`; its tests run on Postgres |
 | 9.3 | sign in through Cloudflare Access and Tailscale; Cloudflare Tunnel and Tailscale as machine link routes (D24); Wardenclyffe ([texas-baseline](texas-baseline.md) M6) | absent | Texas reached through each |
 | 9.4 | AgentHub as its own server with its own release, protection and the Devagotchi pin (ADR 0005, [texas-baseline](texas-baseline.md) M7) | absent: AgentHub is served by the hub | an AgentHub release installed alone |
 | 9.5 | the structure finished: each domain serves its own pages (decision 6), the other crates (S10), a test that every front door has its sections (S12) ([structure-cleanup](structure-cleanup.md), map in [structure-cleanup-map](structure-cleanup-map.md)) | S5 to S7 and S9 merged (#228 to #236, agenthub #1 to #3) | the layout tests, and `web/` left with the shell |
@@ -170,13 +170,14 @@ Only after Phase 9 is proven: the cloud edition ([cloud-edition](cloud-edition.m
 
 ## Decisions for the operator
 
-1. **SQLite that remains.** The hub and the link are Postgres only. SQLite is left in three places:
+1. **SQLite that remains.** The hub and the link are Postgres only, and so is AgentHub: its
+   standalone board moved to Postgres (done, increment 197, 2026-11-17; 9.2). SQLite is left in
+   two places:
    - the machine engine's operation journal, on each machine;
-   - the kernel's `devagotchi ai` capture journal, on each machine;
-   - AgentHub's standalone board, `.devagotchi/board.sqlite3`, used when no hub is bound.
+   - the kernel's `devagotchi ai` capture journal, on each machine.
 
    Proposal: keep the two machine-local journals (they are on-machine state, like a phone's
-   offline cache), and move the standalone board to Postgres or drop it.
+   offline cache). The operator decides.
 2. **Android**: the phone app only, or also as a machine the AI works on?
 3. **AgentHub's licence**: move it from BUSL-1.1 to FSL-1.1-ALv2 like the main repository?
 4. **"Python scans"**: should the scanners be written in Python, or should they scan Python and other
@@ -188,7 +189,7 @@ Only after Phase 9 is proven: the cloud edition ([cloud-edition](cloud-edition.m
    keeps only the shell (proposed), or `web/` stays and is nested by domain. Step S8 waits on it.
 7. **"AgentHub is limited" in the standalone edition**: where is the line? Proposed: the
    standalone edition keeps what one person and their AIs need: boards on the person's own hub
-   (and the local board), tickets, claims and leases, notes, approvals on the phone, the hooks,
+   (and the standalone board), tickets, claims and leases, notes, approvals on the phone, the hooks,
    `board scan`. The commercial module adds what teams and a business need: organisations,
    teams and shared machines (4.5), the configurable hierarchy (4.4), statistics in ClickHouse
    (4.7), importers beyond `board scan` (4.2), AgentHub on its own Postgres (4.8). Nothing is

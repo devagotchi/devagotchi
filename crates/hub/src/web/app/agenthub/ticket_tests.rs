@@ -5,6 +5,7 @@
 use serde_json::{Value, json};
 
 use super::super::tests::{hosted, page, things_of};
+use crate::agenthub::Workflow;
 use crate::tenancy::tests::tenants::{Hosted, Person, refused};
 
 async fn ticket(hub: &Hosted, alice: &mut Person, id: &str) -> Value {
@@ -364,11 +365,7 @@ async fn the_board_filters_by_anchor_chips_and_the_ticket_shows_its_anchors() {
 }
 
 /// A's board `alpha` with its workflow set to `workflow`, as its owner may customise it.
-async fn board_with_workflow(
-    hub: &Hosted,
-    alice: &mut Person,
-    workflow: &crate::agenthub::Workflow,
-) {
+async fn board_with_workflow(hub: &Hosted, alice: &mut Person, workflow: &Workflow) {
     let bound = hub
         .call(alice, "board_bind", json!({ "project": "alpha" }))
         .await;
@@ -418,7 +415,9 @@ async fn close_and_undo(hub: &Hosted, alice: &mut Person) -> (String, String) {
 async fn undo_on_a_customised_workflow_says_which_transition_to_add() {
     let hub = or_skip!(hosted());
     let mut alice = hub.first_connect("Claude").await;
-    let mut ours = crate::agenthub::Workflow::previous_default();
+    let mut ours = Workflow::default_workflow(); // its owner's: closed tickets never reopen
+    ours.transitions
+        .retain(|t| t.to != "ready" || !matches!(&*t.from, "done" | "cancelled"));
     ours.id = "ours".into();
     board_with_workflow(&hub, &mut alice, &ours).await;
     let (id, to) = close_and_undo(&hub, &mut alice).await;
