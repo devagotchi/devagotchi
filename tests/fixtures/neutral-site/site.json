@@ -129,6 +129,9 @@
   "assets": {
     "logo": "logo.svg",
     "icon": "icon.svg",
+    "app_icons": ["icon-192.png", "icon-512.png"],
+    "maskable_icon": "icon-maskable-512.png",
+    "badge": "badge-96.png",
     "diagram": "diagram.svg"
   }
 }

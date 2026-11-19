@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """The phone control app in a real browser (docs/spec-phone-app.md, Tests), at phone size.
 
-Starts `devagotchi hub serve` as a hosted hub (`tenancy.mode multi`) on SQLite at
-http://localhost (a secure context, so the service worker runs without TLS). Then:
+Starts `devagotchi hub serve` as a hosted hub (`tenancy.mode multi`) on Postgres
+(`DEVAGOTCHI_HUB_STORAGE_URL`) at http://localhost (a secure context, so the service worker
+runs without TLS). Then:
 
 1. A person signs up from their AI client's sign-in page on an iPhone 13 (emulated); the AI
    adds a machine (a broker and `devagotchi link`, online) and a board with a ticket.
@@ -93,6 +94,37 @@ def no_sideways_scroll(page, width: int) -> None:
     for what in ("document.documentElement.scrollWidth", "document.querySelector('body.app > main').scrollWidth"):
         seen = page.evaluate(what)
         assert seen <= width, f"{what} is {seen} at {width} px: the page scrolls sideways"
+
+
+def frame_cache(url: str) -> str:
+    """The cache the hub's service worker keeps the app's frame in, as `/sw.js` names it."""
+    status, _, worker = call(f"{url}/sw.js")
+    found = re.search(r'^var FRAME = "([^"]+)";', worker, re.M)
+    assert status == 200 and found, f"/sw.js names no FRAME cache ({status}):\n{worker[:400]}"
+    return found.group(1)
+
+
+def poll(page, expression: str, seconds: float = 15) -> bool:
+    """Whether `expression` comes true in the page within `seconds`. Polled from here: each
+    evaluate awaits a promise and must give exactly `true`. (`wait_for_function` is no good
+    here: the app's CSP refuses the eval its polling needs, and a first answer that is a
+    promise counts as truthy, so it passed whatever the promise held.)"""
+    deadline = time.time() + seconds
+    while time.time() < deadline:
+        if page.evaluate(expression) is True:
+            return True
+        time.sleep(0.2)
+    return False
+
+
+def wait_kept(page, cache: str, path: str, seconds: float = 15) -> None:
+    """Wait until the service worker has put `path` in `cache`, without opening (so making) a
+    cache that is not there: a worker that keeps the frame anywhere else fails this wait."""
+    check = (f"caches.has({json.dumps(cache)}).then(has => has && caches.open({json.dumps(cache)})"
+             f".then(c => c.match({json.dumps(path)})).then(Boolean))")
+    if not poll(page, check, seconds):
+        names = page.evaluate("caches.keys()")
+        raise AssertionError(f"{path} never reached the cache {cache} in {seconds} s; caches: {names}")
 
 
 def main() -> int:
@@ -366,11 +398,9 @@ def main() -> int:
             # 5. Offline: the service worker keeps the frame; with the hub gone a reload
             # shows the app's offline page instead of a browser error.
             page.goto(f"{url}/app")
-            page.wait_for_function("navigator.serviceWorker && navigator.serviceWorker.controller",
-                                   timeout=15_000)
-            page.wait_for_function(
-                "caches.open('devagotchi-app-2').then(c => c.match('/app/offline')).then(Boolean)",
-                timeout=15_000)
+            controlled = "!!(navigator.serviceWorker && navigator.serviceWorker.controller)"
+            assert poll(page, controlled), "no service worker controls /app"
+            wait_kept(page, frame_cache(url), "/app/offline")
             hub.terminate()
             hub.wait(timeout=10)
             page.reload()

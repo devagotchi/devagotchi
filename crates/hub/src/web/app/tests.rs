@@ -266,6 +266,30 @@ async fn the_app_installs_at_app_and_opens_offline() {
         purposes.contains(&"any") && purposes.contains(&"maskable"),
         "{manifest}"
     );
+    // Android installs from PNGs: 192 and 512, and a maskable one of its own, each served as
+    // image/png at the size it is listed at.
+    let mut pngs = Vec::new();
+    for icon in manifest["icons"].as_array().unwrap() {
+        if icon["type"] != "image/png" {
+            continue;
+        }
+        let answer = hub.get(icon["src"].as_str().unwrap(), None).await;
+        assert_eq!(answer.headers()["content-type"], "image/png", "{icon}");
+        let bytes = answer.bytes().await.unwrap();
+        let side = u32::from_be_bytes(bytes[16..20].try_into().unwrap());
+        let tall = u32::from_be_bytes(bytes[20..24].try_into().unwrap());
+        assert_eq!(icon["sizes"], format!("{side}x{tall}"), "{icon}");
+        pngs.push((
+            icon["purpose"].as_str().unwrap().to_string(),
+            side,
+            icon["src"].clone(),
+        ));
+    }
+    let any: Vec<u32> = pngs.iter().filter(|p| p.0 == "any").map(|p| p.1).collect();
+    assert!(any.contains(&192) && any.contains(&512), "{manifest}");
+    let maskable: Vec<_> = pngs.iter().filter(|p| p.0 == "maskable").collect();
+    assert_eq!(maskable.len(), 1, "{manifest}");
+    assert!(!pngs.iter().any(|p| p.0 == "any" && p.2 == maskable[0].2));
 
     // The page the service worker keeps for offline needs no sign-in, and it keeps it.
     let (status, offline) = Hosted::text(hub.get("/app/offline", None).await).await;
@@ -291,6 +315,37 @@ async fn the_app_installs_at_app_and_opens_offline() {
             .unwrap()
             .starts_with("text/javascript")
     );
+}
+
+/// The app installs from the sign-in page a phone lands on, on a hosted hub and on the
+/// one-owner hub alike, and from the landing page: the manifest, and a CSP that loads it.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn the_sign_in_page_carries_the_manifest_a_phone_installs_from() {
+    let hosted = or_skip!(hosted());
+    let owned = or_skip!(crate::web::passkey_tests::world());
+    let answers = [
+        ("hosted /auth/login", hosted.get("/auth/login", None).await),
+        (
+            "one-owner /auth/login",
+            owned.get("/auth/login", None).await,
+        ),
+        ("landing", hosted.get("/", None).await),
+    ];
+    for (what, answer) in answers {
+        let csp = answer.headers()["content-security-policy"]
+            .to_str()
+            .unwrap()
+            .to_string();
+        let html = answer.text().await.unwrap();
+        assert!(
+            html.contains("<link rel=\"manifest\" href=\"/manifest.webmanifest\">"),
+            "{what}"
+        );
+        assert!(html.contains("<meta name=\"theme-color\""), "{what}");
+        for allowed in ["manifest-src 'self'", "img-src 'self'"] {
+            assert!(csp.contains(allowed), "{what}: {csp}");
+        }
+    }
 }
 
 /// An operation as the broker answers it, for the hub's routed-jobs ring.

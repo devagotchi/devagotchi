@@ -563,6 +563,19 @@ Three more constraints shape the program:
 **Shared-file rule for this phase.** 246 makes the pure moves first: `manifest()` and `service_worker()` out of `site.rs` into `site/pwa.rs`, and the head and CSP builder out of `pages.rs` (lines 424-509) into `web/pages/head.rs`, with both ratchet entries lowered. It lands early so the other lanes rebase onto the split files.
 
 ### 245: Make the phone CI check honest, and start the Android browser suite (S)
+- **Delivered as (2026-11-18, branch `increment-245/honest-phone-ci`):** the offline wait was
+  passing whatever the cache held. `wait_for_function`'s first answer was a promise, which
+  counts as truthy, and its later polling is refused by the app's CSP (`'unsafe-eval'`).
+  `app_browser.py` now reads the cache name from `/sw.js` (`frame_cache`) and polls from
+  Python with an `evaluate` that must give `true` (`poll`, `wait_kept`). It never opens a
+  cache that is not there. `tests/android_browser.py` claims a single-tenancy hub on a
+  Pixel 7 with a virtual passkey and opens `/app`, `/approvals` and `/app/me` at 412 px. It
+  runs in CI beside `app_browser.py`, on its own `android` database.
+  - Run here (Windows, Chrome 157): `android_browser.py` passed. A scratch harness on the same
+    hub showed the old wait passing on `devagotchi-app-2` (a cache the worker never fills) and
+    the new wait failing on it, while passing on `/sw.js`'s `devagotchi-app-3`.
+  - Not run here: `app_browser.py` as a whole. It joins a Linux machine with
+    `install-devagotchi.sh`, so CI runs it.
 - **Scope:**
   - Map A0: `tests/app_browser.py:372` waits on cache `devagotchi-app-2`, but the service worker uses `-3`. Read the name from `/sw.js`. Fix the docstring (Postgres).
   - Create `tests/android_browser.py` (Pixel 7, **single tenancy**, claimed owner) as the home of later Android asserts, so lanes stop colliding in `app_browser.py`.
@@ -572,6 +585,31 @@ Three more constraints shape the program:
 - **Depends on:** nothing.
 
 ### 246: Installable on Android: PNG icons, and the manifest on the sign-in page (M)
+- **Delivered as (2026-11-18, branch `increment-246/installable-android`, stacked on 245):**
+  - The moves:
+    - `manifest()` and `service_worker()` are in `site/pwa.rs`.
+    - The page kinds, `render` and the CSP are in `web/pages/head.rs`.
+    - `AssetNames` moved from `site/model.rs` to `site/assets.rs`.
+    - The fonts test moved from `site/tests.rs` to `site/assets_tests.rs`.
+    - Ratchet entries went down: `site.rs`, `pages.rs`, `model.rs`, `site/tests.rs` and `landing.rs`.
+  - `site.json` `assets` names new icons. The built-in and neutral sites ship them, and the
+    site check refuses a non-square PNG:
+    - `app_icons`: 192 and 512 square PNGs;
+    - `maskable_icon`: full bleed;
+    - `badge`: one colour on transparent, 96.
+  - The manifest lists each PNG at the size its file measures (`Asset::png_size`, moved from
+    `discovery.rs`).
+  - `background_color` is the `--bg` token. The `tokens.json` field is gone.
+  - Both sign-in pages (hosted `sign_in::page` and the one-owner passkey page) and `/` carry
+    the manifest link, icon and `theme-color`. A new `Kind::SignIn` adds
+    `manifest-src 'self'; img-src 'self'` to their CSP; the landing CSP adds `manifest-src`.
+  - Tests:
+    - `the_app_installs_at_app_and_opens_offline` (extended);
+    - `the_sign_in_page_carries_the_manifest_a_phone_installs_from`;
+    - `the_installed_app_has_measured_png_icons_a_maskable_one_and_a_badge`;
+    - `an_app_icon_that_is_not_a_square_png_stops_the_start`;
+    - `android_browser.py` step 3: installability on `/app` and `/auth/login`, and the icons
+      decoded.
 - **Scope:** Map A1, plus the moves described above.
   - Add `icon-192.png`, `icon-512.png`, a full-bleed `icon-maskable-512.png` and a monochrome `badge-96.png`, emitted with sizes measured by `png_size` (`site/discovery.rs:294`).
   - On `/auth/login` (and the manifest also on `/`): manifest link, `theme-color` and icon, with `manifest-src 'self'` and `img-src 'self'` added to the Kind::Plain CSP for those pages.

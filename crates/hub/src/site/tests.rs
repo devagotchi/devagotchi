@@ -185,7 +185,11 @@ fn the_built_in_site_checks_out_and_says_what_the_hub_always_said() {
     assert_eq!(
         names,
         [
+            "badge-96.png",
             "diagram.svg",
+            "icon-192.png",
+            "icon-512.png",
+            "icon-maskable-512.png",
             "icon.svg",
             "logo.svg",
             "pet.svg",
@@ -248,8 +252,15 @@ fn a_neutral_site_names_nothing_of_the_built_in_one_anywhere() {
     assert_eq!(site.mcp_info().name, "lumen-relay");
     assert_eq!(site.mcp_info().title.as_deref(), Some("Lumen Relay"));
     // Only the assets it names are served: none of the built-in ones.
-    let names: Vec<&str> = site.assets.keys().map(String::as_str).collect();
-    assert_eq!(names, ["diagram.svg", "icon.svg", "logo.svg"]);
+    let names: Vec<&String> = site.assets.keys().collect();
+    let mut named: Vec<&String> = site.info.assets.all().collect();
+    named.sort();
+    assert_eq!(names, named);
+    assert!(
+        !names
+            .iter()
+            .any(|name| ["pet.svg", "preview.png"].contains(&name.as_str()))
+    );
 }
 
 /// A site made from the neutral one, changed by `edit`, that checks out.
@@ -343,7 +354,7 @@ fn tokens_and_messages_give_only_what_they_change() {
 }
 
 /// A site directory made from the neutral one, changed by `edit`.
-fn variant(edit: impl FnOnce(&Path)) -> (tempfile::TempDir, Result<Site, String>) {
+pub(super) fn variant(edit: impl FnOnce(&Path)) -> (tempfile::TempDir, Result<Site, String>) {
     let dir = tempfile::tempdir().unwrap();
     copy(&neutral_dir(), dir.path());
     edit(dir.path());
@@ -364,7 +375,7 @@ pub(crate) fn copy(from: &Path, to: &Path) {
     }
 }
 
-fn edit_json(path: &Path, change: impl FnOnce(&mut serde_json::Value)) {
+pub(super) fn edit_json(path: &Path, change: impl FnOnce(&mut serde_json::Value)) {
     let mut value: serde_json::Value =
         serde_json::from_str(&std::fs::read_to_string(path).unwrap()).unwrap();
     change(&mut value);
@@ -579,45 +590,6 @@ fn a_site_that_does_not_check_out_says_what_and_where() {
             .contains("not an absolute path")
     );
     assert!(Site::load(Path::new("/nonexistent/site/dir")).is_err());
-}
-
-#[test]
-fn a_site_may_serve_its_own_fonts_from_this_hub() {
-    let (_dir, loaded) = variant(|d| {
-        let mut font = b"wOF2".to_vec();
-        font.extend_from_slice(&[0; 60]);
-        std::fs::write(d.join("assets/body.woff2"), font).unwrap();
-        edit_json(&d.join("tokens.json"), |v| {
-            v["font_files"] = serde_json::json!([
-                { "family": "Body Sans", "file": "body.woff2", "weight": "100 900" }
-            ]);
-            v["fonts"] = serde_json::json!({ "ui": "\"Body Sans\", system-ui, sans-serif" });
-        });
-    });
-    let site = loaded.unwrap();
-    assert!(site.has_fonts());
-    let font = &site.assets["body.woff2"];
-    assert_eq!(font.mime, "font/woff2");
-    let css = site.stylesheet();
-    assert!(
-        css.contains(&format!(
-            "@font-face {{ font-family: \"Body Sans\"; src: url(/assets/body.woff2?v={}) format(\"woff2\");",
-            font.version
-        )),
-        "{css}"
-    );
-    assert!(css.contains("--font-ui: \"Body Sans\", system-ui, sans-serif;"));
-    // A font that is not one, or names a file the site does not have, is refused.
-    let (_dir, loaded) = variant(|d| {
-        std::fs::write(d.join("assets/body.woff2"), b"not a font").unwrap();
-    });
-    assert!(loaded.unwrap_err().contains("assets/body.woff2"));
-    let (_dir, loaded) = variant(|d| {
-        edit_json(&d.join("tokens.json"), |v| {
-            v["font_files"] = serde_json::json!([{ "family": "X", "file": "gone.woff2" }]);
-        });
-    });
-    assert!(loaded.unwrap_err().contains("no assets/gone.woff2"));
 }
 
 #[test]
