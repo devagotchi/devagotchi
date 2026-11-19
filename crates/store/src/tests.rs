@@ -41,7 +41,8 @@ fn a_test_database_name_carries_the_second_it_was_made() {
 
 #[tokio::test]
 async fn a_test_run_drops_the_test_databases_an_earlier_run_left() {
-    let Ok(server) = std::env::var(testing::POSTGRES_ENV) else {
+    let Some(server) = testing::server_url() else {
+        eprintln!("{}", testing::SKIPPED);
         return;
     };
     DRIVERS_FOR_TESTS.call_once(install_default_drivers);
@@ -76,6 +77,7 @@ async fn a_test_run_drops_the_test_databases_an_earlier_run_left() {
 #[tokio::test(flavor = "multi_thread")]
 async fn the_hub_role_is_taken_only_where_the_database_granted_it() {
     let Some(url) = testing::empty_postgres().await else {
+        eprintln!("{}", testing::SKIPPED);
         return;
     };
     let mut admin = sqlx::AnyConnection::connect(&url).await.unwrap();
