@@ -1,0 +1,132 @@
+approval_request: I1: arguments are open
+approval_request: I2: `project` has no description
+approval_request: O1: Json<T> answers declare an output schema; media answers do not
+approval_wait: I1: arguments are open
+approval_wait: I2: `id` has no description
+approval_wait: I2: `project` has no description
+approval_wait: O1: Json<T> answers declare an output schema; media answers do not
+board_attach: T1: title and annotations.title: (Some("Attach an existing shared board"), None)
+board_attach: I1: arguments are open
+board_attach: O1: Json<T> answers declare an output schema; media answers do not
+board_bind: I1: arguments are open
+board_bind: O1: Json<T> answers declare an output schema; media answers do not
+board_claim: I1: arguments are open
+board_claim: I2: `project` has no description
+board_claim: O1: Json<T> answers declare an output schema; media answers do not
+board_complete: I1: arguments are open
+board_complete: I2: `fence` has no description
+board_complete: I2: `id` has no description
+board_complete: I2: `project` has no description
+board_complete: O1: Json<T> answers declare an output schema; media answers do not
+board_create: I1: arguments are open
+board_create: I2: `assignee` has no description
+board_create: I2: `description` has no description
+board_create: I2: `labels` has no description
+board_create: I2: `project` has no description
+board_create: O1: Json<T> answers declare an output schema; media answers do not
+board_dep: I1: arguments are open
+board_dep: I2: `depends_on` has no description
+board_dep: I2: `id` has no description
+board_dep: I2: `project` has no description
+board_dep: I2: `remove` has no description
+board_dep: O1: Json<T> answers declare an output schema; media answers do not
+board_events: I1: arguments are open
+board_events: I2: `project` has no description
+board_events: O1: Json<T> answers declare an output schema; media answers do not
+board_force_release: I1: arguments are open
+board_force_release: I2: `id` has no description
+board_force_release: I2: `project` has no description
+board_force_release: O1: Json<T> answers declare an output schema; media answers do not
+board_get: I1: arguments are open
+board_get: I2: `id` has no description
+board_get: I2: `project` has no description
+board_get: O1: Json<T> answers declare an output schema; media answers do not
+board_handoff: I1: arguments are open
+board_handoff: I2: `fence` has no description
+board_handoff: I2: `id` has no description
+board_handoff: I2: `project` has no description
+board_handoff: O1: Json<T> answers declare an output schema; media answers do not
+board_heartbeat: I1: arguments are open
+board_heartbeat: I2: `id` has no description
+board_heartbeat: I2: `project` has no description
+board_heartbeat: O1: Json<T> answers declare an output schema; media answers do not
+board_inbox: I1: arguments are open
+board_inbox: I2: `project` has no description
+board_inbox: O1: Json<T> answers declare an output schema; media answers do not
+board_issue_checkpoint: T1: title and annotations.title: (Some("Checkpoint shared issue context"), None)
+board_issue_checkpoint: I2: `decisions` has no description
+board_issue_checkpoint: I2: `expected_version` has no description
+board_issue_checkpoint: I2: `fence` has no description
+board_issue_checkpoint: I2: `handoff_note` has no description
+board_issue_checkpoint: I2: `issue_number` has no description
+board_issue_checkpoint: I2: `repository` has no description
+board_issue_checkpoint: I2: `request_id` has no description
+board_issue_checkpoint: I2: `state_summary` has no description
+board_issue_checkpoint: O1: Json<T> answers declare an output schema; media answers do not
+board_issue_context: T1: title and annotations.title: (Some("Read shared issue context"), None)
+board_issue_context: I2: `after` has no description
+board_issue_context: I2: `issue_number` has no description
+board_issue_context: I2: `limit` has no description
+board_issue_context: I2: `repository` has no description
+board_issue_context: O1: Json<T> answers declare an output schema; media answers do not
+board_issue_context: D3: untrusted answer not called data
+board_list: I1: arguments are open
+board_list: I2: `label` has no description
+board_list: I2: `project` has no description
+board_list: I2: `state` has no description
+board_list: O1: Json<T> answers declare an output schema; media answers do not
+board_note: I1: arguments are open
+board_note: I2: `id` has no description
+board_note: I2: `project` has no description
+board_note: O1: Json<T> answers declare an output schema; media answers do not
+board_prime: I1: arguments are open
+board_prime: I2: `project` has no description
+board_prime: O1: Json<T> answers declare an output schema; media answers do not
+board_ready: I1: arguments are open
+board_ready: I2: `project` has no description
+board_ready: O1: Json<T> answers declare an output schema; media answers do not
+board_release: I1: arguments are open
+board_release: I2: `fence` has no description
+board_release: I2: `id` has no description
+board_release: I2: `project` has no description
+board_release: O1: Json<T> answers declare an output schema; media answers do not
+board_settings: I1: arguments are open
+board_settings: I2: `project` has no description
+board_settings: O1: Json<T> answers declare an output schema; media answers do not
+board_update: I1: arguments are open
+board_update: I2: `assignee` has no description
+board_update: I2: `clear_assignee` has no description
+board_update: I2: `description` has no description
+board_update: I2: `id` has no description
+board_update: I2: `priority` has no description
+board_update: I2: `project` has no description
+board_update: I2: `title` has no description
+board_update: O1: Json<T> answers declare an output schema; media answers do not
+board_verify: I1: arguments are open
+board_verify: O1: Json<T> answers declare an output schema; media answers do not
+board_wait: I1: arguments are open
+board_wait: I2: `project` has no description
+board_wait: O1: Json<T> answers declare an output schema; media answers do not
+board_wake: I1: arguments are open
+board_wake: I2: `project` has no description
+board_wake: O1: Json<T> answers declare an output schema; media answers do not
+connection_call: I1: arguments are open
+connection_call: D3: untrusted answer not called data
+dictionary_get: I1: arguments are open
+lexicon_handoff: I1: arguments are open
+lexicon_handoff: I2: `action` has no description
+lexicon_propose: I1: arguments are open
+lexicon_propose: I2: `counterexamples` has no description
+lexicon_propose: I2: `examples` has no description
+lexicon_propose: I2: `phrase` has no description
+lexicon_propose: I2: `start` has no description
+lexicon_resolve: I1: arguments are open
+lexicon_review: I1: arguments are open
+lexicon_review: I2: `action` has no description
+lexicon_review: I2: `concepts` has no description
+lexicon_review: I2: `counterexamples` has no description
+lexicon_review: I2: `examples` has no description
+lexicon_review: I2: `filter` has no description
+lexicon_review: I2: `meaning` has no description
+lexicon_review: I2: `phrase` has no description
+workflow_start: A2: a changing tool states destructive_hint and idempotent_hint

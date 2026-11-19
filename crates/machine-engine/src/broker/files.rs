@@ -211,7 +211,21 @@ fn answer(files: &Scope<'_>, request: RequestBody) -> (&'static str, BridgeResul
             "search_files",
             files.search(input).map(ResponseBody::Search),
         ),
-        _ => (
+        RequestBody::OperationStart(_)
+        | RequestBody::OperationGet(_)
+        | RequestBody::OperationRead(_)
+        | RequestBody::OperationCancel(_)
+        | RequestBody::OperationList(_)
+        | RequestBody::OperationWait(_)
+        | RequestBody::OperationsChanged(_)
+        | RequestBody::ConfigGet(_)
+        | RequestBody::ConfigSet(_)
+        | RequestBody::ProcessList(_)
+        | RequestBody::ProcessKill(_)
+        | RequestBody::UrlRead(_)
+        | RequestBody::OperationInput(_)
+        | RequestBody::OperationResize(_)
+        | RequestBody::BrokerCapabilities(_) => (
             "file request",
             Err(BridgeError::new("internal_error", "not a file request")),
         ),

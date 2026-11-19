@@ -55,8 +55,10 @@ pub struct FileSearchInput {
     pub cursor: Option<String>,
 }
 
-fn default_search_results() -> u32 {
-    100
+/// Default for omitted search_results inputs on either tool surface.
+pub const DEFAULT_SEARCH_RESULTS: u32 = 100;
+pub fn default_search_results() -> u32 {
+    DEFAULT_SEARCH_RESULTS
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]

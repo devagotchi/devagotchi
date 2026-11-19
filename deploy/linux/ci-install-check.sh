@@ -70,7 +70,10 @@ link_connected() {
 config_hash() { sudo sha256sum "$HOME_DIR/.config/devagotchi/broker.json" | cut -d' ' -f1; }
 
 sudo install -d -m 0755 "$PROBES"
-sudo install -m 0644 tests/adapter_probe.py tests/hub_probe.py tests/fake_nomen.py "$PROBES/"
+# adapter_probe.py imports the catalog (mcp_protocol.py) and the account-policy checks
+# (adapter_system_probe.py) from beside it.
+sudo install -m 0644 tests/adapter_probe.py tests/adapter_system_probe.py tests/mcp_protocol.py \
+  tests/hub_probe.py tests/fake_nomen.py "$PROBES/"
 
 echo "--- the release build this machine takes"
 want=$(rustc -vV | sed -n 's/^host: //p')

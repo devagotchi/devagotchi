@@ -4,6 +4,10 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+/// Most entries one `list_directory` page returns.
+pub const MAX_LIST_ENTRIES: u32 = 1000;
+/// Deepest `list_directory` goes below the directory it lists.
+pub const MAX_LIST_DEPTH: u32 = 3;
 /// Largest page of file bytes one read returns, so the answer fits one wire frame.
 pub const MAX_FILE_READ_BYTES: usize = 24 * 1024;
 
@@ -33,8 +37,10 @@ pub struct FileReadInput {
 /// Most lines one read by lines returns.
 pub const MAX_READ_LINES: u32 = 5000;
 
-fn default_file_read_bytes() -> usize {
-    MAX_FILE_READ_BYTES
+/// Default for omitted file_read_bytes inputs on either tool surface.
+pub const DEFAULT_FILE_READ_BYTES: usize = MAX_FILE_READ_BYTES;
+pub fn default_file_read_bytes() -> usize {
+    DEFAULT_FILE_READ_BYTES
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -94,8 +100,10 @@ pub struct FileListInput {
     pub cursor: Option<String>,
 }
 
-fn default_list_entries() -> u32 {
-    200
+/// Default for omitted list_entries inputs on either tool surface.
+pub const DEFAULT_LIST_ENTRIES: u32 = 200;
+pub fn default_list_entries() -> u32 {
+    DEFAULT_LIST_ENTRIES
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -160,6 +168,7 @@ pub struct FileWriteInput {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bytes_base64: Option<String>,
     #[serde(default)]
+    /// overwrite (default), create (refuse if it exists) or append.
     pub mode: WriteMode,
     /// Overwrite only if the file's current SHA-256 is this (from an earlier write or
     /// edit), so a change made in between is not lost.
@@ -185,8 +194,10 @@ pub struct FileEditInput {
     pub expected_replacements: u32,
 }
 
-fn default_replacements() -> u32 {
-    1
+/// Default for omitted replacements inputs on either tool surface.
+pub const DEFAULT_REPLACEMENTS: u32 = 1;
+pub fn default_replacements() -> u32 {
+    DEFAULT_REPLACEMENTS
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]

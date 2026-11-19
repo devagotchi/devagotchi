@@ -2,11 +2,13 @@
 //! This library is its whole behaviour, `devagotchi mcp` its name. It never links the
 //! broker: `devagotchi mcp` runs only this code.
 
+pub mod arguments;
 pub mod capabilities;
 pub mod connect;
 pub mod files;
 pub mod image;
 pub mod outputs;
+pub mod pattern;
 pub mod run;
 
 use std::{ffi::OsString, path::PathBuf, process::ExitCode};
@@ -88,8 +90,10 @@ pub async fn serve(socket: PathBuf) -> BridgeResult<()> {
 }
 
 mod adapter;
-/// What every surface says about typing into a job and resizing its terminal.
-pub use adapter::terminal::{INPUT_DESCRIPTION, RESIZE_DESCRIPTION};
+/// Every local tool, for schema/parity checks without starting a broker.
+pub fn local_tools() -> Vec<rmcp::model::Tool> {
+    adapter::BridgeAdapter::router().list_all()
+}
 
 /// The kind of broker answer `actual` is, by name.
 pub fn response_kind(actual: &ResponseBody) -> &'static str {

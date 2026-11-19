@@ -60,7 +60,7 @@ impl BridgeAdapter {
         name = "set_config_value",
         description = describe::SET_CONFIG_VALUE,
         title = "Change a broker limit",
-        annotations(title = "Change a broker limit", read_only_hint = false, destructive_hint = false, idempotent_hint = true, open_world_hint = false)
+        annotations(title = "Change a broker limit", read_only_hint = false, destructive_hint = true, idempotent_hint = true, open_world_hint = false)
     )]
     async fn set_config_value(
         &self,
@@ -117,7 +117,7 @@ impl BridgeAdapter {
         name = "read_url",
         description = describe::READ_URL,
         title = "Read a web address",
-        annotations(title = "Read a web address", read_only_hint = true, destructive_hint = false, idempotent_hint = true, open_world_hint = true)
+        annotations(title = "Read a web address", read_only_hint = true, open_world_hint = true)
     )]
     async fn read_url(
         &self,

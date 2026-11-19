@@ -12,7 +12,10 @@ use crate::store::{Store, transaction};
 /// The advisory lock every append holds: "devagotchi audit" as a number.
 const CHAIN_LOCK: i64 = 0x6476_6761_7564_6974;
 
+mod completion;
+
 pub struct Audit {
+    write_failures: completion::WriteFailures,
     store: Store,
 }
 
@@ -79,7 +82,15 @@ fn read_error(error: impl std::fmt::Display) -> BridgeError {
 impl Audit {
     /// The chain in the hub's store.
     pub fn new(store: Store) -> Self {
-        Self { store }
+        Self {
+            store,
+            write_failures: completion::WriteFailures::default(),
+        }
+    }
+
+    /// Latched operator alert, available even when the audit database cannot be reached.
+    pub fn write_failure_alert(&self) -> Option<serde_json::Value> {
+        self.write_failures.alert()
     }
 
     /// The store the chain is kept in: the hub's Postgres, which the lexicon shares.
@@ -265,8 +276,8 @@ impl Audit {
 }
 
 impl crate::mcp::Hub {
-    /// Record one call in the audit chain. A call that cannot be audited is not a call
-    /// this bastion made, so a failure here fails the call. An operation that started
+    /// Record one call before an effect, refusing if the append fails. Completion callers
+    /// use record_completion or recorded to preserve the real result. An operation that started
     /// (`operation_start`, or `run`) is also its tenant's operation milestone
     /// (`analytics::funnel`): the first, and the latest a day at a time.
     pub(crate) async fn record(

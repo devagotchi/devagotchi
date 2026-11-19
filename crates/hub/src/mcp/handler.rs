@@ -37,10 +37,10 @@ impl ServerHandler for Hub {
             self.record(subject, &request.name, "", "", "key_denied")
                 .await
                 .map_err(|Json(error)| rmcp::ErrorData::internal_error(error.message, None))?;
-            return Ok(
-                rmcp::model::CallToolResult::error(vec![rmcp::model::ContentBlock::text(why)])
-                    .into(),
-            );
+            return Ok(rmcp::model::CallToolResult::structured_error(
+                serde_json::json!({"code": "key_denied", "message": why}),
+            )
+            .into());
         }
         let seat = self.request_seat(&context);
         let delivers = request.name != "board_inbox";
@@ -53,8 +53,18 @@ impl ServerHandler for Hub {
                 .map_err(|Json(error)| rmcp::ErrorData::internal_error(error.message, None))?;
             return Ok(answer.into());
         }
+        let tool = request.name.clone();
+        let router = Self::router();
+        let known = router.get(&tool).is_some();
         let call = rmcp::handler::server::tool::ToolCallContext::new(self, request, context);
-        let answer = Self::router().call(call).await;
+        let raw = router.call(call).await;
+        if devagotchi_mcp::arguments::refused_arguments(known, &raw).is_some()
+            && let Some(subject) = &subject
+        {
+            self.record_completion(subject, &tool, "", "", "invalid_arguments")
+                .await;
+        }
+        let answer = devagotchi_mcp::arguments::coded(known, raw);
         // Notes left for this caller ride the answer to whatever it just called.
         let mut answer = answer;
         if delivers

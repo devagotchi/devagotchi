@@ -42,11 +42,11 @@ pub struct ListProcessesInput {
     /// The machine, by its name from `machines`.
     pub machine: String,
     /// Only processes whose name or command line contains this (case ignored).
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub filter: Option<String>,
-    /// Most processes to return, 1 to 1000 (default 200), busiest first.
-    #[serde(default)]
-    pub max_results: Option<u32>,
+    /// Most processes to return, 1..=1000 (default 200), busiest first.
+    #[serde(default = "devagotchi_contracts::default_process_results")]
+    pub max_results: u32,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -54,9 +54,11 @@ pub struct ListProcessesInput {
 pub struct KillProcessInput {
     /// The machine, by its name from `machines`.
     pub machine: String,
+    /// The process ID, from list_processes.
     pub pid: u32,
-    /// Kill at once (SIGKILL) instead of asking it to stop (SIGTERM).
-    #[serde(default)]
+    /// Kill at once (SIGKILL) instead of asking it to stop (SIGTERM). On Windows a process is
+    /// always ended at once.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub force: bool,
 }
 
@@ -65,13 +67,13 @@ pub struct KillProcessInput {
 pub struct ReadUrlInput {
     /// The machine, by its name from `machines`.
     pub machine: String,
-    /// An http or https address, as the machine reaches it (its localhost is its own).
+    /// An http or https address.
     pub url: String,
     /// Where to start in the response body (the previous page's `next_offset`).
     #[serde(default)]
     pub offset: u64,
-    /// Bytes to return, 1 to 24576 (default 24576).
-    #[serde(default)]
+    /// Bytes to return, 1..=24576 (default 24576).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub max_bytes: Option<usize>,
 }
 
@@ -123,7 +125,7 @@ impl Hub {
         name = "set_config_value",
         description = describe::SET_CONFIG_VALUE,
         title = "Change a machine's broker limit",
-        annotations(title = "Change a machine's broker limit", read_only_hint = false, destructive_hint = false, idempotent_hint = true, open_world_hint = false)
+        annotations(title = "Change a machine's broker limit", read_only_hint = false, destructive_hint = true, idempotent_hint = true, open_world_hint = false)
     )]
     async fn set_config_value(
         &self,
@@ -156,7 +158,7 @@ impl Hub {
     ) -> Result<Json<ProcessPage>, Json<BridgeError>> {
         let body = RequestBody::ProcessList(ProcessListInput {
             filter: input.filter,
-            max_results: input.max_results.unwrap_or(200),
+            max_results: input.max_results,
         });
         match self
             .call("list_processes", &input.machine, body, context)
@@ -195,7 +197,7 @@ impl Hub {
         name = "read_url",
         description = describe::READ_URL,
         title = "Read a web address from a machine",
-        annotations(title = "Read a web address from a machine", read_only_hint = true, destructive_hint = false, idempotent_hint = true, open_world_hint = true)
+        annotations(title = "Read a web address from a machine", read_only_hint = true, open_world_hint = true)
     )]
     async fn read_url(
         &self,

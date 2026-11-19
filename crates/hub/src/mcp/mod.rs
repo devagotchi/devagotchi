@@ -28,7 +28,7 @@ mod callers;
 mod handler;
 mod hub;
 mod machines;
-mod schema;
+pub(crate) mod schema;
 mod tools;
 
 /// What the rest of the hub uses of the router.

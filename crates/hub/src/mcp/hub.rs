@@ -190,8 +190,8 @@ impl Hub {
             Ok(ResponseBody::Start(output)) => output.operation.operation_id.clone(),
             _ => operation_id,
         };
-        self.record(&subject, tool, broker, &recorded_id, &outcome)
-            .await?;
+        self.record_completion(&subject, tool, broker, &recorded_id, &outcome)
+            .await;
         result
     }
 }

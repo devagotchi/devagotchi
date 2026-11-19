@@ -13,9 +13,6 @@ use crate::trace;
 use devagotchi_contracts::*;
 use std::path::Path;
 
-const OUTPUT_LIMIT: std::ops::RangeInclusive<usize> = 1024..=16 * 1024 * 1024;
-const OPERATIONS: std::ops::RangeInclusive<usize> = 1..=4096;
-const CONCURRENT: std::ops::RangeInclusive<usize> = 1..=64;
 /// What a `granted` broker refuses whatever it is asked: settings changes (`set_config`), and
 /// the machine's processes and the web (`account_only` in `system.rs`). Its capabilities
 /// leave them out.
@@ -52,23 +49,27 @@ impl Limits {
 
     /// These limits, or what is wrong with them.
     fn checked(self) -> Result<Self, String> {
-        if !OUTPUT_LIMIT.contains(&self.output_limit_bytes) {
+        if !OUTPUT_LIMIT_BYTES_RANGE.contains(&self.output_limit_bytes) {
             return Err(format!(
                 "output_limit_bytes must be {}..={} (it is {})",
-                OUTPUT_LIMIT.start(),
-                OUTPUT_LIMIT.end(),
+                OUTPUT_LIMIT_BYTES_RANGE.start(),
+                OUTPUT_LIMIT_BYTES_RANGE.end(),
                 self.output_limit_bytes
             ));
         }
-        if !OPERATIONS.contains(&self.max_operations) {
+        if !MAX_OPERATIONS_RANGE.contains(&self.max_operations) {
             return Err(format!(
-                "max_operations must be 1..=4096 (it is {})",
+                "max_operations must be {}..={} (it is {})",
+                MAX_OPERATIONS_RANGE.start(),
+                MAX_OPERATIONS_RANGE.end(),
                 self.max_operations
             ));
         }
-        if !CONCURRENT.contains(&self.max_concurrent) {
+        if !MAX_CONCURRENT_RANGE.contains(&self.max_concurrent) {
             return Err(format!(
-                "max_concurrent must be 1..=64 (it is {})",
+                "max_concurrent must be {}..={} (it is {})",
+                MAX_CONCURRENT_RANGE.start(),
+                MAX_CONCURRENT_RANGE.end(),
                 self.max_concurrent
             ));
         }

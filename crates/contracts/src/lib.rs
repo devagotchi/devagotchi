@@ -70,6 +70,7 @@ pub struct StartInput {
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct GetInput {
+    /// The operation ID returned by operation_start or run.
     pub operation_id: String,
     /// Set by the transport, never by an AI (see `StartInput::caller`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -109,6 +110,7 @@ pub struct Revision {
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct WaitInput {
+    /// The operation ID returned by operation_start or run.
     pub operation_id: String,
     /// Return when output beyond this sequence exists (the cursor you have read up to), as
     /// well as when the operation settles. Without it, return only when it settles.
@@ -126,8 +128,10 @@ pub struct WaitInput {
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ListInput {
+    /// Number of operations to skip (default 0).
     #[serde(default)]
     pub offset: u64,
+    /// Most operations to return, 1..=64 (default 32).
     #[serde(default = "default_list_limit")]
     pub limit: u32,
     /// With a caller: `account` (the default) lists what any of its account's conversations
@@ -140,8 +144,10 @@ pub struct ListInput {
     #[schemars(skip)]
     pub caller: Option<Caller>,
 }
-fn default_list_limit() -> u32 {
-    32
+pub const MAX_LIST_LIMIT: u32 = 64;
+pub const DEFAULT_LIST_LIMIT: u32 = 32;
+pub fn default_list_limit() -> u32 {
+    DEFAULT_LIST_LIMIT
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -168,6 +174,7 @@ pub struct OperationsPage {
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ReadInput {
+    /// The operation ID returned by operation_start or run.
     pub operation_id: String,
     /// Last sequence consumed, starting at zero. Reading never advances another reader.
     #[serde(default)]
@@ -181,8 +188,9 @@ pub struct ReadInput {
     pub caller: Option<Caller>,
 }
 
-fn default_page_bytes() -> usize {
-    MAX_OUTPUT_PAGE_BYTES
+pub const DEFAULT_PAGE_BYTES: usize = MAX_OUTPUT_PAGE_BYTES;
+pub fn default_page_bytes() -> usize {
+    DEFAULT_PAGE_BYTES
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -324,7 +332,27 @@ impl RequestBody {
             | Self::OperationsChanged(ChangesInput { timeout_ms, .. }) => {
                 std::time::Duration::from_millis((*timeout_ms).min(MAX_WAIT_MS))
             }
-            _ => std::time::Duration::ZERO,
+            Self::OperationStart(_)
+            | Self::OperationGet(_)
+            | Self::OperationRead(_)
+            | Self::OperationCancel(_)
+            | Self::OperationList(_)
+            | Self::FileRead(_)
+            | Self::FileList(_)
+            | Self::FileWrite(_)
+            | Self::FileEdit(_)
+            | Self::FileInfo(_)
+            | Self::FileMkdir(_)
+            | Self::FileMove(_)
+            | Self::FileSearch(_)
+            | Self::ConfigGet(_)
+            | Self::ConfigSet(_)
+            | Self::ProcessList(_)
+            | Self::ProcessKill(_)
+            | Self::UrlRead(_)
+            | Self::OperationInput(_)
+            | Self::OperationResize(_)
+            | Self::BrokerCapabilities(_) => std::time::Duration::ZERO,
         }
     }
 }
@@ -399,96 +427,5 @@ pub enum WireResponse {
     Error(BridgeError),
 }
 
-/// The machine link (plan N20): a broker on another machine is reached through one
-/// outbound WebSocket that its `devagotchi-link` holds open to the hub. These frames
-/// are the whole protocol. A `call` carries exactly one broker request, so the
-/// broker's own validation and executable grants still decide what runs.
-pub const LINK_PROTOCOL_VERSION: u32 = 1;
-/// Largest WebSocket message either side accepts.
-pub const MAX_LINK_MESSAGE_BYTES: usize = 1024 * 1024;
-
-/// Hub to device.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "type", rename_all = "snake_case", deny_unknown_fields)]
-pub enum HubFrame {
-    /// The first frame on every connection. The device answers with a signed `hello`.
-    Challenge {
-        nonce: String,
-        hub: String,
-    },
-    Welcome {
-        device: String,
-    },
-    Refused {
-        code: String,
-        message: String,
-    },
-    Call {
-        id: u64,
-        request: WireRequest,
-    },
-    /// Update this machine to the hub's build `version`: wait for its running jobs unless
-    /// `force`, then download, check and install it. The hub sends it only to a device
-    /// whose hello carried `build`; an older device would refuse an unknown frame.
-    Update {
-        version: String,
-        force: bool,
-    },
-}
-
-/// Device to hub.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "type", rename_all = "snake_case", deny_unknown_fields)]
-pub enum LinkFrame {
-    /// Proves the device key over the challenge. `enroll_code` is present only on the
-    /// first connection, when the hub binds this key to the device name.
-    Hello {
-        version: u32,
-        device: String,
-        /// Ed25519 public key, 32 bytes, hex.
-        public_key: String,
-        /// Ed25519 signature over `link_signing_message`, 64 bytes, hex.
-        signature: String,
-        #[serde(default)]
-        enroll_code: Option<String>,
-        /// The build this device runs (`devagotchi --version`'s name: `main-<sha7>`, a
-        /// release version, or `dev`). An older device leaves it out.
-        #[serde(default)]
-        build: Option<String>,
-        /// `container` for a machine in a container, which updates with its image and never
-        /// by itself; left out on any other machine (and by an older device).
-        #[serde(default, skip_serializing_if = "Option::is_none")]
-        kind: Option<String>,
-    },
-    Result {
-        id: u64,
-        response: WireResponse,
-    },
-    Heartbeat,
-    /// Where an update the hub asked for stands: `waiting_for_jobs`, `downloading`,
-    /// `installing`, `done` or `failed`, with `detail` saying why when it failed.
-    UpdateStatus {
-        state: String,
-        #[serde(default)]
-        detail: Option<String>,
-    },
-}
-
-/// The states a [`LinkFrame::UpdateStatus`] reports, in the order an update passes them.
-pub const UPDATE_STATES: [&str; 5] = [
-    "waiting_for_jobs",
-    "downloading",
-    "installing",
-    "done",
-    "failed",
-];
-
-/// The exact bytes a device signs: protocol, the hub's public URL, the device name and
-/// the hub's nonce, so a signature cannot be replayed to another hub, as another
-/// device, or on another connection.
-pub fn link_signing_message(hub: &str, device: &str, nonce: &str) -> Vec<u8> {
-    format!("devagotchi-link/{LINK_PROTOCOL_VERSION}\n{hub}\n{device}\n{nonce}").into_bytes()
-}
-
-#[cfg(test)]
-mod link_frame_tests;
+mod link;
+pub use link::*;

@@ -14,6 +14,11 @@ from upstream. Devagotchi's side is the tools `devagotchi mcp` registers
 Devagotchi names a job by `operation_id`. Desktop Commander names a terminal session by pid.
 That is a different shape, not a missing stop or read.
 
+Every tool has one description and the same arguments on both surfaces; the hub adds `machine`
+(B1, [the pattern](../patterns/machine-capability.md)). Since B1 the hub's `operation_*` tools take
+`machine` beside their arguments, not `{broker, input}`, and a known tool given bad arguments
+answers `invalid_arguments` as a tool error. `crates/hub/src/machines/tests/parity.rs` holds both.
+
 ## Tool by tool
 
 | Desktop Commander | What it does | Devagotchi | Gap |

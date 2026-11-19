@@ -154,7 +154,9 @@ try:
     _, ready = start([*broker_cmd, "--state-dir", str(account_state), "--config", str(account_config)], "ready:", "account broker")
     account_endpoint = ready.split("ready:", 1)[1].strip()
 
-    adapter_ok = run_probe(
+    protocol_ok = run_probe([str(HERE / "mcp_protocol.py"), "--devagotchi", str(devagotchi),
+                             "--socket", str(work / "unused-endpoint")], "stdio protocol and complete catalog")
+    adapter_ok = protocol_ok and run_probe(
         [str(HERE / "adapter_probe.py"), endpoint, "--adapter", *adapter_cmd, "--git", git, "--cwd", str(workspace)],
         "stdio adapter probe",
     )

@@ -118,6 +118,7 @@ pub const MAX_INPUT_KEYS: usize = 64;
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct SendInput {
+    /// The operation ID returned by operation_start or run.
     pub operation_id: String,
     /// Text to type, exactly as given (UTF-8, at most 16 KiB). Nothing is added: end a line
     /// with the `enter` key.
@@ -139,6 +140,7 @@ pub struct SendInput {
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ResizeInput {
+    /// The operation ID returned by operation_start or run.
     pub operation_id: String,
     /// New width, 2..=500 columns.
     pub cols: u16,
@@ -196,7 +198,6 @@ impl crate::RequestBody {
         }
     }
 
-    /// The caller this request names, for a kind of request that carries one.
     /// What the request is about, for an audit line: the operation (its retry key when it
     /// starts one), or the path. Empty for a request about neither.
     pub fn target(&self) -> String {
@@ -226,6 +227,7 @@ impl crate::RequestBody {
         }
     }
 
+    /// The caller this request names, for a kind of request that carries one.
     pub fn caller(&self) -> Option<&Caller> {
         match self {
             Self::OperationStart(input) => input.caller.as_ref(),
@@ -235,7 +237,21 @@ impl crate::RequestBody {
             Self::OperationGet(input) | Self::OperationCancel(input) => input.caller.as_ref(),
             Self::OperationRead(input) => input.caller.as_ref(),
             Self::OperationWait(input) => input.caller.as_ref(),
-            _ => None,
+            Self::OperationsChanged(_)
+            | Self::FileRead(_)
+            | Self::FileList(_)
+            | Self::FileWrite(_)
+            | Self::FileEdit(_)
+            | Self::FileInfo(_)
+            | Self::FileMkdir(_)
+            | Self::FileMove(_)
+            | Self::FileSearch(_)
+            | Self::ConfigGet(_)
+            | Self::ConfigSet(_)
+            | Self::ProcessList(_)
+            | Self::ProcessKill(_)
+            | Self::UrlRead(_)
+            | Self::BrokerCapabilities(_) => None,
         }
     }
 

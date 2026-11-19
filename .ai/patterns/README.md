@@ -200,7 +200,7 @@ review.
 | Test shape: names, skip shapes, scripts run by CI, workflow pins and timeouts | G13, tests-and-ci | `crates/devagotchi/tests/test_shape.rs` | planned (B6) |
 | Link wire scan: dispatch wildcards, compared literals, personal paths | G5, G3, link 11 | `crates/devagotchi/tests/link_protocol.rs` | planned (B2) |
 | SQL scan: qualified tables, `AssertSqlSafe`, `QueryBuilder`, `tenant_id` ratchet | persistence 12-18 | `crates/devagotchi/tests/sql.rs` | planned (B6) |
-| Link wire golden (append-only) | G2 | `crates/contracts/src/link/tests.rs` | planned (B2); today's frame tests are `crates/contracts/src/link_frame_tests.rs` |
+| Link wire golden (append-only) | G2 | `crates/contracts/src/link/tests.rs` | the file is in place (B1); the append-only golden is planned (B2) |
 | `describe::BROKER_TOOLS` covers `REQUEST_METHODS` | machine-capability 7 | `crates/contracts/src/system/tests.rs` | planned (B1 adds `BROKER_TOOLS` and the test); the file exists |
 | Every tool's form, through shared `check_tools` | mcp-tools N1, T1, A1, A2, I1, I2, O1, D1, D3 | `crates/mcp/src/pattern.rs`, called by `crates/mcp/src/adapter/tests.rs` and `crates/hub/src/mcp/tests/tools.rs` | planned (B1) |
 | Hub audit and uniqueness scan | G7, N1 | `crates/hub/src/mcp/tests/scan.rs` | planned (B1) |

@@ -1,6 +1,5 @@
 //! What the hub's own tools take and return, as their JSON schemas describe them: a machine, the routed operation inputs, adding and updating a machine, and `whoami`.
 
-use devagotchi_contracts::{GetInput, ReadInput, StartInput, WaitInput};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -8,7 +7,7 @@ use serde::{Deserialize, Serialize};
 /// through the `machines` tool. The hub is its one owner.
 #[derive(Debug, Clone, Serialize, JsonSchema, PartialEq, Eq)]
 pub struct Machine {
-    /// The name to pass as `broker` to the operation tools.
+    /// The name to pass as `machine` to the machine tools.
     pub name: String,
     /// `local`: a broker on the hub's own host. `linked`: a machine that dials in.
     pub kind: &'static str,
@@ -42,37 +41,14 @@ pub struct Machines {
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
-pub struct StartRouted {
-    /// Name of the enrolled broker that owns the target machine.
-    pub broker: String,
-    pub input: StartInput,
-}
-
-#[derive(Debug, Deserialize, JsonSchema)]
-pub struct GetRouted {
-    pub broker: String,
-    pub input: GetInput,
-}
-
-#[derive(Debug, Deserialize, JsonSchema)]
-pub struct WaitRouted {
-    pub broker: String,
-    pub input: WaitInput,
-}
-
-#[derive(Debug, Deserialize, JsonSchema)]
-pub struct ReadRouted {
-    pub broker: String,
-    pub input: ReadInput,
-}
-
-#[derive(Debug, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub struct MachineAdd {
     /// Short name for the machine, `[a-z0-9][a-z0-9-]{0,62}`.
     pub name: String,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub struct MachineUpdate {
     /// The machine's name, as `machines` lists it.
     pub machine: String,

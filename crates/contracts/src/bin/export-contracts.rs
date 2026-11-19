@@ -4,9 +4,10 @@ use devagotchi_contracts::{
     BridgeError, BrokerCapabilities, CapabilitiesInput, ChangesInput, ConfigGetInput,
     ConfigSetInput, ConfigView, DirectoryInput, FileContent, FileEditInput, FileInfo,
     FileInfoInput, FileListInput, FileListing, FileMoveInput, FileReadInput, FileSearchInput,
-    FileWriteInput, FileWritten, GetInput, ListInput, OperationView, OperationsPage, OutputPage,
-    ProcessKillInput, ProcessKilled, ProcessListInput, ProcessPage, ReadInput, Revision,
-    SearchPage, StartInput, StartOutput, UrlContent, UrlReadInput, WaitInput,
+    FileWriteInput, FileWritten, GetInput, InputSent, ListInput, OperationView, OperationsPage,
+    OutputPage, ProcessKillInput, ProcessKilled, ProcessListInput, ProcessPage, ReadInput,
+    ResizeInput, Revision, SearchPage, SendInput, StartInput, StartOutput, UrlContent,
+    UrlReadInput, WaitInput,
 };
 use schemars::{JsonSchema, generate::SchemaSettings};
 use serde_json::Value;
@@ -20,6 +21,9 @@ use std::path::PathBuf;
 #[schemars(deny_unknown_fields)]
 struct BrokerContracts {
     start_input: StartInput,
+    send_input: SendInput,
+    resize_input: ResizeInput,
+    input_sent: InputSent,
     get_input: GetInput,
     read_input: ReadInput,
     list_input: ListInput,
