@@ -144,4 +144,3 @@ pub struct ImageOnMachine {
     /// Path (absolute, `~/...`, or relative to the workspace) of a PNG, JPEG, GIF or WebP image, up to 3.75 MB.
     pub path: String,
 }
-

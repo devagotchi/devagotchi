@@ -6,7 +6,8 @@ use devagotchi_contracts::describe;
 
 use devagotchi_contracts::{
     BridgeError, DirectoryInput, FileContent, FileEditInput, FileInfo, FileInfoInput,
-    FileListInput, FileListing, FileMoveInput, FileReadInput, FileWriteInput, FileWritten, RequestBody, ResponseBody,
+    FileListInput, FileListing, FileMoveInput, FileReadInput, FileWriteInput, FileWritten,
+    RequestBody, ResponseBody,
 };
 use devagotchi_mcp::{
     files::{Files, read_many},

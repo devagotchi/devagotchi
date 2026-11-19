@@ -21,7 +21,7 @@ AI client -> hub /mcp -> Links::call -> HubFrame::Call -> /link <-wss- devagotch
 
 | Part | Home today |
 |---|---|
-| The wire: frames, sizes, versions, signed bytes, words both sides compare | `crates/contracts/src/lib.rs` (the block from the doc comment above `LINK_PROTOCOL_VERSION` to `link_signing_message` and its test module, lines 402-494) |
+| The wire: frames, sizes, versions, signed bytes, words both sides compare | `crates/contracts/src/link/mod.rs`, re-exported flat from `lib.rs` (G10's contracts exception); its tests in `link/tests.rs` |
 | Machine side: CLI, enroll, run and backoff, session, update, handoff | `crates/link/src/` |
 | Hub side: door, handshake and admit, session loop, calls, updates, presence, registry | `crates/hub/src/machines/link/`, `crates/hub/src/machines/routes.rs`, `crates/hub/src/machines/update.rs` |
 | The AI's verbs `machine_add` and `machine_update` | tools in `crates/hub/src/mcp/tools/machines.rs`, logic in `crates/hub/src/mcp/machines.rs` (`update_machine`). Both move to `crates/hub/src/machines/manage.rs` (see Where files go). |
@@ -49,9 +49,9 @@ Two exemplars, both on main at 2b3feec.
 protocol change that touches every layer with its own test, and the one that uses serde's
 forward-compatible field idiom.
 
-- Contracts: `LinkFrame::Hello.kind` (`crates/contracts/src/lib.rs:458-461`). Test
+- Contracts: `LinkFrame::Hello.kind` (`crates/contracts/src/link/mod.rs`). Test
   `hello_carries_its_build_and_an_old_hello_without_one_still_parses`
-  (`crates/contracts/src/link_frame_tests.rs:3-35`): absent when None, parsed when present,
+  (`crates/contracts/src/link/tests.rs`): absent when None, parsed when present,
   the old shape still parses.
 - Link: `KIND_ENV` (`crates/link/src/lib.rs:26-28`), `run` (line 206), `Updater::kind` and
   `Updater::request` (`crates/link/src/update.rs:77-80`, `97-103`). Test
@@ -257,7 +257,7 @@ G10 holds. The moves below are the S10 step of the structure plan.
    - Every shape a released peer sends parses.
    - A None optional added after v1 is absent from the JSON.
    - `link_signing_message` is pinned byte for byte.
-   - Exemplar: `link_frame_tests.rs:3-35`.
+   - Exemplar: `crates/contracts/src/link/tests.rs`.
 2. **Hub unit** (`machines/link/tests/`).
    - Runs on `Links` over a fresh Postgres database, taken as `or_skip!(test_links())` (G13).
    - Builds the session with `Session::fake(..)`, which returns the `calls` and `control`
@@ -312,7 +312,7 @@ Three checks hold rules 1, 2, 5 and 11. None needs a database. CI runs them thro
 `cargo nextest run`. Each lands green together with the fixes it guards (G12). They are proposals:
 none was compiled or run.
 
-**1. Wire golden**, `crates/contracts/src/link/tests.rs` (today `link_frame_tests.rs`).
+**1. Wire golden**, `crates/contracts/src/link/tests.rs`.
 
 ```rust
 /// Every frame shape a released peer sends, oldest first. APPEND ONLY: a peer that sends an
@@ -588,7 +588,7 @@ Each was re-read at main 2b3feec.
 
 ### Rule 12: test layers
 
-- `crates/contracts/src/link_frame_tests.rs` (whole file): only Hello, Update and UpdateStatus
+- `crates/contracts/src/link/tests.rs` (whole file): only Hello, Update and UpdateStatus
   have wire tests. Nothing pins `link_signing_message`, and every hub test signs through the same
   function, so an accidental edit passes every Rust test and strands every machine -> Mechanical
   check 1.
@@ -632,10 +632,6 @@ Each was re-read at main 2b3feec.
   `jitter`, lines 113-249; inline tests 255-369): logic at the top level (layout rule 4) ->
   `crates/link/src/run/mod.rs` with `run/tests.rs`; `lib.rs` keeps `USAGE`, `parse_args`, `cli`
   and the `parse_args` tests.
-- `crates/contracts/src/lib.rs` (lines 402-494) and `crates/contracts/src/link_frame_tests.rs`:
-  the wire is inline in a 494-line `lib.rs`, so the next frame crosses the cap, and its tests
-  are a top-level `<x>_tests.rs` -> `crates/contracts/src/link/mod.rs` and `link/tests.rs`,
-  with `mod link; pub use link::*;` in `lib.rs` (G10's contracts exception).
 - `crates/hub/src/machines/link/tests.rs` (475 lines) beside `crates/hub/src/machines/link/tests/`
   -> `tests/mod.rs` with the fixtures (`test_links`, `hello`, `Session::fake`), then one file per
   subject: `presence.rs`, `admit.rs`, `wire.rs`, `calls.rs`, and the existing `container.rs`.

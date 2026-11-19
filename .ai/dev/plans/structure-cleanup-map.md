@@ -29,7 +29,7 @@ Part of [structure-cleanup](structure-cleanup.md). Every Rust file in `crates/` 
 | `interactive.rs` | `interactive/mod.rs` | S10 | 236 | Interactive operations: a program started with its input kept open, on a |
 | `interactive/tests.rs` |  |  | 75 | (no module doc) |
 | `lib.rs` |  |  | 468 | Canonical wire types. Serde rejects unknown fields; broker validation enforces bounds. |
-| `link_frame_tests.rs` | `link_frame/tests.rs` | S10 | 61 | (no module doc); with LinkFrame and its update states out of `lib.rs` into `link_frame/mod.rs` |
+| `link_frame_tests.rs` | `link/tests.rs` | S10 | 61 | done in B1: the link frames are in `link/mod.rs`, re-exported flat |
 
 ## crates/devagotchi
 

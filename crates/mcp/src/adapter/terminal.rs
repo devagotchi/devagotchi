@@ -1,10 +1,9 @@
 //! Typing into an interactive operation and resizing its terminal: an operation started
 //! with `interactive` (operation_start) keeps its input open for these.
 
-use devagotchi_contracts::describe;
-
 use devagotchi_contracts::{
     BridgeError, InputSent, OperationView, RequestBody, ResizeInput, ResponseBody, SendInput,
+    describe,
 };
 use rmcp::{
     Json, RoleServer, handler::server::wrapper::Parameters, service::RequestContext, tool,
@@ -13,10 +12,6 @@ use rmcp::{
 
 use super::BridgeAdapter;
 use crate::unexpected;
-
-/// What both surfaces say about `operation_input`.
-
-/// What both surfaces say about `operation_resize`.
 
 #[tool_router(router = terminal_router, vis = "pub(super)")]
 impl BridgeAdapter {

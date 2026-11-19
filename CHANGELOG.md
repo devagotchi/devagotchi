@@ -80,6 +80,37 @@ install, not a production promotion. The gap that is still open is in
   already forgotten past 4096 retirements cannot be brought back. An earlier build run on a
   journal this one opened fails each retirement once the journal holds 4096 tombstones.
 
+### The Desktop Commander tools follow one pattern (B1)
+
+- **Every machine tool follows the same path:** contract, broker, local tool, hub tool
+  (`.ai/patterns/machine-capability.md`).
+  - Each tool's description is written once (`crates/contracts/src/describe.rs`), so the
+    local and hub tools say the same thing.
+  - Defaults and bounds are defined once in the contracts.
+  - A parity test fails if the two surfaces drift apart.
+- **Changed for callers:** the hub's `operation_*` tools take `machine` beside their other
+  arguments, like every other machine tool. They no longer take `{broker, input}`.
+- **Bad arguments:** a known tool given bad arguments now answers with a coded tool error,
+  `invalid_arguments` (MCP 2025-11-25), not a protocol error. An unknown tool is still a
+  protocol error.
+- **Audit failures after the work** (operator decision, 2026-11-19): when a tool call has
+  already done its work and its audit line then cannot be saved, the caller gets the real
+  result.
+  - The hub logs `audit.write_failed` (no arguments or output in it).
+  - It latches an operator alert into `/healthz` (`operator_alerts`, and `ok: false`) until
+    it restarts.
+  - Before the work, a failed audit write still refuses the call.
+- **Tool hints:** `set_config_value` is marked destructive on both surfaces, since lowering
+  `max_operations` drops retained jobs. `read_url`'s hints now match.
+- **Time limits:** `read_url` gives up after 4 seconds, inside the 5-second local call
+  deadline. Before, a 20-second fetch could never answer. A search page's time is derived
+  from the same deadline.
+- **Tests:**
+  - The probes now call every local tool, including search, config, processes, `read_url`
+    and terminal resize.
+  - `tests/mcp_protocol.py` checks the complete tool catalog and runs from `tests/e2e.py`.
+- **The link frames** moved to `crates/contracts/src/link/`. The import paths are the same.
+
 ### The Docker line leaves a running machine (increment 209)
 
 - `machine_add`'s Docker line now brings up a machine that stays: a broker, its link to the

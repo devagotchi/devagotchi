@@ -49,25 +49,27 @@ impl Limits {
 
     /// These limits, or what is wrong with them.
     fn checked(self) -> Result<Self, String> {
-        if !OUTPUT_LIMIT.contains(&self.output_limit_bytes) {
+        if !OUTPUT_LIMIT_BYTES_RANGE.contains(&self.output_limit_bytes) {
             return Err(format!(
                 "output_limit_bytes must be {}..={} (it is {})",
-                OUTPUT_LIMIT.start(),
-                OUTPUT_LIMIT.end(),
+                OUTPUT_LIMIT_BYTES_RANGE.start(),
+                OUTPUT_LIMIT_BYTES_RANGE.end(),
                 self.output_limit_bytes
             ));
         }
-        if !OPERATIONS.contains(&self.max_operations) {
+        if !MAX_OPERATIONS_RANGE.contains(&self.max_operations) {
             return Err(format!(
                 "max_operations must be {}..={} (it is {})",
-                OPERATIONS.start(), OPERATIONS.end(),
+                MAX_OPERATIONS_RANGE.start(),
+                MAX_OPERATIONS_RANGE.end(),
                 self.max_operations
             ));
         }
-        if !CONCURRENT.contains(&self.max_concurrent) {
+        if !MAX_CONCURRENT_RANGE.contains(&self.max_concurrent) {
             return Err(format!(
                 "max_concurrent must be {}..={} (it is {})",
-                CONCURRENT.start(), CONCURRENT.end(),
+                MAX_CONCURRENT_RANGE.start(),
+                MAX_CONCURRENT_RANGE.end(),
                 self.max_concurrent
             ));
         }

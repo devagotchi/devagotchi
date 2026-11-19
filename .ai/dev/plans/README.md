@@ -13,7 +13,8 @@ the one-user edition there is ordered in [the one-user edition](one-user-edition
 [phone](mobile-experience.md), the [browser](browser-experience.md), the
 [plugins](plugins.md) and the [cloud edition](cloud-edition.md).
 
-Active: [AI development contracts and local capture](ai-development-capture.md);
+Active: [B1: Desktop Commander core follows its pattern](desktop-commander-b1.md);
+[AI development contracts and local capture](ai-development-capture.md);
 [Make alpha = pre-release obvious](alpha-stage-obvious.md);
 [Texas baseline: installed the way a public customer would](texas-baseline.md);
 [The landing page: layman interactives from the real product](landing.md);

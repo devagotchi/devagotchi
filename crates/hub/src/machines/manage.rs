@@ -6,8 +6,7 @@ use rmcp::{
 };
 
 use crate::mcp::{
-    Hub,
-    join_line,
+    Hub, join_line,
     schema::{MachineAdd, MachineAdded, MachineUpdate, MachineUpdated, Machines},
 };
 
@@ -47,7 +46,8 @@ impl Hub {
                 "Download the archive and SHA256SUMS from {hub}/dist/ for this machine, check the sum, unpack, then: printf '%s\\n' '{code}' | devagotchi link enroll --state-dir ~/.local/state/devagotchi-link --hub {hub} --device {device} --broker <broker-endpoint>"
             ),
         }) }.await;
-        self.recorded(&subject, "machine_add", "", &name, result).await
+        self.recorded(&subject, "machine_add", "", &name, result)
+            .await
     }
 
     #[tool(
@@ -69,8 +69,12 @@ impl Hub {
     ) -> Result<Json<MachineUpdated>, Json<BridgeError>> {
         let subject = self.subject(&context)?;
         let machine = input.machine.clone();
-        let result = self.update_machine(&subject, input).await.map_err(|Json(e)| e);
-        self.recorded(&subject, "machine_update", &machine, "", result).await
+        let result = self
+            .update_machine(&subject, input)
+            .await
+            .map_err(|Json(e)| e);
+        self.recorded(&subject, "machine_update", &machine, "", result)
+            .await
     }
 
     #[tool(
@@ -88,7 +92,9 @@ impl Hub {
         context: RequestContext<RoleServer>,
     ) -> Result<Json<Machines>, Json<BridgeError>> {
         let subject = self.subject(&context)?;
-        let result = Ok(Machines { machines: self.machine_status(&subject).await });
+        let result = Ok(Machines {
+            machines: self.machine_status(&subject).await,
+        });
         self.recorded(&subject, "machines", "", "", result).await
     }
 }

@@ -1,5 +1,5 @@
 use super::*;
-use crate::{ListInput, RequestBody, StartInput};
+use crate::{GetInput, ListInput, ReadInput, RequestBody, StartInput, WaitInput};
 
 fn smuggled() -> serde_json::Value {
     serde_json::json!({"account": LOCAL_ACCOUNT, "client": "forged"})

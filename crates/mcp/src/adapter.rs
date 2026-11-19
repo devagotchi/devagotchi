@@ -37,7 +37,7 @@ pub(super) struct BridgeAdapter {
 #[derive(Debug, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct RunInput {
-    /// The command line, as you would type it in a terminal here: bash or sh on Linux,
+    /// The command line, as you would type it in a terminal on the machine: bash or sh on Linux,
     /// PowerShell on Windows.
     pub command: String,
     /// Directory to run in (absolute, `~/...`, or relative to the workspace); defaults to the workspace (your home directory unless
@@ -356,7 +356,9 @@ impl ServerHandler for BridgeAdapter {
     ) -> Result<rmcp::model::CallToolResponse, rmcp::ErrorData> {
         let (tool, arguments) = (request.name.clone(), request.arguments.clone());
         let call = rmcp::handler::server::tool::ToolCallContext::new(self, request, context);
-        let answer = crate::arguments::coded(Self::router().get(&tool).is_some(), Self::router().call(call).await);
+        let router = Self::router();
+        let known = router.get(&tool).is_some();
+        let answer = crate::arguments::coded(known, router.call(call).await);
         self.history.record(&tool, arguments.as_ref(), &answer);
         answer
     }

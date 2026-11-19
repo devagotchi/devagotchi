@@ -4,9 +4,11 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-/// Largest page of file bytes one read returns, so the answer fits one wire frame.
+/// Most entries one `list_directory` page returns.
 pub const MAX_LIST_ENTRIES: u32 = 1000;
+/// Deepest `list_directory` goes below the directory it lists.
 pub const MAX_LIST_DEPTH: u32 = 3;
+/// Largest page of file bytes one read returns, so the answer fits one wire frame.
 pub const MAX_FILE_READ_BYTES: usize = 24 * 1024;
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -37,7 +39,9 @@ pub const MAX_READ_LINES: u32 = 5000;
 
 /// Default for omitted file_read_bytes inputs on either tool surface.
 pub const DEFAULT_FILE_READ_BYTES: usize = MAX_FILE_READ_BYTES;
-pub fn default_file_read_bytes() -> usize { DEFAULT_FILE_READ_BYTES }
+pub fn default_file_read_bytes() -> usize {
+    DEFAULT_FILE_READ_BYTES
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
@@ -98,7 +102,9 @@ pub struct FileListInput {
 
 /// Default for omitted list_entries inputs on either tool surface.
 pub const DEFAULT_LIST_ENTRIES: u32 = 200;
-pub fn default_list_entries() -> u32 { DEFAULT_LIST_ENTRIES }
+pub fn default_list_entries() -> u32 {
+    DEFAULT_LIST_ENTRIES
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
@@ -190,7 +196,9 @@ pub struct FileEditInput {
 
 /// Default for omitted replacements inputs on either tool surface.
 pub const DEFAULT_REPLACEMENTS: u32 = 1;
-pub fn default_replacements() -> u32 { DEFAULT_REPLACEMENTS }
+pub fn default_replacements() -> u32 {
+    DEFAULT_REPLACEMENTS
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]

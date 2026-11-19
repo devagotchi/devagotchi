@@ -137,4 +137,3 @@ pub struct ResizeRouted {
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub take_over: bool,
 }
-

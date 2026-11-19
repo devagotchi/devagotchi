@@ -135,7 +135,11 @@ mod tests {
 
     #[tokio::test]
     async fn too_many_or_none_or_oversized_pages_are_refused() {
-        assert!(read_many(nothing_is_read, Vec::new(), Some(100)).await.is_err());
+        assert!(
+            read_many(nothing_is_read, Vec::new(), Some(100))
+                .await
+                .is_err()
+        );
         let many = vec!["/a".to_owned(); MAX_FILES + 1];
         assert!(read_many(nothing_is_read, many, Some(100)).await.is_err());
         let one = vec!["/a".to_owned()];

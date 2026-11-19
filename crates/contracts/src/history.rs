@@ -23,7 +23,9 @@ pub struct RecentCallsInput {
 
 /// Default for omitted recent_calls inputs on either tool surface.
 pub const DEFAULT_RECENT_CALLS: u32 = 50;
-pub fn default_recent_calls() -> u32 { DEFAULT_RECENT_CALLS }
+pub fn default_recent_calls() -> u32 {
+    DEFAULT_RECENT_CALLS
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]

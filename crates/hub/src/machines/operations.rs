@@ -3,8 +3,9 @@
 use devagotchi_contracts::describe;
 
 use devagotchi_contracts::{
-    BridgeError, OperationView, OutputPage, RequestBody, ResponseBody, StartOutput,
-    StartInput, GetInput, WaitInput, ReadInput, ListInput, SendInput, ResizeInput, InputSent, OperationsPage,
+    BridgeError, GetInput, InputSent, ListInput, OperationView, OperationsPage, OutputPage,
+    ReadInput, RequestBody, ResizeInput, ResponseBody, SendInput, StartInput, StartOutput,
+    WaitInput,
 };
 use rmcp::{
     Json, RoleServer, handler::server::wrapper::Parameters, service::RequestContext, tool,
@@ -39,7 +40,17 @@ impl Hub {
             .call(
                 "operation_start",
                 &routed.machine,
-                RequestBody::OperationStart(StartInput { idempotency_key: routed.idempotency_key, executable: routed.executable, args: routed.args, command: routed.command, cwd: routed.cwd, deadline_ms: routed.deadline_ms, interactive: routed.interactive, combined_output: routed.combined_output, caller: None }),
+                RequestBody::OperationStart(StartInput {
+                    idempotency_key: routed.idempotency_key,
+                    executable: routed.executable,
+                    args: routed.args,
+                    command: routed.command,
+                    cwd: routed.cwd,
+                    deadline_ms: routed.deadline_ms,
+                    interactive: routed.interactive,
+                    combined_output: routed.combined_output,
+                    caller: None,
+                }),
                 context,
             )
             .await?
@@ -68,7 +79,10 @@ impl Hub {
             .call(
                 "operation_get",
                 &routed.machine,
-                RequestBody::OperationGet(GetInput { operation_id: routed.operation_id, caller: None }),
+                RequestBody::OperationGet(GetInput {
+                    operation_id: routed.operation_id,
+                    caller: None,
+                }),
                 context,
             )
             .await?
@@ -97,7 +111,12 @@ impl Hub {
             .call(
                 "operation_wait",
                 &routed.machine,
-                RequestBody::OperationWait(WaitInput { operation_id: routed.operation_id, output_after: routed.output_after, timeout_ms: routed.timeout_ms, caller: None }),
+                RequestBody::OperationWait(WaitInput {
+                    operation_id: routed.operation_id,
+                    output_after: routed.output_after,
+                    timeout_ms: routed.timeout_ms,
+                    caller: None,
+                }),
                 context,
             )
             .await?
@@ -126,7 +145,12 @@ impl Hub {
             .call(
                 "operation_read",
                 &routed.machine,
-                RequestBody::OperationRead(ReadInput { operation_id: routed.operation_id, cursor: routed.cursor, max_bytes: routed.max_bytes, caller: None }),
+                RequestBody::OperationRead(ReadInput {
+                    operation_id: routed.operation_id,
+                    cursor: routed.cursor,
+                    max_bytes: routed.max_bytes,
+                    caller: None,
+                }),
                 context,
             )
             .await?
@@ -157,7 +181,10 @@ impl Hub {
             .call(
                 "operation_cancel",
                 &routed.machine,
-                RequestBody::OperationCancel(GetInput { operation_id: routed.operation_id, caller: None }),
+                RequestBody::OperationCancel(GetInput {
+                    operation_id: routed.operation_id,
+                    caller: None,
+                }),
                 context,
             )
             .await?
@@ -181,7 +208,12 @@ impl Hub {
         Parameters(routed): Parameters<ListRouted>,
         context: RequestContext<RoleServer>,
     ) -> Result<Json<OperationsPage>, Json<BridgeError>> {
-        let body = RequestBody::OperationList(ListInput { offset: routed.offset, limit: routed.limit, scope: routed.scope, caller: None });
+        let body = RequestBody::OperationList(ListInput {
+            offset: routed.offset,
+            limit: routed.limit,
+            scope: routed.scope,
+            caller: None,
+        });
         match self
             .call("operation_list", &routed.machine, body, context)
             .await?
@@ -208,7 +240,13 @@ impl Hub {
         Parameters(routed): Parameters<InputRouted>,
         context: RequestContext<RoleServer>,
     ) -> Result<Json<InputSent>, Json<BridgeError>> {
-        let body = RequestBody::OperationInput(SendInput { operation_id: routed.operation_id, text: routed.text, keys: routed.keys, take_over: routed.take_over, caller: None });
+        let body = RequestBody::OperationInput(SendInput {
+            operation_id: routed.operation_id,
+            text: routed.text,
+            keys: routed.keys,
+            take_over: routed.take_over,
+            caller: None,
+        });
         match self
             .call("operation_input", &routed.machine, body, context)
             .await?
@@ -235,7 +273,13 @@ impl Hub {
         Parameters(routed): Parameters<ResizeRouted>,
         context: RequestContext<RoleServer>,
     ) -> Result<Json<OperationView>, Json<BridgeError>> {
-        let body = RequestBody::OperationResize(ResizeInput { operation_id: routed.operation_id, cols: routed.cols, rows: routed.rows, take_over: routed.take_over, caller: None });
+        let body = RequestBody::OperationResize(ResizeInput {
+            operation_id: routed.operation_id,
+            cols: routed.cols,
+            rows: routed.rows,
+            take_over: routed.take_over,
+            caller: None,
+        });
         match self
             .call("operation_resize", &routed.machine, body, context)
             .await?

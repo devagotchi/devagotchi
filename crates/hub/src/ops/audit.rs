@@ -82,7 +82,10 @@ fn read_error(error: impl std::fmt::Display) -> BridgeError {
 impl Audit {
     /// The chain in the hub's store.
     pub fn new(store: Store) -> Self {
-        Self { store, write_failures: completion::WriteFailures::default() }
+        Self {
+            store,
+            write_failures: completion::WriteFailures::default(),
+        }
     }
 
     /// Latched operator alert, available even when the audit database cannot be reached.

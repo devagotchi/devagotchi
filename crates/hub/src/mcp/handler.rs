@@ -37,10 +37,10 @@ impl ServerHandler for Hub {
             self.record(subject, &request.name, "", "", "key_denied")
                 .await
                 .map_err(|Json(error)| rmcp::ErrorData::internal_error(error.message, None))?;
-            return Ok(
-                rmcp::model::CallToolResult::structured_error(serde_json::json!({"code": "key_denied", "message": why}))
-                    .into(),
-            );
+            return Ok(rmcp::model::CallToolResult::structured_error(
+                serde_json::json!({"code": "key_denied", "message": why}),
+            )
+            .into());
         }
         let seat = self.request_seat(&context);
         let delivers = request.name != "board_inbox";
@@ -54,12 +54,18 @@ impl ServerHandler for Hub {
             return Ok(answer.into());
         }
         let tool = request.name.clone();
-        let known = Self::router().get(&tool).is_some();
+        let router = Self::router();
+        let known = router.get(&tool).is_some();
         let call = rmcp::handler::server::tool::ToolCallContext::new(self, request, context);
-        let raw = Self::router().call(call).await;
-        if known && raw.as_ref().is_err_and(|e| e.code == rmcp::model::ErrorCode::INVALID_PARAMS)
-            && let Some(subject) = &subject {
-            self.record_completion(subject, &tool, "", "", "invalid_arguments").await;
+        let raw = router.call(call).await;
+        if known
+            && raw
+                .as_ref()
+                .is_err_and(|e| e.code == rmcp::model::ErrorCode::INVALID_PARAMS)
+            && let Some(subject) = &subject
+        {
+            self.record_completion(subject, &tool, "", "", "invalid_arguments")
+                .await;
         }
         let answer = devagotchi_mcp::arguments::coded(known, raw);
         // Notes left for this caller ride the answer to whatever it just called.

@@ -7,7 +7,6 @@ use super::Hub;
 
 mod machines;
 
-
 impl Hub {
     /// Every tool this hub serves: its own, and each domain's router added to them. Their
     /// answers' schemas are open to fields added later (`devagotchi_mcp::outputs`).

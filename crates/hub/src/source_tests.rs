@@ -246,13 +246,13 @@ pub(crate) fn child(file: &Path, name: &str, path: Option<&str>) -> PathBuf {
     }
 }
 
-
 pub(crate) fn sources() -> Vec<(PathBuf, String, bool)> {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
     let mut files = Vec::new();
     let mut queue = vec![(root.join("lib.rs"), false)];
     while let Some((file, test_only)) = queue.pop() {
-        let text = std::fs::read_to_string(&file).unwrap_or_else(|e| panic!("{}: {e}", file.display()));
+        let text =
+            std::fs::read_to_string(&file).unwrap_or_else(|e| panic!("{}: {e}", file.display()));
         for (name, in_test, path) in scan(&text).modules {
             queue.push((child(&file, &name, path.as_deref()), test_only || in_test));
         }

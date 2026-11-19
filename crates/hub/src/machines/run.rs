@@ -21,7 +21,7 @@ use crate::mcp::Hub;
 pub struct RunInput {
     /// The machine, by its name from `machines`.
     pub machine: String,
-    /// The command line, as you would type it in a terminal here: bash or sh on Linux,
+    /// The command line, as you would type it in a terminal on the machine: bash or sh on Linux,
     /// PowerShell on Windows.
     pub command: String,
     /// Directory to run in (absolute, `~/...`, or relative to the workspace); defaults to the workspace (your home directory unless
@@ -94,7 +94,11 @@ impl Hub {
             "wait_seconds",
         ) {
             Ok(value) => value,
-            Err(error) => return self.recorded(&subject, "run", &input.machine, "", Err(error)).await,
+            Err(error) => {
+                return self
+                    .recorded(&subject, "run", &input.machine, "", Err(error))
+                    .await;
+            }
         };
         let timeout = match shared::bounded(
             input.timeout_seconds,
@@ -103,7 +107,11 @@ impl Hub {
             "timeout_seconds",
         ) {
             Ok(value) => value,
-            Err(error) => return self.recorded(&subject, "run", &input.machine, "", Err(error)).await,
+            Err(error) => {
+                return self
+                    .recorded(&subject, "run", &input.machine, "", Err(error))
+                    .await;
+            }
         };
         let route = match self.route(&subject, &input.machine).await {
             Ok(route) => route,

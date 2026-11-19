@@ -1,12 +1,10 @@
 //! The file tools: read, list, search, write, edit, inspect, make directories and move, each
 //! one request to this user's broker; `read_multiple_files` and `read_image` are several.
 
-use devagotchi_contracts::describe;
-
 use devagotchi_contracts::{
     BridgeError, DirectoryInput, FileContent, FileEditInput, FileInfo, FileInfoInput,
     FileListInput, FileListing, FileMoveInput, FileReadInput, FileSearchInput, FileWriteInput,
-    FileWritten, RequestBody, ResponseBody, SearchPage,
+    FileWritten, RequestBody, ResponseBody, SearchPage, describe,
 };
 use rmcp::{
     Json, RoleServer, handler::server::wrapper::Parameters, model::CallToolResult,
@@ -17,8 +15,6 @@ use serde::Deserialize;
 
 use super::BridgeAdapter;
 use crate::{files, image, unexpected};
-
-/// What `search_files` says on this machine (the hub says the same of a named machine).
 
 #[derive(Debug, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]

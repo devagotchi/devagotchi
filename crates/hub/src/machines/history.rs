@@ -21,7 +21,7 @@ use crate::mcp::Hub;
 #[serde(deny_unknown_fields)]
 pub struct RecentCallsInput {
     /// Only calls of this tool, such as `run` or `read_file`.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub tool: Option<String>,
     /// Only calls to this machine, by its name from `machines`.
     #[serde(default)]

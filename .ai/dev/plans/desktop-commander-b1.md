@@ -1,7 +1,10 @@
 # B1: Desktop Commander core follows its pattern
 
 Branch: increment-209/desktop-commander-pattern. Base: a61cfb7 (#259).
-PR: pending. Implementation: in progress. Validation: pending. Push: pending. Main: not merged.
+PR: pending. Implementation: done (reviewed 2026-11-19: compile breaks, misplaced docs,
+unnamed ranges, orphan comments, routers built per check, "terminal here" on the hub, and a
+missing audit-failure behaviour test fixed; link frames moved to `contracts/src/link/` to keep
+`lib.rs` under the cap). Validation: see the PR. Push: pending. Main: not merged.
 
 ## Objective and authority
 Every existing machine capability follows contract → broker → local tool → hub tool, with shared descriptions/defaults, local/hub parity and probes covering every local tool. Follow ../../patterns/machine-capability.md and ../../patterns/mcp-tools.md; reconcile their B1 known violations.
