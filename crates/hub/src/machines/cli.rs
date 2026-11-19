@@ -30,7 +30,7 @@ pub(crate) fn enroll(state: &Path, config: Option<&Path>, device: &str) -> Bridg
             .issue_code(device, super::random::<16>())
             .await?;
         // The code itself is never audited or logged; only that one was issued.
-        operator_event(&Audit::new(store), "link.code_issued", device, "ok").await?;
+        operator_event(&Audit::new(store), "link.code_issued", device, "", "ok").await?;
         Ok(code)
     })?;
     // The code is the one secret this prints; it goes to stdout only, once.
@@ -69,8 +69,8 @@ pub(crate) fn revoke(state: &Path, config: Option<&Path>, device: &str) -> Bridg
     let (revoked, cancelled) = store::block_on(async {
         let store = store::for_command(state, config).await?;
         let (revoked, cancelled) = Devices::new(store.clone()).revoke(device).await?;
-        let outcome = format!("revoked={revoked} codes_cancelled={cancelled}");
-        operator_event(&Audit::new(store), "link.revoke", device, &outcome).await?;
+        let counts = format!("revoked={revoked} codes_cancelled={cancelled}");
+        operator_event(&Audit::new(store), "link.revoke", device, &counts, "ok").await?;
         Ok((revoked, cancelled))
     })?;
     match (revoked, cancelled) {

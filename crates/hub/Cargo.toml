@@ -69,3 +69,6 @@ tempfile = { workspace = true }
 # Tests mint a fresh RSA key per run and stand up a fake Nomen.
 aws-lc-rs = "1"
 axum = { version = "0.8", default-features = false, features = ["form"] }
+# The link socket test plays a machine against the real `/link` route (`machines/link/tests/socket.rs`),
+# with the client the link itself uses.
+tokio-tungstenite = { version = "0.30", default-features = false, features = ["connect"] }

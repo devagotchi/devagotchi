@@ -164,7 +164,7 @@ Three more constraints shape the program:
   - `broker run` writes its default config on first run, as `start` does.
   - The link refuses `HubFrame::Update` on a container (`DEVAGOTCHI_MACHINE_KIND=container`) with reason "container: re-run the join line or `docker compose pull && up -d`". Auto-update skips such machines; the hello reports the kind, and the hub learns it first.
   - Move the template out of `join/mod.rs` (492 lines) into `join/compose.yml` with `include_str!`.
-- **Files:** `crates/hub/src/machines/join/mod.rs`, `crates/hub/src/machines/join/compose.yml` (new), `crates/link/src/lib.rs`, `crates/link/src/session.rs`, `crates/machine-engine/src/service.rs` (or wherever `broker run` reads its config), `crates/hub/src/machines/link/updates.rs`, `tests/compose_join.py`, `.github/workflows/image.yml`, `docs/identity.md`.
+- **Files:** `crates/hub/src/machines/join/mod.rs`, `crates/hub/src/machines/join/compose.yml` (new), `crates/link/src/lib.rs`, `crates/link/src/session/mod.rs`, `crates/machine-engine/src/service.rs` (or wherever `broker run` reads its config), `crates/hub/src/machines/link/updates.rs`, `tests/compose_join.py`, `.github/workflows/image.yml`, `docs/identity.md`.
 - **Acceptance:**
   - Hub unit test: the compose file names `:sha-<sha7>` for a `main-<sha7>` build and holds the code only in `environment`.
   - Link unit test: re-enroll with an existing key exits 0 without a network call.
@@ -282,7 +282,7 @@ Three more constraints shape the program:
 - **Scope:** Map I6.
   - `machine_disconnect {machine, revoke?}`: a stop frame over the link marks the machine offline. `revoke=true` needs an approved approval and then calls `Hub::revoke_own_machine` (`tenancy/machines.rs:200`), then `Links::revoke_owned`.
   - `review_call`: creates an approval card. On Run it executes through `Hub::call` as the person and stores the result under a call_id from 214; on Cancel it executes nothing.
-- **Files:** `crates/contracts/src/wire.rs`, `crates/link/src/session.rs`, `crates/hub/src/machines/link/{serve,registry}.rs`, `crates/hub/src/mcp/tools/machines.rs`, `crates/hub/src/machines/review.rs` (new), `crates/hub/src/web/approval_page.rs` (from 256, as the Run/Cancel surface).
+- **Files:** `crates/contracts/src/wire.rs`, `crates/link/src/session/mod.rs`, `crates/hub/src/machines/link/{serve,registry}.rs`, `crates/hub/src/mcp/tools/machines.rs`, `crates/hub/src/machines/review.rs` (new), `crates/hub/src/web/approval_page.rs` (from 256, as the Run/Cancel surface).
 - **Acceptance:**
   - `e2e.py` leg: `machine_disconnect` and `machines` shows the machine offline; `link run` again brings it back; `revoke=true` without an approval is refused.
   - Hub test: `review_call` shows a card; Run executes and `get_tool_result` returns the answer; Cancel runs nothing; both are in the audit.
@@ -528,7 +528,7 @@ Three more constraints shape the program:
   - The hub update card says how many machines will follow and how many are offline.
   - No new frames.
   - The link's `/dist` client uses `redirect(Policy::none())` (D2b).
-- **Files:** `crates/hub/src/web/app/machine.rs`, `crates/hub/src/web/app/machines_update.rs` (new), `crates/hub/src/web/app/home.rs`, `crates/hub/src/machines/link/updates.rs`, `crates/link/src/update.rs`, `crates/link/src/update_tests.rs`.
+- **Files:** `crates/hub/src/web/app/machine.rs`, `crates/hub/src/web/app/machines_update.rs` (new), `crates/hub/src/web/app/home.rs`, `crates/hub/src/machines/link/updates.rs`, `crates/link/src/update/mod.rs`, `crates/link/src/update/tests.rs`.
 - **Acceptance:**
   - Hub test (new file): an out-of-date machine shows both builds and "Update to <v>"; a current one shows no button; Update all sends `HubFrame::Update` only to out-of-date machines, with one audit row each.
   - Link test: a 302 on `/dist/SHA256SUMS` fails the update and leaves nothing under `updates/`.
@@ -877,7 +877,7 @@ Each lane is its own worktree with its **own `CARGO_TARGET_DIR`** (memory: a sha
 | L2 join | 209 → 210; then 220 when 214 and 256 are in | `crates/hub/src/machines/join/`, `crates/link/src/lib.rs`, `tests/compose_join.py`, image.yml join leg |
 | L3 plugins and docs | 211 → 260 → 261 → (after 262) 264 → 267 → 268 → 269 | `plugins/`, `README.md`, `crates/mcp/src/connect*`, `crates/connectors`, `apps/desktop` (263 stays with L7) |
 | L4 identity and admin | 225 → 226 → 227 → 228 → 229 → 230; 231, 232, 233, 234 in any order after 225; 235 after 217 | `web/providers.rs`, `identity/`, `web/hub_settings_{shippin,activity}.rs`, `web/account_security.rs`, `web/app/{ai_clients,machine_settings}.rs`, `web/one_user/` |
-| L5 update | 236 → 237 → 238 → 239 → 240 → 241 → 242 → 243 → 244 | `deploy/compose/`, `deploy/linux/`, `crates/devagotchi/build.rs`, `ops/{release_check,update_status,health}.rs`, `serve/shutdown.rs`, `web/hub_settings_hub.rs`, `web/hub_update.rs`, `web/app/machines_update.rs`, `crates/link/src/update.rs` |
+| L5 update | 236 → 237 → 238 → 239 → 240 → 241 → 242 → 243 → 244 | `deploy/compose/`, `deploy/linux/`, `crates/devagotchi/build.rs`, `ops/{release_check,update_status,health}.rs`, `serve/shutdown.rs`, `web/hub_settings_hub.rs`, `web/hub_update.rs`, `web/app/machines_update.rs`, `crates/link/src/update/mod.rs` |
 | L6 phone | 245 → 246 (merge fast: it splits `site.rs` and `pages.rs`) → 247, 248, 249 → 250 → 251 → 252 → 253; 254 after 213 and 242; 255 after 248 | `web/hub.css`, `web/pages/head.rs`, `site/pwa.rs`, `site/style.rs`, `tokens.json`, `web/assets/{app.js,sw.js}`, `web/sign_in*.rs`, `web/app/{job,events}.rs`, `tests/android_browser.py`, `tests/android_device.py` |
 | L7 notifications | 256 → 258 → 259; 257 after 246 and 248; 262 (agenthub repository) → 263 → 265 → 266 | `web/approval_page.rs`, `notify/approvals.rs`, `notify/push/subscriptions.rs`, `identity/preferences/`, `web/app/notifications.rs`, `crates/agenthub/src/cli/`, `crates/kernel/src/cues/`, `mcp/views/` |
 

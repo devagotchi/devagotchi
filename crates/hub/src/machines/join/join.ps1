@@ -30,8 +30,8 @@
         $archive = "devagotchi-$target.zip"
         & $get $archive $sum | Out-Null
         [IO.File]::WriteAllText((Join-Path $work "$archive.sha256"), "$sum  $archive")
-        # Jesse's machines keep everything on D:; elsewhere it goes under the user's local app data.
-        if (Test-Path 'D:\localdev') { $root = 'D:\localdev\devagotchi' } else { $root = Join-Path $env:LOCALAPPDATA 'Devagotchi' }
+        # DEVAGOTCHI_ROOT chooses where it goes; otherwise the user's local app data.
+        if ($env:DEVAGOTCHI_ROOT) { $root = $env:DEVAGOTCHI_ROOT } else { $root = Join-Path $env:LOCALAPPDATA 'Devagotchi' }
         Write-Host "devagotchi join: installing devagotchi $version in $root and joining $hub as $device"
         $shell = (Get-Process -Id $PID).Path
         $env:DEVAGOTCHI_ENROLL_CODE = '@CODE@'

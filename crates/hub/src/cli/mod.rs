@@ -284,7 +284,8 @@ pub(crate) fn manage(command: Command) -> BridgeResult<()> {
                 };
                 // The link itself is never audited or logged; only that one was issued.
                 let audit = Audit::new(accounts.store().clone());
-                ops::audit::operator_event(&audit, "account.owner_link", &owner.id, "ok").await?;
+                ops::audit::operator_event(&audit, "account.owner_link", &owner.id, "", "ok")
+                    .await?;
                 Ok::<_, BridgeError>((owner, token))
             })?;
             // The link is the one secret this prints; it goes to stdout only, once.
@@ -311,7 +312,7 @@ pub(crate) fn manage(command: Command) -> BridgeResult<()> {
             runtime.block_on(async {
                 identity::connect::run(&connect, &mut std::io::stderr()).await?;
                 let store = store::for_command(&connect.state, Some(&connect.config)).await?;
-                ops::audit::operator_event(&Audit::new(store), "nomen.connect", "", "ok").await
+                ops::audit::operator_event(&Audit::new(store), "nomen.connect", "", "", "ok").await
             })?;
         }
         Command::CheckSite { dir } => {

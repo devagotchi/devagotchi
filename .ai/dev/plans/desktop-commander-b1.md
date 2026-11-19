@@ -1,10 +1,12 @@
 # B1: Desktop Commander core follows its pattern
 
-Branch: increment-209/desktop-commander-pattern. Base: a61cfb7 (#259).
-PR: pending. Implementation: done (reviewed 2026-11-19: compile breaks, misplaced docs,
-unnamed ranges, orphan comments, routers built per check, "terminal here" on the hub, and a
-missing audit-failure behaviour test fixed; link frames moved to `contracts/src/link/` to keep
-`lib.rs` under the cap). Validation: see the PR. Push: pending. Main: not merged.
+Branch: increment-209/desktop-commander-pattern (deleted on merge). Base: a61cfb7 (#259).
+PR: #260, merged as `e7aeb51` with all 18 checks green. Implementation: done (reviewed
+2026-11-19: compile breaks, misplaced docs, unnamed ranges, orphan comments, routers built
+per check, "terminal here" on the hub, and a missing audit-failure behaviour test fixed; link
+frames moved to `contracts/src/link/` to keep `lib.rs` under the cap). Validation: the
+workspace suite on the test Postgres and `tests/e2e.py` on Windows, then CI on every runner.
+Push: done. Main: merged. Next: [B2](link-and-join-b2.md), in [the rewrite](rewrite.md).
 
 ## Objective and authority
 Every existing machine capability follows contract → broker → local tool → hub tool, with shared descriptions/defaults, local/hub parity and probes covering every local tool. Follow ../../patterns/machine-capability.md and ../../patterns/mcp-tools.md; reconcile their B1 known violations.

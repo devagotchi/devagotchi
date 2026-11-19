@@ -39,8 +39,10 @@ from an unrelated passing test.
   Public OSS code must not contain private WardenMesh deployment code or secrets.
 - Platform execution/IPC backends and unsafe code remain confined to `crates/machine-engine/src/execution/platform/*`
   and `crates/ipc/src/{unix,windows}*`, with real-OS tests. No unsafe shortcut elsewhere.
-- Contracts belong in `crates/contracts/src/lib.rs`; regenerate artifacts, never edit
-  generated schemas/desktop types. Follow existing formatting, localization and helpers.
+- Contracts belong in a family module of `crates/contracts/src/`, re-exported from `lib.rs`;
+  a new machine capability follows `.ai/patterns/machine-capability.md`, a link change
+  `.ai/patterns/link.md`. Regenerate artifacts, never edit generated schemas/desktop types.
+  Follow existing formatting, localization and helpers.
 - Make complete, narrowly scoped changes. Surface errors; no swallowed failures,
   fabricated evidence, success-shaped fallbacks, hidden test skips or "done" without proof.
 - Use the board's claim/fence/heartbeat/note/handoff protocol where configured.

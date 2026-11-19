@@ -333,12 +333,13 @@ fn now_rfc3339() -> String {
     devagotchi_contracts::utc_rfc3339(std::time::SystemTime::now())
 }
 
-/// A chain on a new database of the test server, or `None` without one.
-/// Record an operator command on the hub's audit chain: who ran it and what it did.
+/// Record an operator command on the hub's audit chain: who ran it, on what (`device`, and
+/// `target` for any detail), and its outcome (`ok` or a code).
 pub(crate) async fn operator_event(
     audit: &Audit,
     tool: &str,
     device: &str,
+    target: &str,
     outcome: &str,
 ) -> BridgeResult<()> {
     let user = std::env::var("USER")
@@ -351,7 +352,7 @@ pub(crate) async fn operator_event(
             via: "cli",
             tool,
             broker: device,
-            operation_id: "",
+            operation_id: target,
             outcome,
         })
         .await?;

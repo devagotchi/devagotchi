@@ -284,11 +284,11 @@ composites move to it in B4).
 13. **The broker answers inside the transport's deadline.** A local client and the machine link
     wait `devagotchi_ipc::IO_TIMEOUT + request.held_for()` (`exchange` in
     `crates/ipc/src/lib.rs`, reached through `devagotchi_ipc::request`; the link forwards
-    through the same call in `crates/link/src/session.rs`). Every internal time
+    through the same call in `crates/link/src/session/mod.rs`). Every internal time
     budget is derived from that and held by a `const` assertion beside it (G6), as
     `MUTATION_WAIT` is in `broker/files.rs`. `held_for()` is only for requests that wait on
     purpose (`operation_wait`, `operations_changed`); the link counts them in its waits pool
-    (`crates/link/src/session.rs`).
+    (`crates/link/src/session/mod.rs`).
 
 ### Tools
 
@@ -369,7 +369,7 @@ beside `files/`, and `crates/machine-engine/src/broker/system.rs` beside `broker
 ## Anti-patterns
 
 - A wildcard in a capability table (rule 6). The link uses `caller()` to refuse a hub that
-  speaks for the machine's own account (`from_a_hub` in `crates/link/src/session.rs`); a new
+  speaks for the machine's own account (`from_a_hub` in `crates/link/src/session/mod.rs`); a new
   caller-carrying request missing there passes silently.
 - Validation or defaults restated in a tool or a hub mirror (`unwrap_or(200)`), or a bound
   restated as a literal (`"1..=4096"`): two numbers that drift (G3).

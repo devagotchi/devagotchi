@@ -30,10 +30,7 @@ pub fn image(version: &str) -> Option<String> {
         }
         Some(_) => return None,
         None if version.as_bytes().first().is_some_and(u8::is_ascii_digit)
-            && version.len() <= 64
-            && version
-                .bytes()
-                .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'.' | b'-' | b'_')) =>
+            && devagotchi_contracts::valid_build_name(version) =>
         {
             version.to_string()
         }
@@ -184,7 +181,10 @@ mod tests {
                 "--hub, \"https://app.devagotchi.com\", --device, \"t0123456789ab-dabo\""
             )
         );
-        assert!(file.contains("DEVAGOTCHI_MACHINE_KIND: container"));
+        assert!(file.contains(&format!(
+            "DEVAGOTCHI_MACHINE_KIND: {}",
+            devagotchi_contracts::MACHINE_KIND_CONTAINER
+        )));
         assert!(file.contains("command: [link, run, --state-dir, /state/link]"));
         assert!(file.contains("--broker, /state/broker/broker.sock"));
         assert!(file.contains("command: [start, --state-dir, /state/broker"));

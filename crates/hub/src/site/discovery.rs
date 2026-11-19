@@ -20,7 +20,7 @@ pub const PAGES: [&str; 4] = ["docs", "support", "privacy", "terms"];
 
 /// What no crawler reads: accounts, the operator, setup and offers links, sign-in and
 /// OAuth, the API, joining and downloads, and the MCP and link endpoints.
-pub const PRIVATE: [&str; 20] = [
+pub const PRIVATE: [&str; 19] = [
     "/account",
     "/operator",
     "/go/",
@@ -40,7 +40,6 @@ pub const PRIVATE: [&str; 20] = [
     "/signed-out",
     "/mcp",
     "/link",
-    "/enroll",
 ];
 
 fn base(public_url: &str) -> &str {

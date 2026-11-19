@@ -148,16 +148,8 @@ async fn waiting(hub: Hosted) {
         .issue_owned_code(&subject, &stored, [7; 16], 16)
         .await
         .unwrap();
-    let enrolled = hub
-        .http
-        .post(format!("{}/enroll", hub.url))
-        .json(&json!({ "name": stored, "code": code, "public_key": "laptop-key" }))
-        .send()
-        .await
-        .unwrap();
-    assert_eq!(enrolled.status(), 403);
-    let enrolled: Value = enrolled.json().await.unwrap();
-    assert_eq!(enrolled["error"], "early_access");
+    let denied = hub.enroll(&stored, &code, "laptop-key").await.unwrap_err();
+    assert_eq!(denied.code, "early_access");
     assert!(
         hub.devices.get(&stored).await.unwrap().is_none(),
         "nothing joined"
@@ -194,14 +186,9 @@ async fn waiting(hub: Hosted) {
         .call(&mut person, "machine_add", json!({ "name": "desk" }))
         .await;
     assert!(!refused(&added), "{added}");
-    let enrolled = hub
-        .http
-        .post(format!("{}/enroll", hub.url))
-        .json(&json!({ "name": stored, "code": code, "public_key": "laptop-key" }))
-        .send()
+    hub.enroll(&stored, &code, "laptop-key")
         .await
-        .unwrap();
-    assert_eq!(enrolled.status(), 201, "its code works once it is in");
+        .expect("its code works once it is in");
     let who = whoami(&hub, &mut person).await;
     assert_eq!(who["access"], "admitted");
     assert!(who.get("access_note").is_none() && who.get("waiting_since").is_none());

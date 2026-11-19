@@ -103,19 +103,12 @@ impl Links {
     /// online, and a workflow waiting on it wakes. The receiver gets the calls routed to it.
     #[cfg(test)]
     pub(crate) fn connect_for_test(&self, device: &str) -> mpsc::Receiver<(u64, WireRequest)> {
-        let (calls, received) = mpsc::channel(CALL_QUEUE);
         let id = self.next.fetch_add(1, Ordering::Relaxed);
-        self.sessions.lock().expect("links").insert(
-            device.to_string(),
-            super::Session {
-                id,
-                calls,
-                pending: std::sync::Arc::default(),
-                build: None,
-                container: false,
-                control: mpsc::channel(1).0,
-            },
-        );
+        let (session, (received, _frames)) = super::Session::fake(id, None, false);
+        self.sessions
+            .lock()
+            .expect("links")
+            .insert(device.to_string(), session);
         self.changed();
         received
     }

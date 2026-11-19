@@ -26,14 +26,13 @@ async fn a_ticket_made_after_a_run_carries_the_machine_the_seat_and_the_repo() {
             .nth(1)
             .unwrap();
         let stored = stored.split(' ').next().unwrap();
-        let enrolled = hub
-            .http
-            .post(format!("{}/enroll", hub.url))
-            .json(&json!({ "name": stored, "code": added["code"], "public_key": format!("{name}-key") }))
-            .send()
-            .await
-            .unwrap();
-        assert_eq!(enrolled.status(), 201);
+        hub.enroll(
+            &stored,
+            added["code"].as_str().unwrap(),
+            &format!("{name}-key"),
+        )
+        .await
+        .unwrap();
     }
     let bound = hub
         .call(&mut person, "board_bind", json!({ "project": "fills" }))

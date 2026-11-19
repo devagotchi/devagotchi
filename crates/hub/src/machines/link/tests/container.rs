@@ -11,26 +11,13 @@ fn connect_as(
     build: &str,
     container: bool,
 ) -> mpsc::Receiver<HubFrame> {
-    let (calls, _) = mpsc::channel(1);
-    let (control, frames) = mpsc::channel(4);
-    links.sessions.lock().unwrap().insert(
-        device.to_string(),
-        Session {
-            id: 7,
-            calls,
-            pending: Arc::default(),
-            build: Some(build.into()),
-            container,
-            control,
-        },
-    );
+    let (_, (_, frames)) = connect(links, device, 7, Some(build), container);
     frames
 }
 
 #[tokio::test]
 async fn a_container_is_never_asked_to_update_and_is_told_how_to_move() {
-    let dir = tempfile::tempdir().unwrap();
-    let links = links!(dir.path());
+    let links = or_skip!(test_links());
     let links = links.offering(Some("main-bbbbbbb".into()));
     let mut docked = connect_as(&links, "docked", "main-aaaaaaa", true);
     let mut plain = connect_as(&links, "plain", "main-aaaaaaa", false);

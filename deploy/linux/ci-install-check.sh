@@ -162,7 +162,7 @@ wait_for 30 "link reconnected" link_connected
 ok "restarted by systemd and reconnected"
 
 echo "--- an update the link asks for: devagotchi-update.path applies it as root"
-# What the link writes (crates/link/src/handoff.rs): the checked download in its state,
+# What the link writes (crates/link/src/update/handoff.rs): the checked download in its state,
 # then update-request.json. Root's .path unit runs the root-owned installer on it.
 LINK_STATE=$HOME_DIR/.local/state/devagotchi-link
 target=$("$INSTALL" --print-target)
