@@ -730,7 +730,8 @@
         },
         "mode": {
           "$ref": "#/$defs/WriteMode",
-          "default": "overwrite"
+          "default": "overwrite",
+          "description": "overwrite (default), create (refuse if it exists) or append."
         },
         "path": {
           "description": "Path (absolute, `~/...`, or relative to the workspace) of the file.",
@@ -792,6 +793,7 @@
       "additionalProperties": false,
       "properties": {
         "operation_id": {
+          "description": "The operation ID returned by operation_start or run.",
           "type": "string"
         }
       },
@@ -814,6 +816,26 @@
           "type": "string"
         }
       ]
+    },
+    "InputSent": {
+      "additionalProperties": false,
+      "description": "Input delivered to the program.",
+      "properties": {
+        "cursor": {
+          "description": "The output sequence just before this input: what it caused is after it, so read or\nwait from here (`operation_read` cursor, `operation_wait` output_after).",
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "operation": {
+          "$ref": "#/$defs/OperationView"
+        }
+      },
+      "required": [
+        "operation",
+        "cursor"
+      ],
+      "type": "object"
     },
     "InteractiveInput": {
       "additionalProperties": false,
@@ -883,17 +905,45 @@
       ],
       "type": "object"
     },
+    "Key": {
+      "description": "A named key for `operation_input`. On a terminal each is the bytes a terminal sends;\non a pipe `enter` is a newline, `ctrl_c` and `ctrl_backslash` signal the program (on\nLinux; Windows refuses them on a pipe), and `ctrl_d` closes its input.",
+      "enum": [
+        "enter",
+        "tab",
+        "backspace",
+        "escape",
+        "up",
+        "down",
+        "left",
+        "right",
+        "home",
+        "end",
+        "page_up",
+        "page_down",
+        "delete",
+        "space",
+        "ctrl_c",
+        "ctrl_d",
+        "ctrl_z",
+        "ctrl_l",
+        "ctrl_u",
+        "ctrl_backslash"
+      ],
+      "type": "string"
+    },
     "ListInput": {
       "additionalProperties": false,
       "properties": {
         "limit": {
           "default": 32,
+          "description": "Most operations to return, 1..=64 (default 32).",
           "format": "uint32",
           "minimum": 0,
           "type": "integer"
         },
         "offset": {
           "default": 0,
+          "description": "Number of operations to skip (default 0).",
           "format": "uint64",
           "minimum": 0,
           "type": "integer"
@@ -1248,6 +1298,7 @@
           "type": "boolean"
         },
         "pid": {
+          "description": "The process ID, from list_processes.",
           "format": "uint32",
           "minimum": 0,
           "type": "integer"
@@ -1353,11 +1404,45 @@
           "type": "integer"
         },
         "operation_id": {
+          "description": "The operation ID returned by operation_start or run.",
           "type": "string"
         }
       },
       "required": [
         "operation_id"
+      ],
+      "type": "object"
+    },
+    "ResizeInput": {
+      "additionalProperties": false,
+      "properties": {
+        "cols": {
+          "description": "New width, 2..=500 columns.",
+          "format": "uint16",
+          "maximum": 65535,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "operation_id": {
+          "description": "The operation ID returned by operation_start or run.",
+          "type": "string"
+        },
+        "rows": {
+          "description": "New height, 1..=200 rows.",
+          "format": "uint16",
+          "maximum": 65535,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "take_over": {
+          "description": "As for `operation_input`.",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "operation_id",
+        "cols",
+        "rows"
       ],
       "type": "object"
     },
@@ -1493,6 +1578,37 @@
           "type": "string"
         }
       ]
+    },
+    "SendInput": {
+      "additionalProperties": false,
+      "properties": {
+        "keys": {
+          "description": "Keys pressed after the text, in order (at most 64).",
+          "items": {
+            "$ref": "#/$defs/Key"
+          },
+          "type": "array"
+        },
+        "operation_id": {
+          "description": "The operation ID returned by operation_start or run.",
+          "type": "string"
+        },
+        "take_over": {
+          "description": "Drive an operation another conversation or client of the same account started, or\ntake the keyboard from the one holding it. Never reaches another account's.",
+          "type": "boolean"
+        },
+        "text": {
+          "description": "Text to type, exactly as given (UTF-8, at most 16 KiB). Nothing is added: end a line\nwith the `enter` key.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "operation_id"
+      ],
+      "type": "object"
     },
     "StartInput": {
       "additionalProperties": false,
@@ -1672,6 +1788,7 @@
       "additionalProperties": false,
       "properties": {
         "operation_id": {
+          "description": "The operation ID returned by operation_start or run.",
           "type": "string"
         },
         "output_after": {
@@ -1780,6 +1897,9 @@
     "get_input": {
       "$ref": "#/$defs/GetInput"
     },
+    "input_sent": {
+      "$ref": "#/$defs/InputSent"
+    },
     "list_input": {
       "$ref": "#/$defs/ListInput"
     },
@@ -1807,11 +1927,17 @@
     "read_input": {
       "$ref": "#/$defs/ReadInput"
     },
+    "resize_input": {
+      "$ref": "#/$defs/ResizeInput"
+    },
     "revision": {
       "$ref": "#/$defs/Revision"
     },
     "search_page": {
       "$ref": "#/$defs/SearchPage"
+    },
+    "send_input": {
+      "$ref": "#/$defs/SendInput"
     },
     "start_input": {
       "$ref": "#/$defs/StartInput"
@@ -1831,6 +1957,9 @@
   },
   "required": [
     "start_input",
+    "send_input",
+    "resize_input",
+    "input_sent",
     "get_input",
     "read_input",
     "list_input",

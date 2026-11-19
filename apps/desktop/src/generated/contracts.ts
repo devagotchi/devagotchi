@@ -6,7 +6,6 @@
  * Broker validation enforces domain bounds beyond these structural types.
  */
 
-export type ListScope = "mine" | "account";
 /**
  * How an interactive operation takes input.
  */
@@ -20,6 +19,33 @@ export type OperationState =
   | "timed_out"
   | "interrupted"
   | "unknown";
+export type ListScope = "mine" | "account";
+/**
+ * A named key for `operation_input`. On a terminal each is the bytes a terminal sends;
+ * on a pipe `enter` is a newline, `ctrl_c` and `ctrl_backslash` signal the program (on
+ * Linux; Windows refuses them on a pipe), and `ctrl_d` closes its input.
+ */
+export type Key =
+  | "enter"
+  | "tab"
+  | "backspace"
+  | "escape"
+  | "up"
+  | "down"
+  | "left"
+  | "right"
+  | "home"
+  | "end"
+  | "page_up"
+  | "page_down"
+  | "delete"
+  | "space"
+  | "ctrl_c"
+  | "ctrl_d"
+  | "ctrl_z"
+  | "ctrl_l"
+  | "ctrl_u"
+  | "ctrl_backslash";
 
 /**
  * Export-only schema root. These fields reference canonical Rust DTOs and are
@@ -46,6 +72,7 @@ export interface BrokerContracts {
   file_write_input: FileWriteInput;
   file_written: FileWritten;
   get_input: GetInput;
+  input_sent: InputSent;
   list_input: ListInput;
   operation_view: OperationView;
   operations_page: OperationsPage;
@@ -55,8 +82,10 @@ export interface BrokerContracts {
   process_list_input: ProcessListInput;
   process_page: ProcessPage;
   read_input: ReadInput;
+  resize_input: ResizeInput;
   revision: Revision;
   search_page: SearchPage;
+  send_input: SendInput;
   start_input: StartInput;
   start_output: StartOutput;
   url_content: UrlContent;
@@ -472,6 +501,9 @@ export interface FileWriteInput {
    * edit), so a change made in between is not lost.
    */
   expected_sha256?: string | null;
+  /**
+   * overwrite (default), create (refuse if it exists) or append.
+   */
   mode?: "overwrite" | "create" | "append";
   /**
    * Path (absolute, `~/...`, or relative to the workspace) of the file.
@@ -505,17 +537,21 @@ export interface FileWritten {
   size: number;
 }
 export interface GetInput {
+  /**
+   * The operation ID returned by operation_start or run.
+   */
   operation_id: string;
 }
-export interface ListInput {
-  limit?: number;
-  offset?: number;
+/**
+ * Input delivered to the program.
+ */
+export interface InputSent {
   /**
-   * With a caller: `account` (the default) lists what any of its account's conversations
-   * started, also before a restart (for this machine's own account, everything here);
-   * `mine` only what this conversation or client started. Without a caller: everything.
+   * The output sequence just before this input: what it caused is after it, so read or
+   * wait from here (`operation_read` cursor, `operation_wait` output_after).
    */
-  scope?: ListScope | null;
+  cursor: number;
+  operation: OperationView;
 }
 export interface OperationView {
   args: string[];
@@ -558,6 +594,22 @@ export interface InteractiveView {
    * wait or take it over. Absent when nobody holds it.
    */
   writer_until_ms?: number | null;
+}
+export interface ListInput {
+  /**
+   * Most operations to return, 1..=64 (default 32).
+   */
+  limit?: number;
+  /**
+   * Number of operations to skip (default 0).
+   */
+  offset?: number;
+  /**
+   * With a caller: `account` (the default) lists what any of its account's conversations
+   * started, also before a restart (for this machine's own account, everything here);
+   * `mine` only what this conversation or client started. Without a caller: everything.
+   */
+  scope?: ListScope | null;
 }
 export interface OperationsPage {
   next_offset?: number | null;
@@ -608,6 +660,9 @@ export interface ProcessKillInput {
    * always ended at once.
    */
   force?: boolean;
+  /**
+   * The process ID, from list_processes.
+   */
   pid: number;
 }
 export interface ProcessKilled {
@@ -683,7 +738,28 @@ export interface ReadInput {
    * Maximum raw bytes to return, 1024..=16384. Frames are at most 1024 bytes.
    */
   max_bytes?: number;
+  /**
+   * The operation ID returned by operation_start or run.
+   */
   operation_id: string;
+}
+export interface ResizeInput {
+  /**
+   * New width, 2..=500 columns.
+   */
+  cols: number;
+  /**
+   * The operation ID returned by operation_start or run.
+   */
+  operation_id: string;
+  /**
+   * New height, 1..=200 rows.
+   */
+  rows: number;
+  /**
+   * As for `operation_input`.
+   */
+  take_over?: boolean;
 }
 /**
  * The broker's current operations revision.
@@ -745,6 +821,26 @@ export interface SearchMatch {
   path: string;
   /**
    * The matching line, without its line ending; a very long line is cut.
+   */
+  text?: string | null;
+}
+export interface SendInput {
+  /**
+   * Keys pressed after the text, in order (at most 64).
+   */
+  keys?: Key[];
+  /**
+   * The operation ID returned by operation_start or run.
+   */
+  operation_id: string;
+  /**
+   * Drive an operation another conversation or client of the same account started, or
+   * take the keyboard from the one holding it. Never reaches another account's.
+   */
+  take_over?: boolean;
+  /**
+   * Text to type, exactly as given (UTF-8, at most 16 KiB). Nothing is added: end a line
+   * with the `enter` key.
    */
   text?: string | null;
 }
@@ -857,6 +953,9 @@ export interface UrlReadInput {
   url: string;
 }
 export interface WaitInput {
+  /**
+   * The operation ID returned by operation_start or run.
+   */
   operation_id: string;
   /**
    * Return when output beyond this sequence exists (the cursor you have read up to), as
