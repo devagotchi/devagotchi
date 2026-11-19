@@ -1,4 +1,4 @@
-# Devagotchi: the machine "@NAME@" in Docker, joined to @HUB@ (build @VERSION@).
+# The machine "@NAME@" in Docker, joined to @HUB@ (build @VERSION@).
 # The hub wrote this file for one single-use join code. Start it with:
 #   docker compose -f compose.yml up -d
 #
