@@ -20,6 +20,6 @@ Active: [B1: Desktop Commander core follows its pattern](desktop-commander-b1.md
 [The landing page: layman interactives from the real product](landing.md);
 [Dormant machines and signing back in by a link](dormancy-and-reauth.md);
 [Structure cleanup](structure-cleanup.md); [The kernel](kernel.md);
-[write_pdf: the built-in PDF writer (spec, in review)](write-pdf.md);
+[PDF: write_pdf, read_pdf and the shared font pack (spec, in review)](write-pdf.md); [dev build on the phone, dev stats and diagnostics export (spec, in review)](dev-build-and-diagnostics.md);
 [v0.1.0 release readiness](v0.1-release-readiness.md).
 Broader product delivery remains in the [canonical release plan](../../../docs/implementation-and-release-plan.md).
