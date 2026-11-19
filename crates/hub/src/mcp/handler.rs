@@ -58,10 +58,7 @@ impl ServerHandler for Hub {
         let known = router.get(&tool).is_some();
         let call = rmcp::handler::server::tool::ToolCallContext::new(self, request, context);
         let raw = router.call(call).await;
-        if known
-            && raw
-                .as_ref()
-                .is_err_and(|e| e.code == rmcp::model::ErrorCode::INVALID_PARAMS)
+        if devagotchi_mcp::arguments::refused_arguments(known, &raw).is_some()
             && let Some(subject) = &subject
         {
             self.record_completion(subject, &tool, "", "", "invalid_arguments")

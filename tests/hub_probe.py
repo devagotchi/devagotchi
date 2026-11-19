@@ -242,10 +242,10 @@ if args.run_broker:
     # session) over whatever a tool call says, and the link refuses any caller no hub can be.
     forged = {"account": "local", "client": "forged"}
 
-    def interactive(command, mode):
+    def interactive(command, mode, extra=None):
         return call("operation_start", {"machine": args.run_broker,
             "idempotency_key": str(uuid.uuid4()), "executable": "", "args": [], "command": command,
-            "deadline_ms": 120000, "interactive": {"mode": mode}, "caller": forged})
+            "deadline_ms": 120000, "interactive": {"mode": mode}, **(extra or {})})
 
     def typed(operation_id, text, keys, take_over=False):
         return call("operation_input", {"machine": args.run_broker,
@@ -264,8 +264,12 @@ if args.run_broker:
         new_size = "30x100"
     else:
         read_line, show_size, new_size = "read line; echo got:$line", "echo ready; read x; stty size", "30 100"
+    # The arguments are closed (G2): a caller written into a tool call is refused, never used.
+    is_error, smuggled = interactive(read_line, "pipe", {"caller": forged})
+    check("a tool call that names a caller is refused as invalid_arguments",
+          is_error and smuggled.get("code") == "invalid_arguments", json.dumps(smuggled)[:240])
     is_error, piped = interactive(read_line, "pipe")
-    check("an interactive start ignores a forged caller", not is_error
+    check("an interactive start on a pipe", not is_error
           and (piped.get("operation", {}).get("interactive") or {}).get("mode") == "pipe", json.dumps(piped)[:240])
     piped_id = piped.get("operation", {}).get("operation_id", "")
     is_error, other = in_another_session(lambda: typed(piped_id, "from b", ["enter"]))
