@@ -24,8 +24,10 @@ on:
 permissions: {}
 
 jobs:
+  # Neither job runs until the repository sets NOTIFY_TO: an unconfigured notifier is not a
+  # failed check on every pull request.
   pull-request:
-    if: github.event_name == 'pull_request_target'
+    if: github.event_name == 'pull_request_target' && vars.NOTIFY_TO != ''
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
@@ -70,6 +72,7 @@ jobs:
 
   ci-failed:
     if: >-
+      vars.NOTIFY_TO != '' &&
       github.event_name == 'workflow_run' &&
       contains(fromJSON('["failure", "timed_out", "startup_failure"]'), github.event.workflow_run.conclusion)
     runs-on: ubuntu-24.04

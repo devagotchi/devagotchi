@@ -25,6 +25,8 @@ const RECHECK: Duration = Duration::from_secs(30);
 const GIVE_UP: Duration = Duration::from_secs(6 * 60 * 60);
 /// A handed-off update that has not restarted this link by then did not happen.
 const HANDOFF_LIMIT: Duration = Duration::from_secs(10 * 60);
+/// What a machine in a container answers an update: it moves with its image, never by itself.
+pub const CONTAINER_REFUSAL: &str = "container: this machine updates with its image, never by itself; set the image tag in its compose.yml to the hub's build and run `docker compose up -d --build`";
 
 /// Where an update stands, as `LinkFrame::UpdateStatus` says it.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -49,17 +51,20 @@ pub struct Updater {
     broker: PathBuf,
     state_dir: PathBuf,
     build: String,
+    /// In a container (`DEVAGOTCHI_MACHINE_KIND=container`): every update is refused.
+    container: bool,
     status: watch::Sender<Option<Status>>,
     running: Mutex<bool>,
 }
 
 impl Updater {
-    pub fn new(config: &LinkConfig, state_dir: &Path, build: &str) -> Arc<Self> {
+    pub fn new(config: &LinkConfig, state_dir: &Path, build: &str, container: bool) -> Arc<Self> {
         Arc::new(Self {
             hub: config.hub.clone(),
             broker: PathBuf::from(&config.broker),
             state_dir: state_dir.to_path_buf(),
             build: build.to_string(),
+            container,
             status: watch::Sender::new(None),
             running: Mutex::new(false),
         })
@@ -67,6 +72,11 @@ impl Updater {
 
     pub fn build(&self) -> &str {
         &self.build
+    }
+
+    /// What the hello says this machine is: `container`, or nothing for any other machine.
+    pub fn kind(&self) -> Option<&'static str> {
+        self.container.then_some("container")
     }
 
     pub fn subscribe(&self) -> watch::Receiver<Option<Status>> {
@@ -83,8 +93,14 @@ impl Updater {
     }
 
     /// Start one update to `version`. While one runs, a second request starts nothing and
-    /// is answered with the current status instead.
+    /// is answered with the current status instead. A container starts none, and says why.
     pub fn request(self: &Arc<Self>, version: String, force: bool) -> Option<Status> {
+        if self.container {
+            return Some(Status {
+                state: "failed",
+                detail: Some(CONTAINER_REFUSAL.into()),
+            });
+        }
         {
             let mut running = self.running.lock().expect("updater");
             if *running {

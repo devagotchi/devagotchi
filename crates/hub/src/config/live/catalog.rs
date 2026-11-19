@@ -48,7 +48,7 @@ impl Group {
     pub fn help(self) -> &'static str {
         match self {
             Group::SignUp => {
-                "How fast new accounts may be made, and what an account nobody has secured yet (no password, passkey or sign-in) may hold. A hosted hub (tenancy multi) uses all of these; a single owner's hub uses the machine and client limits for accounts its owner lets in."
+                "How fast new accounts may be made, and what an account nobody has secured yet (no password, passkey or sign-in) may hold. Only a hosted hub (tenancy multi) shows and uses these: strangers start accounts only there."
             }
             Group::Passwords => "What a password must be, for sign-up and for every change.",
             Group::Machines => {

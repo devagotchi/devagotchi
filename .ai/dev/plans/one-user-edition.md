@@ -131,6 +131,29 @@ Three more constraints shape the program:
 - **Depends on:** nothing.
 
 ### 209: Docker machine join that leaves a running machine (M)
+- **Delivered as (2026-11-18, branch `increment-209/docker-join`):** the compose file is
+  `crates/hub/src/machines/join/compose.yml`, served by `join/compose.rs`. Where it
+  departs from the scope, and why:
+  - The broker cannot run on the hub's image as is: it is distroless, so `run` would have no
+    shell. The broker service builds `FROM` the hub's image onto `debian:stable-slim`
+    (`dockerfile_inline`: the binary and the CA bundle copied over). `enroll` and `link` run
+    the hub's image unchanged. All three run as root in their containers, so the IPC peer
+    check matches across them; the state is a named volume at `/state`.
+  - The broker runs `devagotchi start --state-dir /state/broker --config /state/broker.json --workspace /work`, which
+    already writes its config on first run, so `broker run` was not changed.
+  - The update refusal says "change the image tag, then `docker compose up -d --build`",
+    since a built service does not move with `docker compose pull`.
+  - The hub refuses before sending anything (`update_unsupported`, starting `container:`),
+    even when the machine is on the hub's build. The link refuses too, as a backstop.
+  - Tests: `the_compose_file_names_the_builds_image_and_holds_the_code_only_in_its_environment`,
+    `the_image_follows_the_tags_image_yml_publishes`,
+    `the_docker_line_gets_a_compose_file_for_the_builds_image_until_the_code_is_spent`
+    (the route: 200, then 410 once spent, and 409 for an unpublished build),
+    `a_container_is_never_asked_to_update_and_is_told_how_to_move`,
+    `re_enrolling_with_an_existing_key_exits_0_without_a_network_call`,
+    `a_container_refuses_every_update_and_says_so`.
+  - The Docker leg of `tests/compose_join.py` (`--docker`) runs in image.yml only. It was
+    not run on the Windows workstation where this was written.
 - **Why:** The `docker` line `machine_add` hands out cannot succeed, and even if it did it would leave nothing running (see the blocker table).
 - **Scope:**
   - Replace the compose template with three services, all on the hub's own image `ghcr.io/devagotchi/devagotchi:<tag>`. The tag comes from the downloads VERSION: `main-<sha7>` becomes `:sha-<sha7>`, `X.Y.Z` becomes `:X.Y.Z` (image.yml:211-214). A `dev` build refuses with a plain message.
@@ -302,6 +325,17 @@ Three more constraints shape the program:
 ## Phase 2: Shippin.ai sign-in and the owner's management section (one user only)
 
 ### 225: The one-user hub hides the multi-user surfaces (S)
+- **Delivered as (2026-11-18, branch `increment-225/one-user-hides-multi-user`, stacked on
+  208):** `web/one_user/mod.rs` decides whether the organisation pages are mounted;
+  `routes.rs` merges `one_user::orgs(multi_tenant)` where it merged `orgs::routes()` (net 0:
+  `router` takes `multi_tenant`, passed by `serve::app` and the two web fixtures). `/admin`
+  drops the People section and chip, You drops the Organisations card, and Boards drops its
+  organisations link too (`app/home.rs`, the same dead link). "17 clients" is
+  `devagotchi_connectors::all().len()`.
+  - Tests: `web::one_user::tests::a_one_user_hub_hides_the_multi_user_surfaces` and
+    `a_hosted_hub_keeps_the_multi_user_surfaces` (Postgres).
+  - Still open: the JSON API (`/api/v1/orgs/…`, `/api/v1/invites/accept`,
+    `tenancy/orgs/api`) is still mounted on a one-user hub; it was not in this scope.
 - **Why:** The operator ruled on 2026-11-18 that the standalone build manages no other users. Today `/invite` answers 200 on the live hub; `/admin` shows People (`hub_settings.rs:224,231,251-255`) and You shows an Organisations card (`app/me.rs:170-197`).
 - **Scope:** When `!config.multi_tenant()`:
   - drop the People section and its chip from `/admin`;
@@ -529,6 +563,19 @@ Three more constraints shape the program:
 **Shared-file rule for this phase.** 246 makes the pure moves first: `manifest()` and `service_worker()` out of `site.rs` into `site/pwa.rs`, and the head and CSP builder out of `pages.rs` (lines 424-509) into `web/pages/head.rs`, with both ratchet entries lowered. It lands early so the other lanes rebase onto the split files.
 
 ### 245: Make the phone CI check honest, and start the Android browser suite (S)
+- **Delivered as (2026-11-18, branch `increment-245/honest-phone-ci`):** the offline wait was
+  passing whatever the cache held. `wait_for_function`'s first answer was a promise, which
+  counts as truthy, and its later polling is refused by the app's CSP (`'unsafe-eval'`).
+  `app_browser.py` now reads the cache name from `/sw.js` (`frame_cache`) and polls from
+  Python with an `evaluate` that must give `true` (`poll`, `wait_kept`). It never opens a
+  cache that is not there. `tests/android_browser.py` claims a single-tenancy hub on a
+  Pixel 7 with a virtual passkey and opens `/app`, `/approvals` and `/app/me` at 412 px. It
+  runs in CI beside `app_browser.py`, on its own `android` database.
+  - Run here (Windows, Chrome 157): `android_browser.py` passed. A scratch harness on the same
+    hub showed the old wait passing on `devagotchi-app-2` (a cache the worker never fills) and
+    the new wait failing on it, while passing on `/sw.js`'s `devagotchi-app-3`.
+  - Not run here: `app_browser.py` as a whole. It joins a Linux machine with
+    `install-devagotchi.sh`, so CI runs it.
 - **Scope:**
   - Map A0: `tests/app_browser.py:372` waits on cache `devagotchi-app-2`, but the service worker uses `-3`. Read the name from `/sw.js`. Fix the docstring (Postgres).
   - Create `tests/android_browser.py` (Pixel 7, **single tenancy**, claimed owner) as the home of later Android asserts, so lanes stop colliding in `app_browser.py`.
@@ -538,6 +585,31 @@ Three more constraints shape the program:
 - **Depends on:** nothing.
 
 ### 246: Installable on Android: PNG icons, and the manifest on the sign-in page (M)
+- **Delivered as (2026-11-18, branch `increment-246/installable-android`, stacked on 245):**
+  - The moves:
+    - `manifest()` and `service_worker()` are in `site/pwa.rs`.
+    - The page kinds, `render` and the CSP are in `web/pages/head.rs`.
+    - `AssetNames` moved from `site/model.rs` to `site/assets.rs`.
+    - The fonts test moved from `site/tests.rs` to `site/assets_tests.rs`.
+    - Ratchet entries went down: `site.rs`, `pages.rs`, `model.rs`, `site/tests.rs` and `landing.rs`.
+  - `site.json` `assets` names new icons. The built-in and neutral sites ship them, and the
+    site check refuses a non-square PNG:
+    - `app_icons`: 192 and 512 square PNGs;
+    - `maskable_icon`: full bleed;
+    - `badge`: one colour on transparent, 96.
+  - The manifest lists each PNG at the size its file measures (`Asset::png_size`, moved from
+    `discovery.rs`).
+  - `background_color` is the `--bg` token. The `tokens.json` field is gone.
+  - Both sign-in pages (hosted `sign_in::page` and the one-owner passkey page) and `/` carry
+    the manifest link, icon and `theme-color`. A new `Kind::SignIn` adds
+    `manifest-src 'self'; img-src 'self'` to their CSP; the landing CSP adds `manifest-src`.
+  - Tests:
+    - `the_app_installs_at_app_and_opens_offline` (extended);
+    - `the_sign_in_page_carries_the_manifest_a_phone_installs_from`;
+    - `the_installed_app_has_measured_png_icons_a_maskable_one_and_a_badge`;
+    - `an_app_icon_that_is_not_a_square_png_stops_the_start`;
+    - `android_browser.py` step 3: installability on `/app` and `/auth/login`, and the icons
+      decoded.
 - **Scope:** Map A1, plus the moves described above.
   - Add `icon-192.png`, `icon-512.png`, a full-bleed `icon-maskable-512.png` and a monochrome `badge-96.png`, emitted with sizes measured by `png_size` (`site/discovery.rs:294`).
   - On `/auth/login` (and the manifest also on `/`): manifest link, `theme-color` and icon, with `manifest-src 'self'` and `img-src 'self'` added to the Kind::Plain CSP for those pages.

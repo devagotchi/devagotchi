@@ -39,7 +39,7 @@ permissions:
 # If there's a prerelease-style suffix to the version, then the release(s)
 # will be marked as a prerelease.
 on:
-  pull_request:
+  # No pull_request: dist-workspace.toml pr-run-mode = "skip".
   push:
     # Every commit on main is built, attested and kept as workflow artifacts, so what
     # runs on our servers is GitHub's build of a known commit, never a hand-built copy.

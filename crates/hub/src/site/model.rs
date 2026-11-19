@@ -328,26 +328,7 @@ pub enum SignUp {
     EarlyAccess,
 }
 
-/// Which of `assets/` the pages use. Each is optional.
-#[derive(Debug, Clone, Default, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct AssetNames {
-    /// The bar's mark, drawn inline (SVG).
-    #[serde(default)]
-    pub logo: Option<String>,
-    /// The app's icon and favicon (SVG or PNG).
-    #[serde(default)]
-    pub icon: Option<String>,
-    /// The picture beside the landing page's closing call, drawn inline (SVG).
-    #[serde(default)]
-    pub mascot: Option<String>,
-    /// How it fits together, drawn inline (SVG) in the hero and How it works.
-    #[serde(default)]
-    pub diagram: Option<String>,
-    /// The picture link previews and search results show (PNG, JPEG or WebP).
-    #[serde(default)]
-    pub preview: Option<String>,
-}
+pub use super::assets::AssetNames;
 
 impl SiteFile {
     pub fn check(&self) -> Result<(), String> {

@@ -80,6 +80,55 @@ install, not a production promotion. The gap that is still open is in
   already forgotten past 4096 retirements cannot be brought back. An earlier build run on a
   journal this one opened fails each retirement once the journal holds 4096 tombstones.
 
+### The Docker line leaves a running machine (increment 209)
+
+- `machine_add`'s Docker line now brings up a machine that stays: a broker, its link to the
+  hub, and a one-shot enroll. Before, the compose file ran the Linux join script in a slim
+  Debian container, which stopped at its first check and left nothing running.
+- The link and enroll run the hub's own image, of the hub's own build (`:sha-<short>` for a
+  main build, the version for a release). The broker runs the same binary on Debian, so a
+  command has a shell. The join code is only in the enroll service's environment.
+- Running `docker compose up -d` again is harmless: `devagotchi link enroll` succeeds without
+  a code when its key is already enrolled for the same hub and machine.
+- A machine in Docker updates with its image, not by itself. `machine_update` says how
+  (change the image tag, then `docker compose up -d --build`), and the hourly update round
+  passes it by. Its link tells the hub it is a container.
+- A hub on a `dev` build has no published image, so its Docker line answers 409 and says to
+  use the Linux line. A used or unknown code answers 410, so the line stops before
+  `docker compose` runs.
+### A one-user hub shows no pages for managing other people (increment 225)
+
+- A hub set up for one person (`tenancy.mode single`, the default) no longer offers the
+  pages for organisations, members and invites. `/orgs`, every page under it, `/invite` and
+  `/assets/invite.js` now answer like a page that does not exist.
+- Hub settings (`/admin`) has no People section and no People chip there. The sign-up
+  limits it held are for strangers starting accounts, which only a hosted hub allows.
+- You (`/app/me`) has no Organisations card, and Boards no link to organisations.
+- A hosted hub (`tenancy.mode multi`) keeps all of them, as before.
+- Hub settings counts the AI clients from the list `/connect` shows, instead of a fixed
+  "17 clients".
+### Install the app on Android, from the sign-in page too (increment 246)
+
+- The app has PNG icons now: 192 and 512, a separate maskable one that Android crops to its
+  own shape, and a one-colour badge for the status bar. The manifest lists each one at the
+  size its file really is.
+- The sign-in page and the landing page carry the app's manifest. A phone that is not signed
+  in yet can install the app from the page it lands on.
+- The installed app opens on the page's own background colour (`--bg`). A site's
+  `tokens.json` no longer has `background_color`; remove it if yours sets it.
+- A site names its icons in `site.json` `assets` with `app_icons`, `maskable_icon` and
+  `badge`. A site whose icons are not square PNGs does not start, and says which file is
+  wrong.
+
+### The phone checks tell the truth, and Android gets its own suite (increment 245)
+
+- The phone app's offline check in CI waited on a cache the service worker no longer fills,
+  and passed anyway. It now reads the cache name from `/sw.js` and waits until `/app/offline`
+  is really in it.
+- `tests/android_browser.py` is new: the one-user hub on a Pixel 7. The owner claims the hub
+  with a passkey, then `/app`, `/approvals` and `/app/me` open and none scrolls sideways at
+  412 px. CI runs it. Later phone checks go there.
+
 ### read_file works again in claude.ai after an update (increment 208)
 
 - Every tool's answer schema, through a hub and through `devagotchi mcp`, now allows fields

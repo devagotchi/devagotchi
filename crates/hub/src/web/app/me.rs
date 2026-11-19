@@ -167,8 +167,9 @@ pub async fn page(
         escape(&me.name),
     );
 
+    // A one-user hub manages no other people, so it has no Organisations card (`one_user`).
     let orgs = match state.hub.boards.orgs() {
-        Some(orgs) => {
+        Some(orgs) if state.hub.config.multi_tenant() => {
             let rows: Vec<String> = match orgs.of_subject(&subject.id).await {
                 Ok(found) => found
                     .iter()
@@ -193,7 +194,7 @@ pub async fn page(
                 escape(&copy.orgs_manage),
             )
         }
-        None => String::new(),
+        _ => String::new(),
     };
 
     let key = state.hub.push.as_ref().map(|p| p.public_key.clone());

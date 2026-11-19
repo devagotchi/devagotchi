@@ -450,7 +450,7 @@ pub fn login_page(hub: &HubSignIn, return_to: &str) -> Response {
         String::new()
     };
     let password = super::sign_in::password_form(hub, return_to);
-    let mut response = scripted(
+    let mut response = pages::passkey_sign_in(
         "Sign in",
         &format!(
             "<h1>Sign in</h1>{others}{password}{email}\

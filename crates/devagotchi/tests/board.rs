@@ -184,12 +184,18 @@ fn plugin_hook(
         command.env(name, value);
     }
     let mut child = command.spawn().unwrap();
-    child
+    // A hook with nothing to do (`--if-board` and no board) exits without reading its input,
+    // so the write may find the pipe already closed: that is the hook being silent, and what
+    // it printed and how it exited are still checked by the caller.
+    match child
         .stdin
         .take()
         .unwrap()
         .write_all(&serde_json::to_vec(&body).unwrap())
-        .unwrap();
+    {
+        Err(error) if error.kind() == std::io::ErrorKind::BrokenPipe => {}
+        written => written.unwrap(),
+    }
     child.wait_with_output().unwrap()
 }
 

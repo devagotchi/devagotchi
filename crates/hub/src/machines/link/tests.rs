@@ -61,6 +61,7 @@ fn hello(
         ),
         enroll_code: code.map(str::to_string),
         build: None,
+        kind: None,
     })
 }
 
@@ -75,6 +76,7 @@ fn connect(links: &Links, device: &str) {
             calls,
             pending: Arc::default(),
             build: None,
+            container: false,
             control,
         },
     );
@@ -288,6 +290,7 @@ async fn weak_keys_are_refused_even_with_a_valid_code() {
         signature: hex::encode([0u8; 64]),
         enroll_code: Some(code),
         build: None,
+        kind: None,
     });
     assert_eq!(links.admit(frame, "n").await.unwrap_err().code, "bad_key");
     assert!(links.devices.get("gus").await.unwrap().is_none());
@@ -393,6 +396,7 @@ async fn a_full_queue_answers_busy_and_leaves_no_waiters() {
             calls,
             pending: pending.clone(),
             build: None,
+            container: false,
             control: mpsc::channel(1).0,
         },
     );
@@ -430,6 +434,7 @@ async fn an_unanswered_inspection_leaves_no_waiter_and_keeps_the_link() {
             calls,
             pending: pending.clone(),
             build: None,
+            container: false,
             control: mpsc::channel(1).0,
         },
     );
@@ -465,3 +470,6 @@ async fn an_unanswered_inspection_leaves_no_waiter_and_keeps_the_link() {
     ));
     device.await.unwrap();
 }
+
+// After the macros above, which it uses.
+mod container;

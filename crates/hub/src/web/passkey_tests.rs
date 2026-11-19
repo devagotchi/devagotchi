@@ -106,7 +106,7 @@ async fn world_configured(owner: Option<&str>, site: Option<&std::path::Path>) -
         passkeys: HubSignIn::new(config.clone(), accounts.clone()).map(Arc::new),
     };
     assert!(state.passkeys.is_some());
-    let app = router(true)
+    let app = router(true, state.hub.config.multi_tenant())
         .layer(axum::middleware::from_fn_with_state(state.clone(), bar))
         .with_state(state);
     tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });

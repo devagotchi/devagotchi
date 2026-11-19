@@ -28,12 +28,15 @@
 mod analytics_copy;
 mod assets;
 #[cfg(test)]
+mod assets_tests;
+#[cfg(test)]
 mod brand_tests;
 pub mod discovery;
 mod markdown;
 pub(crate) mod model;
 pub mod offers;
 mod plans;
+mod pwa;
 mod style;
 #[cfg(test)]
 pub(crate) mod tests;
@@ -139,6 +142,10 @@ fn builtin_files() -> Files {
     let assets = builtin_assets!(
         "logo.svg",
         "icon.svg",
+        "icon-192.png",
+        "icon-512.png",
+        "icon-maskable-512.png",
+        "badge-96.png",
         "pet.svg",
         "diagram.svg",
         "preview.png"
@@ -274,18 +281,9 @@ impl Site {
         let style = style::Style::build(&tokens, &info, &loaded)?;
         // Only what the site uses is served: a file left in assets/ (or a built-in one this
         // site does not name) stays off the web.
-        let names = &info.assets;
-        let used: Vec<&String> = [
-            &names.logo,
-            &names.icon,
-            &names.mascot,
-            &names.diagram,
-            &names.preview,
-        ]
-        .into_iter()
-        .flatten()
-        .chain(tokens.font_files.iter().map(|font| &font.file))
-        .collect();
+        let used: Vec<&String> = (info.assets.all())
+            .chain(tokens.font_files.iter().map(|font| &font.file))
+            .collect();
         loaded.retain(|name, _| used.contains(&name));
         let site = Self {
             dir,
@@ -496,7 +494,7 @@ impl Site {
                     .map_err(|why| format!("assets/{name} ({what}, drawn inline): {why}"))?;
             }
         }
-        Ok(())
+        self.check_app_icons()
     }
 
     /// The product's name, as every page and message says it.
@@ -551,54 +549,6 @@ impl Site {
     /// The colour a phone paints its bar in for the installed app.
     pub fn theme_color(&self) -> &str {
         &self.style.theme_color
-    }
-
-    /// The installed app's manifest.
-    pub fn manifest(&self) -> String {
-        // The site's icon, also as the maskable icon a phone crops to its own shape.
-        let icons: Vec<serde_json::Value> = self
-            .named(self.info.assets.icon.as_ref())
-            .map(|icon| {
-                ["any", "maskable"].map(|purpose| {
-                    serde_json::json!({
-                        "src": icon.url(),
-                        "sizes": if icon.extension() == "svg" { "any" } else { "512x512" },
-                        "type": icon.mime,
-                        "purpose": purpose,
-                    })
-                })
-            })
-            .into_iter()
-            .flatten()
-            .collect();
-        let manifest = serde_json::json!({
-            "name": self.info.product.name,
-            "short_name": self.info.product.short_name.as_deref().unwrap_or(&self.info.product.name),
-            "description": self.info.product.description,
-            "id": "/app",
-            "start_url": "/app",
-            "scope": "/",
-            "display": "standalone",
-            "orientation": "portrait",
-            "background_color": self.style.background_color,
-            "theme_color": self.style.theme_color,
-            "icons": icons,
-        });
-        serde_json::to_string_pretty(&manifest).unwrap_or_default()
-    }
-
-    /// The service worker with this site's name and icon in its notifications.
-    pub fn service_worker(&self) -> String {
-        let icon = self
-            .named(self.info.assets.icon.as_ref())
-            .map(Asset::url)
-            .unwrap_or_default();
-        include_str!("web/assets/sw.js")
-            .replace(
-                "@TITLE@",
-                &serde_json::to_string(&self.info.product.name).unwrap_or_default(),
-            )
-            .replace("@ICON@", &serde_json::to_string(&icon).unwrap_or_default())
     }
 
     /// The MCP server's name and instructions as AI clients see them.

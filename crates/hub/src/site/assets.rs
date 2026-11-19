@@ -24,6 +24,57 @@ const TYPES: [(&str, &str); 9] = [
     ("woff", "font/woff"),
 ];
 
+/// Which of `assets/` the pages use (`site.json` `assets`). Each is optional.
+#[derive(Debug, Clone, Default, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct AssetNames {
+    /// The bar's mark, drawn inline (SVG).
+    #[serde(default)]
+    pub logo: Option<String>,
+    /// The app's icon and favicon (SVG or PNG).
+    #[serde(default)]
+    pub icon: Option<String>,
+    /// The installed app's icons a phone picks from (PNG, square), at the sizes their files
+    /// measure: Android wants 192 and 512 (`site/pwa.rs`).
+    #[serde(default)]
+    pub app_icons: Vec<String>,
+    /// The installed app's icon that a phone crops to its own shape (PNG, square): colour to
+    /// every edge, the picture inside the middle 80%.
+    #[serde(default)]
+    pub maskable_icon: Option<String>,
+    /// The notification's mark in the phone's status bar (PNG, square): one colour on
+    /// transparent, since Android reads only its alpha.
+    #[serde(default)]
+    pub badge: Option<String>,
+    /// The picture beside the landing page's closing call, drawn inline (SVG).
+    #[serde(default)]
+    pub mascot: Option<String>,
+    /// How it fits together, drawn inline (SVG) in the hero and How it works.
+    #[serde(default)]
+    pub diagram: Option<String>,
+    /// The picture link previews and search results show (PNG, JPEG or WebP).
+    #[serde(default)]
+    pub preview: Option<String>,
+}
+
+impl AssetNames {
+    /// Every asset named here; only these are served.
+    pub fn all(&self) -> impl Iterator<Item = &String> {
+        [
+            &self.logo,
+            &self.icon,
+            &self.maskable_icon,
+            &self.badge,
+            &self.mascot,
+            &self.diagram,
+            &self.preview,
+        ]
+        .into_iter()
+        .flatten()
+        .chain(&self.app_icons)
+    }
+}
+
 #[derive(Clone)]
 pub struct Asset {
     pub name: String,
@@ -107,6 +158,29 @@ impl Asset {
 
     pub fn text(&self) -> String {
         String::from_utf8_lossy(&self.bytes).trim_end().to_string()
+    }
+
+    /// A PNG's width and height, from its header; `None` for anything else.
+    pub fn png_size(&self) -> Option<(u32, u32)> {
+        let bytes = &self.bytes[..];
+        if bytes.len() < 24 || &bytes[..8] != b"\x89PNG\r\n\x1a\n" || &bytes[12..16] != b"IHDR" {
+            return None;
+        }
+        let word = |at: usize| {
+            u32::from_be_bytes([bytes[at], bytes[at + 1], bytes[at + 2], bytes[at + 3]])
+        };
+        Some((word(16), word(20)))
+    }
+
+    /// A PNG that is a square of at least `least` pixels a side: its side.
+    pub fn square_png(&self, least: u32) -> Result<u32, String> {
+        match self.png_size() {
+            Some((width, height)) if width == height && width >= least => Ok(width),
+            Some((width, height)) => Err(format!(
+                "is {width}x{height}; it must be square, at least {least} pixels a side"
+            )),
+            None => Err("must be a PNG".into()),
+        }
     }
 
     /// The file is what its name says, and an SVG carries nothing that runs or fetches.

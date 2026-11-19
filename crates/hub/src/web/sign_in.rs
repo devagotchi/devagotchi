@@ -40,7 +40,7 @@ pub(super) fn fresh(hub: &HubSignIn, headers: &HeaderMap, return_to: &str) -> Op
 
 /// A page whose forms post here: the browser sends a POST's true Origin only under `same-origin`.
 fn own_page(title: &str, body: &str) -> Response {
-    let mut response = pages::html(StatusCode::OK, title, body);
+    let mut response = pages::sign_in(title, body);
     response.headers_mut().insert(
         header::REFERRER_POLICY,
         HeaderValue::from_static("same-origin"),

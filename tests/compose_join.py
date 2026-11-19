@@ -15,10 +15,17 @@ Runs against a deploy/compose stack already up from the hub image this commit bu
    installs the hub's own build, enrolls the machine and starts it.
 4. The machine is online, the AI runs a command on it with `run`, and the machine runs the
    hub's build (`/opt/devagotchi/current` -> `versions/<VERSION>`).
+5. With `--docker` (increment 209): the Docker line runs exactly as `machine_add` gave it, in
+   an empty directory. It leaves a running machine (broker, link, and an enroll that
+   exited 0); the AI runs `echo` on it; `docker compose up -d` a second time keeps it online;
+   `machine_update` on it is refused as a container's, and no update starts. The compose
+   file names the image of the hub's build, which the job tagged locally from the image
+   it just built (a pull request's image is never pushed).
 
-Needs root through passwordless sudo and systemd (a GitHub Ubuntu runner).
+Needs root through passwordless sudo and systemd (a GitHub Ubuntu runner), and Docker with
+Compose for `--docker`.
 
-    python3 tests/compose_join.py --hub http://localhost:8787 --version main-abc1234
+    python3 tests/compose_join.py --hub http://localhost:8787 --version main-abc1234 [--docker]
 """
 
 import argparse
@@ -31,6 +38,7 @@ import re
 import subprocess
 import sys
 import tarfile
+import tempfile
 import time
 import urllib.error
 import urllib.request
@@ -84,10 +92,88 @@ def names_in(name: str, data: bytes) -> set:
         return {Path(member.name).name for member in archive.getmembers() if member.isfile()}
 
 
+def image_of(version: str) -> str:
+    """The hub image of a build, as `machines/join/compose.rs` names it."""
+    if re.fullmatch(r"(main|ci)-[0-9a-f]{7}", version):
+        return f"ghcr.io/devagotchi/devagotchi:sha-{version.split('-', 1)[1]}"
+    return f"ghcr.io/devagotchi/devagotchi:{version}"
+
+
+def online(person: Person, name: str, seconds: int = 180) -> dict:
+    """`run echo` on `name` once its link has connected and its broker answers."""
+    deadline = time.monotonic() + seconds
+    while True:
+        ran = person.tool("run", {"machine": name, "command": f"echo hi-from-{name}"})
+        if not ran.get("isError") and f"hi-from-{name}" in ran["structuredContent"]["output"]:
+            return ran
+        if time.monotonic() > deadline:
+            raise AssertionError(f"{name} never ran a command: {ran}")
+        time.sleep(2)
+
+
+def docker_leg(person: Person, hub: str, version: str) -> None:
+    """5. The Docker line leaves a running machine, and a second `up -d` changes nothing."""
+    added = person.tool("machine_add", {"name": "docked"})
+    assert not added.get("isError"), added
+    machine = added["structuredContent"]
+    code = machine["code"]
+    assert machine["docker"] == (
+        f"curl -fsSL {hub}/join/{code}.compose.yml -o compose.yml && docker compose -f compose.yml up -d"
+    ), machine
+    work = Path(tempfile.mkdtemp(prefix="docked-"))
+    compose = ["docker", "compose", "-f", "compose.yml"]
+
+    def logs() -> None:
+        shown = subprocess.run(compose + ["logs", "--no-color", "--tail", "200"], cwd=work,
+                               capture_output=True, text=True)
+        print(shown.stdout[-8000:], shown.stderr[-2000:], file=sys.stderr)
+
+    try:
+        up = subprocess.run(["bash", "-c", machine["docker"]], cwd=work, stdin=subprocess.DEVNULL,
+                            capture_output=True, text=True, timeout=1200)
+        print(up.stdout[-4000:], up.stderr[-4000:], file=sys.stderr)
+        assert up.returncode == 0, up.returncode
+        text = (work / "compose.yml").read_text()
+        assert f"FROM {image_of(version)} AS hub" in text, text
+        assert text.count(code) == 1 and f'DEVAGOTCHI_ENROLL_CODE: "{code}"' in text, text
+        ok(f"the Docker line brought up {image_of(version)} with the code in its environment only")
+
+        online(person, "docked")
+        listed = person.tool("machines")["structuredContent"]["machines"]
+        assert any(m["name"] == "docked" and m["status"] == "online" for m in listed), listed
+        ok("the Docker machine is online and the AI ran a command on it")
+
+        # The same file again: enroll finds its key and exits 0; the machine stays.
+        again = subprocess.run(compose + ["up", "-d"], cwd=work, stdin=subprocess.DEVNULL,
+                               capture_output=True, text=True, timeout=600)
+        print(again.stdout[-2000:], again.stderr[-2000:], file=sys.stderr)
+        assert again.returncode == 0, again.returncode
+        enroll = subprocess.run(compose + ["ps", "-a", "--format", "json", "enroll"], cwd=work,
+                                capture_output=True, text=True, check=True).stdout
+        states = [json.loads(line) for line in enroll.splitlines() if line.strip()]
+        assert states and all(s.get("ExitCode") == 0 for s in states), states
+        online(person, "docked")
+        ok("docker compose up -d a second time: enroll exits 0 and the machine stays online")
+
+        refused = person.tool("machine_update", {"machine": "docked"})
+        assert refused.get("isError"), refused
+        assert "container:" in json.dumps(refused), refused
+        listed = person.tool("machines")["structuredContent"]["machines"]
+        docked = next(m for m in listed if m["name"] == "docked")
+        assert docked["status"] == "online" and not docked.get("update"), docked
+        ok("machine_update on the Docker machine is refused as a container's; no update started")
+    except BaseException:
+        logs()
+        raise
+    subprocess.run(compose + ["down", "-v"], cwd=work, capture_output=True, timeout=300)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--hub", required=True, help="the hub's public URL")
     parser.add_argument("--version", required=True, help="the VERSION the image carries")
+    parser.add_argument("--docker", action="store_true",
+                        help="also join a machine with the Docker line (step 5)")
     args = parser.parse_args()
     hub = args.hub.rstrip("/")
 
@@ -145,6 +231,9 @@ def main() -> int:
     listed = person.tool("machines")["structuredContent"]["machines"]
     assert any(m.get("status") == "online" for m in listed), listed
     ok(f"the machine is online, runs {args.version}, and the AI ran a command on it")
+
+    if args.docker:
+        docker_leg(person, hub, args.version)
     print("COMPOSE JOIN PASSED")
     return 0
 
