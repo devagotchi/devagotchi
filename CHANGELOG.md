@@ -96,6 +96,17 @@ install, not a production promotion. The gap that is still open is in
 - A hub on a `dev` build has no published image, so its Docker line answers 409 and says to
   use the Linux line. A used or unknown code answers 410, so the line stops before
   `docker compose` runs.
+### A one-user hub shows no pages for managing other people (increment 225)
+
+- A hub set up for one person (`tenancy.mode single`, the default) no longer offers the
+  pages for organisations, members and invites. `/orgs`, every page under it, `/invite` and
+  `/assets/invite.js` now answer like a page that does not exist.
+- Hub settings (`/admin`) has no People section and no People chip there. The sign-up
+  limits it held are for strangers starting accounts, which only a hosted hub allows.
+- You (`/app/me`) has no Organisations card, and Boards no link to organisations.
+- A hosted hub (`tenancy.mode multi`) keeps all of them, as before.
+- Hub settings counts the AI clients from the list `/connect` shows, instead of a fixed
+  "17 clients".
 
 ### read_file works again in claude.ai after an update (increment 208)
 

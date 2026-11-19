@@ -78,6 +78,7 @@ mod sign_in_cards;
 mod walkthrough_tests;
 #[cfg(test)]
 pub(crate) use operator_tests as operator_tests_support;
+mod one_user;
 mod orgs;
 mod pages;
 #[cfg(test)]

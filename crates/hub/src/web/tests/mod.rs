@@ -235,7 +235,7 @@ async fn world_with(
         passkeys: None,
     };
     let hub = state.hub.clone();
-    let app = router(true)
+    let app = router(true, state.hub.config.multi_tenant())
         .layer(axum::middleware::from_fn_with_state(state.clone(), bar))
         .merge(crate::machines::join::routes())
         .with_state(state);

@@ -30,8 +30,8 @@ use crate::{
 /// authorization server for AI clients (32b) and the browser claim of a new hub (16c):
 /// `/claim`, `/.well-known/oauth-authorization-server` and `/oauth/*`. It is false only in
 /// `auth.mode devagotchi`, whose own authorization server (`crate::oauth`) serves `/claim`
-/// and the metadata itself: axum refuses the same path twice when the router is built.
-pub fn router(hub_authorization: bool) -> Router<AppState> {
+/// and the metadata itself: axum refuses the same path twice. `multi_tenant`: `one_user`.
+pub fn router(hub_authorization: bool, multi_tenant: bool) -> Router<AppState> {
     let router = Router::new()
         .route("/", get(root))
         .route("/account", get(account))
@@ -62,7 +62,7 @@ pub fn router(hub_authorization: bool) -> Router<AppState> {
         .merge(sign_in::routes())
         // The phone control app (`app/`).
         .merge(super::app::routes())
-        .merge(super::orgs::routes())
+        .merge(super::one_user::orgs(multi_tenant))
         .route("/auth/password/set", post(set_password))
         .route("/api/v1/me", get(me))
         .route("/api/v1/machines", post(machines::add_json))

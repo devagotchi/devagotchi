@@ -325,6 +325,17 @@ Three more constraints shape the program:
 ## Phase 2: Shippin.ai sign-in and the owner's management section (one user only)
 
 ### 225: The one-user hub hides the multi-user surfaces (S)
+- **Delivered as (2026-11-18, branch `increment-225/one-user-hides-multi-user`, stacked on
+  208):** `web/one_user/mod.rs` decides whether the organisation pages are mounted;
+  `routes.rs` merges `one_user::orgs(multi_tenant)` where it merged `orgs::routes()` (net 0:
+  `router` takes `multi_tenant`, passed by `serve::app` and the two web fixtures). `/admin`
+  drops the People section and chip, You drops the Organisations card, and Boards drops its
+  organisations link too (`app/home.rs`, the same dead link). "17 clients" is
+  `devagotchi_connectors::all().len()`.
+  - Tests: `web::one_user::tests::a_one_user_hub_hides_the_multi_user_surfaces` and
+    `a_hosted_hub_keeps_the_multi_user_surfaces` (Postgres).
+  - Still open: the JSON API (`/api/v1/orgs/…`, `/api/v1/invites/accept`,
+    `tenancy/orgs/api`) is still mounted on a one-user hub; it was not in this scope.
 - **Why:** The operator ruled on 2026-11-18 that the standalone build manages no other users. Today `/invite` answers 200 on the live hub; `/admin` shows People (`hub_settings.rs:224,231,251-255`) and You shows an Organisations card (`app/me.rs:170-197`).
 - **Scope:** When `!config.multi_tenant()`:
   - drop the People section and its chip from `/admin`;
