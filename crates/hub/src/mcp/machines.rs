@@ -107,15 +107,16 @@ impl Hub {
             .await
             .map_err(Json)?;
         let (state, detail) = match asked {
-            crate::machines::link::UpdateAsked::AlreadyOn(build) => {
-                ("done".to_string(), Some(format!("already on {build}")))
-            }
+            crate::machines::link::UpdateAsked::AlreadyOn(build) => (
+                devagotchi_contracts::UPDATE_DONE.to_string(),
+                Some(format!("already on {build}")),
+            ),
             crate::machines::link::UpdateAsked::Sent => {
                 let within =
                     std::time::Duration::from_secs(input.wait_seconds.unwrap_or(50).min(300));
                 match self.links.wait_update(&device, within).await {
                     Some(update) => (update.state, update.detail),
-                    None => ("requested".to_string(), None),
+                    None => (crate::machines::update::REQUESTED.to_string(), None),
                 }
             }
         };
@@ -136,7 +137,7 @@ impl Hub {
         }
     }
 
-    /// What `machines` says about `device`'s latest update (`machine_update.rs`).
+    /// What `machines` says about `device`'s latest update (`machines/link/updates.rs`).
     pub(super) fn update_shown(&self, device: &str) -> Option<String> {
         let build = self.links.build(device);
         self.links

@@ -80,6 +80,30 @@ install, not a production promotion. The gap that is still open is in
   already forgotten past 4096 retirements cannot be brought back. An earlier build run on a
   journal this one opened fails each retirement once the journal holds 4096 tombstones.
 
+### The machine link notices a hub that went away, and has one door (B2)
+
+- **A hub that vanished is noticed in a minute.** The link Pings the hub with every
+  heartbeat and reconnects after 60 seconds without an answer. Before, a hub lost to a NAT
+  timeout or a sleeping host was noticed only when TCP gave up, while the hub already showed
+  the machine offline. Every write on either side gives up after 10 seconds. Both sides take
+  these times from `devagotchi_contracts`.
+- **One way to join:** a machine binds its key only by signing the hub's challenge with its
+  code. `POST /enroll`, which bound a key with no signature, is gone (decision D3). Nothing
+  released called it.
+- **The code stays off command lines.** The Windows installer takes it from
+  `DEVAGOTCHI_ENROLL_CODE`, as the join line already passes it; `-EnrollCode` still works
+  and warns that it is going away. The hub's "Add a machine" page shows the variable form.
+- **Where Windows installs.** The join line and the installer install under
+  `DEVAGOTCHI_ROOT` when it is set, else `%LOCALAPPDATA%\Devagotchi`. A machine already
+  installed keeps its folder and its workspace when it updates.
+- **Audit:** a link event that cannot be saved raises the operator alert from B1. Link
+  outcomes are `ok` or a code (`update_failed` for a failed update); the detail is in the
+  target column.
+- **Checks:** a golden list of every frame a released machine sends, pinned signing bytes,
+  a socket test against the real `/link` route, fake-hub tests on the link, and
+  `crates/devagotchi/tests/link_protocol.rs`, which fails on a wildcard frame arm, a shared
+  word written by hand, or a personal path in a join script or installer.
+
 ### The Desktop Commander tools follow one pattern (B1)
 
 - **Every machine tool follows the same path:** contract, broker, local tool, hub tool

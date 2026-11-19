@@ -2,28 +2,24 @@
 //! file already over it may grow. `layout/oversize.txt` lists the files that were over the
 //! cap when the rule arrived; the list only gets shorter and its numbers only get smaller.
 
+mod support;
+
 use std::{
     collections::BTreeMap,
     fs,
     path::{Path, PathBuf},
 };
 
+use support::workspace_root;
+
 /// Most lines a Rust file may hold unless `layout/oversize.txt` lists it.
 const CAP: usize = 500;
-/// Folders under the workspace root that hold the workspace's Rust.
-const ROOTS: [&str; 2] = ["crates", "apps"];
-/// Folder names never walked: build output and other people's code.
-const SKIPPED: [&str; 2] = ["target", "node_modules"];
 const HEADER: &str = "\
 # Rust files over the 500-line cap when the cap arrived (main 332bf25, 2026-11-13).
 # <lines><TAB><path>, sorted by path. A listed file may shrink, never grow; a file that is
 # not listed may not exceed the cap. Never add a line or raise a number to make the test
 # pass: see .ai/patterns/layout.md.
 ";
-
-fn workspace_root() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")
-}
 
 fn baseline_path() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/layout/oversize.txt")
@@ -38,39 +34,18 @@ fn line_count(bytes: &[u8]) -> usize {
     }
 }
 
-/// Every `.rs` file under the roots, as a `/`-separated path from the workspace root.
+/// Every `.rs` file under the roots, as a `/`-separated path from the workspace root, with
+/// its line count.
 fn rust_files(root: &Path) -> BTreeMap<String, usize> {
-    fn walk(root: &Path, dir: &Path, found: &mut BTreeMap<String, usize>) {
-        for entry in fs::read_dir(dir).unwrap_or_else(|e| panic!("{}: {e}", dir.display())) {
-            let entry = entry.unwrap();
-            let path = entry.path();
-            let name = entry.file_name().to_string_lossy().into_owned();
-            let kind = entry.file_type().unwrap();
-            if kind.is_dir() {
-                if !name.starts_with('.') && !SKIPPED.contains(&name.as_str()) {
-                    walk(root, &path, found);
-                }
-            } else if kind.is_file() && name.ends_with(".rs") {
-                let relative = path
-                    .strip_prefix(root)
-                    .unwrap()
-                    .components()
-                    .map(|part| part.as_os_str().to_string_lossy())
-                    .collect::<Vec<_>>()
-                    .join("/");
-                let bytes = fs::read(&path).unwrap_or_else(|e| panic!("{relative}: {e}"));
-                found.insert(relative, line_count(&bytes));
-            }
-        }
-    }
-    let mut found = BTreeMap::new();
-    for name in ROOTS {
-        walk(root, &root.join(name), &mut found);
-    }
-    found
+    support::rust_files(root)
+        .into_iter()
+        .map(|(relative, path)| {
+            let bytes = fs::read(&path).unwrap_or_else(|e| panic!("{relative}: {e}"));
+            (relative, line_count(&bytes))
+        })
+        .collect()
 }
 
-/// The list as `path -> lines`. A malformed, repeated or not-oversize line is an error.
 fn parse_baseline(text: &str, cap: usize) -> Result<BTreeMap<String, usize>, String> {
     let mut listed = BTreeMap::new();
     for (index, line) in text.lines().enumerate() {

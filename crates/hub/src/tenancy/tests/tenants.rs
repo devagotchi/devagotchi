@@ -494,14 +494,9 @@ async fn isolation(hub: Hosted) {
         stored.ends_with("-laptop") && stored.starts_with('t'),
         "{stored}"
     );
-    let enrolled = hub
-        .http
-        .post(format!("{}/enroll", hub.url))
-        .json(&json!({ "name": stored, "code": added["code"], "public_key": "bob-laptop-key" }))
-        .send()
+    hub.enroll(&stored, added["code"].as_str().unwrap(), "bob-laptop-key")
         .await
         .unwrap();
-    assert_eq!(enrolled.status(), 201);
     let bound = hub
         .call(&mut bob, "board_bind", json!({ "project": "secret-plans" }))
         .await;

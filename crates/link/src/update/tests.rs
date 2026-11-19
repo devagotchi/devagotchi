@@ -9,7 +9,9 @@ use std::{
     time::Duration,
 };
 
-use crate::{handoff::outcome, idle::wait_for_idle};
+use devagotchi_contracts::{UPDATE_DONE, UPDATE_FAILED};
+
+use super::{handoff::outcome, idle::wait_for_idle};
 
 #[tokio::test]
 async fn the_wait_ends_when_the_fake_broker_runs_no_jobs() {
@@ -78,12 +80,12 @@ fn a_restarted_link_reports_done_or_failed_once() {
     let pending = dir.path().join("update-pending.json");
     std::fs::write(&pending, r#"{"version":"main-bbbbbbb"}"#).unwrap();
     let done = outcome(dir.path(), "main-bbbbbbb").unwrap();
-    assert_eq!((done.state, done.detail), ("done", None));
+    assert_eq!((done.state, done.detail), (UPDATE_DONE, None));
     assert!(!pending.exists(), "the record is used once");
     assert_eq!(outcome(dir.path(), "main-bbbbbbb"), None);
     std::fs::write(&pending, r#"{"version":"main-bbbbbbb"}"#).unwrap();
     let failed = outcome(dir.path(), "main-aaaaaaa").unwrap();
-    assert_eq!(failed.state, "failed");
+    assert_eq!(failed.state, UPDATE_FAILED);
     assert!(failed.detail.unwrap().contains("main-bbbbbbb"));
 }
 
@@ -104,8 +106,8 @@ fn the_windows_updater_runs_detached_and_logs_to_a_file() {
          Write-Host \"fake installer: $Version from $ArtifactDir into $Root autostart=$Autostart\"\n",
     )
     .unwrap();
-    crate::handoff::start(&state, &dir, "ci-test").unwrap();
-    let log = crate::handoff::log_path(&state, "ci-test").unwrap();
+    super::handoff::start(&state, &dir, "ci-test").unwrap();
+    let log = super::handoff::log_path(&state, "ci-test").unwrap();
     assert_eq!(log, root.path().join("logs").join("update-ci-test.log"));
     let deadline = std::time::Instant::now() + Duration::from_secs(60);
     let mut text = String::new();
@@ -135,7 +137,7 @@ async fn a_container_refuses_every_update_and_says_so() {
     assert_eq!(docked.kind(), Some("container"));
     for force in [false, true] {
         let status = docked.request("main-def5678".into(), force).unwrap();
-        assert_eq!(status.state, "failed");
+        assert_eq!(status.state, UPDATE_FAILED);
         let detail = status.detail.unwrap();
         assert!(detail.starts_with("container:"), "{detail}");
         assert!(detail.contains("docker compose up -d --build"), "{detail}");

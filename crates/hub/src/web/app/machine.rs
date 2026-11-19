@@ -182,7 +182,10 @@ pub async fn update(
     };
     let (done, detail) = match state.hub.update_machine(&subject, asked).await {
         Ok(updated) => (updated.state, updated.detail),
-        Err(refused) => ("failed".to_string(), Some(refused.0.message)),
+        Err(refused) => (
+            devagotchi_contracts::UPDATE_FAILED.to_string(),
+            Some(refused.0.message),
+        ),
     };
     let mut to = format!("{here}?state={}", super::super::encode(&done));
     if let Some(detail) = detail {

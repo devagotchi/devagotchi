@@ -143,7 +143,7 @@ pub(crate) async fn run(
         Some(accounts) => links.gated(accounts.enroll_gate()),
         None => links,
     });
-    // Machines on another build update themselves, checked hourly (`machine_update.rs`).
+    // Machines on another build update themselves, checked hourly (`machines/link/updates.rs`).
     tokio::spawn(links.clone().auto_update_hourly());
     let workflows = accounts.clone().map(|accounts| {
         Arc::new(workflows::Workflows::new(

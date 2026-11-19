@@ -146,7 +146,7 @@ pub(crate) async fn make(
         }
     };
     let audit = Audit::new(accounts.store().clone());
-    operator_event(&audit, "account.test_accounts", &admin.id, "ok").await?;
+    operator_event(&audit, "account.test_accounts", &admin.id, "", "ok").await?;
     Ok(Made { admin, user })
 }
 

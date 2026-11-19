@@ -4,7 +4,7 @@
 //! (`handler/server/router/tool.rs`); this gives it the code every other refusal carries. An
 //! unknown or hidden tool stays a protocol error.
 use devagotchi_contracts::BridgeError;
-use rmcp::model::{CallToolResponse, CallToolResult, ContentBlock, ErrorCode};
+use rmcp::model::{CallToolResponse, CallToolResult, ErrorCode};
 
 /// How rmcp begins the message of an argument deserialization failure.
 const RMCP_ARGUMENT_FAILURE: &str = "failed to deserialize parameters:";
@@ -54,6 +54,7 @@ pub fn coded(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rmcp::model::ContentBlock;
 
     fn code(answer: &Result<CallToolResponse, rmcp::ErrorData>) -> Option<String> {
         match answer {

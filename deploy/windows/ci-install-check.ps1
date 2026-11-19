@@ -140,8 +140,14 @@ $ErrorActionPreference = 'Stop'
 if (-not $code.StartsWith('dvg-')) { throw "no enrollment code: $code" }
 
 try {
-    & "$PSScriptRoot\install-devagotchi.ps1" -BinDir (Resolve-Path 'target\debug').ProviderPath -Root $root -Workspace $ws `
-        -Autostart -Hub $hubUrl -Device ci-machine -EnrollCode $code
+    # The code goes in the environment, as the join script and the hub's page pass it.
+    $env:DEVAGOTCHI_ENROLL_CODE = $code
+    try {
+        & "$PSScriptRoot\install-devagotchi.ps1" -BinDir (Resolve-Path 'target\debug').ProviderPath -Root $root -Workspace $ws `
+            -Autostart -Hub $hubUrl -Device ci-machine
+    } finally {
+        Remove-Item Env:\DEVAGOTCHI_ENROLL_CODE -ErrorAction SilentlyContinue
+    }
     $linkRun = Get-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run' -Name 'Devagotchi Link' -ErrorAction SilentlyContinue
     if (-not $linkRun) { throw 'link autostart entry missing' }
     if ($linkRun.'Devagotchi Link' -match [regex]::Escape($code)) { throw 'the enrollment code leaked into the Run entry' }
@@ -150,8 +156,10 @@ try {
     python tests/hub_probe.py $hubUrl --token $token --broker ci-machine --git $git --cwd $ws
     if ($LASTEXITCODE -ne 0) { throw 'hub probe through the installed link failed' }
 
-    # An upgrade without the code keeps the enrollment and brings the link back.
-    & "$PSScriptRoot\install-devagotchi.ps1" -BinDir (Resolve-Path 'target\debug').ProviderPath -Root $root -Workspace $ws
+    # An upgrade without the code keeps the enrollment and brings the link back; without
+    # -Workspace it keeps the workspace its config names (the probe runs there).
+    & "$PSScriptRoot\install-devagotchi.ps1" -BinDir (Resolve-Path 'target\debug').ProviderPath -Root $root
+    if (Test-Path (Join-Path $root 'workspace')) { throw 'the upgrade made a new workspace instead of keeping its own' }
     python tests/hub_probe.py $hubUrl --token $token --broker ci-machine --git $git --cwd $ws
     if ($LASTEXITCODE -ne 0) { throw 'hub probe after reinstall failed' }
     Write-Host 'ok   reinstall kept the enrollment and the link'

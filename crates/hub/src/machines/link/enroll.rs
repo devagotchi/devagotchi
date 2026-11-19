@@ -1,7 +1,8 @@
 //! Who may join: a one-time code that is still live, the gate a hosted hub puts on enrolling, and the hello a machine opens with checked against its enrolled key or a code.
 
 use devagotchi_contracts::{
-    BridgeError, BridgeResult, LINK_PROTOCOL_VERSION, LinkFrame, link_signing_message,
+    BridgeError, BridgeResult, LINK_PROTOCOL_VERSION, LinkFrame, MACHINE_KIND_CONTAINER,
+    link_signing_message,
 };
 use ed25519_dalek::{Signature, VerifyingKey};
 
@@ -66,7 +67,7 @@ impl Links {
         else {
             return refuse("protocol_error", "expected a hello frame".into());
         };
-        let container = kind.as_deref() == Some("container");
+        let container = kind.as_deref() == Some(MACHINE_KIND_CONTAINER);
         if version != LINK_PROTOCOL_VERSION {
             return refuse(
                 "protocol_version",
@@ -115,11 +116,11 @@ impl Links {
                 "link",
                 "link.enroll",
                 &device,
-                &fingerprint(&public_key),
                 &match &bound.owner {
-                    Some(owner) => format!("ok owner={owner}"),
-                    None => "ok".into(),
+                    Some(owner) => format!("{} owner={owner}", fingerprint(&public_key)),
+                    None => fingerprint(&public_key),
                 },
+                "ok",
             )
             .await;
             self.joined(bound.owner.as_deref());

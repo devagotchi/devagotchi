@@ -4,7 +4,8 @@
   optionally register `devagotchi mcp` with Claude Desktop and Claude Code.
 
 .DESCRIPTION
-  Everything lands under -Root (default D:\localdev\devagotchi): versioned binaries, the
+  Everything lands under -Root (default $env:DEVAGOTCHI_ROOT, else
+  %LOCALAPPDATA%\Devagotchi): versioned binaries, the
   broker config, its private state directory (created by the broker itself) and its log.
   Nothing needs administrator rights. Changes outside -Root happen only with a switch:
     -Autostart              HKCU Run entries so the broker (and the link, if set up) start at logon
@@ -18,8 +19,10 @@
   -ExecPolicy account writes a new broker config whose broker runs commands as this user
   (the `run` tool and `command` lines); without it the broker runs granted executables only.
 
-  With -Hub, -Device and -EnrollCode (or the code in DEVAGOTCHI_ENROLL_CODE, as the hub's
-  join script passes it) the machine also joins a Devagotchi hub over the link:
+  With -Hub and -Device, and the one-time code in the DEVAGOTCHI_ENROLL_CODE environment
+  variable (as the hub's join script passes it), the machine also joins a Devagotchi hub over
+  the link. The code never goes on a command line, where other users of this machine could
+  list it; -EnrollCode still works but is deprecated for that reason. The link:
   `devagotchi link` enrolls this machine's own key with the one-time code (from
   `devagotchi hub enroll --device NAME` on the hub host), then holds one outbound connection
   to the hub. No port opens here. Later runs need only -Hub and -Device, or nothing: the
@@ -30,16 +33,16 @@
 .EXAMPLE
   .\install-devagotchi.ps1 -Version 0.1.0 -Autostart -RegisterClaudeDesktop
 .EXAMPLE
-  .\install-devagotchi.ps1 -BinDir D:\localdev\devagotchi-src\target\release    # from a local build
+  .\install-devagotchi.ps1 -BinDir .\target\release    # from a local build, in the checkout
 .EXAMPLE
-  .\install-devagotchi.ps1 -Version 0.1.0 -Autostart -Hub https://mcp.shippin.cloud -Device gus -EnrollCode dvg-...
+  $env:DEVAGOTCHI_ENROLL_CODE = 'dvg-...'; .\install-devagotchi.ps1 -Version 0.1.0 -Autostart -Hub https://hub.example -Device gus
 #>
 [CmdletBinding()]
 param(
     [string]$Version = '',
     [string]$ArtifactDir = '',
     [string]$BinDir = '',
-    [string]$Root = 'D:\localdev\devagotchi',
+    [string]$Root = '',
     [string]$Workspace = '',
     [string]$Repo = 'devagotchi/devagotchi',
     [string]$ClaudeDesktopConfig = (Join-Path $env:APPDATA 'Claude\claude_desktop_config.json'),
@@ -58,6 +61,14 @@ param(
 
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = 'Stop'
+if (-not $Root) {
+    # No machine- or person-specific default (.ai/patterns/link.md rule 11): the variable,
+    # else the user's local app data.
+    if ($env:DEVAGOTCHI_ROOT) { $Root = $env:DEVAGOTCHI_ROOT } else { $Root = Join-Path $env:LOCALAPPDATA 'Devagotchi' }
+}
+if ($EnrollCode) {
+    Write-Warning '-EnrollCode puts the code on a command line other users can list; set $env:DEVAGOTCHI_ENROLL_CODE instead. -EnrollCode will be removed.'
+}
 # The join script hands the code over in the environment, never on a command line.
 if (-not $EnrollCode -and $Hub -and $Device -and $env:DEVAGOTCHI_ENROLL_CODE) {
     $EnrollCode = $env:DEVAGOTCHI_ENROLL_CODE
@@ -266,9 +277,13 @@ Write-Host "    $Bin -> $dest"
 
 # ---------------------------------------------------------------- config
 Step 'Broker config (grants = the toolchains present on this machine)'
-if (-not $Workspace) {
-    if (Test-Path 'D:\localdev') { $Workspace = 'D:\localdev' } else { $Workspace = Join-Path $Root 'workspace' }
+if (-not $Workspace -and (Test-Path $Config)) {
+    # An installed machine keeps the workspace its config already names: an update passes no
+    # -Workspace, and must not move it.
+    $saved = Get-Content -Raw $Config | ConvertFrom-Json
+    if ($saved.PSObject.Properties['workspace']) { $Workspace = $saved.workspace }
 }
+if (-not $Workspace) { $Workspace = Join-Path $Root 'workspace' }
 New-Item -ItemType Directory -Force -Path $Workspace | Out-Null
 $Workspace = (Resolve-Path $Workspace).ProviderPath
 if (-not (Test-Path $Config)) {
@@ -345,7 +360,7 @@ if (Test-Path (Join-Path $LinkState 'link.json')) {
     Write-Host "    $($ready.Line.Trim()) (pid $($ready.Process.Id)); log $linkLogUsed"
     $linked = $true
 } elseif ($Hub -or $Device) {
-    throw 'this machine has not enrolled yet: pass -Hub, -Device and -EnrollCode once'
+    throw 'this machine has not enrolled yet: set $env:DEVAGOTCHI_ENROLL_CODE to the code from the hub and pass -Hub and -Device once'
 }
 
 # ---------------------------------------------------------------- autostart

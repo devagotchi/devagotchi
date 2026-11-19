@@ -27,8 +27,10 @@ impl Links {
         self.devices.held(owner).await
     }
 
-    /// Spend an account's one-time code and bind `public_key` to `name`. The code is
-    /// the secret; this is the same check the link handshake uses.
+    /// Spend an account's one-time code and bind `public_key` to `name`, for tests that need
+    /// a machine joined without its socket. A real machine binds its key only by signing the
+    /// link's challenge (`enroll.rs` `admit`, `.ai/patterns/link.md` rule 8).
+    #[cfg(test)]
     pub async fn enroll_owned(
         &self,
         name: &str,
@@ -105,8 +107,8 @@ impl Links {
                 "join",
                 "link.join_script",
                 device,
-                "",
                 way,
+                "ok",
             )
             .await;
         }
@@ -116,11 +118,14 @@ impl Links {
     /// Revoke one of `owner`'s machines; its open link closes within seconds.
     pub async fn revoke_owned(&self, owner: &str, device: &str) -> BridgeResult<(bool, usize)> {
         let result = self.devices.revoke_owned(owner, device).await;
-        let outcome = match &result {
-            Ok((revoked, cancelled)) => format!("revoked={revoked} codes_cancelled={cancelled}"),
-            Err(error) => error.code.clone(),
+        let (counts, outcome) = match &result {
+            Ok((revoked, cancelled)) => (
+                format!("revoked={revoked} codes_cancelled={cancelled}"),
+                "ok",
+            ),
+            Err(error) => (String::new(), error.code.as_str()),
         };
-        self.event(owner, "web", "link.revoke", device, "", &outcome)
+        self.event(owner, "web", "link.revoke", device, &counts, outcome)
             .await;
         result
     }

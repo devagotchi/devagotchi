@@ -21,13 +21,6 @@ pub(crate) fn first_token(line: &str) -> (&str, bool, &str) {
     (&line[..end], false, &line[end..])
 }
 
-/// True when the line runs a shell script: its first token ends in `.sh`, or is `bash`,
-/// `sh`, `bash.exe` or `sh.exe` (ASCII case-insensitive, as Windows file names are).
-pub(crate) fn runs_shell_script(line: &str) -> bool {
-    let (token, _, _) = first_token(line);
-    script_path(token) || is_bash(token)
-}
-
 fn script_path(token: &str) -> bool {
     token.len() > 3 && token[token.len() - 3..].eq_ignore_ascii_case(".sh")
 }
@@ -38,7 +31,9 @@ fn is_bash(token: &str) -> bool {
         .any(|name| token.eq_ignore_ascii_case(name))
 }
 
-/// The `-c` text for a line that runs a shell script, or `None` for any other line.
+/// The `-c` text for a line that runs a shell script, or `None` for any other line. A line
+/// runs one when its first token ends in `.sh`, or is `bash`, `sh`, `bash.exe` or `sh.exe`
+/// (ASCII case-insensitive, as Windows file names are).
 /// A line that starts with bash or sh is given as written. A line that starts with a
 /// `.sh` path runs that script with this same bash (`"$BASH" <path> <rest>`): Git Bash
 /// treats a file as executable only when it starts with `#!`, so a script without one
@@ -128,16 +123,16 @@ mod tests {
 
     #[test]
     fn a_script_is_a_sh_path_or_bash_first() {
-        assert!(runs_shell_script("./scripts/check.sh"));
-        assert!(runs_shell_script(r#""C:\x y\a.sh" --flag"#));
-        assert!(runs_shell_script("bash -c 'echo hi'"));
-        assert!(runs_shell_script("  SH.EXE -c true"));
-        assert!(runs_shell_script(r"C:\repo\BUILD.SH"));
-        assert!(!runs_shell_script("Get-ChildItem"));
-        assert!(!runs_shell_script("notes.sh.txt"));
-        assert!(!runs_shell_script("bashful"));
-        assert!(!runs_shell_script(".sh"));
-        assert!(!runs_shell_script("Write-Output a.sh"));
+        assert!(bash_line("./scripts/check.sh").is_some());
+        assert!(bash_line(r#""C:\x y\a.sh" --flag"#).is_some());
+        assert!(bash_line("bash -c 'echo hi'").is_some());
+        assert!(bash_line("  SH.EXE -c true").is_some());
+        assert!(bash_line(r"C:\repo\BUILD.SH").is_some());
+        assert!(bash_line("Get-ChildItem").is_none());
+        assert!(bash_line("notes.sh.txt").is_none());
+        assert!(bash_line("bashful").is_none());
+        assert!(bash_line(".sh").is_none());
+        assert!(bash_line("Write-Output a.sh").is_none());
     }
 
     #[test]

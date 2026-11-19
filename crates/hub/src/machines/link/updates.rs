@@ -2,7 +2,9 @@
 
 use std::{sync::Arc, time::Duration};
 
-use devagotchi_contracts::{BridgeError, BridgeResult, HubFrame};
+use devagotchi_contracts::{
+    BridgeError, BridgeResult, HubFrame, UPDATE_DONE, UPDATE_FAILED, UPDATE_STATES, update_finished,
+};
 
 use crate::machines::{now_secs, update::Update};
 
@@ -33,13 +35,13 @@ impl Links {
         via: &str,
     ) -> BridgeResult<UpdateAsked> {
         let asked = self.ask_update(device, force);
-        let (version, outcome) = match &asked {
-            Ok(UpdateAsked::Sent) => (self.offered.clone(), format!("sent force={force}")),
-            Ok(UpdateAsked::AlreadyOn(build)) => (Some(build.clone()), "already_on".into()),
-            Err(error) => (self.offered.clone(), error.code.clone()),
+        let offered = self.offered.clone().unwrap_or_default();
+        let (target, outcome) = match &asked {
+            Ok(UpdateAsked::Sent) => (format!("{offered} force={force}"), "ok"),
+            Ok(UpdateAsked::AlreadyOn(build)) => (format!("{build} already_on"), "ok"),
+            Err(error) => (offered, error.code.as_str()),
         };
-        let version = version.unwrap_or_default();
-        self.event(subject, via, "machine.update", device, &version, &outcome)
+        self.event(subject, via, "machine.update", device, &target, outcome)
             .await;
         asked
     }
@@ -109,7 +111,7 @@ impl Links {
 
     /// The link reported a step of its update.
     pub(super) async fn update_reported(&self, device: &str, state: &str, detail: Option<String>) {
-        if !devagotchi_contracts::UPDATE_STATES.contains(&state) {
+        if !UPDATE_STATES.contains(&state) {
             return;
         }
         let (target, newly_failed) = {
@@ -117,7 +119,7 @@ impl Links {
             let entry = updates
                 .entry(device.to_string())
                 .or_insert_with(|| Update::new("", now_secs()));
-            let newly_failed = state == "failed" && entry.state != "failed";
+            let newly_failed = state == UPDATE_FAILED && entry.state != UPDATE_FAILED;
             entry.state = state.to_string();
             entry.detail = detail.clone().map(|d| d.chars().take(300).collect());
             (entry.target.clone(), newly_failed)
@@ -126,10 +128,18 @@ impl Links {
         if newly_failed {
             self.push_machine(device, "update_failed").await;
         }
-        if matches!(state, "done" | "failed") {
-            let outcome = match &detail {
-                Some(detail) => format!("{state}: {detail}"),
-                None => state.to_string(),
+        if update_finished(state) {
+            // `update_failed` is the word `push_machine` already uses for the same event.
+            let outcome = if state == UPDATE_DONE {
+                "ok"
+            } else {
+                "update_failed"
+            };
+            let target = match &detail {
+                Some(detail) => {
+                    format!("{target}: {}", detail.chars().take(300).collect::<String>())
+                }
+                None => target,
             };
             let subject = format!("device:{device}");
             self.event(
@@ -138,7 +148,7 @@ impl Links {
                 "machine.update_status",
                 device,
                 &target,
-                &outcome,
+                outcome,
             )
             .await;
         }
@@ -154,7 +164,7 @@ impl Links {
                 .is_some_and(|u| u.running(now_secs()) && Some(u.target.as_str()) == build)
         };
         if done {
-            self.update_reported(device, "done", None).await;
+            self.update_reported(device, UPDATE_DONE, None).await;
         }
     }
 

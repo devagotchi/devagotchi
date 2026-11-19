@@ -209,7 +209,7 @@ share/devagotchi/fonts/
   `core` (and `ui` if chosen) next to the binary.
 - **Installers** put it inside each version's directory, beside the binary (§10), so the
   binary and its pack always switch and roll back together.
-- **Machine self-update** (`crates/link/src/update.rs`) replaces the pack with the binary.
+- **Machine self-update** (`crates/link/src/update/mod.rs`) replaces the pack with the binary.
   Every font file is listed in the release's `SHA256SUMS` and checked the same way the
   binary is.
 - **The hub's Docker image** carries the pack at `/usr/share/devagotchi/fonts`. The hub
@@ -505,7 +505,7 @@ Package names are checked against each distribution at P10g before the docs ship
 | `crates/machine-engine/src/files/pdf.rs`, `broker/files.rs`, `broker.rs` | resolve and read inputs, the gate, the child with deadline and memory cap, atomic writes, the `pdf` settings |
 | `crates/mcp/src/adapter/file_tools.rs` | both tools locally |
 | `crates/hub/src/machines/files.rs`, `mcp/`, `site/style.rs`, `site/pwa.rs`, `tests/hub_probe.py` | both tools through a hub; serving `/fonts/`; the service worker caching them |
-| `scripts/stage-fonts.sh` (new), `scripts/stage-downloads.sh`, `dist-workspace.toml`, the installers, `crates/link/src/update.rs`, `deploy/compose/Dockerfile` | the pack: source files, `woff2`, archives, installs, updates, the image |
+| `scripts/stage-fonts.sh` (new), `scripts/stage-downloads.sh`, `dist-workspace.toml`, the installers, `crates/link/src/update/mod.rs`, `deploy/compose/Dockerfile` | the pack: source files, `woff2`, archives, installs, updates, the image |
 | `deny.toml`, `LICENSE` notices | BSD-2-Clause; the font licenses |
 
 Each `.rs` file stays at 500 lines or fewer, and the layout ratchet holds.

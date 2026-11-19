@@ -4,8 +4,9 @@
 use std::{sync::Arc, time::Duration};
 
 use devagotchi_contracts::{
-    API_VERSION, BridgeError, HUB_ACCOUNT_PREFIX, HubFrame, LINK_PROTOCOL_VERSION, LinkFrame,
-    MAX_LINK_MESSAGE_BYTES, RequestBody, WireRequest, WireResponse, link_signing_message,
+    API_VERSION, BridgeError, HUB_ACCOUNT_PREFIX, HubFrame, LINK_HEARTBEAT, LINK_IDLE_TIMEOUT,
+    LINK_PROTOCOL_VERSION, LINK_SEND_TIMEOUT, LinkFrame, MAX_LINK_MESSAGE_BYTES,
+    REFUSAL_UNAVAILABLE, RequestBody, WireRequest, WireResponse, link_signing_message,
 };
 use ed25519_dalek::{Signer, SigningKey};
 use futures_util::{SinkExt, StreamExt};
@@ -22,14 +23,29 @@ use crate::{
 
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(15);
 const HANDSHAKE_TIMEOUT: Duration = Duration::from_secs(15);
-/// The hub drops a link after 60 s of silence.
-const HEARTBEAT: Duration = Duration::from_secs(20);
 /// Calls handled at once. Beyond this the link answers `link_busy` instead of queueing,
 /// so a hub cannot make this machine open unbounded broker connections.
 const MAX_IN_FLIGHT: usize = 16;
 /// Waits (requests the broker holds until something changes) have their own pool, so a
 /// caller waiting on many operations never crowds out ordinary calls.
 const MAX_WAITS: usize = 8;
+
+/// How a connection proves both ends are still there (`.ai/patterns/link.md` rule 6): a
+/// `heartbeat` frame and a WebSocket Ping every `heartbeat`; give up after `idle` with nothing
+/// from the hub (its Pong included), and after `send` on any one write.
+#[derive(Debug, Clone, Copy)]
+struct Liveness {
+    heartbeat: Duration,
+    idle: Duration,
+    send: Duration,
+}
+
+/// The link's own: the contracts' values, which the hub keeps too.
+const LIVENESS: Liveness = Liveness {
+    heartbeat: LINK_HEARTBEAT,
+    idle: LINK_IDLE_TIMEOUT,
+    send: LINK_SEND_TIMEOUT,
+};
 
 /// Why a connection ended.
 #[derive(Debug)]
@@ -62,6 +78,15 @@ fn tls() -> Result<Connector, String> {
 }
 
 pub async fn connect(config: &LinkConfig, key: &SigningKey, mode: Mode<'_>) -> Ended {
+    connect_with(config, key, mode, LIVENESS).await
+}
+
+async fn connect_with(
+    config: &LinkConfig,
+    key: &SigningKey,
+    mode: Mode<'_>,
+    liveness: Liveness,
+) -> Ended {
     let url = match endpoint(&config.hub) {
         Ok(url) => url,
         Err(error) => return Ended::Refused(error),
@@ -95,7 +120,12 @@ pub async fn connect(config: &LinkConfig, key: &SigningKey, mode: Mode<'_>) -> E
                 format!("enrolled for {} but this hub says it is {hub}", config.hub),
             ));
         }
-        Ok(_) => return Ended::Retry("hub did not open with a challenge".into()),
+        Ok(
+            HubFrame::Welcome { .. }
+            | HubFrame::Refused { .. }
+            | HubFrame::Call { .. }
+            | HubFrame::Update { .. },
+        ) => return Ended::Retry("hub did not open with a challenge".into()),
         Err(why) => return Ended::Retry(why),
     };
     let signature = key.sign(&link_signing_message(&config.hub, &config.device, &nonce));
@@ -117,13 +147,15 @@ pub async fn connect(config: &LinkConfig, key: &SigningKey, mode: Mode<'_>) -> E
             Mode::Enroll { .. } => None,
         },
     };
-    if let Err(why) = send(&mut sink, &hello).await {
+    if let Err(why) = send(&mut sink, &hello, liveness.send).await {
         return Ended::Retry(why);
     }
     match next_frame(&mut stream).await {
         Ok(HubFrame::Welcome { .. }) => {}
         Ok(HubFrame::Refused { code, message }) => return refusal(code, message),
-        Ok(_) => return Ended::Retry("hub answered the hello with an unexpected frame".into()),
+        Ok(HubFrame::Challenge { .. } | HubFrame::Call { .. } | HubFrame::Update { .. }) => {
+            return Ended::Retry("hub answered the hello with an unexpected frame".into());
+        }
         Err(why) => return Ended::Retry(why),
     }
     let (updater, state_dir) = match mode {
@@ -140,14 +172,18 @@ pub async fn connect(config: &LinkConfig, key: &SigningKey, mode: Mode<'_>) -> E
 
     // Serve: each call runs in its own task; answers funnel back through one writer.
     let (answers_tx, mut answers_rx) = mpsc::channel::<LinkFrame>(64);
-    let mut heartbeat = tokio::time::interval(HEARTBEAT);
+    let mut heartbeat = tokio::time::interval(liveness.heartbeat);
     heartbeat.tick().await;
+    // The hub sends nothing while it has nothing to ask, but answers every Ping: silence
+    // this long means it is gone (a NAT that forgot us, a sleeping host), whatever TCP says.
+    let idle = tokio::time::sleep(liveness.idle);
+    tokio::pin!(idle);
     let broker = std::path::PathBuf::from(&config.broker);
     let slots = Arc::new(tokio::sync::Semaphore::new(MAX_IN_FLIGHT));
     let waits = Arc::new(tokio::sync::Semaphore::new(MAX_WAITS));
     // How the update the previous link handed off went, then each change of one under way.
-    if let Some(status) = crate::handoff::outcome(state_dir, updater.build())
-        && let Err(why) = send(&mut sink, &status.frame()).await
+    if let Some(status) = crate::update::outcome(state_dir, updater.build())
+        && let Err(why) = send(&mut sink, &status.frame(), liveness.send).await
     {
         return Ended::Retry(why);
     }
@@ -155,55 +191,69 @@ pub async fn connect(config: &LinkConfig, key: &SigningKey, mode: Mode<'_>) -> E
     updates.mark_unchanged();
     loop {
         tokio::select! {
-            incoming = stream.next() => match incoming {
-                Some(Ok(Message::Text(text))) => match serde_json::from_str::<HubFrame>(&text) {
-                    Ok(HubFrame::Call { id, request }) => {
-                        let answers = answers_tx.clone();
-                        let held = !request.request.held_for().is_zero();
-                        let (pool, limit) = if held { (&waits, MAX_WAITS) } else { (&slots, MAX_IN_FLIGHT) };
-                        let Ok(slot) = pool.clone().try_acquire_owned() else {
-                            let busy = WireResponse::Error(BridgeError::new(
-                                "link_busy",
-                                format!("this machine is already handling {limit} {}", if held { "waits" } else { "calls" }),
-                            ));
-                            let _ = answers.try_send(LinkFrame::Result { id, response: busy });
-                            continue;
-                        };
-                        let broker = broker.clone();
-                        tokio::spawn(async move {
-                            let response = handle(&broker, request).await;
-                            let _ = answers.send(LinkFrame::Result { id, response }).await;
-                            drop(slot);
-                        });
-                    }
-                    Ok(HubFrame::Update { version, force }) => {
-                        if let Some(status) = updater.request(version, force) {
-                            let _ = answers_tx.try_send(status.frame());
+            incoming = stream.next() => {
+                if let Some(Ok(_)) = &incoming {
+                    idle.as_mut().reset(tokio::time::Instant::now() + liveness.idle);
+                }
+                match incoming {
+                    Some(Ok(Message::Text(text))) => match serde_json::from_str::<HubFrame>(&text) {
+                        Ok(HubFrame::Call { id, request }) => {
+                            let answers = answers_tx.clone();
+                            let held = !request.request.held_for().is_zero();
+                            let (pool, limit) = if held { (&waits, MAX_WAITS) } else { (&slots, MAX_IN_FLIGHT) };
+                            let Ok(slot) = pool.clone().try_acquire_owned() else {
+                                let busy = WireResponse::Error(BridgeError::new(
+                                    "link_busy",
+                                    format!("this machine is already handling {limit} {}", if held { "waits" } else { "calls" }),
+                                ));
+                                let _ = answers.try_send(LinkFrame::Result { id, response: busy });
+                                continue;
+                            };
+                            let broker = broker.clone();
+                            tokio::spawn(async move {
+                                let response = handle(&broker, request).await;
+                                let _ = answers.send(LinkFrame::Result { id, response }).await;
+                                drop(slot);
+                            });
                         }
-                    }
-                    Ok(HubFrame::Refused { code, message }) => return refusal(code, message),
-                    Ok(_) | Err(_) => return Ended::Retry("hub sent a frame this link does not understand".into()),
-                },
-                Some(Ok(Message::Ping(_) | Message::Pong(_) | Message::Frame(_))) => {}
-                Some(Ok(Message::Binary(_))) => return Ended::Retry("hub sent a binary frame".into()),
-                Some(Ok(Message::Close(_))) | None => return Ended::Retry("hub closed the link".into()),
-                Some(Err(error)) => return Ended::Retry(format!("link read: {error}")),
-            },
+                        Ok(HubFrame::Update { version, force }) => {
+                            if let Some(status) = updater.request(version, force) {
+                                let _ = answers_tx.try_send(status.frame());
+                            }
+                        }
+                        Ok(HubFrame::Refused { code, message }) => return refusal(code, message),
+                        Ok(HubFrame::Challenge { .. } | HubFrame::Welcome { .. }) | Err(_) => {
+                            return Ended::Retry("hub sent a frame this link does not understand".into());
+                        }
+                    },
+                    Some(Ok(Message::Ping(_) | Message::Pong(_) | Message::Frame(_))) => {}
+                    Some(Ok(Message::Binary(_))) => return Ended::Retry("hub sent a binary frame".into()),
+                    Some(Ok(Message::Close(_))) | None => return Ended::Retry("hub closed the link".into()),
+                    Some(Err(error)) => return Ended::Retry(format!("link read: {error}")),
+                }
+            }
+            () = &mut idle => {
+                return Ended::Retry(format!("hub silent for {}s", liveness.idle.as_secs_f32()));
+            }
             Some(answer) = answers_rx.recv() => {
-                if let Err(why) = send(&mut sink, &answer).await {
+                if let Err(why) = send(&mut sink, &answer, liveness.send).await {
                     return Ended::Retry(why);
                 }
             }
             Ok(()) = updates.changed() => {
                 let status = updates.borrow_and_update().clone();
                 if let Some(status) = status
-                    && let Err(why) = send(&mut sink, &status.frame()).await
+                    && let Err(why) = send(&mut sink, &status.frame(), liveness.send).await
                 {
                     return Ended::Retry(why);
                 }
             }
             _ = heartbeat.tick() => {
-                if let Err(why) = send(&mut sink, &LinkFrame::Heartbeat).await {
+                let alive = match send(&mut sink, &LinkFrame::Heartbeat, liveness.send).await {
+                    Ok(()) => write(&mut sink, Message::Ping(Vec::new().into()), liveness.send).await,
+                    Err(why) => Err(why),
+                };
+                if let Err(why) = alive {
                     return Ended::Retry(why);
                 }
             }
@@ -213,7 +263,7 @@ pub async fn connect(config: &LinkConfig, key: &SigningKey, mode: Mode<'_>) -> E
 
 /// A refusal from the hub: permanent unless the hub says it only could not check now.
 fn refusal(code: String, message: String) -> Ended {
-    if code == "unavailable" {
+    if code == REFUSAL_UNAVAILABLE {
         Ended::Retry(format!("hub temporarily unavailable: {message}"))
     } else {
         Ended::Refused(BridgeError::new(&code, message))
@@ -273,14 +323,27 @@ where
     }
 }
 
-async fn send<S>(sink: &mut S, frame: &LinkFrame) -> Result<(), String>
+async fn send<S>(sink: &mut S, frame: &LinkFrame, within: Duration) -> Result<(), String>
 where
     S: futures_util::Sink<Message, Error = tokio_tungstenite::tungstenite::Error> + Unpin,
 {
     let text = serde_json::to_string(frame).map_err(|e| e.to_string())?;
-    sink.send(Message::text(text))
-        .await
-        .map_err(|e| format!("link write: {e}"))
+    write(sink, Message::text(text), within).await
+}
+
+/// One write, given up after `within`: a hub that stopped reading cannot hold the link.
+async fn write<S>(sink: &mut S, message: Message, within: Duration) -> Result<(), String>
+where
+    S: futures_util::Sink<Message, Error = tokio_tungstenite::tungstenite::Error> + Unpin,
+{
+    match tokio::time::timeout(within, sink.send(message)).await {
+        Ok(Ok(())) => Ok(()),
+        Ok(Err(error)) => Err(format!("link write: {error}")),
+        Err(_) => Err(format!(
+            "link write: the hub took more than {}s",
+            within.as_secs_f32()
+        )),
+    }
 }
 
 #[cfg(test)]

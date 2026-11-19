@@ -16,7 +16,9 @@ use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
 
-use crate::update::Status;
+use devagotchi_contracts::{UPDATE_DONE, UPDATE_FAILED};
+
+use super::Status;
 
 /// What a link leaves for the one that replaces it: the version it asked for.
 const PENDING: &str = "update-pending.json";
@@ -48,7 +50,7 @@ pub fn outcome(state_dir: &Path, build: &str) -> Option<Status> {
     let pending = pending?;
     if pending.version == build {
         return Some(Status {
-            state: "done",
+            state: UPDATE_DONE,
             detail: None,
         });
     }
@@ -68,7 +70,7 @@ pub fn outcome(state_dir: &Path, build: &str) -> Option<Status> {
                 .map(|l| l.chars().take(300).collect())
         });
     Some(Status {
-        state: "failed",
+        state: UPDATE_FAILED,
         detail: Some(last.unwrap_or_else(|| format!("{} did not come up", pending.version))),
     })
 }

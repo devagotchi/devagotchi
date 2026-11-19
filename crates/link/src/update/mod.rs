@@ -10,15 +10,20 @@ use std::{
     time::Duration,
 };
 
-use devagotchi_contracts::LinkFrame;
+use devagotchi_contracts::{
+    LinkFrame, MACHINE_KIND_CONTAINER, UPDATE_DONE, UPDATE_DOWNLOADING, UPDATE_FAILED,
+    UPDATE_INSTALLING, UPDATE_WAITING, valid_build_name,
+};
 use sha2::{Digest, Sha256};
 use tokio::sync::watch;
 
-use crate::{
-    handoff,
-    idle::{busy_operations, wait_for_idle},
-    state::LinkConfig,
-};
+use crate::state::LinkConfig;
+use idle::{busy_operations, wait_for_idle};
+
+mod handoff;
+mod idle;
+
+pub(crate) use handoff::outcome;
 
 /// How often a waiting update looks at the broker's jobs again, and when it stops waiting.
 const RECHECK: Duration = Duration::from_secs(30);
@@ -76,7 +81,7 @@ impl Updater {
 
     /// What the hello says this machine is: `container`, or nothing for any other machine.
     pub fn kind(&self) -> Option<&'static str> {
-        self.container.then_some("container")
+        self.container.then_some(MACHINE_KIND_CONTAINER)
     }
 
     pub fn subscribe(&self) -> watch::Receiver<Option<Status>> {
@@ -97,7 +102,7 @@ impl Updater {
     pub fn request(self: &Arc<Self>, version: String, force: bool) -> Option<Status> {
         if self.container {
             return Some(Status {
-                state: "failed",
+                state: UPDATE_FAILED,
                 detail: Some(CONTAINER_REFUSAL.into()),
             });
         }
@@ -116,12 +121,12 @@ impl Updater {
                     tokio::time::sleep(HANDOFF_LIMIT).await;
                     let _ = handoff::pending(&this.state_dir, None);
                     this.set(
-                        "failed",
+                        UPDATE_FAILED,
                         Some("the updater did not restart this link".into()),
                     );
                 }
                 Ok(false) => {}
-                Err(detail) => this.set("failed", Some(detail)),
+                Err(detail) => this.set(UPDATE_FAILED, Some(detail)),
             }
             *this.running.lock().expect("updater") = false;
         });
@@ -130,11 +135,11 @@ impl Updater {
 
     /// Ok(true) once handed off, Ok(false) when there was nothing to do.
     async fn run(&self, version: &str, force: bool) -> Result<bool, String> {
-        if !valid_version(version) {
+        if !valid_build_name(version) {
             return Err(format!("{version:?} is not a plain version"));
         }
         if version == self.build {
-            self.set("done", None);
+            self.set(UPDATE_DONE, None);
             return Ok(false);
         }
         if !force {
@@ -143,13 +148,13 @@ impl Updater {
                 || busy_operations(broker.clone()),
                 RECHECK,
                 GIVE_UP,
-                || self.set("waiting_for_jobs", None),
+                || self.set(UPDATE_WAITING, None),
             )
             .await?;
         }
-        self.set("downloading", None);
+        self.set(UPDATE_DOWNLOADING, None);
         let dir = self.download(version).await?;
-        self.set("installing", None);
+        self.set(UPDATE_INSTALLING, None);
         handoff::pending(&self.state_dir, Some(version))?;
         if let Err(why) = handoff::start(&self.state_dir, &dir, version) {
             let _ = handoff::pending(&self.state_dir, None);
@@ -237,15 +242,5 @@ fn listed_sum(sums: &str, name: &str) -> Option<String> {
     })
 }
 
-/// The hub's own rule for a version it hands out (`downloads.rs`): it names directories
-/// and goes on an installer's command line.
-fn valid_version(version: &str) -> bool {
-    version.len() <= 64
-        && version
-            .bytes()
-            .next()
-            .is_some_and(|b| b.is_ascii_alphanumeric())
-        && version
-            .bytes()
-            .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'.' | b'-' | b'_'))
-}
+#[cfg(test)]
+mod tests;

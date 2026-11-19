@@ -129,7 +129,7 @@ this page is the only place it is shown.</p><pre class=\"what\">{code}</pre>\
 <h2>Linux</h2><p class=\"meta\">With the {product} installer on that machine:</p>\
 <pre class=\"what\">echo {code} | sudo ./install-devagotchi.sh --hub {hub} --device {stored} --enroll --exec-policy account</pre>\
 <h2>Windows</h2><p class=\"meta\">In PowerShell, next to the installer:</p>\
-<pre class=\"what\">.\\install-devagotchi.ps1 -Autostart -ExecPolicy account -Hub {hub} -Device {stored} -EnrollCode {code}</pre>"
+<pre class=\"what\">$env:DEVAGOTCHI_ENROLL_CODE = '{code}'; .\\install-devagotchi.ps1 -Autostart -ExecPolicy account -Hub {hub} -Device {stored}; Remove-Item Env:\\DEVAGOTCHI_ENROLL_CODE</pre>"
         )
     };
     pages::html(

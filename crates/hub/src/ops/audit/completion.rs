@@ -31,6 +31,17 @@ impl WriteFailures {
     }
 }
 
+impl Audit {
+    /// One append for something already done that no MCP call made (a machine's link
+    /// connecting, dropping, enrolling, updating): a failure raises the operator alert, and
+    /// what happened stands.
+    pub(crate) async fn record_after(&self, entry: &AuditEntry<'_>) {
+        if self.record(entry).await.is_err() {
+            self.write_failures.raise(entry.tool, entry.outcome);
+        }
+    }
+}
+
 impl crate::mcp::Hub {
     /// Attempt exactly one audit append after work. Preserve its actual result even when
     /// the audit store fails: retrying the effect could duplicate it.

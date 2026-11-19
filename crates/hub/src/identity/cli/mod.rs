@@ -179,7 +179,7 @@ fn set_password_from(
             .reset_password_for_email(&options.account, &options.email, &password)
             .await?;
         let audit = Audit::new(accounts.store().clone());
-        operator_event(&audit, "account.password_reset", &options.account, "ok").await
+        operator_event(&audit, "account.password_reset", &options.account, "", "ok").await
     })?;
     println!(
         "Password set for {}; its browser sessions ended.",

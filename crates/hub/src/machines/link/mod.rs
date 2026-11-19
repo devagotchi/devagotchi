@@ -49,8 +49,32 @@ struct Session {
     build: Option<String>,
     /// Its hello said it runs in a container: it updates with its image, never on request.
     container: bool,
-    /// Frames the hub sends on its own: `update` (`machine_update.rs`).
+    /// Frames the hub sends on its own: `update` (`updates.rs`).
     control: mpsc::Sender<HubFrame>,
+}
+
+/// Calls routed to a session, and the frames the hub sends it on its own, as a test reads them.
+#[cfg(test)]
+type FakeReceivers = (mpsc::Receiver<(u64, WireRequest)>, mpsc::Receiver<HubFrame>);
+
+#[cfg(test)]
+impl Session {
+    /// A session as `serve` leaves one for a link whose hello said `build` and, with
+    /// `container`, `kind: container`; every test builds its sessions here, so a new gate
+    /// field is one edit. The receivers get what the hub sends it.
+    fn fake(id: u64, build: Option<&str>, container: bool) -> (Self, FakeReceivers) {
+        let (calls, routed) = mpsc::channel(CALL_QUEUE);
+        let (control, frames) = mpsc::channel(4);
+        let session = Self {
+            id,
+            calls,
+            pending: Pending::default(),
+            build: build.map(str::to_string),
+            container,
+            control,
+        };
+        (session, (routed, frames))
+    }
 }
 
 /// Removes a call's waiter if the caller stops waiting for any reason (cancelled, timed

@@ -313,14 +313,9 @@ async fn milestones_once(hub: Hosted) {
             .issue_owned_code(&subject, &stored, [n as u8 + 1; 16], 16)
             .await
             .unwrap();
-        let enrolled = hub
-            .http
-            .post(format!("{}/enroll", hub.url))
-            .json(&json!({ "name": stored, "code": code, "public_key": format!("{name}-key") }))
-            .send()
+        hub.enroll(&stored, &code, &format!("{name}-key"))
             .await
             .unwrap();
-        assert_eq!(enrolled.status(), 201);
     }
 
     // Its first board; binding it again adds nothing.

@@ -15,7 +15,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use devagotchi_contracts::{BridgeError, BridgeResult};
+use devagotchi_contracts::{BridgeError, BridgeResult, valid_build_name};
 use sha2::{Digest, Sha256};
 
 /// Where the hub image keeps the builds of its own commit (`deploy/compose/Dockerfile`).
@@ -69,18 +69,6 @@ pub fn servable(name: &str) -> bool {
             .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'.' | b'-' | b'_'))
 }
 
-/// A version the join script may pass to the installers as is (their own rule).
-fn valid_version(version: &str) -> bool {
-    version.len() <= 64
-        && version
-            .bytes()
-            .next()
-            .is_some_and(|b| b.is_ascii_alphanumeric())
-        && version
-            .bytes()
-            .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'.' | b'-' | b'_'))
-}
-
 fn file_sha256(path: &Path) -> std::io::Result<String> {
     let mut file = std::fs::File::open(path)?;
     let mut hasher = Sha256::new();
@@ -102,7 +90,7 @@ impl Downloads {
                 .map_err(|error| invalid(dir, format!("{name}: {error}")))
         };
         let version = read("VERSION")?.trim().to_string();
-        if !valid_version(&version) {
+        if !valid_build_name(&version) {
             return Err(invalid(
                 dir,
                 format!("VERSION {version:?} is not a plain version"),

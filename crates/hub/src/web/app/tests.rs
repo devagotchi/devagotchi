@@ -87,14 +87,9 @@ pub(super) async fn things_of(hub: &Hosted, person: &mut Person) -> String {
         .nth(1)
         .unwrap();
     let stored = stored.split(' ').next().unwrap().to_string();
-    let enrolled = hub
-        .http
-        .post(format!("{}/enroll", hub.url))
-        .json(&json!({ "name": stored, "code": added["code"], "public_key": "desk-key" }))
-        .send()
+    hub.enroll(&stored, added["code"].as_str().unwrap(), "desk-key")
         .await
         .unwrap();
-    assert_eq!(enrolled.status(), 201);
     let bound = hub
         .call(person, "board_bind", json!({ "project": "alpha" }))
         .await;

@@ -1,10 +1,17 @@
 //! Machines update themselves to the build this hub hands out, and on request
 //! (docs/spec-machine-update.md, U4). The hub only asks: a device whose hello said its
-//! `build` gets `HubFrame::Update`, and its link does the rest (`crates/link/src/update.rs`),
+//! `build` gets `HubFrame::Update`, and its link does the rest (`crates/link/src/update/`),
 //! reporting each step back. This file holds what the hub remembers about each update and
-//! which machines get one now; `link.rs` sends and receives the frames.
+//! which machines get one now; `machines/link/updates.rs` sends the request and takes the
+//! reports `machines/link/serve.rs` reads.
 
 use std::{collections::HashMap, time::Duration};
+
+use devagotchi_contracts::{UPDATE_FAILED, update_finished};
+
+/// An update the hub asked for that its machine has not reported on yet. Only the hub says
+/// it; the link's states are the contracts' `UPDATE_*`.
+pub const REQUESTED: &str = "requested";
 
 /// How often the hub looks for machines on another build.
 pub const EVERY: Duration = Duration::from_secs(60 * 60);
@@ -19,8 +26,7 @@ pub const RECENT_SECS: u64 = 60 * 60;
 pub struct Update {
     /// The build it was asked to go to.
     pub target: String,
-    /// `requested`, then what the link reports: `waiting_for_jobs`, `downloading`,
-    /// `installing`, `done` or `failed`.
+    /// [`REQUESTED`], then what the link reports (`devagotchi_contracts::UPDATE_STATES`).
     pub state: String,
     pub detail: Option<String>,
     /// When it was asked, in seconds since the Unix epoch.
@@ -31,7 +37,7 @@ impl Update {
     pub fn new(target: &str, now: u64) -> Self {
         Self {
             target: target.to_string(),
-            state: "requested".into(),
+            state: REQUESTED.into(),
             detail: None,
             requested_at: now,
         }
@@ -39,8 +45,7 @@ impl Update {
 
     /// Still under way: not finished, and not silent for longer than [`RECENT_SECS`].
     pub fn running(&self, now: u64) -> bool {
-        !matches!(self.state.as_str(), "done" | "failed")
-            && now.saturating_sub(self.requested_at) < RECENT_SECS
+        !update_finished(&self.state) && now.saturating_sub(self.requested_at) < RECENT_SECS
     }
 
     /// What `machines` shows for it: `updating` while it runs, `failed: <reason>, back on
@@ -49,7 +54,7 @@ impl Update {
         if self.running(now) {
             return Some("updating".into());
         }
-        (self.state == "failed").then(|| {
+        (self.state == UPDATE_FAILED).then(|| {
             let reason = self
                 .detail
                 .as_deref()

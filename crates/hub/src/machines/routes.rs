@@ -1,5 +1,6 @@
-//! The hub's two doors for machines: `/link`, where each machine's `devagotchi link` holds its
-//! WebSocket, and `/enroll`, where a machine binds its key with a one-time code.
+//! The hub's one door for machines: `/link`, where each machine's `devagotchi link` holds its
+//! WebSocket. A machine binds its key there too, by signing the hub's challenge with its
+//! one-time code in the hello (`machines/link/enroll.rs` `admit`); there is no other way in.
 
 use std::net::SocketAddr;
 
@@ -8,16 +9,14 @@ use axum::{
     extract::{ConnectInfo, State, ws::WebSocketUpgrade},
     http::StatusCode,
     response::{IntoResponse, Response},
-    routing::{get, post},
+    routing::get,
 };
 
 use crate::AppState;
 
-/// `/link` and `/enroll`, for the hub's router.
+/// `/link`, for the hub's router.
 pub(crate) fn routes() -> Router<AppState> {
-    Router::new()
-        .route("/enroll", post(enroll_with_code))
-        .route("/link", get(link_upgrade))
+    Router::new().route("/link", get(link_upgrade))
 }
 
 /// Machines dial in here; the device proves its key inside the socket, not with a bearer.
@@ -35,46 +34,4 @@ async fn link_upgrade(
         .max_message_size(devagotchi_contracts::MAX_LINK_MESSAGE_BYTES)
         .max_frame_size(devagotchi_contracts::MAX_LINK_MESSAGE_BYTES)
         .on_upgrade(move |socket| links.serve(socket, peer, permit))
-}
-
-#[derive(serde::Deserialize)]
-struct EnrollBody {
-    name: String,
-    code: String,
-    public_key: String,
-}
-
-/// Bind a machine key to a one-time code from `machine_add`. The code is the secret.
-async fn enroll_with_code(
-    State(state): State<AppState>,
-    axum::Json(body): axum::Json<EnrollBody>,
-) -> Response {
-    // An account waiting to be let in enrolls nothing (`tenancy/gate.rs`).
-    if let Err(error) = state.hub.links.may_enroll(&body.code).await {
-        return (
-            StatusCode::FORBIDDEN,
-            axum::Json(serde_json::json!({ "error": error.code, "message": error.message })),
-        )
-            .into_response();
-    }
-    match state
-        .hub
-        .links
-        .enroll_owned(&body.name, &body.code, &body.public_key)
-        .await
-    {
-        Ok(device) => (
-            StatusCode::CREATED,
-            axum::Json(serde_json::json!({
-                "name": device.name,
-                "owner": device.owner,
-            })),
-        )
-            .into_response(),
-        Err(error) => (
-            StatusCode::BAD_REQUEST,
-            axum::Json(serde_json::json!({ "error": error.code, "message": error.message })),
-        )
-            .into_response(),
-    }
 }

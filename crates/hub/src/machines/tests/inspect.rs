@@ -75,14 +75,9 @@ async fn inspection_asks_the_broker_and_says_why_not_without_guessing() {
     let stored = added["manual"].as_str().unwrap();
     let stored = stored.split("--device ").nth(1).unwrap();
     let stored = stored.split(' ').next().unwrap().to_string();
-    let enrolled = hub
-        .http
-        .post(format!("{}/enroll", hub.url))
-        .json(&json!({ "name": stored, "code": added["code"], "public_key": "desk-key" }))
-        .send()
+    hub.enroll(&stored, added["code"].as_str().unwrap(), "desk-key")
         .await
         .unwrap();
-    assert_eq!(enrolled.status(), 201);
     let answer = inspect(&hub, &mut person, "desk").await;
     assert_eq!(code(&answer), "broker_offline");
 

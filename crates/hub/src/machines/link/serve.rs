@@ -7,7 +7,10 @@ use std::{
 };
 
 use axum::extract::ws::{Message, Utf8Bytes, WebSocket};
-use devagotchi_contracts::{BridgeError, HubFrame, LinkFrame, WireRequest, WireResponse};
+use devagotchi_contracts::{
+    BridgeError, HubFrame, LINK_IDLE_TIMEOUT, LINK_SEND_TIMEOUT, LinkFrame, REFUSAL_UNAVAILABLE,
+    WireRequest, WireResponse,
+};
 use futures_util::{SinkExt, StreamExt};
 use tokio::sync::{OwnedSemaphorePermit, mpsc};
 
@@ -20,11 +23,12 @@ pub(super) const HELLO_TIMEOUT: Duration = Duration::from_secs(10);
 /// A hello is a few hundred bytes; anything larger is refused before parsing.
 pub(super) const MAX_HELLO_BYTES: usize = 4096;
 
-/// A link that sends nothing for this long is considered gone; devices beat every 20 s.
-pub(super) const IDLE_TIMEOUT: Duration = Duration::from_secs(60);
+/// A link that sends nothing for this long (no frame, Ping or Pong) is considered gone; the
+/// link beats every `LINK_HEARTBEAT`, and gives up a silent hub after the same window.
+pub(super) const IDLE_TIMEOUT: Duration = LINK_IDLE_TIMEOUT;
 
 /// No single write to a device may hold the session loop longer than this.
-pub(super) const SEND_TIMEOUT: Duration = Duration::from_secs(10);
+pub(super) const SEND_TIMEOUT: Duration = LINK_SEND_TIMEOUT;
 
 pub(super) const REVOCATION_CHECK: Duration = Duration::from_secs(2);
 
@@ -34,7 +38,7 @@ pub(super) fn wire_refusal(error: &BridgeError) -> HubFrame {
     let (code, message) = match error.code.as_str() {
         "protocol_version" => ("protocol_version", error.message.as_str()),
         "device_store" | "audit_write" => (
-            "unavailable",
+            REFUSAL_UNAVAILABLE,
             "the hub could not check this device right now; retry",
         ),
         _ => (
@@ -302,9 +306,8 @@ impl Links {
         key: &str,
         outcome: &str,
     ) {
-        if let Err(error) = self
-            .audit
-            .record(&AuditEntry {
+        self.audit
+            .record_after(&AuditEntry {
                 subject,
                 via,
                 tool,
@@ -312,10 +315,7 @@ impl Links {
                 operation_id: key,
                 outcome,
             })
-            .await
-        {
-            eprintln!("devagotchi hub: link audit failed: {error}");
-        }
+            .await;
     }
 
     /// Audit a refused handshake, at most once a second. The claimed name is recorded as
@@ -344,12 +344,22 @@ impl Links {
             .collect();
         let subject = format!("unverified:{claimed}");
         let via = format!("link {peer}");
-        let outcome = format!("{} ({} more refusals not itemized)", error.code, suppressed);
+        let unitemized = match suppressed {
+            0 => String::new(),
+            n => format!("{n} more refusals not itemized"),
+        };
         eprintln!(
             "devagotchi hub: link refused from {peer} claiming {claimed:?}: {}",
             error
         );
-        self.event(&subject, &via, "link.refused", &claimed, "", &outcome)
-            .await;
+        self.event(
+            &subject,
+            &via,
+            "link.refused",
+            &claimed,
+            &unitemized,
+            &error.code,
+        )
+        .await;
     }
 }

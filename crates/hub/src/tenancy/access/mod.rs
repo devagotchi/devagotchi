@@ -323,7 +323,7 @@ impl Accounts {
         }))
     }
 
-    /// What `/enroll` and the link ask before a machine joins with an account's code: no
+    /// What the link's enroll hello asks before a machine joins with an account's code: no
     /// while its tenant waits to be let in, or when the store cannot say.
     pub fn enroll_gate(self: &Arc<Self>) -> crate::machines::link::EnrollGate {
         let accounts = self.clone();
