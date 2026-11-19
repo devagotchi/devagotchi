@@ -6,6 +6,7 @@ pub mod capabilities;
 pub mod connect;
 pub mod files;
 pub mod image;
+pub mod outputs;
 pub mod run;
 
 use std::{ffi::OsString, path::PathBuf, process::ExitCode};

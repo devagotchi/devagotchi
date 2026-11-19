@@ -80,6 +80,15 @@ install, not a production promotion. The gap that is still open is in
   already forgotten past 4096 retirements cannot be brought back. An earlier build run on a
   journal this one opened fails each retirement once the journal holds 4096 tombstones.
 
+### read_file works again in claude.ai after an update (increment 208)
+
+- Every tool's answer schema, through a hub and through `devagotchi mcp`, now allows fields
+  added later. Before, answers were advertised as closed. When `FileContent` gained
+  `identity`, claude.ai, which still held the older tool list, refused every `read_file` and
+  `read_multiple_files` ("must NOT have additional properties").
+- Arguments stay closed, so a misspelt argument is still refused.
+- A client that cached the closed schemas needs one reconnect to pick up the open ones.
+
 ### A command on Windows starts without walking every thread on the machine (increment 201)
 - The broker still creates each root suspended, puts it in its Job Object, and only then
   resumes it. It now finds the root's threads from a snapshot of the root alone

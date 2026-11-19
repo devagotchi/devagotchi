@@ -17,3 +17,28 @@ fn the_adapter_names_no_other_product() {
         }
     }
 }
+
+/// An answer may grow (`crate::outputs`): no output schema the adapter advertises refuses a
+/// field added later, and its arguments stay closed.
+#[test]
+fn every_output_schema_is_open_and_every_input_closed() {
+    let tools = BridgeAdapter::router().list_all();
+    assert!(tools.iter().any(|tool| tool.output_schema.is_some()));
+    for tool in tools {
+        if let Some(schema) = &tool.output_schema {
+            let text = serde_json::to_string(schema.as_ref()).unwrap();
+            assert!(
+                !text.contains("\"additionalProperties\":false"),
+                "{}: {text}",
+                tool.name
+            );
+        }
+        if tool.input_schema.get("properties").is_some() {
+            assert_eq!(
+                tool.input_schema["additionalProperties"], false,
+                "{}: arguments stay closed",
+                tool.name
+            );
+        }
+    }
+}
