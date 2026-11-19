@@ -21,13 +21,15 @@ const COMMAND_CHARS: usize = 400;
 const PROCESSES: &str = "so it does not reach the machine's other processes; its own jobs are in operation_list and stop with operation_cancel";
 /// How long `kill_process` watches for the process to go.
 const EXIT_WATCH: Duration = Duration::from_secs(3);
+const _: () = assert!(EXIT_WATCH.as_millis() + 1000 < devagotchi_ipc::IO_TIMEOUT.as_millis());
 
 impl Broker {
     pub(super) async fn on_system(&self, request: RequestBody) -> BridgeResult<ResponseBody> {
         let (what, done) = match request {
             RequestBody::ConfigGet(_) => (
                 "get_config",
-                self.config_view(None).map(ResponseBody::Config),
+                { let broker = Broker { shared: self.shared.clone() };
+                    blocking(move || broker.config_view(None)).await.map(ResponseBody::Config) },
             ),
             RequestBody::BrokerCapabilities(_) => (
                 "broker_capabilities",
@@ -35,7 +37,8 @@ impl Broker {
             ),
             RequestBody::ConfigSet(input) => (
                 "set_config_value",
-                self.set_config(input).map(ResponseBody::Config),
+                { let broker = Broker { shared: self.shared.clone() };
+                    blocking(move || broker.set_config(input)).await.map(ResponseBody::Config) },
             ),
             RequestBody::ProcessList(input) => (
                 "list_processes",
@@ -52,7 +55,23 @@ impl Broker {
                     Err(error) => Err(error),
                 },
             ),
-            _ => (
+            RequestBody::OperationStart(_)
+        | RequestBody::OperationGet(_)
+        | RequestBody::OperationRead(_)
+        | RequestBody::OperationCancel(_)
+        | RequestBody::OperationList(_)
+        | RequestBody::OperationWait(_)
+        | RequestBody::OperationsChanged(_)
+        | RequestBody::FileRead(_)
+        | RequestBody::FileList(_)
+        | RequestBody::FileWrite(_)
+        | RequestBody::FileEdit(_)
+        | RequestBody::FileInfo(_)
+        | RequestBody::FileMkdir(_)
+        | RequestBody::FileMove(_)
+        | RequestBody::FileSearch(_)
+        | RequestBody::OperationInput(_)
+        | RequestBody::OperationResize(_) => (
                 "system request",
                 Err(BridgeError::new("internal_error", "not a system request")),
             ),

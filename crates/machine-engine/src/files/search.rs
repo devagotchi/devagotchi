@@ -16,7 +16,8 @@ use regex::{Regex, RegexBuilder};
 use super::{Scope, display, invalid};
 
 /// How long one page searches before it answers with what it has and a cursor.
-const PAGE_TIME: Duration = Duration::from_secs(5);
+const PAGE_TIME: Duration = devagotchi_ipc::IO_TIMEOUT.saturating_sub(Duration::from_secs(2));
+const _: () = assert!(PAGE_TIME.as_millis() < devagotchi_ipc::IO_TIMEOUT.as_millis());
 /// Larger files are skipped (and counted) by a contents search.
 const MAX_SEARCHED_FILE: u64 = 8 * 1024 * 1024;
 /// A file whose first bytes hold a NUL is binary, as git and ripgrep judge it.

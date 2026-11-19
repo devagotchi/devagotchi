@@ -9,7 +9,8 @@ use reqwest::header::{CONTENT_RANGE, CONTENT_TYPE, RANGE};
 use std::sync::OnceLock;
 
 /// How long one fetch may take, connecting through the last byte.
-const FETCH_TIME: Duration = Duration::from_secs(20);
+const FETCH_TIME: Duration = devagotchi_ipc::IO_TIMEOUT.saturating_sub(Duration::from_secs(1));
+const _: () = assert!(FETCH_TIME.as_millis() < devagotchi_ipc::IO_TIMEOUT.as_millis());
 const REDIRECTS: usize = 5;
 
 fn client() -> BridgeResult<&'static reqwest::Client> {
@@ -168,3 +169,6 @@ fn failed(error: reqwest::Error) -> BridgeError {
     }
     BridgeError::new(code, message)
 }
+
+#[cfg(test)]
+mod tests;

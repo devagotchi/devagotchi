@@ -13,6 +13,9 @@ fn a_caller_in_a_tool_call_is_not_offered_and_a_transport_replaces_it() {
         schemars::schema_for!(ListInput),
         schemars::schema_for!(SendInput),
         schemars::schema_for!(ResizeInput),
+        schemars::schema_for!(GetInput),
+        schemars::schema_for!(ReadInput),
+        schemars::schema_for!(WaitInput),
     ] {
         let properties = &schema.as_value()["properties"];
         assert!(properties.get("caller").is_none(), "{properties}");

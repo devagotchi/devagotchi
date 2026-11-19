@@ -31,13 +31,15 @@ pub(crate) async fn healthz(State(state): State<AppState>) -> Response {
         }
     }
     let audit = state.hub.audit.verify().await;
-    let chain_ok = audit.as_ref().map(|status| status.ok).unwrap_or(false);
+    let alert = state.hub.audit.write_failure_alert();
+    let chain_ok = audit.as_ref().map(|status| status.ok).unwrap_or(false) && alert.is_none();
     // The identity provider is reported, not counted: an outage there leaves the hub, its
     // links and confirmed sign-ins working (see identity/nomen/).
     let mut body = serde_json::json!({
         "ok": all_up && chain_ok,
         "brokers": brokers,
         "audit": audit.ok(),
+        "operator_alerts": alert.into_iter().collect::<Vec<_>>(),
         "issuer": state.verifier.issuer_health(),
         "downloads": match (&state.hub.downloads, &state.hub.config.downloads) {
             (Some(downloads), _) => serde_json::json!({ "version": downloads.version, "files": downloads.files().count() }),

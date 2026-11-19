@@ -6,7 +6,7 @@ use rmcp::handler::server::router::tool::ToolRouter;
 use super::Hub;
 
 mod machines;
-mod operations;
+
 
 impl Hub {
     /// Every tool this hub serves: its own, and each domain's router added to them. Their
@@ -14,9 +14,7 @@ impl Hub {
     pub(crate) fn router() -> ToolRouter<Self> {
         devagotchi_mcp::outputs::open_outputs(
             Self::machines_router()
-                + Self::operation_router()
                 + Self::machine_router()
-                + Self::callers_router()
                 + Self::board_router()
                 + Self::workflow_router()
                 + Self::offers_router()

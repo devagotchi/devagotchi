@@ -3,3 +3,7 @@
 
 mod plugins;
 mod schema;
+
+mod tools;
+
+mod scan;

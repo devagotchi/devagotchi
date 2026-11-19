@@ -90,3 +90,6 @@ pub async fn serve_with(
 ) -> BridgeResult<()> {
     serve::run(state_dir, config_path, extensions).await
 }
+
+#[cfg(test)]
+mod source_tests;

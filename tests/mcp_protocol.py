@@ -31,7 +31,7 @@ TOOL_SCHEMAS = {
     "broker_capabilities": (set(), {"api_version", "version", "os", "arch", "exec_policy", "shell_commands",
                                     "workspace_scope", "supported_requests"}),
     "operation_start": (
-        {"idempotency_key", "executable", "args", "command", "cwd", "deadline_ms", "interactive"},
+        {"idempotency_key", "executable", "args", "command", "cwd", "deadline_ms", "interactive", "combined_output"},
         {"operation", "replayed"},
     ),
     "operation_get": ({"operation_id"}, {"operation_id", "state", "detail"}),
@@ -49,7 +49,7 @@ TOOL_SCHEMAS = {
         {"operation_id", "state", "exit_code", "output", "truncated"},
     ),
     "read_file": ({"path", "offset", "max_bytes", "start_line", "line_count"}, {"path", "size", "offset", "next_offset", "eof"}),
-    "list_directory": ({"path", "depth", "max_entries"}, {"path", "entries", "truncated"}),
+    "list_directory": ({"path", "depth", "max_entries", "cursor"}, {"path", "entries", "truncated"}),
     "write_file": (
         {"path", "text", "bytes_base64", "mode", "expected_sha256", "create_dirs"},
         {"path", "size", "sha256", "created"},
@@ -59,6 +59,14 @@ TOOL_SCHEMAS = {
     "get_file_info": ({"path"}, {"path", "kind", "size", "readonly"}),
     "create_directory": ({"path"}, {"path", "kind", "size", "readonly"}),
     "move_file": ({"source", "destination", "overwrite"}, {"path", "kind", "size", "readonly"}),
+    "search_files": ({"path", "pattern", "target", "regex", "case_sensitive", "glob", "include_ignored", "context_lines", "max_results", "cursor"}, {"path", "matches", "complete"}),
+    "get_config": (set(), {"workspace", "exec_policy", "changeable"}),
+    "set_config_value": ({"key", "value"}, {"workspace", "exec_policy", "changeable"}),
+    "list_processes": ({"filter", "max_results"}, {"processes", "matched", "total"}),
+    "kill_process": ({"pid", "force"}, {"pid", "name", "signal", "exited"}),
+    "read_url": ({"url", "offset", "max_bytes"}, {"url", "status", "next_offset", "eof"}),
+    "get_recent_tool_calls": ({"tool", "max_results"}, {"calls", "matched"}),
+    "get_usage_stats": (set(), {"calls", "failed", "scope"}),
     # An image answers with an image block, so it declares no structured output.
     "read_image": ({"path"}, None),
 }
@@ -266,6 +274,15 @@ def run_session(label, adapter, socket, checks):
         if modern:
             unknown_params["_meta"] = modern_meta()
         check("unknown_tool_rejected", lambda: error_code(peer.request("tools/call", unknown_params), -32602))
+        def invalid_arguments():
+            params = {"name": "broker_capabilities", "arguments": {"unexpected": True}}
+            if modern:
+                params["_meta"] = modern_meta()
+            result = result_of(peer.request("tools/call", params))
+            require(result.get("isError") is True, "invalid arguments were not a tool error")
+            require(result.get("structuredContent", {}).get("code") == "invalid_arguments", "missing argument refusal code")
+            return {"code": "invalid_arguments"}
+        check("known_tool_invalid_arguments", invalid_arguments)
     except Exception as error:
         checks.append({
             "name": f"{label}.{current}", "passed": False, "error": str(error),

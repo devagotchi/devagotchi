@@ -65,3 +65,12 @@ fn capabilities_carry_no_path_grant_or_account() {
         ]
     );
 }
+
+#[test]
+fn every_broker_method_but_the_desktops_own_is_a_tool() {
+    let mut methods: Vec<_> = crate::describe::BROKER_TOOLS.iter().map(|(_, m)| *m).collect();
+    methods.push("operations_changed"); methods.sort();
+    let mut all = super::REQUEST_METHODS.to_vec(); all.sort(); assert_eq!(methods, all);
+    let names: std::collections::BTreeSet<_> = crate::describe::BROKER_TOOLS.iter().map(|(n, _)| n).collect();
+    assert_eq!(names.len(), crate::describe::BROKER_TOOLS.len());
+}

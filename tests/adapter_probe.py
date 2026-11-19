@@ -22,6 +22,9 @@ import subprocess
 import sys
 import time
 import uuid
+from mcp_protocol import TOOL_SCHEMAS
+
+called_tools = set()
 
 parser = argparse.ArgumentParser()
 parser.add_argument("socket")
@@ -42,6 +45,8 @@ request_id = 0
 
 def rpc(method, params=None, notify=False):
     global request_id
+    if method == "tools/call":
+        called_tools.add(params["name"])
     message = {"jsonrpc": "2.0", "method": method}
     if params is not None:
         message["params"] = params
@@ -82,9 +87,7 @@ print("server:", init["serverInfo"]["name"], init["serverInfo"].get("version"), 
 rpc("notifications/initialized", notify=True)
 tools = rpc("tools/list")["result"]["tools"]
 print("tools:", ", ".join(sorted(t["name"] for t in tools)))
-missing = {"run", "read_file", "list_directory", "write_file", "edit_file", "operation_list",
-           "operation_start", "operation_wait", "operation_input", "operation_resize",
-           "broker_capabilities"} - {t["name"] for t in tools}
+missing = set(TOOL_SCHEMAS) - {t["name"] for t in tools}
 if missing:
     raise SystemExit(f"tools missing: {sorted(missing)}")
 
@@ -113,14 +116,10 @@ started = call("operation_start", {
 })
 operation = started["operation"]["operation_id"] if "operation" in started else started["operation_id"]
 print("operation:", operation)
-state = None
-for _ in range(300):  # up to 30 s
-    got = call("operation_get", {"operation_id": operation})
-    state = got.get("operation", got)
-    # Non-terminal states per OperationState::terminal (contracts): accepted, running.
-    if state["state"] not in ("accepted", "running"):
-        break
-    time.sleep(0.1)
+state = call("operation_wait", {"operation_id": operation, "timeout_ms": 30000})
+got = call("operation_get", {"operation_id": operation})
+if got["state"] != state["state"]:
+    raise SystemExit("operation_get disagrees with the settled wait")
 print("state:", state["state"], "exit:", state.get("exit_code", state.get("exit")))
 read = call("operation_read", {"operation_id": operation, "cursor": 0, "max_bytes": 4096})
 frames = read.get("frames", read.get("chunks", []))
@@ -239,6 +238,16 @@ if args.account:
     operations = call("operation_list", {})["operations"]
     if ran["operation_id"] not in [op["operation_id"] for op in operations]:
         raise SystemExit("operation_list did not show the run")
+    from adapter_system_probe import check_system
+    check_system(call, rpc, args.cwd, args.git)
+    recent = call("get_recent_tool_calls", {"max_results": 500})
+    stats = call("get_usage_stats", {})
+    if not recent["calls"] or stats["calls"] < len(called_tools) - 2:
+        raise SystemExit("history did not count the exercised calls")
+    uncovered = set(TOOL_SCHEMAS) - called_tools
+    if uncovered:
+        raise SystemExit(f"tools without a probe case: {sorted(uncovered)}")
+    print("tool coverage:", len(called_tools), "of", len(TOOL_SCHEMAS))
     proc.stdin.close()
     proc.wait(timeout=5)
     raise SystemExit(0)

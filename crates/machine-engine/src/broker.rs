@@ -657,8 +657,8 @@ impl Broker {
     }
 
     fn list(&self, input: ListInput) -> BridgeResult<OperationsPage> {
-        if !(1..=64).contains(&input.limit) {
-            return Err(invalid("limit must be 1..=64"));
+        if !(1..=MAX_LIST_LIMIT).contains(&input.limit) {
+            return Err(invalid(format!("limit must be 1..={MAX_LIST_LIMIT}")));
         }
         let scope = input.scope.unwrap_or_default();
         let state = self.shared.lock();

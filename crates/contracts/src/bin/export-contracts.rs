@@ -1,6 +1,7 @@
 //! Export canonical Rust DTO schemas without opening a broker or journal.
 
 use devagotchi_contracts::{
+    SendInput, ResizeInput, InputSent,
     BridgeError, BrokerCapabilities, CapabilitiesInput, ChangesInput, ConfigGetInput,
     ConfigSetInput, ConfigView, DirectoryInput, FileContent, FileEditInput, FileInfo,
     FileInfoInput, FileListInput, FileListing, FileMoveInput, FileReadInput, FileSearchInput,
@@ -20,6 +21,9 @@ use std::path::PathBuf;
 #[schemars(deny_unknown_fields)]
 struct BrokerContracts {
     start_input: StartInput,
+    send_input: SendInput,
+    resize_input: ResizeInput,
+    input_sent: InputSent,
     get_input: GetInput,
     read_input: ReadInput,
     list_input: ListInput,

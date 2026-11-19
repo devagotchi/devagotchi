@@ -39,6 +39,8 @@ pub mod history;
 pub mod join;
 pub mod link;
 mod routes;
+mod operations;
+mod manage;
 pub mod run;
 pub mod search;
 pub mod system;
@@ -52,7 +54,9 @@ impl crate::mcp::Hub {
     /// The tools that work on one named machine: running commands, its files, searching them,
     /// and its settings and processes; and the caller's own calls to machines.
     pub(crate) fn machine_router() -> rmcp::handler::server::router::tool::ToolRouter<Self> {
-        Self::run_router()
+        Self::manage_router()
+            + Self::operations_router()
+            + Self::run_router()
             + Self::files_router()
             + Self::search_router()
             + Self::system_router()

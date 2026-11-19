@@ -37,12 +37,13 @@ pub struct Files {
 pub async fn read_many<C, F>(
     call: C,
     paths: Vec<String>,
-    max_bytes: usize,
+    max_bytes: Option<usize>,
 ) -> Result<Files, BridgeError>
 where
     C: Fn(RequestBody) -> F,
     F: Future<Output = Result<ResponseBody, BridgeError>>,
 {
+    let max_bytes = max_bytes.unwrap_or_else(devagotchi_contracts::default_file_read_bytes);
     if !(1..=MAX_FILES).contains(&paths.len()) {
         return Err(BridgeError::new(
             "invalid_request",
@@ -116,7 +117,7 @@ mod tests {
             }
         };
         let paths = vec!["/a".to_owned(), "/missing".to_owned(), "/b".to_owned()];
-        let files = read_many(call, paths, 100).await.unwrap().files;
+        let files = read_many(call, paths, Some(100)).await.unwrap().files;
         let asked: Vec<&str> = files.iter().map(|f| f.path.as_str()).collect();
         assert_eq!(asked, ["/a", "/missing", "/b"]);
         assert_eq!(
@@ -134,12 +135,12 @@ mod tests {
 
     #[tokio::test]
     async fn too_many_or_none_or_oversized_pages_are_refused() {
-        assert!(read_many(nothing_is_read, Vec::new(), 100).await.is_err());
+        assert!(read_many(nothing_is_read, Vec::new(), Some(100)).await.is_err());
         let many = vec!["/a".to_owned(); MAX_FILES + 1];
-        assert!(read_many(nothing_is_read, many, 100).await.is_err());
+        assert!(read_many(nothing_is_read, many, Some(100)).await.is_err());
         let one = vec!["/a".to_owned()];
         assert!(
-            read_many(nothing_is_read, one, MAX_FILE_READ_BYTES + 1)
+            read_many(nothing_is_read, one, Some(MAX_FILE_READ_BYTES + 1))
                 .await
                 .is_err()
         );

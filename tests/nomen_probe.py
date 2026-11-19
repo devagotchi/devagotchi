@@ -190,7 +190,7 @@ try:
           json.dumps(me))
     member = Mcp(base, "tok-member")
     member.open()
-    is_error, answer = member.tool("operation_get", {"broker": "elsewhere", "input": {"operation_id": "x"}})
+    is_error, answer = member.tool("operation_get", {"machine": "elsewhere","operation_id": "x"})
     check("member refused outside its grant", is_error and answer.get("code") == "not_granted", json.dumps(answer))
 
     for token in ("tok-other-project", "tok-other-issuer", "tok-email-sub", "tok-expired", "tok-never-issued",

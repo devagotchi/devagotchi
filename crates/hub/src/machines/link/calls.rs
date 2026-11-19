@@ -142,7 +142,19 @@ impl Links {
             ResponseBody::Start(output) => (&output.operation, started),
             ResponseBody::Operation(view) => (view, None),
             ResponseBody::Output(page) => (&page.operation, None),
-            _ => return,
+            ResponseBody::InputSent(sent) => (&sent.operation, None),
+            ResponseBody::Operations(_)
+            | ResponseBody::File(_)
+            | ResponseBody::Listing(_)
+            | ResponseBody::Written(_)
+            | ResponseBody::Revision(_)
+            | ResponseBody::Info(_)
+            | ResponseBody::Search(_)
+            | ResponseBody::Config(_)
+            | ResponseBody::Processes(_)
+            | ResponseBody::Killed(_)
+            | ResponseBody::Url(_)
+            | ResponseBody::Capabilities(_) => return,
         };
         let state = serde_json::to_value(&view.state)
             .ok()

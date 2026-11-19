@@ -70,6 +70,7 @@ pub struct StartInput {
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct GetInput {
+    /// The operation ID returned by operation_start or run.
     pub operation_id: String,
     /// Set by the transport, never by an AI (see `StartInput::caller`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -109,6 +110,7 @@ pub struct Revision {
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct WaitInput {
+    /// The operation ID returned by operation_start or run.
     pub operation_id: String,
     /// Return when output beyond this sequence exists (the cursor you have read up to), as
     /// well as when the operation settles. Without it, return only when it settles.
@@ -126,8 +128,10 @@ pub struct WaitInput {
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ListInput {
+    /// Number of operations to skip (default 0).
     #[serde(default)]
     pub offset: u64,
+    /// Most operations to return, 1..=64 (default 32).
     #[serde(default = "default_list_limit")]
     pub limit: u32,
     /// With a caller: `account` (the default) lists what any of its account's conversations
@@ -140,9 +144,9 @@ pub struct ListInput {
     #[schemars(skip)]
     pub caller: Option<Caller>,
 }
-fn default_list_limit() -> u32 {
-    32
-}
+pub const MAX_LIST_LIMIT: u32 = 64;
+pub const DEFAULT_LIST_LIMIT: u32 = 32;
+pub fn default_list_limit() -> u32 { DEFAULT_LIST_LIMIT }
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
@@ -168,6 +172,7 @@ pub struct OperationsPage {
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ReadInput {
+    /// The operation ID returned by operation_start or run.
     pub operation_id: String,
     /// Last sequence consumed, starting at zero. Reading never advances another reader.
     #[serde(default)]
@@ -181,9 +186,8 @@ pub struct ReadInput {
     pub caller: Option<Caller>,
 }
 
-fn default_page_bytes() -> usize {
-    MAX_OUTPUT_PAGE_BYTES
-}
+pub const DEFAULT_PAGE_BYTES: usize = MAX_OUTPUT_PAGE_BYTES;
+pub fn default_page_bytes() -> usize { DEFAULT_PAGE_BYTES }
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -324,7 +328,27 @@ impl RequestBody {
             | Self::OperationsChanged(ChangesInput { timeout_ms, .. }) => {
                 std::time::Duration::from_millis((*timeout_ms).min(MAX_WAIT_MS))
             }
-            _ => std::time::Duration::ZERO,
+            Self::OperationStart(_)
+            | Self::OperationGet(_)
+            | Self::OperationRead(_)
+            | Self::OperationCancel(_)
+            | Self::OperationList(_)
+            | Self::FileRead(_)
+            | Self::FileList(_)
+            | Self::FileWrite(_)
+            | Self::FileEdit(_)
+            | Self::FileInfo(_)
+            | Self::FileMkdir(_)
+            | Self::FileMove(_)
+            | Self::FileSearch(_)
+            | Self::ConfigGet(_)
+            | Self::ConfigSet(_)
+            | Self::ProcessList(_)
+            | Self::ProcessKill(_)
+            | Self::UrlRead(_)
+            | Self::OperationInput(_)
+            | Self::OperationResize(_)
+            | Self::BrokerCapabilities(_) => std::time::Duration::ZERO,
         }
     }
 }

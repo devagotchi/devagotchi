@@ -26,9 +26,9 @@ pub struct RecentCallsInput {
     /// Only calls to this machine, by its name from `machines`.
     #[serde(default)]
     pub machine: Option<String>,
-    /// Most calls to return, newest first, 1 to 500 (default 50).
-    #[serde(default)]
-    pub max_results: Option<u32>,
+    /// Most calls to return, newest first, 1..=500 (default 50).
+    #[serde(default = "devagotchi_contracts::default_recent_calls")]
+    pub max_results: u32,
 }
 
 /// An audit row's `broker` is the name the call gave: one of the caller's machines, or a
@@ -65,7 +65,7 @@ impl Hub {
         context: RequestContext<RoleServer>,
     ) -> Result<Json<RecentCalls>, Json<BridgeError>> {
         let subject = self.subject(&context)?;
-        let most = input.max_results.unwrap_or(50);
+        let most = input.max_results;
         if !(1..=MAX_RECENT_CALLS).contains(&most) {
             return Err(Json(BridgeError::new(
                 "invalid_request",

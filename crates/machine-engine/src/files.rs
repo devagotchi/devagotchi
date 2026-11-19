@@ -24,8 +24,6 @@ mod manage;
 mod search;
 mod write;
 
-const MAX_ENTRIES: u32 = 1000;
-const MAX_DEPTH: u32 = 3;
 
 /// Where file requests may reach.
 pub(crate) struct Scope<'a> {
@@ -204,11 +202,11 @@ impl Scope<'_> {
     }
 
     pub(crate) fn list(&self, input: FileListInput) -> BridgeResult<FileListing> {
-        if input.depth > MAX_DEPTH {
-            return Err(invalid(format!("depth must be 0..={MAX_DEPTH}")));
+        if input.depth > MAX_LIST_DEPTH {
+            return Err(invalid(format!("depth must be 0..={MAX_LIST_DEPTH}")));
         }
-        if !(1..=MAX_ENTRIES).contains(&input.max_entries) {
-            return Err(invalid(format!("max_entries must be 1..={MAX_ENTRIES}")));
+        if !(1..=MAX_LIST_ENTRIES).contains(&input.max_entries) {
+            return Err(invalid(format!("max_entries must be 1..={MAX_LIST_ENTRIES}")));
         }
         let root = self.resolve(&input.path)?;
         let shown = display(&root)?;

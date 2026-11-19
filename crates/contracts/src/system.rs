@@ -17,6 +17,9 @@ pub const CHANGEABLE_SETTINGS: [&str; 3] =
     ["output_limit_bytes", "max_operations", "max_concurrent"];
 /// Most processes one `list_processes` returns.
 pub const MAX_PROCESS_RESULTS: u32 = 1000;
+pub const OUTPUT_LIMIT: std::ops::RangeInclusive<usize> = 1024..=16 * 1024 * 1024;
+pub const OPERATIONS: std::ops::RangeInclusive<usize> = 1..=4096;
+pub const CONCURRENT: std::ops::RangeInclusive<usize> = 1..=64;
 
 /// Every request method this build's broker serves, in `RequestBody`'s order: what
 /// `broker_capabilities` starts from before a broker's policy removes what it always refuses.
@@ -137,9 +140,9 @@ pub struct ProcessListInput {
     pub max_results: u32,
 }
 
-fn default_process_results() -> u32 {
-    200
-}
+/// Default for omitted process_results inputs on either tool surface.
+pub const DEFAULT_PROCESS_RESULTS: u32 = 200;
+pub fn default_process_results() -> u32 { DEFAULT_PROCESS_RESULTS }
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
@@ -181,6 +184,7 @@ pub struct ProcessPage {
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ProcessKillInput {
+    /// The process ID, from list_processes.
     pub pid: u32,
     /// Kill at once (SIGKILL) instead of asking it to stop (SIGTERM). On Windows a process is
     /// always ended at once.

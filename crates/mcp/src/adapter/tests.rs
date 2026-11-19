@@ -42,3 +42,8 @@ fn every_output_schema_is_open_and_every_input_closed() {
         }
     }
 }
+
+#[test]
+fn every_local_tool_follows_the_pattern() {
+    assert_eq!(crate::pattern::check_tools(&crate::local_tools()), Vec::<String>::new());
+}
