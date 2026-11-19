@@ -2,9 +2,14 @@
 
 **Your AI, at home in your workspace.**
 
-Devagotchi is a universal workspace bridge, beginning with locally installed MCP clients and a native app for seeing commands, output, and workspace activity. The product direction represents every admitted task as a graph and grows into a trusted internal mesh, with public API/MCP surfaces for adoption. Windows, macOS, and Linux are required targets. Source is published at [devagotchi/devagotchi](https://github.com/devagotchi/devagotchi). The rebuilt [Devagotchi Site](https://devagotchi.justsayit.chatgpt.site) is published with a read-only HTTP/MCP reference service and Linux source download; [devagotchi.net](https://devagotchi.net) has been added and is pending DNS validation.
+Devagotchi is the central point for a solo developer: a self-hosted Desktop Commander that
+lets Claude, ChatGPT and Codex run commands, files and processes on your own machines through
+your own hub, plus AgentHub (a ticket board your AI agents share, with approvals), an Android
+phone app, and plugins. The hub runs on Linux (x86_64, arm64); machines run on Windows and
+Linux today, and macOS is a target that does not work yet. It is alpha: pre-release.
 
-This working copy is built from a separate process broker, a thin official-SDK MCP adapter, and a Tauri desktop inspector. **Execution providers are implemented for Linux and Windows. The macOS provider is still required before a cross-platform release.**
+**[docs/product.md](docs/product.md) is the one description of what is being built and what
+works today, with the evidence for each.** Where another document disagrees, it holds.
 
 ## Install: one line, for you or your AI
 
