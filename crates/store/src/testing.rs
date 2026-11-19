@@ -1,11 +1,27 @@
 //! Stores for a test: a fresh database on the test Postgres that
 //! `DEVAGOTCHI_TEST_POSTGRES_URL` names (CI's hub-postgres job sets it), migrated with the
 //! migrations the test's crate keeps. Without one, a test that needs a store skips
-//! (`or_skip!`).
+//! (`or_skip!`) and says so (`SKIPPED: no DEVAGOTCHI_TEST_POSTGRES_URL`), unless
+//! `DEVAGOTCHI_TEST_REQUIRE_POSTGRES=1` (CI's hub-postgres job), where a missing server is a
+//! failure: a test there never passes without running.
 
 use super::*;
 
 pub const POSTGRES_ENV: &str = "DEVAGOTCHI_TEST_POSTGRES_URL";
+/// `1`: a test that needs the test Postgres fails without one, instead of skipping.
+pub const REQUIRE_ENV: &str = "DEVAGOTCHI_TEST_REQUIRE_POSTGRES";
+/// What a skipped test prints, so a run that skipped says so.
+pub const SKIPPED: &str = "SKIPPED: no DEVAGOTCHI_TEST_POSTGRES_URL";
+
+/// The test Postgres server's URL, or `None` to skip; panics when `REQUIRE_ENV` is `1` and
+/// there is none. Every test that needs the server takes it from here.
+pub fn server_url() -> Option<String> {
+    let url = std::env::var(POSTGRES_ENV).ok().filter(|u| !u.is_empty());
+    if url.is_none() && std::env::var(REQUIRE_ENV).is_ok_and(|v| v == "1") {
+        panic!("{REQUIRE_ENV}=1, but {POSTGRES_ENV} is not set: this test would have skipped");
+    }
+    url
+}
 
 /// A store under test, with what keeps it alive and how to open it again.
 pub struct TestStore {
@@ -28,7 +44,7 @@ pub async fn postgres_with(migrations: &[&Migrator]) -> Option<TestStore> {
 /// The URL of a new database on the test server with nothing in it yet, or `None`
 /// without a server.
 pub async fn empty_postgres() -> Option<String> {
-    let server = std::env::var(POSTGRES_ENV).ok().filter(|u| !u.is_empty())?;
+    let server = server_url()?;
     static DRIVERS: Once = Once::new();
     DRIVERS.call_once(install_default_drivers);
     let name = format!("{PREFIX}{}_{}", now_secs(), hex::encode(random::<8>()));
@@ -127,7 +143,10 @@ macro_rules! or_skip {
     ($fixture:expr) => {
         match $fixture.await {
             Some(found) => found,
-            None => return,
+            None => {
+                eprintln!("{}", $crate::testing::SKIPPED);
+                return;
+            }
         }
     };
 }

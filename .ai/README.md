@@ -31,6 +31,9 @@ its versioned contracts, not another agent or task engine.
 | DG-ADAPTER-1 | [Harness-specific adapters and capability limits](docs/adapters.md) |
 | DG-RETRY-1 | [The broker's retry lifecycle: permanent retired keys, retry identity, refusal and history size](docs/retry-lifecycle.md) |
 
+- [What is being built](../docs/product.md): the one product description; every other
+  document agrees with it. [Documentation map](../docs/documentation-map.md): every
+  document, and whether it is kept, fixed, folded or retired.
 - [Plans](dev/plans/README.md): maintained task/PR plans, with [template](dev/plans/TEMPLATE.md).
 - [Editions](docs/editions.md): what is core, what is cloud, and the license.
 - [Patterns](patterns/README.md): reusable guidance, not duplicated architecture decisions.

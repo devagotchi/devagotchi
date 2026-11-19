@@ -67,10 +67,11 @@ jobs:
       - run: cargo nextest run --locked --profile ci
 
   hub-postgres:
-    # Every test that takes a store runs here on Postgres (crates/store), against a throwaway
-    # cluster of the runner image's PostgreSQL; AgentHub's (the submodule at crates/agenthub)
-    # with them. A test that cannot reach it fails; none skips while
-    # DEVAGOTCHI_TEST_POSTGRES_URL is set.
+    # Every test in every crate that depends on the store (rdeps(devagotchi-store): the hub,
+    # AgentHub, the one binary's board and recovery tests) runs here on Postgres, against a
+    # throwaway cluster. DEVAGOTCHI_TEST_REQUIRE_POSTGRES=1 makes a test that would skip for
+    # want of a server fail instead (crates/store/src/testing.rs server_url), so nothing here
+    # passes without running.
     name: hub (postgres)
     runs-on: ubuntu-24.04
     timeout-minutes: 30
@@ -88,15 +89,12 @@ jobs:
       # The export's real-ClickHouse test (warehouse/tests.rs) runs against it.
       - name: Start a throwaway ClickHouse
         run: tests/throwaway_clickhouse.sh
-      - run: cargo nextest run --locked --profile ci -p devagotchi-hub -p devagotchi-agenthub -p devagotchi-store
+      - run: cargo nextest run --locked --profile ci -E 'rdeps(devagotchi-store)'
         env:
           DEVAGOTCHI_TEST_POSTGRES_URL: postgres://postgres@127.0.0.1:55432/postgres
+          DEVAGOTCHI_TEST_REQUIRE_POSTGRES: "1"
           DEVAGOTCHI_TEST_CLICKHOUSE_URL: http://127.0.0.1:18123
           DEVAGOTCHI_TEST_CLICKHOUSE_USER: devagotchi
-      # The one binary's `board` command line on a standalone board, which is in Postgres.
-      - run: cargo nextest run --locked --profile ci -p devagotchi --test board
-        env:
-          DEVAGOTCHI_TEST_POSTGRES_URL: postgres://postgres@127.0.0.1:55432/postgres
 
   hub-compose:
     # The self-hosted stack (deploy/compose/): the hub image built from this commit, its own

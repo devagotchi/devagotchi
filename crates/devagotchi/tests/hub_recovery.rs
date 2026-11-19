@@ -17,7 +17,7 @@ fn hub_set_password_reads_stdin_keeps_the_owner_and_never_prints_the_password() 
     use std::{io::Write, process::Stdio};
     let runtime = tokio::runtime::Runtime::new().unwrap();
     let Some(url) = runtime.block_on(devagotchi_store::testing::empty_postgres()) else {
-        eprintln!("skipped: no {}", devagotchi_store::testing::POSTGRES_ENV);
+        eprintln!("{}", devagotchi_store::testing::SKIPPED);
         return;
     };
     let dir = tempfile::tempdir().unwrap();
