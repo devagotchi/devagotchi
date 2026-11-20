@@ -1,0 +1,34 @@
+/* The layout primitives every page composes (`web/style/mod.rs`). Each does one job, takes its
+   sizes from the fluid scales (`--space-*`, `--step-*` in tokens.json), and is tuned where it
+   is used by a custom property, never by a viewport breakpoint. */
+@layer components {
+  /* Children one under another, evenly spaced. */
+  .stack { display: flex; flex-direction: column; gap: var(--stack-gap, var(--space-s)); }
+  .stack > * { margin-block: 0; }
+
+  /* Children side by side, wrapping onto the next line when the row is full. */
+  .cluster { display: flex; flex-wrap: wrap; align-items: center;
+    gap: var(--cluster-gap, var(--space-xs)); }
+
+  /* As many equal columns as fit, each at least --grid-min wide: one column on a phone. */
+  .auto-grid { display: grid; gap: var(--grid-gap, var(--space-s)); align-content: start;
+    grid-template-columns: repeat(auto-fill, minmax(min(var(--grid-min, 18rem), 100%), 1fr)); }
+
+  /* A side of --side beside a main that takes the rest, stacking (side first) once the main
+     would be narrower than --main-min. With data-side="end" the side follows the main. */
+  .sidebar { display: flex; flex-wrap: wrap; align-items: flex-start;
+    gap: var(--sidebar-gap, var(--space-m)); }
+  .sidebar > * { min-inline-size: 0; }
+  .sidebar > :first-child { flex: 1 1 var(--side, 18rem); }
+  .sidebar > :last-child { flex: 999 1 0; min-inline-size: min(var(--main-min, 55%), 100%); }
+  .sidebar[data-side="end"] > :first-child { flex: 999 1 0;
+    min-inline-size: min(var(--main-min, 55%), 100%); }
+  .sidebar[data-side="end"] > :last-child { flex: 1 1 var(--side, 18rem); min-inline-size: 0; }
+
+  /* Every child in one row, or every child in one column once the row is under --switch-at. */
+  .switcher { display: flex; flex-wrap: wrap; gap: var(--switcher-gap, var(--space-s)); }
+  .switcher > * { flex-grow: 1; flex-basis: calc((var(--switch-at, 30rem) - 100%) * 999); }
+
+  /* A box its children lay themselves out against (`@container`). */
+  .query { container-type: inline-size; }
+}

@@ -238,7 +238,9 @@ placeholder=\"{l}\"><button type=\"submit\">{}</button></form>",
         l = escape(&copy.search_label),
     );
     let body = format!(
-        "<h1>{}</h1>{search}{}{}{}{}{}{}{}<section class=\"card\">{list}</section>",
+        "<div class=\"stack\" data-page=\"board\"><header class=\"cluster board-head\"><h1>{}</h1>{search}</header>\
+<div class=\"sidebar\"><aside class=\"stack board-filters\">{}{}{}{}{}{}{}</aside>\
+<section class=\"card query board-list\">{list}</section></div></div>",
         escape(&project),
         chips("state", &copy.filter_state, states, &chosen.state),
         chips(

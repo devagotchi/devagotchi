@@ -74,6 +74,7 @@ mod provider_apply;
 #[cfg(test)]
 mod shippin_tests;
 mod sign_in_cards;
+pub(crate) mod style;
 #[cfg(test)]
 mod walkthrough_tests;
 #[cfg(test)]

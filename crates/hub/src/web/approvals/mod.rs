@@ -16,6 +16,7 @@
 //! act from this hub's own page, as deciding is.
 
 mod ahead;
+mod layout;
 
 pub use ahead::{grant, revoke};
 
@@ -582,12 +583,7 @@ fn page(
             )
         })
         .collect();
-    pages::app(
-        StatusCode::OK,
-        "Approvals",
-        &format!("<h1>Approvals</h1>{flash}{body}{ahead_cards}{notify}"),
-        pages::Tab::Approvals,
-    )
+    layout::page(&flash, &body, &ahead_cards, &notify)
 }
 
 /// What a tenant waiting to be let in sees instead of a board change.

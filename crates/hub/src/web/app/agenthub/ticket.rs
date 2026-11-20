@@ -381,11 +381,14 @@ spellcheck=\"false\" placeholder=\"{}\"></label></div>\
         })
         .unwrap_or_default();
     let body = format!(
-        "<p class=\"meta\"><a href=\"/app/boards/{}\">{}</a> · {}</p><h1>{}</h1>{flash}{undo}\
-<section class=\"card\" id=\"ticket\"><dl class=\"facts\"><dt>{}</dt><dd id=\"state\">{}</dd>\
+        "<div class=\"stack\" data-page=\"ticket\"><header class=\"stack ticket-head\">\
+<p class=\"meta\"><a href=\"/app/boards/{}\">{}</a> · {}</p><h1>{}</h1>{flash}{undo}</header>\
+<div class=\"sidebar\" data-side=\"end\"><div class=\"stack ticket-main\">\
+<section class=\"card query\" id=\"ticket\"><dl class=\"facts\"><dt>{}</dt><dd id=\"state\">{}</dd>\
 <dt>{}</dt><dd>P{}</dd><dt>{}</dt><dd>{}</dd><dt>{}</dt><dd id=\"assignee\">{}</dd><dt>{}</dt><dd>{}</dd>{anchors}</dl>\
-<pre class=\"what\">{}</pre>{actions}<div class=\"delegate\">{delegate}</div></section>{source}<h2>{}</h2>{notes}{comment}<h2>{}</h2>\
-<ul class=\"rows\" id=\"history\">{history}</ul>",
+<pre class=\"what\">{}</pre></section>{source}<h2>{}</h2>{notes}{comment}</div>\
+<aside class=\"stack ticket-side\"><section class=\"card\">{actions}<div class=\"delegate\">{delegate}</div></section>\
+<section class=\"card\"><h2>{}</h2><ul class=\"rows\" id=\"history\">{history}</ul></section></aside></div></div>",
         encode(&project),
         escape(&project),
         escape(&ticket.id),
