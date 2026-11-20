@@ -26,7 +26,7 @@ fn src() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("src")
 }
 
-use crate::source_tests::{scan, sources};
+use crate::tests::sources::{scan, sources};
 
 fn brand_in(text: &str) -> Option<&'static str> {
     let mut text = text.to_string();

@@ -92,4 +92,4 @@ pub async fn serve_with(
 }
 
 #[cfg(test)]
-mod source_tests;
+mod tests;
