@@ -3,6 +3,7 @@ mod audited;
 mod hosted;
 mod notes;
 mod scanned;
+mod searched;
 mod served;
 mod serving;
 mod settings;

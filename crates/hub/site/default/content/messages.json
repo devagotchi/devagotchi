@@ -333,7 +333,7 @@
     "filter_repo": "Repo",
     "filter_agent": "Agent",
     "ticket_anchors": "Where",
-    "search_label": "Search tickets",
+    "search_label": "Search tasks, IDs and comments",
     "search_button": "Search",
     "tickets_empty": "No open tickets match.",
     "you": "You",

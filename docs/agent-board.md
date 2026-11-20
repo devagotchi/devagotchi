@@ -30,6 +30,14 @@ existing grants.
 MCP `board_create` accepts `depends_on: ["task-id", ...]`; the CLI accepts repeatable
 `devagotchi board new "Title" --depends-on TASK_ID` flags on standalone and bound boards.
 
+The board's search box finds an exact task ID, text in a comment, or words in its title and
+description. For example, `installer windows` finds both words even when separated;
+`"exact phrase"` searches a phrase. Labels and other selected filters still apply. The
+browser lists open tasks; MCP `board_list` with `text` and CLI `board ls --text "query"`
+can also search closed tasks unless `open_only` / `--open` is set. `%`, `_` and `\` are
+literal characters, not search wildcards.
+Use `--human` for readable CLI output when piping; `ls --text QUERY` always names a search.
+
 ## 1. What a ticket is, and is not
 
 A **ticket** is a unit of coordination and memory between people and agents: "port the claim
