@@ -1,5 +1,63 @@
 # AgentHub as a software factory
 
+## Active oldest-first absorption, 2026-11-20
+
+The prior use of **absorbed** below included capabilities merely assigned future milestones.
+That is not implementation or feature parity. Those historical headings do not establish
+completion. The operator requires actual absorption, oldest source branch first, with each
+behavior implemented and verified before its source branch can be closed.
+
+Source order (original work dates, not the dates preservation commits were created):
+
+1. Go AgentHub baseline through `origin/box-snapshot/2026-10-18` (`46419c6`): starts with
+   specification `c8e166f`, PostgreSQL backend `a703761`, CLI `4886860`, protocol tests
+   `d469998`, and React interface `dcca3d3`; later October 17–18 work follows in ancestry
+   order. **Active; not absorbed.**
+2. Go `master` through `ca626db` (October 20): audit its remaining delta after source 1.
+3. Go `feat/devspace-bridge-contract` through `97172d9` (October 21–22).
+4. Go `preserve/packaging-2026-10-25` (`adca8b7`, preserved November 18).
+5. Rust `preserve/nov6-uncommitted` (`c936f7f`): verify earlier ports against each behavior,
+   not merely their merge commits. Keep original dirty checkouts untouched.
+
+### First source: board creation and task creation
+
+- Branch: `increment-278/absorb-agenthub-board-creation`, baseline `af88363`.
+- Source: `dcca3d3`, `web/src/pages/Board.tsx` and `NewTask.tsx`, backed by `a703761`'s
+  project/task store. Current Rust already has board binding and ticket creation through
+  MCP/CLI, but its browser's empty board list offers no way to start.
+- Implement: signed-in browser board creation and task creation using the existing hub
+  board resolver and AgentHub transactions; expose them in the board list and board page.
+  Preserve existing ticket editing/delegation/history. Product copy belongs to site messages.
+- Acceptance: browser creates a board and task, opens that real task and its history;
+  MCP observes the same data; another account cannot read or mutate it; a read-only member
+  cannot create a task; cross-site and unauthenticated writes fail; database errors remain
+  errors. Test with isolated Postgres, then actual Docker/browser acceptance.
+- Non-goals of this packet: do not declare the source branch absorbed, replace the current
+  database, restore obsolete auth shortcuts, or mark the Agents/Audit/settings interface
+  delivered. Those source capabilities remain pending in this same baseline review.
+- Database constraint: hub and AgentHub use PostgreSQL. Any remaining SQLite use elsewhere
+  requires an explicit justification grounded in established real-world practice; an old
+  implementation or instruction is not sufficient justification.
+- Implementation: browser forms use the shared audited binding owner and existing board
+  creation transaction. Task detail lists dependency links and whether each still blocks
+  the task, including changes when a dependency finishes. MCP and standalone/bound CLI
+  creation accept dependency sets.
+  AgentHub [PR #9](https://github.com/devagotchi/agenthub/pull/9) merged as `e299d18`.
+- Validation: 90 AgentHub tests; 492 hub tests passed on the initial full run, and the one
+  static audit-owner scan failure was fixed and passed its focused rerun. The bound CLI
+  dependency test and final browser HTTP tests passed. The other default workspace crates
+  passed 291 tests (cargo test; nextest unavailable). Windows E2E, stdio protocol, layout,
+  dependency audit, generated contracts and AI contract checks passed. Edge acceptance
+  exercised owner/ordinary-user board and dependent task creation at desktop/phone widths
+  against a single-environment native hub and isolated Docker PostgreSQL.
+- Delivery: backend merged; parent application push/PR/main and deployed-image acceptance
+  pending. Linux/macOS/ARM, real ClickHouse export and Docker-compose checks remain remote
+  CI gates.
+
+The baseline also still requires a source-to-implementation audit of principal roles,
+presence, WIP overrides, policy editing/enforcement, workflows/settings, request idempotency,
+audit UI, and all later baseline commits. No later source branch is being declared complete.
+
 - Contract: DG-DELIVERY-1; stage: read [project.json](../../project.json)
 - Issue / request: operator, 2026-11-09 (factory board plan, rulings), 2026-11-11 ("fold in
   the latest software factory trends that are showing massive success via research") and

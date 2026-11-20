@@ -27,6 +27,9 @@ fn tool_names_are_unique_and_every_body_reaches_its_audit_owner() {
             let audit = [
                 "self.call(",
                 "self.board_call",
+                // Browser and MCP binding share this audited owner; the HTTP audit
+                // tests verify one line for a bind, including its created target.
+                "self.bind_project(",
                 "self.recorded(",
                 "self.record_completion(",
             ]

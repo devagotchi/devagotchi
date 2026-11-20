@@ -41,6 +41,7 @@ impl Hub {
             priority: input.priority,
             labels: input.labels,
             parent: input.parent,
+            depends_on: input.depends_on,
             assignee: input.assignee,
             discovered_from: input.discovered_from,
             anchors: Anchors {

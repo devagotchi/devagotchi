@@ -380,12 +380,39 @@ spellcheck=\"false\" placeholder=\"{}\"></label></div>\
             )
         })
         .unwrap_or_default();
+    let dependencies: String = view
+        .deps
+        .iter()
+        .filter(|dep| dep.kind == crate::agenthub::DepKind::Blocks)
+        .map(|dep| {
+            let status = if ticket.blocked_by.contains(&dep.depends_on) {
+                &copy.creation.waiting
+            } else {
+                &copy.creation.unblocked
+            };
+            format!(
+                "<li><a href=\"/app/tickets/{}/{}\">{}</a> <span>{}</span></li>",
+                encode(&project),
+                encode(&dep.depends_on),
+                escape(&dep.depends_on),
+                escape(status)
+            )
+        })
+        .collect();
+    let dependencies = if dependencies.is_empty() {
+        String::new()
+    } else {
+        format!(
+            "<dt>{}</dt><dd><ul id=\"dependencies\">{dependencies}</ul></dd>",
+            escape(&copy.creation.dependencies)
+        )
+    };
     let body = format!(
         "<div class=\"stack\" data-page=\"ticket\"><header class=\"stack ticket-head\">\
 <p class=\"meta\"><a href=\"/app/boards/{}\">{}</a> · {}</p><h1>{}</h1>{flash}{undo}</header>\
 <div class=\"sidebar\" data-side=\"end\"><div class=\"stack ticket-main\">\
 <section class=\"card query\" id=\"ticket\"><dl class=\"facts\"><dt>{}</dt><dd id=\"state\">{}</dd>\
-<dt>{}</dt><dd>P{}</dd><dt>{}</dt><dd>{}</dd><dt>{}</dt><dd id=\"assignee\">{}</dd><dt>{}</dt><dd>{}</dd>{anchors}</dl>\
+<dt>{}</dt><dd>P{}</dd><dt>{}</dt><dd>{}</dd><dt>{}</dt><dd id=\"assignee\">{}</dd><dt>{}</dt><dd>{}</dd>{anchors}{dependencies}</dl>\
 <pre class=\"what\">{}</pre></section>{source}<h2>{}</h2>{notes}{comment}</div>\
 <aside class=\"stack ticket-side\"><section class=\"card\">{actions}<div class=\"delegate\">{delegate}</div></section>\
 <section class=\"card\"><h2>{}</h2><ul class=\"rows\" id=\"history\">{history}</ul></section></aside></div></div>",

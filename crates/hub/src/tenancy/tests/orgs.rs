@@ -3,7 +3,7 @@
 //! a project is made, the invited person's AI works it, and a change of role holds from that
 //! AI's next call: demoted to viewer it reads and changes nothing, removed it reaches
 //! nothing. Only people change who works what; another site's form changes nothing. On
-//! SQLite, and on Postgres when the test server is set (CI).
+//! the isolated PostgreSQL test server.
 
 use serde_json::{Value, json};
 
@@ -384,6 +384,12 @@ async fn pages(store: Option<&str>) {
         "{}",
         location(&commented)
     );
+    let task_form = "/app/boards/acme%2Fsite/new";
+    assert_eq!(hub.get(task_form, Some(&bob.cookie)).await.status(), 200);
+    let created = form(task_form, &bob.cookie, &[("title", "Browser member task")])
+        .await
+        .unwrap();
+    assert_eq!(created.status(), 303);
     let demoted = form(
         "/orgs/acme/members",
         &alice.cookie,
@@ -392,6 +398,15 @@ async fn pages(store: Option<&str>) {
     .await
     .unwrap();
     assert_eq!(location(&demoted), "/orgs/acme?done=1");
+    assert_eq!(hub.get(task_form, Some(&bob.cookie)).await.status(), 403);
+    let denied = form(
+        task_form,
+        &bob.cookie,
+        &[("title", "Viewer must not create")],
+    )
+    .await
+    .unwrap();
+    assert_eq!(denied.status(), 403);
     let refused = form(
         &format!("{here}/comment"),
         &bob.cookie,

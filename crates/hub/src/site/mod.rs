@@ -26,6 +26,7 @@
 //! the built-in default serves, compiled into the binary.
 
 mod analytics_copy;
+pub(crate) mod app_copy;
 mod assets;
 #[cfg(test)]
 mod assets_tests;

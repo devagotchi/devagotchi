@@ -164,7 +164,11 @@ pub async fn boards(State(state): State<AppState>, headers: HeaderMap) -> Respon
     pages::app_page(
         StatusCode::OK,
         title,
-        &format!("{}{orgs}", boards_card(&boards)),
+        &format!(
+            "<p><a class=\"button primary\" href=\"/app/new-board\">{}</a></p>{}{orgs}",
+            escape(&site.messages.app.creation.board),
+            boards_card(&boards)
+        ),
         Tab::Boards,
     )
 }
