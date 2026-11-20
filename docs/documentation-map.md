@@ -40,6 +40,7 @@ release tags and links to retiring documents. A FIX list for those files may be 
 | `.ai/docs/editions.md` | Core, multi-tenant and cloud; three builds; licence; "what Devagotchi is for" (L74-80) | Current; one stale line (L64-66) |
 | `.ai/dev/plans/path.md` | Order of phases 0 to 9; what "done" means; standalone edition scope (L28-58) | Current on order; status column read at ea50352 |
 | `.ai/dev/plans/one-user-edition.md` | Increments 208 to 270 in the operator's 2026-11-18 order; platform default (L902) | Current |
+| `.ai/dev/plans/standalone-build.md` | The order across path, one-user, rewrite B5/B6, the S8 moves, P10 and D1 to D7 (waves W0 to W10); the hub's and the other crates' target trees; naming rules N1 to N12 | Added 2026-11-20 at 726af4e; current |
 | `.ai/dev/plans/roadmap.md` | Four tracks; core lane and cloud lane order (L32-37) | Stale; its cloud lane contradicts path.md (X4) |
 | `.ai/dev/plans/free-edition.md` | "Order, as of 2026-11-15" (L188-201) | Order superseded by path.md and one-user-edition.md |
 | `.ai/dev/plans/cloud-edition.md` | The commercial cloud and its milestones | Current, one internal contradiction (X6) |

@@ -17,7 +17,9 @@ Active: [the rewrite: every major area on its golden pattern](rewrite.md), batch
 ([B1](desktop-commander-b1.md) and [B2](link-and-join-b2.md) merged;
 [B2a: main builds again](main-builds.md) merged;
 [B3: AgentHub board operations](board-operations-b3.md) merged;
-[B4: the rest of the hub MCP surface](hub-mcp-surface-b4.md));
+[B4: the rest of the hub MCP surface](hub-mcp-surface-b4.md) merged);
+[The standalone build: what is left, in order, and where each piece lives](standalone-build.md)
+(the order across every plan below, the target tree and the naming rules);
 [AI development contracts and local capture](ai-development-capture.md);
 [Make alpha = pre-release obvious](alpha-stage-obvious.md);
 [Texas baseline: installed the way a public customer would](texas-baseline.md);
