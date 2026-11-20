@@ -80,6 +80,15 @@ install, not a production promotion. The gap that is still open is in
   already forgotten past 4096 retirements cannot be brought back. An earlier build run on a
   journal this one opened fails each retirement once the journal holds 4096 tombstones.
 
+### Every commit on main is built again (B2a)
+
+- From `2b3feec` to `86b9d8b` the release workflow passed on main but built nothing: making
+  pull requests skip the release build made main skip it too. No archive or hub image of
+  those commits exists. Main now builds, attests and pushes its hub image (`:main`,
+  `:sha-<short>`) on every commit again; only a tag publishes a release; pull requests still
+  skip it. Main's archives are attested too, so `scripts/fetch-main-build.sh` accepts them.
+  `crates/devagotchi/tests/release_builds.rs` fails if any job main needs can be skipped.
+
 ### The machine link notices a hub that went away, and has one door (B2)
 
 - **A hub that vanished is noticed in a minute.** The link Pings the hub with every

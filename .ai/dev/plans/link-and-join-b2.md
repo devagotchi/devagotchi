@@ -2,7 +2,7 @@
 
 - Contract: DG-DELIVERY-1; stage: read [project.json](../../project.json)
 - Request: the operator, 2026-11-19: carry out [the rewrite](rewrite.md) batch by batch.
-- PR: not_created
+- PR: #261 (merged as `86b9d8b`)
 - Branch / baseline: `increment-271/link-and-join`, from main `a596db6`.
 - Objective: every violation [the link pattern](../../patterns/link.md) listed at main
   2b3feec is fixed, with the pattern's mechanical checks in the tree.
@@ -127,10 +127,14 @@ Also in this batch:
 
 ## Verification receipts
 
-Recorded in the PR.
+2026-11-19, Windows 11, test Postgres required: the workspace suite 841 passed, 0 failed, no
+SKIPPED; `python tests/e2e.py` on a fresh database passed; fmt, the layout ratchet and
+`generate-contracts --check` clean. CI on #261: 18 of 18 checks passed (Linux x86_64 and
+arm64, Windows 2022, 2025 and 11 arm, macOS core, e2e, install checks, compose, Postgres).
 
 ## Delivery
 
-Implementation: done. Validation: in progress. Push: not_verified.
-PR: not_created. Main: not_verified.
-**DELIVERY INCOMPLETE: NOT PUSHED / NOT MERGED TO MAIN**
+Implementation: done. Validation: done (above). Push: done.
+PR: #261, squash-merged. Main: `86b9d8b`, branch deleted.
+Not yet: on Texas and the phone (the path's receipt). The release build of `86b9d8b` skipped
+every job (fixed in [main builds again](main-builds.md)), so no build of B2 exists to deploy.
