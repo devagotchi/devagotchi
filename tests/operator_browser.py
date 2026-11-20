@@ -257,8 +257,10 @@ def main() -> int:
             assert who["access"] == "waiting", who
             tenant = who["tenant"]
             answer = person.tool("machines")
-            assert answer.get("isError") is True and "structuredContent" not in answer, answer
-            note = answer["content"][0]["text"]
+            # A refusal like any other tool's (B4): `{code: early_access, message}`.
+            assert answer.get("isError") is True, answer
+            assert answer["structuredContent"]["code"] == "early_access", answer
+            note = answer["structuredContent"]["message"]
             assert "early-access list" in note and f"{url}/account" in note, note
             status, _, missing = call(f"{url}/no-such-page")
             assert (status, missing) == (404, ""), (status, missing)
