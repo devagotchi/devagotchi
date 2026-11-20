@@ -198,6 +198,10 @@ hints. Its input is the contracts type itself, since the adapter has no `machine
   `default`, that keeps it out of the output schema's `required`.
 - **O3.** An answer that needs a follow-up says so in a `next` string naming the tool to call:
   `RunOutput.next`, `WorkflowStarted.next`, `BoardError.next`.
+- **O4.** An answer is an object, and so is its output schema (MCP `structuredContent`): a list
+  answers inside one (`TicketsOut { tickets }`, B3). rmcp writes the schema from the return type
+  as written, so a tool spells out `Json<T>` or `Result<Json<T>, E>`; an alias hides it and the
+  tool declares none.
 
 ### Refusals
 
@@ -287,7 +291,7 @@ Layout is [G10][shared] and [layout.md](layout.md). For MCP tools in particular:
 Test shape is [G13][shared]. A new tool is covered at four levels:
 
 1. **The tool list (unit, no I/O).** `check_tools` (below) holds every tool on both surfaces to
-   N1, T1, A1, A2, I1, I2, O1, D1 and D3. The parity test holds A3 and D2.
+   N1, T1, A1, A2, I1, I2, O1, O4, D1 and D3. The parity test holds A3 and D2.
 2. **Source scan.** Every `#[tool(` name is defined once per surface (N1), and every hub tool body
    reaches an audit helper with no early return before it (AU1).
 3. **Behaviour (hosted harness, test Postgres).** The shape is
@@ -333,7 +337,7 @@ loses entries and is deleted when B4 is done.
 
 | Check | Holds | Lives in |
 |---|---|---|
-| `check_tools`, one shared function | N1 (form), T1, A1, A2 (stated), I1, I2, O1, D1, D3 | `crates/mcp/src/pattern.rs` (new, B1), called by `crates/mcp/src/adapter/tests.rs` and `crates/hub/src/mcp/tests/tools.rs` (new, B1) |
+| `check_tools`, one shared function | N1 (form), T1, A1, A2 (stated), I1, I2, O1, O4, D1, D3 | `crates/mcp/src/pattern.rs` (new, B1), called by `crates/mcp/src/adapter/tests.rs` and `crates/hub/src/mcp/tests/tools.rs` (new, B1) |
 | Audit and uniqueness scan | N1 (unique), AU1 | `crates/hub/src/mcp/tests/scan.rs` (new, B1) |
 | Local/hub parity | A3, D2 | `crates/hub/src/machines/tests/parity.rs` (new, B1) |
 | Board-only checks: `READ_ONLY_TOOLS` against hints, `PER_CALLER_WRITES`, `next_for` coverage | board-operations | `crates/hub/src/agenthub/mcp/tests/contract.rs` (new, B3) |
@@ -492,7 +496,7 @@ it is in brackets.
 - `crates/hub/src/agenthub/mcp/tools/read.rs` (`board_attach`, `board_issue_context`,
   `board_issue_checkpoint`): `title` set, no `annotations(title)` -> add
   `title = "Attach an existing shared board"`, `"Read shared issue context"` and
-  `"Checkpoint shared issue context"` inside each `annotations(...)`. [B3]
+  `"Checkpoint shared issue context"` inside each `annotations(...)`. [B3, done]
 
 ### A2 hints stated and honest; A3 same hints on both surfaces
 
@@ -513,14 +517,14 @@ it is in brackets.
 - `crates/hub/src/workflows/mcp.rs` (`workflow_cancel`): `destructive_hint = false` though the
   link stops working at once -> `destructive_hint = true`. [B4]
 - `crates/hub/src/agenthub/mcp/tools/settings.rs` (`board_settings`): `destructive_hint =
-  false`, but it replaces the board's repo and environments -> `destructive_hint = true`. [B3]
+  false`, but it replaces the board's repo and environments -> `destructive_hint = true`. [B3, done]
 
 ### I1 closed inputs
 
 - `crates/hub/src/agenthub/mcp/schema.rs` (all 22 input structs, `ProjectIn` through
   `ApprovalWaitIn`): no `deny_unknown_fields`; a mistyped `fence` on `board_complete` falls
   back to the remembered fence -> add it under each derive. `crates/agenthub/src/cli/remote.rs`
-  sends only declared fields; grep `tests/*.py` for `board_*` arguments before landing. [B3]
+  sends only declared fields; grep `tests/*.py` for `board_*` arguments before landing. [B3, done]
 - `crates/hub/src/mcp/schema.rs` (`MachineAdd`, `MachineUpdate`): open -> add
   `deny_unknown_fields`. [B1]
 - `crates/hub/src/connections/mod.rs` (`CallIn`): open; a misspelt `body` or `query` is dropped
@@ -536,11 +540,11 @@ it is in brackets.
   `ProjectIn`'s, and `id`, `fence`, `state`, `label`, `description`, `labels`, `assignee`,
   `title`, `priority`, `clear_assignee`, `depends_on`, `remove`): no `///` -> document each, for
   example `/// The project whose board to use, as whoami lists it.` and `/// The fence
-  board_claim returned; omit it on a ticket you hold and the hub supplies it.` [B3]
+  board_claim returned; omit it on a ticket you hold and the hub supplies it.` [B3, done]
 - `crates/agenthub/src/issue_lifecycle.rs` (`IssueLookup`, `ContextWrite`): 12 undocumented
   fields, the inputs of `board_issue_context` and `board_issue_checkpoint` -> document format
   (`owner/repo`), units, the default of `IssueLookup.limit` (50, from `page_size`) and the
-  source of each value. [B3]
+  source of each value. [B3, done]
 - `crates/hub/src/kernel/mcp.rs` (`ProposeInput`: `phrase`, `examples`, `counterexamples`,
   `start`; `ReviewInput`: `action`, `filter`, `phrase`, `meaning`, `concepts`, `examples`,
   `counterexamples`) and `crates/hub/src/kernel/handoff.rs` (`HandoffInput.action`): no `///`
@@ -572,7 +576,7 @@ it is in brackets.
 - `crates/hub/src/agenthub/mcp/tools/read.rs` (`board_wait`,
   `unwrap_or(20_000).min(25_000)`) and `crates/hub/src/agenthub/mcp/tools/messages.rs`
   (`approval_wait`, `unwrap_or(25_000).min(50_000)`): bounds and defaults as literals ->
-  `DEFAULT_*` / `MAX_*` consts used by the field, its doc and the description. [B3]
+  `DEFAULT_*` / `MAX_*` consts used by the field, its doc and the description. [B3, done]
 
 ### I5 flat `machine` (and N3)
 
@@ -626,24 +630,24 @@ it is in brackets.
   `subject_id`, used first by `board_claim`, `board_heartbeat`, `board_note`, `board_handoff`,
   `board_release`, `board_complete`): an invalid seat header is refused after the subject is
   known and before the line -> fold the seat refusal into `result`; take the subject with
-  `board_subject` in the ticket tools. [B3]
+  `board_subject` in the ticket tools. [B3, done]
 - `crates/hub/src/agenthub/mcp/tools/tickets.rs` (`board_heartbeat`, `board_handoff`,
   `board_release`, `board_complete`, `fence_for(..)?`): a ticket with no fence is refused before
-  `board_call` audits -> resolve the fence inside the `board_call` closure. [B3]
+  `board_call` audits -> resolve the fence inside the `board_call` closure. [B3, done]
 - `crates/hub/src/agenthub/mcp/tools/tickets.rs` (`board_dep`, the `kind` parse) and
   `crates/hub/src/agenthub/mcp/tools/messages.rs` (`board_wake`, `wake::target(..)?`): refused
-  before `board_call` audits -> do both inside the closure. [B3]
+  before `board_call` audits -> do both inside the closure. [B3, done]
 - `crates/hub/src/agenthub/mcp/tools/read.rs` (`board_wait`) and
   `crates/hub/src/agenthub/mcp/tools/messages.rs` (`approval_wait`): `board_for(..)?` and store
   errors return before the direct `audited` call -> collect the loop's outcome into a `Result`
-  and audit it once. [B3]
+  and audit it once. [B3, done]
 - `crates/hub/src/agenthub/mcp/tools/settings.rs` (`board_bind`,
   `account_boards(..).map_err(..)?`): a store error returns before the audit -> map it into
-  `result`. [B3]
+  `result`. [B3, done]
 - `crates/hub/src/agenthub/mcp/tools/read.rs` (`board_issue_context`,
   `board_issue_checkpoint`, `config.github.mapping(..)?`): an unmapped repository is refused
   before `board_call_scoped` audits -> audit the code first, or move the mapping into a
-  `board_call_scoped` variant. [B3]
+  `board_call_scoped` variant. [B3, done]
 - `crates/hub/src/kernel/mcp.rs` (`lexicon_review`, `invalid(..)?` and `return
   Err(invalid(..))`): argument refusals before `change` audits -> build the change as a
   `Result` and pass refusals through the same record. [B4]
@@ -655,7 +659,7 @@ it is in brackets.
   sites), `crates/hub/src/agenthub/mcp/tools/messages.rs` (`approval_wait`, outcome
   `approved`/`denied`/`pending`): outcomes outside the vocabulary, so `get_usage_stats` counts
   these successes as failures -> outcome `ok`; method, path and status, or id and status, go in
-  the target; `board_bind` still fires its milestone from `bound.created`. [B3 for board; B4 for
+  the target; `board_bind` still fires its milestone from `bound.created`. [B3 for board, done; B4 for
   connections]
 - `crates/hub/src/workflows/mcp.rs` (`record_workflow`), `crates/hub/src/offers/mcp.rs`
   (`record_offers`), `crates/hub/src/connections/mod.rs` (inline in `connections` and
@@ -673,7 +677,7 @@ it is in brackets.
   ticket))` after the store call) and every helper above: a committed effect is reported as a
   refusal when its line cannot be written -> `Hub::recorded` and the board helpers return the
   real result, log the failure and raise `audit.write_failed`; correct the `Hub::record` doc.
-  Waits on the operator's D1; default G7. [B1 for `Hub::call`; B3 for the board helpers]
+  Waits on the operator's D1; default G7. [B1 for `Hub::call`; B3 for the board helpers, done]
 
 ### D2 one description per shared tool, in `describe.rs`
 

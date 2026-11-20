@@ -9,8 +9,8 @@ use rmcp::{
 };
 
 use super::super::{
-    ApprovalOut, ApprovalRequestIn, ApprovalWaitIn, BoardError, InboxIn, InboxOut, WakeIn, WakeOut,
-    refuse,
+    APPROVAL_WAIT_DEFAULT_MS, APPROVAL_WAIT_MAX_MS, ApprovalOut, ApprovalRequestIn, ApprovalWaitIn,
+    BoardError, InboxIn, InboxOut, WakeIn, WakeOut, refuse,
 };
 use crate::mcp::Hub;
 
@@ -182,7 +182,10 @@ impl Hub {
         // One audit line per wait, however long it blocked: the outcome, with the status
         // the wait ended on beside the id.
         let (target, outcome) = match &result {
-            Ok(approval) => (format!("{} {}", input.id, approval.status), "ok".to_string()),
+            Ok(approval) => (
+                format!("{} {}", input.id, approval.status),
+                "ok".to_string(),
+            ),
             Err(error) => (input.id.clone(), error.code.clone()),
         };
         self.record_completion(&subject, "approval_wait", &input.project, &target, &outcome)
@@ -203,7 +206,12 @@ impl Hub {
     ) -> devagotchi_contracts::BridgeResult<crate::agenthub::approval::ApprovalStatus> {
         let (board, _) = self.board_for(subject, &input.project)?;
         let deadline = tokio::time::Instant::now()
-            + Duration::from_millis(input.timeout_ms.unwrap_or(25_000).min(50_000));
+            + Duration::from_millis(
+                input
+                    .timeout_ms
+                    .unwrap_or(APPROVAL_WAIT_DEFAULT_MS)
+                    .min(APPROVAL_WAIT_MAX_MS),
+            );
         let mut changes = board.changes();
         loop {
             changes.borrow_and_update();

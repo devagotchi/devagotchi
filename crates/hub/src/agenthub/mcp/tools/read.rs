@@ -9,8 +9,8 @@ use rmcp::{
 };
 
 use super::super::{
-    BoardError, EventsIn, EventsOut, ListIn, PrimeIn, ProjectIn, ReadyIn, TicketIn, TicketsOut,
-    WaitIn, refuse,
+    BOARD_WAIT_DEFAULT_MS, BOARD_WAIT_MAX_MS, BoardError, EventsIn, EventsOut, ListIn, PrimeIn,
+    ProjectIn, ReadyIn, TicketIn, TicketsOut, WaitIn, refuse,
 };
 use crate::{
     agenthub::{Anchors, ChainStatus, Event, Filter, Prime, TicketView, face::ME},
@@ -66,7 +66,11 @@ impl Hub {
             &input.project,
             None,
             &context,
-            move |board, actor| board.ready(actor, limit).map(|tickets| TicketsOut { tickets }),
+            move |board, actor| {
+                board
+                    .ready(actor, limit)
+                    .map(|tickets| TicketsOut { tickets })
+            },
         )
         .await
     }
@@ -168,7 +172,11 @@ impl Hub {
             &input.project,
             None,
             &context,
-            move |board, _| board.events(after, limit).map(|events| EventsOut { events }),
+            move |board, _| {
+                board
+                    .events(after, limit)
+                    .map(|events| EventsOut { events })
+            },
         )
         .await
     }
@@ -239,7 +247,12 @@ impl Hub {
     ) -> devagotchi_contracts::BridgeResult<Vec<Event>> {
         let (board, _) = self.board_for(subject, &input.project)?;
         let deadline = tokio::time::Instant::now()
-            + Duration::from_millis(input.timeout_ms.unwrap_or(20_000).min(25_000));
+            + Duration::from_millis(
+                input
+                    .timeout_ms
+                    .unwrap_or(BOARD_WAIT_DEFAULT_MS)
+                    .min(BOARD_WAIT_MAX_MS),
+            );
         let after = input.after_seq;
         // Subscribed before the first read: a change between the read and the sleep is kept.
         let mut changes = board.changes();

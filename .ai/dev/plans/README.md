@@ -15,7 +15,8 @@ the one-user edition there is ordered in [the one-user edition](one-user-edition
 
 Active: [the rewrite: every major area on its golden pattern](rewrite.md), batch by batch
 ([B1](desktop-commander-b1.md) and [B2](link-and-join-b2.md) merged;
-[B2a: main builds again](main-builds.md));
+[B2a: main builds again](main-builds.md) merged;
+[B3: AgentHub board operations](board-operations-b3.md));
 [AI development contracts and local capture](ai-development-capture.md);
 [Make alpha = pre-release obvious](alpha-stage-obvious.md);
 [Texas baseline: installed the way a public customer would](texas-baseline.md);

@@ -218,7 +218,15 @@ pub async fn test(State(state): State<AppState>, headers: HeaderMap) -> Response
     .await
     .unwrap_or_else(|_| Err(not_answered()));
     let target = made.as_ref().map(|a| a.id.clone()).unwrap_or_default();
-    audited(&state, &subject, "approval_request", &project, &target, &made).await;
+    audited(
+        &state,
+        &subject,
+        "approval_request",
+        &project,
+        &target,
+        &made,
+    )
+    .await;
     match made {
         Ok(approval) => {
             state
@@ -283,7 +291,11 @@ pub async fn decide(
         match form.allow_days {
             Some(days) if form.verdict == Verdict::Approved => {
                 let asked = board.approval_status(&form.id)?;
-                if asked.kind.as_deref().is_some_and(|kind| preferences.always_asks(kind)) {
+                if asked
+                    .kind
+                    .as_deref()
+                    .is_some_and(|kind| preferences.always_asks(kind))
+                {
                     board.decide_approval(&actor, &form.id, form.version, form.verdict, &form.note)
                 } else {
                     board
@@ -306,7 +318,15 @@ pub async fn decide(
         Ok(decided) => format!("{ticket} {}", decided.status),
         Err(_) => ticket,
     };
-    audited(&state, &subject, "approval_decide", &project, &target, &result).await;
+    audited(
+        &state,
+        &subject,
+        "approval_decide",
+        &project,
+        &target,
+        &result,
+    )
+    .await;
     match result {
         Ok(decided) => see_other(&format!("/approvals?done={}", decided.id), &[]),
         Err(error) if error.code == "board_store" => pages::message(

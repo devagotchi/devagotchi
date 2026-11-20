@@ -128,17 +128,7 @@ fn nothing_unsafe_is_ever_written_into_a_script() {
     }
     assert!(script(Shell::Sh, hub, "lab", "la'b", CODE, &downloads).is_none());
     // A hub without the PowerShell installer writes no PowerShell script.
-    assert!(
-        script(
-            Shell::PowerShell,
-            hub,
-            "lab",
-            "lab",
-            CODE,
-            &downloads
-        )
-        .is_none()
-    );
+    assert!(script(Shell::PowerShell, hub, "lab", "lab", CODE, &downloads).is_none());
     assert!(valid_code(CODE) && !valid_code("dvg-") && !valid_code(&format!("{CODE}0")));
 }
 

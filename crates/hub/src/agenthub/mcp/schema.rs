@@ -6,6 +6,13 @@ use serde::{Deserialize, Serialize};
 
 use crate::agenthub::{Lease, approval::ApprovalStatus};
 
+/// `board_wait`'s wait when `timeout_ms` is not given, and the longest it holds (ms).
+pub const BOARD_WAIT_DEFAULT_MS: u64 = 20_000;
+pub const BOARD_WAIT_MAX_MS: u64 = 25_000;
+/// `approval_wait`'s wait when `timeout_ms` is not given, and the longest it holds (ms).
+pub const APPROVAL_WAIT_DEFAULT_MS: u64 = 25_000;
+pub const APPROVAL_WAIT_MAX_MS: u64 = 50_000;
+
 // ----- inputs ------------------------------------------------------------------
 
 #[derive(Debug, Deserialize, JsonSchema)]

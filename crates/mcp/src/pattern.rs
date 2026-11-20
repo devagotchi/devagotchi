@@ -73,14 +73,17 @@ pub fn check_tools(tools: &[rmcp::model::Tool]) -> Vec<String> {
                 "Json<T> answers declare an output schema; media answers do not".into(),
             );
         }
-        // MCP: `structuredContent` is an object, and so is the schema that describes it. A
-        // list answers inside one (`{"tickets": [...]}`).
+        // O4. MCP: `structuredContent` is an object, and so is the schema that describes it.
+        // A list answers inside one (`{"tickets": [...]}`).
         if let Some(schema) = &tool.output_schema
             && schema.get("type") != Some(&Value::String("object".into()))
         {
             no(
-                "O2",
-                format!("the output schema is {:?}, not an object", schema.get("type")),
+                "O4",
+                format!(
+                    "the output schema is {:?}, not an object",
+                    schema.get("type")
+                ),
             );
         }
         let said = tool.description.as_deref().unwrap_or_default();

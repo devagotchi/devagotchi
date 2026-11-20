@@ -249,8 +249,7 @@ fn beside(root: &Path) -> Vec<String> {
         .filter_map(|(relative, path)| {
             let stem = path.file_stem()?.to_str()?.to_string();
             let folder = path.with_extension("");
-            let holds_rust = folder.is_dir()
-                && support::rust_files_under(&folder).next().is_some();
+            let holds_rust = folder.is_dir() && support::rust_files_under(&folder).next().is_some();
             (holds_rust && !["main", "lib", "build", "mod"].contains(&stem.as_str()))
                 .then_some(relative)
         })
@@ -270,13 +269,22 @@ fn no_module_is_both_a_file_and_a_folder_beyond_those_listed() {
         .filter(|line| !line.is_empty() && !line.starts_with('#'))
         .collect();
     let found = beside(&workspace_root());
-    let new: Vec<&String> = found.iter().filter(|f| !listed.contains(&f.as_str())).collect();
+    let new: Vec<&String> = found
+        .iter()
+        .filter(|f| !listed.contains(&f.as_str()))
+        .collect();
     assert!(
         new.is_empty(),
         "layout rule 2: make each a folder with mod.rs, never list it:\n  {}",
-        new.iter().map(|s| s.as_str()).collect::<Vec<_>>().join("\n  ")
+        new.iter()
+            .map(|s| s.as_str())
+            .collect::<Vec<_>>()
+            .join("\n  ")
     );
-    let gone: Vec<&&str> = listed.iter().filter(|l| !found.iter().any(|f| f == *l)).collect();
+    let gone: Vec<&&str> = listed
+        .iter()
+        .filter(|l| !found.iter().any(|f| f == *l))
+        .collect();
     assert!(
         gone.is_empty(),
         "fixed, so take them out of layout/beside.txt:\n  {}",

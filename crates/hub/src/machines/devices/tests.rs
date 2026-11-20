@@ -86,19 +86,10 @@ async fn an_owned_code_binds_a_machine_to_its_account_only() {
         .await
         .unwrap();
     // Not in the hub config, yet it joins: the code says whose it is.
-    let device = devices
-        .enroll("lab", &code, "aa", false)
-        .await
-        .unwrap();
+    let device = devices.enroll("lab", &code, "aa", false).await.unwrap();
     assert_eq!(device.owner.as_deref(), Some("acct-a"));
     assert_eq!(
-        devices
-            .get("lab")
-            .await
-            .unwrap()
-            .unwrap()
-            .owner
-            .as_deref(),
+        devices.get("lab").await.unwrap().unwrap().owner.as_deref(),
         Some("acct-a")
     );
     assert_eq!(devices.owned_by("acct-a").await.unwrap().len(), 1);
@@ -130,10 +121,7 @@ async fn an_owned_code_binds_a_machine_to_its_account_only() {
         .issue_owned_code("acct-a", "lab", [22; 16], OWNED_LIMIT)
         .await
         .unwrap();
-    devices
-        .enroll("lab", &again, "bb", false)
-        .await
-        .unwrap();
+    devices.enroll("lab", &again, "bb", false).await.unwrap();
     let record = devices.get("lab").await.unwrap().unwrap();
     assert_eq!(
         (record.public_key.as_str(), record.revoked_at),
@@ -278,10 +266,7 @@ async fn a_live_code_names_its_machine_until_it_is_spent_or_expires() {
         devices.live_code(&code).await.unwrap().as_deref(),
         Some("lab")
     );
-    devices
-        .enroll("lab", &code, "aa", false)
-        .await
-        .unwrap();
+    devices.enroll("lab", &code, "aa", false).await.unwrap();
     assert_eq!(devices.live_code(&code).await.unwrap(), None);
     let other = devices
         .issue_owned_code("acct-a", "spare", [61; 16], OWNED_LIMIT)

@@ -237,7 +237,12 @@ pub(crate) async fn issue_state_route(
         let context = found
             .board
             .hosted()
-            .issue_context(found.repository, query.issue_number, query.after, query.limit)
+            .issue_context(
+                found.repository,
+                query.issue_number,
+                query.after,
+                query.limit,
+            )
             .await?;
         Ok(Json(context).into_response())
     }
@@ -285,7 +290,13 @@ pub(crate) async fn shared_state_write_route(
     };
     state
         .hub
-        .record_completion(&subject, "board_issue_checkpoint", &place, &target, &outcome)
+        .record_completion(
+            &subject,
+            "board_issue_checkpoint",
+            &place,
+            &target,
+            &outcome,
+        )
         .await;
     result
         .map(|receipt| Json(receipt).into_response())

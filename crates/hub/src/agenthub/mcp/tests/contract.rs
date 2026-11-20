@@ -41,7 +41,10 @@ fn a_viewer_may_call_exactly_the_board_tools_that_change_nothing_but_its_read_st
             "{name}: READ_ONLY_TOOLS against its read_only_hint"
         );
         if PER_CALLER_WRITES.contains(&name.as_str()) {
-            assert!(!read_only, "{name} writes the caller's read state: not read-only");
+            assert!(
+                !read_only,
+                "{name} writes the caller's read state: not read-only"
+            );
         }
         assert_eq!(
             super::super::viewer_may_call(&name),
@@ -92,7 +95,11 @@ fn store_codes() -> BTreeSet<String> {
 #[test]
 fn every_code_the_store_refuses_with_names_the_next_call() {
     let codes = store_codes();
-    assert!(codes.len() > 25, "the scan found only {} codes", codes.len());
+    assert!(
+        codes.len() > 25,
+        "the scan found only {} codes",
+        codes.len()
+    );
     let fallback = refuse(BridgeError::new("zz_never_a_code", ""), None).0.next;
     let missing: Vec<&String> = codes
         .iter()
@@ -103,4 +110,33 @@ fn every_code_the_store_refuses_with_names_the_next_call() {
         missing.is_empty(),
         "no next of its own in mcp/refusals.rs: {missing:?}"
     );
+}
+
+/// A wait's default and longest hold are the constants the tool uses, and its field says so.
+#[test]
+fn each_wait_says_its_default_and_its_longest_hold() {
+    use super::super::{
+        APPROVAL_WAIT_DEFAULT_MS, APPROVAL_WAIT_MAX_MS, BOARD_WAIT_DEFAULT_MS, BOARD_WAIT_MAX_MS,
+    };
+    for (tool, default, max) in [
+        ("board_wait", BOARD_WAIT_DEFAULT_MS, BOARD_WAIT_MAX_MS),
+        (
+            "approval_wait",
+            APPROVAL_WAIT_DEFAULT_MS,
+            APPROVAL_WAIT_MAX_MS,
+        ),
+    ] {
+        let found = crate::mcp::tools()
+            .into_iter()
+            .find(|t| t.name == tool)
+            .unwrap_or_else(|| panic!("{tool} is not served"));
+        let said = found.input_schema["properties"]["timeout_ms"]["description"]
+            .as_str()
+            .unwrap_or_default()
+            .to_string();
+        assert!(
+            said.contains(&format!("default {default}")) && said.contains(&format!("max {max}")),
+            "{tool}.timeout_ms says {said:?}, not default {default} and max {max}"
+        );
+    }
 }

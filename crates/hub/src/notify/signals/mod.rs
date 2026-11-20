@@ -403,7 +403,8 @@ impl Sink {
                     );
                     signal.tenant = Some(tenant.clone());
                     signal.owner = row.owner.clone();
-                    signal.project = Some(row.project_name.clone().unwrap_or_else(|| board.clone()));
+                    signal.project =
+                        Some(row.project_name.clone().unwrap_or_else(|| board.clone()));
                     signal.actor = Some(event.actor);
                     signal.ticket = event.ticket;
                     let mut data = event.data;

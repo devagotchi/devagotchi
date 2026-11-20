@@ -151,7 +151,15 @@ pub async fn grant(
     .await
     .unwrap_or_else(|_| Err(not_answered()));
     let target = result.as_ref().map(|s| s.id.clone()).unwrap_or_default();
-    audited(&state, &subject, "approval_allow", &project, &target, &result).await;
+    audited(
+        &state,
+        &subject,
+        "approval_allow",
+        &project,
+        &target,
+        &result,
+    )
+    .await;
     match result {
         Ok(_) => see_other("/approvals?ahead=granted", &[]),
         Err(error) if error.code == "board_store" => unavailable(),
@@ -188,7 +196,15 @@ pub async fn revoke(
     })
     .await
     .unwrap_or_else(|_| Err(not_answered()));
-    audited(&state, &subject, "approval_revoke", &project, &standing, &result).await;
+    audited(
+        &state,
+        &subject,
+        "approval_revoke",
+        &project,
+        &standing,
+        &result,
+    )
+    .await;
     match result {
         Ok(_) => see_other("/approvals?ahead=revoked", &[]),
         Err(error) if error.code == "board_store" => unavailable(),
@@ -200,4 +216,3 @@ pub async fn revoke(
         ),
     }
 }
-

@@ -112,7 +112,10 @@ impl Hub {
         let subject = self.board_subject(context)?;
         let result = match self.seat(context) {
             Err(Json(refused)) => Err(BridgeError::new(&refused.code, refused.message)),
-            Ok(seat) => self.run_scoped(&subject, seat, tool, project, required_kind, f).await,
+            Ok(seat) => {
+                self.run_scoped(&subject, seat, tool, project, required_kind, f)
+                    .await
+            }
         };
         let outcome = match &result {
             Ok(_) => "ok".to_string(),
@@ -149,15 +152,13 @@ impl Hub {
                     "issue repository belongs to the configured shared board",
                 ))
             }
-            (_, _, role) if !role.may_work() && !viewer_may_call(tool) => {
-                Err(BridgeError::new(
-                    "read_only",
-                    format!(
-                        "{} is a viewer on {project:?}: it reads this board and changes nothing",
-                        subject.id
-                    ),
-                ))
-            }
+            (_, _, role) if !role.may_work() && !viewer_may_call(tool) => Err(BridgeError::new(
+                "read_only",
+                format!(
+                    "{} is a viewer on {project:?}: it reads this board and changes nothing",
+                    subject.id
+                ),
+            )),
             (board, kind, role) => {
                 let (id, human) = self.actor_for(subject, seat.as_deref(), kind, role);
                 tokio::task::spawn_blocking(move || {

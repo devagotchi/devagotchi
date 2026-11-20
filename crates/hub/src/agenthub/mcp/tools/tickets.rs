@@ -8,13 +8,10 @@ use rmcp::{
 
 use super::super::{
     BoardError, ClaimIn, ClaimOut, CompleteIn, CreateIn, DepIn, DepsOut, ForceIn, HandoffIn,
-    HeartbeatIn,
-    NoteIn, ReleaseIn, UpdateIn, given_or, mcp_session,
+    HeartbeatIn, NoteIn, ReleaseIn, UpdateIn, given_or, mcp_session,
 };
 use crate::{
-    agenthub::{
-        AnchorPatch, Anchors, DepKind, Lease, NewTicket, NextFilter, Note, Patch, Ticket,
-    },
+    agenthub::{AnchorPatch, Anchors, DepKind, Lease, NewTicket, NextFilter, Note, Patch, Ticket},
     mcp::Hub,
 };
 
