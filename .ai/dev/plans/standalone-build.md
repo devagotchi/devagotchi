@@ -11,7 +11,10 @@
   on the operator's own server and phone. Each piece gets the folder and files it lives in,
   the pattern it follows and the test that proves it.
 - Non-goals: the cloud edition. No new feature beyond [the path](path.md) step 1 and the
-  increments of [the one-user edition](one-user-edition.md). No accepted decision is reopened.
+  increments of [the self-hosted edition](one-user-edition.md), except the operator's
+  2026-11-20 clarification: one environment may have local users. Its branch integration,
+  Docker test deployment and local-user acceptance are tracked in
+  [release readiness](v0.1-release-readiness.md#self-hosted-baseline-2026-11-20).
 - Who owns what, so there is one truth:
 
   | Question | Owner |
@@ -63,7 +66,10 @@
 
   The plugins come forward right after M1 (operator, 2026-11-18).
 - **O5. One concern per PR.** Branches are named `increment-N/<topic>`. Each PR is merged on
-  green and its branch deleted.
+  green. Account for every local and remote branch against current `main`, including the
+  AgentHub submodule repository. Merge dependency branches first, retain unique changes,
+  and verify squash/rebase merges through their PR and resulting diff. Delete a branch only
+  after its absorption is verified. An unavailable remote leaves this check unverified.
 
 ## 3. The waves
 

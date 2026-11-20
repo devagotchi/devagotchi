@@ -4,8 +4,8 @@ This is the boundary. Check it before adding anything that only a hosted service
 
 | Lives in | What belongs there |
 |---|---|
-| **Core** (`devagotchi/devagotchi`, this repository, source-available under [FSL-1.1-ALv2](../../LICENSE)) | For one user: the hub, AgentHub boards, notes and approvals, the phone app, self-hosting, connectors for third-party AI clients, API keys, sign-in providers, signals, statistics, and every setting a person running their own hub needs |
-| **Multi-tenant** (this repository, the `tenancy` domain; its own crate outside the default build once [free edition](../dev/plans/free-edition.md) R4 lands) | Many accounts on one hub: organisations, teams, members and roles (`crates/hub/src/tenancy/orgs/`), sign-up and its limits, `tenancy.mode multi`, `/operator`, plan limits. The Shippin build and managed deployments turn it on; the standalone release does not carry it |
+| **Core** (`devagotchi/devagotchi`, this repository, source-available under [FSL-1.1-ALv2](../../LICENSE)) | One environment with its owner and local users and permissions: the hub, AgentHub boards, notes and approvals, the phone app, self-hosting, connectors for third-party AI clients, API keys, sign-in providers, signals, statistics, and environment settings |
+| **Multi-tenant** (this repository, the `tenancy` domain; its own crate outside the default build once [free edition](../dev/plans/free-edition.md) R4 lands) | Multiple customer environments on one service: customer provisioning, tenant organisations, public sign-up and its limits, `tenancy.mode multi`, `/operator`, tenant plans. The commercial build can turn it on; the standalone release does not carry it. Local accounts and permissions remain in core |
 | **Cloud** (the private repository `shippinAI/devagotchi-cloud`) | Hosted-service operations: billing, plan enforcement for a paid service, tenant provisioning at scale, hosted deployment configuration and secrets, and enterprise chat |
 
 Rules:
@@ -20,6 +20,26 @@ Rules:
    is what the cloud sells. Each version becomes Apache-2.0 two years after it is published.
 5. Every setting a person changes has a guided page, grouped by what it is for. A setting that only
    exists as a file or an environment variable is unfinished.
+
+## Current clarification: 2026-11-20
+
+The first GitHub release is self-hosted / indie: one installation, one environment, an owner
+and users of that environment. It has no multi-tenant hosting. Account creation must not
+provision another customer tenant. Local users, their access grants and revocation stay in
+core when R4 separates commercial tenancy. Existing internal scope keys and database access
+controls are not removed merely because their names contain `tenant`.
+
+Development runs this same self-hosted configuration in Docker. The requested owner login
+is applied only to that deployment, through the existing account/password flow; no known
+credential ships in the image, Compose defaults, repository or release assets. Login after
+restart and an ordinary user's denied admin actions must be verified on the deployed build.
+
+The commercial public offering follows the accepted GitHub release and includes a free
+tier. Hosting, billing and public-service optimizations remain separate from local-user
+management. See [release readiness](../dev/plans/v0.1-release-readiness.md#self-hosted-baseline-2026-11-20).
+
+This clarification supersedes the one-account/no-local-user restrictions in the historical
+2026-11-18 decision below. The historical decisions are retained with that qualification.
 
 Decided by the operator on 2026-11-14, and recorded so this repository does not invent them:
 
@@ -56,7 +76,7 @@ Decided by the operator on 2026-11-18:
 
 - **Three builds, one licence (FSL-1.1-ALv2 stays):**
   - *The Shippin build*: commercial and multi-tenant. Today's multi-tenant `main` is its basis.
-  - *The standalone GitHub release*: free, and tailored to **one** user. It does not offer
+  - *The standalone GitHub release* (historical; local-user restriction superseded above): free, and tailored to **one** user. It does not offer
     managing other users or customers. The owner manages their own projects and their
     startup's systems. The Core row above was corrected to match: organisations and roles were
     listed there and now sit on the multi-tenant side. The standalone release gets there through

@@ -21,7 +21,6 @@
 1650	crates/hub/src/site/model.rs
 842	crates/hub/src/site/tests.rs
 564	crates/hub/src/site/workflows.rs
-521	crates/hub/src/tenancy/orgs/api/mod.rs
 768	crates/hub/src/tenancy/tests/tenants.rs
 607	crates/hub/src/web/analytics.rs
 509	crates/hub/src/web/app/agenthub/ticket_tests.rs

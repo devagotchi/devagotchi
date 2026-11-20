@@ -42,16 +42,26 @@ macOS is a target, but it does not work today. See the table under "What works t
 
 ## Editions
 
-1. **The free self-hosted edition**, released on GitHub. It is for one user. It manages no
-   other users and no customers.
+1. **The free self-hosted / indie edition**, released on GitHub. Each installation is one
+   environment with its own owner and local users. It does not host multiple customer
+   tenants. Local user permissions belong to this edition.
 2. **Managed deployments.** The same release, run for a customer.
 3. **The commercial cloud**, powered by Shippin.AI and built by wiredFRONT LLC and AngryVibes
    LLC. Later it becomes the public doorway: Cloudflare, Tailscale, Vaultix secrets, and
    integrations with Lovable, Replit and any AI project. The commercial module is separate
-   and comes later. It never shapes the self-hosted edition.
+   and comes later, with a free tier and paid tiers. It reuses the accepted self-hosted
+   release and adds public hosting and commercial optimizations.
 
 The line between core, multi-tenant and cloud code is kept in
 [.ai/docs/editions.md](../.ai/docs/editions.md).
+
+The operator clarified this boundary on 2026-11-20: **one environment is not one account**.
+This supersedes the 2026-11-18 restriction against managing local users. Development must
+exercise the self-hosted Docker deployment, with a deployment-local test owner credential;
+that credential is never a default in the distributed image or source. Branch integration
+and the deployment acceptance are tracked in
+[release readiness](../.ai/dev/plans/v0.1-release-readiness.md#self-hosted-baseline-2026-11-20).
+These are requirements, not a claim that local-user management or deployment is complete.
 
 ## Repositories
 

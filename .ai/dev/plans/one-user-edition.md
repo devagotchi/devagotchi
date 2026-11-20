@@ -1,4 +1,12 @@
-# The one-user edition: every requested capability, in order (increments 208 to 269)
+# The self-hosted edition: every requested capability, in order (increments 208 to 269)
+
+**Scope correction, operator 2026-11-20:** this is one environment with local users, not
+one account. The filename and increment history are retained. References below to the
+one-user edition describe the earlier baseline; the current boundary is
+[editions](../../docs/editions.md#current-clarification-2026-11-20). Local account management
+and permissions remain in self-hosted; customer tenancy remains out. Increment 225's removal
+of commercial tenant surfaces must not be used to exclude local-user management. Acceptance
+is tracked in [release readiness](v0.1-release-readiness.md#self-hosted-baseline-2026-11-20).
 
 - Contract: DG-DELIVERY-1; stage: read [project.json](../../project.json) (alpha = pre-release)
 - Issue / request: operator, 2026-11-18. Their order:
@@ -13,13 +21,13 @@
   hosted version comes after. "Nothing was to be replaced, only extended and offered."
 - PR: increment 208 is the first; each increment records its own PR
 - Branch / baseline: `increment-208/open-output-schemas`, from `main` at `f1b48e8`
-- Objective: one ordered program for the self-hosted, one-user edition. Each increment has
+- Objective: one ordered program for the self-hosted, single-environment edition. Each increment has
   exact files, the tests that prove it, and its dependencies. It is ordered so that it fits
   [the path](path.md): the path still decides what "done" means (Texas and the phone), and
   this page orders the work that gets there.
 - Non-goals:
   - the cloud edition, and `shippinAI/devagotchi-cloud`;
-  - managing other users or customers in the one-user build;
+  - hosting multiple customer tenants in the self-hosted build;
   - a chat screen inside the hub (chat happens in Claude, ChatGPT and Codex).
 - Canonical architecture / related plans: [path](path.md),
   [Desktop Commander parity](desktop-commander-parity.md), [hub settings](hub-settings.md),

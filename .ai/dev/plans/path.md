@@ -36,9 +36,12 @@ needs to be truly built and setup in this project so we can finally focus on the
 admin/shippin module that would allow us to either deploy a managed instance, or offer a
 tailored commercial signup offering free tier and more".
 
-1. **The standalone edition**, free, self-hosted from GitHub, tailored to one user (operator,
-   2026-11-18: it does not offer managing other users or customers; [editions](../../docs/editions.md),
-   free-edition R4). Done when these rows are done:
+1. **The standalone edition**, free, self-hosted from GitHub: one environment with its owner
+   and local users, without multiple customer tenants (operator clarification, 2026-11-20;
+   [editions](../../docs/editions.md#current-clarification-2026-11-20), free-edition R4).
+   [Release readiness](v0.1-release-readiness.md#self-hosted-baseline-2026-11-20) adds branch
+   integration, the self-hosted Docker test deployment and local-user acceptance. Done when
+   these rows and that acceptance are done:
    - first, the dev build and the conformance run that prove every tool call works, the same
      way every time, and covers everything Desktop Commander offers and more: rows 5.8, 5.9
      (operator, 2026-11-17: "a true dev build that allows me to track our toolcalling ... not
@@ -174,6 +177,9 @@ Nothing new is built until this phase has run once; what it finds is fixed first
 Only after Phase 9 is proven: the cloud edition ([cloud-edition](cloud-edition.md)).
 
 ## Decided by the operator, 2026-11-18
+
+Historical record: the one-account/no-local-user restriction below is superseded by the
+2026-11-20 clarification in [editions](../../docs/editions.md#current-clarification-2026-11-20).
 
 Recorded in [editions](../../docs/editions.md), and placed where the work lands:
 

@@ -415,9 +415,9 @@ pub(crate) fn app(state: AppState) -> Router {
                 tenancy::orgs::api::bearer_or_session,
             )),
         )
-        // Organisations, members, teams, project roles and invites (`orgs::api`).
+        // Hosted organisations and invites; local project roles remain in both editions.
         .merge(
-            tenancy::orgs::api::routes()
+            tenancy::orgs::api::routes(config.multi_tenant())
                 .layer(axum::extract::DefaultBodyLimit::max(16 * 1024))
                 .layer(middleware::from_fn_with_state(
                     state.clone(),
