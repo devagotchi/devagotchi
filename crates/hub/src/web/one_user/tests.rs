@@ -3,6 +3,7 @@
 //! and `/orgs*`, `/invite` and `/assets/invite.js` answer as an unknown path does. A hosted
 //! hub (`tenancy.mode multi`) keeps all of them. The whole router as it serves, on the test
 //! Postgres (`DEVAGOTCHI_TEST_POSTGRES_URL`; CI sets it).
+//! Organisation APIs follow that boundary too; shared project permissions remain local.
 
 use serde_json::json;
 
@@ -101,4 +102,83 @@ async fn a_hosted_hub_keeps_the_multi_user_surfaces() {
     let (status, boards) = Hosted::text(hub.get("/app/boards", Some(&owner)).await).await;
     assert_eq!(status, 200, "{boards}");
     assert!(boards.contains("id=\"orgs-link\""), "{boards}");
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_single_environment_hides_organisation_apis_but_keeps_project_permissions() {
+    let (hub, owner) = or_skip!(hub("single"));
+    let missing = unknown(&hub, Some(&owner)).await;
+    assert_eq!(missing.0, 404);
+    let paths = [
+        ("GET", "/api/v1/orgs"),
+        ("POST", "/api/v1/orgs"),
+        ("GET", "/api/v1/orgs/acme"),
+        ("PUT", "/api/v1/orgs/acme/members/person"),
+        ("DELETE", "/api/v1/orgs/acme/members/person"),
+        ("POST", "/api/v1/orgs/acme/teams"),
+        ("DELETE", "/api/v1/orgs/acme/teams/builders"),
+        ("PUT", "/api/v1/orgs/acme/teams/builders/members/person"),
+        ("DELETE", "/api/v1/orgs/acme/teams/builders/members/person"),
+        ("POST", "/api/v1/orgs/acme/projects"),
+        ("PUT", "/api/v1/orgs/acme/projects/demo"),
+        (
+            "PUT",
+            "/api/v1/orgs/acme/projects/demo/members/subject/person",
+        ),
+        (
+            "DELETE",
+            "/api/v1/orgs/acme/projects/demo/members/subject/person",
+        ),
+        ("GET", "/api/v1/orgs/acme/invites"),
+        ("POST", "/api/v1/orgs/acme/invites"),
+        ("DELETE", "/api/v1/orgs/acme/invites/invite"),
+        ("POST", "/api/v1/invites/accept"),
+    ];
+    for (method, path) in paths {
+        for cookie in [Some(owner.as_str()), None] {
+            let mut request = hub
+                .http
+                .request(
+                    method.parse().expect("HTTP method"),
+                    format!("{}{path}", hub.url),
+                )
+                .header("Origin", &hub.url)
+                .json(&json!({}));
+            if let Some(cookie) = cookie {
+                request = request.header("Cookie", cookie);
+            }
+            let response = request.send().await.expect("organisation API response");
+            assert_eq!(Hosted::text(response).await, missing, "{method} {path}");
+        }
+    }
+
+    // These routes must still reach their authentication guard, rather than disappear
+    // with the organisation router: local users need shared-project permissions.
+    for (method, path) in [
+        ("GET", "/api/v1/projects/demo/members"),
+        ("PUT", "/api/v1/projects/demo/members/subject/person"),
+        ("DELETE", "/api/v1/projects/demo/members/subject/person"),
+    ] {
+        let response = hub
+            .http
+            .request(
+                method.parse().expect("HTTP method"),
+                format!("{}{path}", hub.url),
+            )
+            .json(&json!({}))
+            .send()
+            .await
+            .expect("project membership response");
+        assert_eq!(response.status(), 401, "{method} {path}");
+    }
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_hosted_environment_keeps_its_organisation_api() {
+    let (hub, owner) = or_skip!(hub("multi"));
+    let response = hub.get("/api/v1/orgs", Some(&owner)).await;
+    assert_eq!(response.status(), 200);
+    let body: serde_json::Value = response.json().await.expect("organisation list");
+    assert!(body["orgs"].is_array(), "{body}");
+    assert_eq!(hub.get("/api/v1/orgs", None).await.status(), 401);
 }

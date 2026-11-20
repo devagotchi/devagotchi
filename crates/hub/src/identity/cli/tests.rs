@@ -221,6 +221,10 @@ fn test_accounts_make_an_admin_and_a_user_and_rotate_their_passwords() {
         assert!(first.admin.owner, "admin is the hub's owner");
         assert!(!first.user.owner, "user is an ordinary account");
         assert_ne!(first.admin.id, first.user.id);
+        assert_eq!(
+            first.admin.tenant, first.user.tenant,
+            "single mode gives the owner and local users one environment"
+        );
         let admin = accounts
             .sign_in_password(test_accounts::ADMIN_EMAIL, "admin pass one")
             .await

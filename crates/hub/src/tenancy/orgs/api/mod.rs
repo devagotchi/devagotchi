@@ -14,7 +14,6 @@ use axum::{
     http::{HeaderMap, Method, StatusCode, header},
     middleware::Next,
     response::{IntoResponse, Response},
-    routing::{delete, get, post, put},
 };
 use devagotchi_contracts::{BridgeError, BridgeResult};
 use serde::Deserialize;
@@ -29,38 +28,8 @@ use projects::{
     set_shared_member, set_visibility, shared_members,
 };
 
-pub(crate) fn routes() -> Router<AppState> {
-    Router::new()
-        .route("/api/v1/orgs", get(list).post(create))
-        .route("/api/v1/orgs/{org}", get(show))
-        .route(
-            "/api/v1/orgs/{org}/members/{subject}",
-            put(set_member).delete(remove_member),
-        )
-        .route("/api/v1/orgs/{org}/teams", post(create_team))
-        .route("/api/v1/orgs/{org}/teams/{team}", delete(delete_team))
-        .route(
-            "/api/v1/orgs/{org}/teams/{team}/members/{subject}",
-            put(add_team_member).delete(remove_team_member),
-        )
-        .route("/api/v1/orgs/{org}/projects", post(create_project))
-        .route("/api/v1/orgs/{org}/projects/{project}", put(set_visibility))
-        .route(
-            "/api/v1/orgs/{org}/projects/{project}/members/{kind}/{principal}",
-            put(set_org_project_member).delete(remove_org_project_member),
-        )
-        .route(
-            "/api/v1/orgs/{org}/invites",
-            get(invites).post(create_invite),
-        )
-        .route("/api/v1/orgs/{org}/invites/{id}", delete(revoke_invite))
-        .route("/api/v1/invites/accept", post(accept))
-        .route("/api/v1/projects/{project}/members", get(shared_members))
-        .route(
-            "/api/v1/projects/{project}/members/{kind}/{principal}",
-            put(set_shared_member).delete(remove_shared_member),
-        )
-}
+mod routes;
+pub(crate) use routes::routes;
 
 /// Who is calling: a bearer token, checked as `/mcp` checks it, or else the person signed in
 /// on this browser. A session's changes must come from this hub's own pages.
