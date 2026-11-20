@@ -29,6 +29,7 @@ use crate::{AppState, agenthub::Board, identity::Subject, site::Site};
 
 pub fn routes() -> Router<AppState> {
     Router::new()
+        .merge(agenthub::create::routes())
         .route("/app", get(home::home))
         .route("/app/machines", get(home::machines))
         .route("/app/machines/{name}", get(machine::page))

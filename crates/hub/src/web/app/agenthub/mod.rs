@@ -3,6 +3,7 @@
 //! are in `crate::agenthub`; these only show it and act through it.
 
 pub(super) mod board;
+pub(super) mod create;
 pub(super) mod ticket;
 pub(super) mod ticket_actions;
 

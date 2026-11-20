@@ -1,6 +1,6 @@
 # Devagotchi agent board: tickets any subscription can claim, work, annotate and hand off
 
-Revision: **2026-11-18 UTC**. Status: **every board is in Postgres: hosted CLI/MCP/web, and standalone boards since 2026-11-17 (ADR 0005); offline queue pending**.
+Revision: **2026-11-20 UTC**. Status: **every board is in Postgres: hosted CLI/MCP/web, and standalone boards since 2026-11-17 (ADR 0005); offline queue pending**.
 Owner: `crates/hub/src/agenthub/`. This document owns the board contract; the
 [architecture master](product-and-platform-plan.md) owns product decisions and sequencing; the
 [task-graph contract](task-graph-and-mesh-contract.md) owns execution graphs, which are a different thing.
@@ -14,6 +14,21 @@ Hub boards run on Postgres (ADR 0001); standalone boards too (ADR 0005, done 202
 SQLite board is deleted, and nothing is migrated from an old `board.sqlite3` (pre-release; there
 is no importer). Earlier packet receipts below describe the legacy backend, not completed
 amended scope.
+
+## Create work in the browser
+
+Sign in, open **AgentHub**, and choose **Create a board**. On that board, choose **New task**
+to enter its title, acceptance criteria, priority, labels and existing tasks it depends on.
+The task and its dependencies save together in PostgreSQL. A refused dependency leaves no
+partial task and keeps the form's contents so you can correct it. The saved task opens with
+its history and dependency links, marked Waiting or No longer blocking; the same task is
+available through MCP and the CLI.
+
+The browser respects current board permissions: owners and members can create tasks;
+viewers cannot. Account boards remain private to their account; shared boards use their
+existing grants.
+MCP `board_create` accepts `depends_on: ["task-id", ...]`; the CLI accepts repeatable
+`devagotchi board new "Title" --depends-on TASK_ID` flags on standalone and bound boards.
 
 ## 1. What a ticket is, and is not
 

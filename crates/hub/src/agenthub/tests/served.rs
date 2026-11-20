@@ -227,8 +227,14 @@ mod bound {
             assert_eq!(ticket["environment"], "prod");
             assert_eq!(ticket["session"], "s-1");
             let id = ticket["id"].as_str().unwrap().to_string();
-            let (code, _, err) = run(&project, &account, Some("claude"), &["new", "plain"]);
+            let (code, dependent, err) = run(
+                &project,
+                &account,
+                Some("claude"),
+                &["new", "plain", "--depends-on", &id, "--depends-on", &id],
+            );
             assert_eq!(code, EXIT_OK, "{err}");
+            assert_eq!(dependent["blocked_by"], json!([id]));
             let (code, listed, err) = run(
                 &project,
                 &account,
