@@ -7,7 +7,7 @@
 //!   confirmed meanings the person settles first. Moves nothing.
 //! - `begin`: this hub stops writing (`handing_over`, epoch + 1).
 //! - `export` (Clyffy's own bundle, if it had a lexicon): the merged lexicon, which this hub
-//!   keeps and Clyffy takes; refused while a conflict stands.
+//!   keeps and Clyffy takes; bridge while a conflict stands.
 //! - `complete` (`epoch`): Clyffy holds it; this hub keeps a read-only mirror. `abort` instead
 //!   gives it back to this hub at a new epoch.
 //! - `mirror` (Clyffy's bundle at the current epoch): the mirror becomes Clyffy's lexicon.
@@ -25,7 +25,7 @@ use rmcp::{
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use super::{Stored, mcp::refused, owner_of};
+use super::{Stored, mcp::bridge, owner_of};
 use crate::mcp::Hub;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, JsonSchema)]
@@ -57,7 +57,10 @@ impl Step {
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub struct HandoffInput {
+    /// The step: `status`, `preview`, `begin`, `export`, `complete`, `abort`, `mirror` or
+    /// `restore` (the description says what each does).
     pub action: Step,
     /// Clyffy's lexicon as a `devagotchi.lexicon.bundle/1` (preview, export, mirror, restore),
     /// with `from: clyffy` and the `owner_id` that `status` gives.
@@ -184,14 +187,13 @@ impl Hub {
         let subject = self.subject(&context)?;
         let owner = owner_of(&subject);
         let action = input.action;
-        let answer = step(&Stored::new(self.audit.store().clone()), &owner, input).await;
-        if !matches!(action, Step::Status | Step::Preview) {
-            let outcome = answer.as_ref().map_or_else(|e| e.code(), |_| "ok");
-            let epoch = answer.as_ref().map(|o| o.epoch).unwrap_or_default();
-            let operation = format!("{}@{epoch}", action.as_str());
-            self.record(&subject, "lexicon_handoff", "", &operation, outcome)
-                .await?;
-        }
-        answer.map(Json).map_err(refused)
+        let answer = step(&Stored::new(self.audit.store().clone()), &owner, input)
+            .await
+            .map_err(bridge);
+        // Every step leaves one line, `status` and `preview` too (AU1).
+        let epoch = answer.as_ref().map(|o| o.epoch).unwrap_or_default();
+        let operation = format!("{}@{epoch}", action.as_str());
+        self.recorded(&subject, "lexicon_handoff", "", &operation, answer)
+            .await
     }
 }

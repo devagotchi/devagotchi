@@ -13,7 +13,7 @@
 //!   the plans are, in the site's words.
 
 use devagotchi_contracts::BridgeError;
-use rmcp::model::{CallToolResult, ContentBlock};
+use rmcp::model::CallToolResult;
 
 use crate::{
     identity::Subject,
@@ -48,15 +48,17 @@ impl Hub {
             .then(|| BridgeError::new("early_access", self.waiting_text(subject)))
     }
 
-    /// What a tool call answers while the caller's tenant waits: the message alone, as
-    /// text. Marked an error result because nothing ran: every hub tool declares an output
-    /// schema, and a result that is not an error must carry content that matches it (MCP
-    /// clients check it). No structured content, so no client misreads it against that
-    /// schema; the text is a plain sentence for the person.
+    /// What a tool call answers while the caller's tenant waits: a refusal like any other
+    /// tool's, `{code: "early_access", message}`, marked an error result because nothing ran.
+    /// A client checks structured content against a tool's output schema only on a result
+    /// that is not an error (MCP 2025-11-25, tool results), so the refusal's own shape is
+    /// read as a refusal; `message` is a plain sentence for the person.
     pub(crate) fn waiting_result(&self, subject: &Subject) -> Option<CallToolResult> {
-        subject
-            .waiting()
-            .then(|| CallToolResult::error(vec![ContentBlock::text(self.waiting_text(subject))]))
+        self.waiting_refusal(subject).map(|refused| {
+            CallToolResult::structured_error(
+                serde_json::json!({"code": refused.code, "message": refused.message}),
+            )
+        })
     }
 
     /// The plan `subject`'s tenant is held to: on a hosted hub, for anyone but its owner,

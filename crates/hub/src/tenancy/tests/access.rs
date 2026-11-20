@@ -97,8 +97,8 @@ async fn waiting(hub: Hosted) {
     let tenant = who["tenant"].as_str().unwrap().to_string();
     let subject = who["subject"].as_str().unwrap().to_string();
 
-    // Every other tool answers with that one message instead of acting: an error result
-    // (nothing ran) in plain words, with no structured content a client could misread.
+    // Every other tool answers with that one message instead of acting: a refusal like any
+    // other tool's (nothing ran), `{code: early_access, message}`.
     let listed = hub.mcp(&mut person, "tools/list", json!({})).await;
     let tools = listed["tools"].as_array().unwrap().clone();
     assert!(tools.len() >= 30, "{} tools", tools.len());
@@ -112,11 +112,11 @@ async fn waiting(hub: Hosted) {
         let arguments = fill(&tool["inputSchema"], &tool["inputSchema"], &ids);
         let answer = hub.call(&mut person, name, arguments).await;
         assert_eq!(answer["isError"], true, "{name}: {answer}");
-        assert!(
-            answer.get("structuredContent").is_none(),
+        assert_eq!(
+            answer["structuredContent"],
+            json!({ "code": "early_access", "message": note }),
             "{name}: {answer}"
         );
-        assert_eq!(answer["content"][0]["text"], note.as_str(), "{name}");
     }
 
     // Adding a machine, from the app's API and from the page, is refused the same.

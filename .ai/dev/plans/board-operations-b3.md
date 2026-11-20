@@ -4,7 +4,8 @@
 - Issue / request: the operator, 2026-11-19: carry out the rewrite plan batch by batch, B3 next
   ([rewrite](rewrite.md), B3).
 - PR: agenthub: the store work went to its main directly (`d149bdc`, `3866d18`, the operator's
-  push), then devagotchi/agenthub#8 (`f4af7f9`, formatting). This repository: not_created.
+  push), then devagotchi/agenthub#8 (`f4af7f9`, formatting). This repository: #263, merged as
+  `ec69ed6`.
 - Branch / baseline: `increment-273/board-operations` in both repositories, from devagotchi
   main `3e2e5b9` and agenthub main `5c1499c`.
 - Objective: every board operation is one transaction with one event per action, every surface
@@ -75,8 +76,13 @@ Also in this batch, found on the way:
 - Found while validating: the web tests' world configures a broker named `lab`, so the
   add-a-machine test's machine is `studio`.
 
+- CI on #263, first run: `e2e (ubuntu-24.04)` failed at "AI clients connect (MCP SDK,
+  Codex)": the official MCP TypeScript SDK refused the tool list over a boolean schema
+  (`Ticket.progress`). Fixed in `f0fe68b` (`outputs::open`, rule O5) and checked against the
+  SDK's own `ListToolsResultSchema` (71 tools pass; without the fix, exactly CI's error). Second
+  run: 18 of 18 checks passed, `tests/app_browser.py` included.
+
 ## Delivery
 
-Implementation: done. Validation: pending. Push: not_verified.
-PR: not_created. Main: not_verified.
-**DELIVERY INCOMPLETE: NOT PUSHED / NOT MERGED TO MAIN**
+Implementation: done. Validation: done. Push: done. PR: #263, squash-merged.
+Main: `ec69ed6`; branch deleted. Not yet: the path's receipt, on the operator's own server and phone.
