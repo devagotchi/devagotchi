@@ -59,6 +59,14 @@ const SHORT: Liveness = Liveness {
     idle: Duration::from_millis(300),
     send: Duration::from_secs(2),
 };
+/// For a test that the link stays up: 20 heartbeats to an idle period, so a shared CI runner
+/// that stalls the test's fake hub for a few hundred milliseconds (macOS, 2026-11-20: 300ms
+/// was not enough twice in a row) does not read as a hub gone silent.
+const PATIENT: Liveness = Liveness {
+    heartbeat: Duration::from_millis(50),
+    idle: Duration::from_secs(1),
+    send: Duration::from_secs(2),
+};
 /// Longest any of these tests may take: a hang fails instead of holding CI.
 const BOUND: Duration = Duration::from_secs(20);
 
@@ -223,9 +231,10 @@ async fn a_hub_that_only_answers_pings_keeps_the_link() {
     let hub = async {
         let mut hub = accept(&listener).await;
         open(&mut hub, &config).await;
-        // Reading answers each Ping with a Pong; nothing else is ever sent.
+        // Reading answers each Ping with a Pong; nothing else is ever sent, for three idle
+        // periods: without the Pongs the link would have given the hub up twice over.
         let mut pings = 0;
-        let quiet = tokio::time::sleep(SHORT.idle * 5);
+        let quiet = tokio::time::sleep(PATIENT.idle * 3);
         tokio::pin!(quiet);
         loop {
             tokio::select! {
@@ -244,7 +253,7 @@ async fn a_hub_that_only_answers_pings_keeps_the_link() {
         updater: &updater,
         state_dir: state.path(),
     };
-    let link = connect_with(&config, &key, mode, SHORT);
+    let link = connect_with(&config, &key, mode, PATIENT);
     let pings = tokio::time::timeout(BOUND, async {
         tokio::select! {
             ended = link => panic!("the link gave up a hub that answers: {ended:?}"),
