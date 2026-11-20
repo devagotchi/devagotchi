@@ -1,6 +1,6 @@
 (function () {
   "use strict";
-  var page = document.querySelector('[data-page="board-audit"]');
+  var page = document.querySelector('[data-page="audit-history"]');
   if (!page || new URL(location.href).searchParams.has("before")) return;
   var pending = null, stopped = false;
   async function wait() {

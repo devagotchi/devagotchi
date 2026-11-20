@@ -47,7 +47,9 @@ and AI checks passed. Edge acceptance passed for owner and ordinary user at desk
 widths: board/task creation, dependencies, ID/comment search, filtered audit, explicit chain
 verification, live refresh, and edited filters retained after focus moves. The final actor
 display adjustment passed the three focused audit tests and a repeated complete browser run.
-Parent publication/main and cross-platform PR CI remain pending.
+Parent PR274 merged as `bf74369ff25a65bfc2820d9e93fa28d2070f1b76` after all 18
+pre-merge CI/security checks passed. Local and remote feature branches were deleted.
+The official Docker image release is building; runtime acceptance of that image remains.
 
 Delivery caveat found while checking merged PRs 272/273 and backend PR12: their pre-merge
 build/test/security checks passed, but the separate post-merge `notify` workflow fails because

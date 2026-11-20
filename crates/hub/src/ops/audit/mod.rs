@@ -13,10 +13,14 @@ use crate::store::{Store, transaction};
 const CHAIN_LOCK: i64 = 0x6476_6761_7564_6974;
 
 mod completion;
+mod history;
+mod read;
+pub use history::HistoryFilter;
 
 pub struct Audit {
     write_failures: completion::WriteFailures,
     store: Store,
+    changed: tokio::sync::watch::Sender<u64>,
 }
 
 #[derive(Debug, Clone)]
@@ -85,6 +89,7 @@ impl Audit {
         Self {
             store,
             write_failures: completion::WriteFailures::default(),
+            changed: tokio::sync::watch::channel(0).0,
         }
     }
 
@@ -100,7 +105,7 @@ impl Audit {
 
     pub async fn record(&self, entry: &AuditEntry<'_>) -> BridgeResult<u64> {
         let at = now_rfc3339();
-        transaction!(&self.store, |connection| {
+        let seq = transaction!(&self.store, |connection| {
             sqlx::query("SELECT pg_advisory_xact_lock($1)")
                 .bind(CHAIN_LOCK)
                 .execute(&mut *connection)
@@ -129,149 +134,9 @@ impl Audit {
             .await?;
             Ok(u64::try_from(seq).unwrap_or(0))
         })
-        .map_err(|error| BridgeError::new("audit_write", error.message))
-    }
-
-    /// Up to `limit` entries after `seq`, oldest first: what the signal sinks read.
-    pub async fn after(&self, seq: u64, limit: usize) -> BridgeResult<Vec<Recorded>> {
-        let mut connection = self.store.read().await?;
-        let rows = sqlx::query(
-            "SELECT seq, at, subject, via, tool, broker, operation_id, outcome, hash
-             FROM audit_entries WHERE seq > $1 ORDER BY seq LIMIT $2",
-        )
-        .bind(i64::try_from(seq).unwrap_or(i64::MAX))
-        .bind(i64::try_from(limit).unwrap_or(i64::MAX))
-        .fetch_all(&mut *connection)
-        .await
-        .map_err(read_error)?;
-        rows.iter()
-            .map(recorded)
-            .collect::<Result<_, sqlx::Error>>()
-            .map_err(read_error)
-    }
-
-    /// One subject's calls, newest first: up to `limit` of them, with how many matched.
-    /// `tool` and `broker` narrow them. What `get_recent_tool_calls` shows.
-    pub async fn calls_of(
-        &self,
-        subject: &str,
-        tool: Option<&str>,
-        broker: Option<&str>,
-        limit: u32,
-    ) -> BridgeResult<(Vec<Recorded>, u64)> {
-        let mut connection = self.store.read().await?;
-        let matched: i64 = sqlx::query_scalar(
-            "SELECT COUNT(*) FROM audit_entries
-             WHERE subject = $1 AND ($2::TEXT IS NULL OR tool = $2)
-               AND ($3::TEXT IS NULL OR broker = $3)",
-        )
-        .bind(subject)
-        .bind(tool)
-        .bind(broker)
-        .fetch_one(&mut *connection)
-        .await
-        .map_err(read_error)?;
-        let rows = sqlx::query(
-            "SELECT seq, at, subject, via, tool, broker, operation_id, outcome, hash
-             FROM audit_entries
-             WHERE subject = $1 AND ($2::TEXT IS NULL OR tool = $2)
-               AND ($3::TEXT IS NULL OR broker = $3)
-             ORDER BY seq DESC LIMIT $4",
-        )
-        .bind(subject)
-        .bind(tool)
-        .bind(broker)
-        .bind(i64::from(limit))
-        .fetch_all(&mut *connection)
-        .await
-        .map_err(read_error)?;
-        let calls = rows
-            .iter()
-            .map(recorded)
-            .collect::<Result<_, sqlx::Error>>();
-        Ok((
-            calls.map_err(read_error)?,
-            u64::try_from(matched).unwrap_or(0),
-        ))
-    }
-
-    /// One subject's calls counted by tool, machine and outcome: what `get_usage_stats`
-    /// tallies. One row per group, with its count and its first and latest call.
-    pub async fn usage_of(&self, subject: &str) -> BridgeResult<Vec<UsageRow>> {
-        let mut connection = self.store.read().await?;
-        let rows = sqlx::query(
-            "SELECT tool, broker, outcome, COUNT(*) AS calls, MIN(at) AS first_at,
-                    MAX(at) AS last_at
-             FROM audit_entries WHERE subject = $1 GROUP BY tool, broker, outcome",
-        )
-        .bind(subject)
-        .fetch_all(&mut *connection)
-        .await
-        .map_err(read_error)?;
-        rows.iter()
-            .map(|row| {
-                Ok(UsageRow {
-                    tool: row.try_get("tool")?,
-                    broker: row.try_get("broker")?,
-                    outcome: row.try_get("outcome")?,
-                    calls: u64::try_from(row.try_get::<i64, _>("calls")?).unwrap_or(0),
-                    first_at: row.try_get("first_at")?,
-                    last_at: row.try_get("last_at")?,
-                })
-            })
-            .collect::<Result<_, sqlx::Error>>()
-            .map_err(read_error)
-    }
-
-    /// The last entry's seq (0 for none): how far a signal sink can be behind.
-    #[cfg(test)]
-    pub async fn last_seq(&self) -> BridgeResult<u64> {
-        let mut connection = self.store.read().await?;
-        let seq: i64 = sqlx::query_scalar("SELECT COALESCE(MAX(seq), 0) FROM audit_entries")
-            .fetch_one(&mut *connection)
-            .await
-            .map_err(read_error)?;
-        Ok(u64::try_from(seq).unwrap_or(0))
-    }
-
-    /// Walk the whole chain. Small logs only; a paged walk arrives with the audit UI.
-    pub async fn verify(&self) -> BridgeResult<ChainStatus> {
-        let mut connection = self.store.read().await?;
-        let rows = sqlx::query(
-            "SELECT at, subject, via, tool, broker, operation_id, outcome, prev_hash, hash
-             FROM audit_entries ORDER BY seq",
-        )
-        .fetch_all(&mut *connection)
-        .await
-        .map_err(read_error)?;
-        let mut prev = "0".repeat(64);
-        let mut entries = 0u64;
-        let mut ok = true;
-        for row in &rows {
-            let text = |column: &str| row.try_get::<String, _>(column).map_err(read_error);
-            let (at, prev_hash, hash) = (text("at")?, text("prev_hash")?, text("hash")?);
-            let (subject, via, tool) = (text("subject")?, text("via")?, text("tool")?);
-            let (broker, operation_id, outcome) =
-                (text("broker")?, text("operation_id")?, text("outcome")?);
-            let entry = AuditEntry {
-                subject: &subject,
-                via: &via,
-                tool: &tool,
-                broker: &broker,
-                operation_id: &operation_id,
-                outcome: &outcome,
-            };
-            if prev_hash != prev || row_hash(&prev, &at, &entry) != hash {
-                ok = false;
-            }
-            prev = hash;
-            entries += 1;
-        }
-        Ok(ChainStatus {
-            entries,
-            ok,
-            head: prev,
-        })
+        .map_err(|error| BridgeError::new("audit_write", error.message))?;
+        self.changed.send_modify(|head| *head = (*head).max(seq));
+        Ok(seq)
     }
 }
 

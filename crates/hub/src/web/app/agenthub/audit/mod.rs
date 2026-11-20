@@ -72,7 +72,6 @@ pub fn routes() -> Router<AppState> {
     Router::new()
         .route("/app/boards/{project}/audit", get(page))
         .route("/app/boards/{project}/audit/changes", get(changes))
-        .route("/assets/board-audit.js", get(script))
 }
 
 async fn access(
@@ -209,12 +208,4 @@ async fn changes(
                 .into_response();
         }
     }
-}
-
-async fn script() -> Response {
-    crate::web::notify::asset(
-        include_str!("audit.js").into(),
-        "text/javascript; charset=utf-8",
-        "no-cache",
-    )
 }

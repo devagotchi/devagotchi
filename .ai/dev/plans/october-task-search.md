@@ -43,4 +43,7 @@ creation, comments and ID/comment searches at 1280/390 widths on a single-enviro
 with isolated Docker PostgreSQL; both passed, without horizontal overflow.
 Local Windows E2E does not run the Linux deployment or ClickHouse probe; those remain CI
 gates. Parent [PR #273](https://github.com/devagotchi/devagotchi/pull/273) merged to main as
-`2ce4e91` with all 18 checks passing. Official Docker image acceptance remains pending.
+`2ce4e91` with all 18 checks passing. The official image for `2ce4e91` was pinned by digest and deployed locally. Owner and
+ordinary-user Edge runs passed board/task/dependency creation and ID/comment search;
+HTTP checks passed permissions, absent hosted organization routes, logout and persistence
+across a container restart. Existing accounts and volumes were retained.

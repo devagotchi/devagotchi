@@ -393,6 +393,16 @@
       "updated": "New events are available. Refresh when you are ready.",
       "unavailable": "Live history is unavailable. Refresh to check your connection and access.",
       "invalid_cursor": "This history page is invalid. Open the board history again."
+    },
+    "hub_audit": {
+      "title": "Hub activity",
+      "description": "Recorded calls and administrative actions across this environment. Task changes are shown in each board’s audit history.",
+      "back": "Hub settings",
+      "machine": "Machine or board",
+      "outcome": "Result",
+      "via": "Connection",
+      "operation": "Operation",
+      "broken": "The history integrity check failed. Recorded entries may have been changed."
     }
   }
 }

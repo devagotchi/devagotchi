@@ -4,16 +4,6 @@
 //! pages the AI directories link to (`/docs`, `/privacy`, `/terms`, `/support`), and what
 //! search engines and AI agents read (`/llms.txt`, `/llms-full.txt`, `/robots.txt`,
 //! `/sitemap.xml`).
-
-use axum::{
-    Router,
-    extract::{Query, State},
-    http::{HeaderMap, HeaderValue, StatusCode, header},
-    response::{IntoResponse, Response},
-    routing::{get, post},
-};
-use serde::Deserialize;
-
 use super::{
     Exchange, SessionToken, WebLogin, analytics, approvals, claim, device, discovery, email,
     machines, notify, oauth, offers, operator,
@@ -25,6 +15,14 @@ use crate::{
     AppState,
     identity::auth::{AuthError, Subject},
 };
+use axum::{
+    Router,
+    extract::{Query, State},
+    http::{HeaderMap, HeaderValue, StatusCode, header},
+    response::{IntoResponse, Response},
+    routing::{get, post},
+};
+use serde::Deserialize;
 
 /// Every browser route. `hub_authorization` mounts the routes of the hub's own
 /// authorization server for AI clients (32b) and the browser claim of a new hub (16c):
@@ -33,6 +31,8 @@ use crate::{
 /// and the metadata itself: axum refuses the same path twice. `multi_tenant`: `one_user`.
 pub fn router(hub_authorization: bool, multi_tenant: bool) -> Router<AppState> {
     let router = Router::new()
+        .merge(super::audit_live::routes())
+        .merge(super::hub_audit::routes())
         .route("/", get(root))
         .route("/account", get(account))
         .route("/signed-out", get(signed_out))
