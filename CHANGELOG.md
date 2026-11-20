@@ -80,6 +80,29 @@ install, not a production promotion. The gap that is still open is in
   already forgotten past 4096 retirements cannot be brought back. An earlier build run on a
   journal this one opened fails each retirement once the journal holds 4096 tombstones.
 
+### AgentHub's pages fit a phone and a wide browser alike, on one fluid scale
+
+- The stylesheet declares its cascade order first: `@layer reset, tokens, base, components,
+  pages`. A page's own rule wins by its layer, not by a longer selector. The existing rules
+  are the `base` layer, unchanged.
+- `tokens.json` has two fluid scales: `steps` for type (`--step--2` to `--step-5`) and
+  `space` for spacing (`--space-3xs` to `--space-3xl`). Each is a `clamp()` between a 360px
+  phone and a 1240px desktop, so sizes grow with the screen and need no breakpoint. A site's
+  own `tokens.json` may change them like any other token.
+- Layout primitives every page can compose (`web/style/primitives.css`): `stack`, `cluster`,
+  `auto-grid`, `sidebar`, `switcher` and `query` (a container for `@container`).
+- **A board:** its name and search share one line. The filters sit beside the tickets on a
+  wide screen and above them on a phone. Each ticket's facts sit beside its title once the
+  list is wide enough, and under it otherwise.
+- **A ticket:** what it asks and its notes take the main column. Its actions, the agents it
+  can go to and its history sit beside that on a wide screen, and under it on a phone.
+- **Approvals:** what waits for a decision shows as many side by side as fit. Approved ahead
+  of time, and this phone's notifications, sit beside them on a wide screen.
+- Each of these pages has its own sheet beside its Rust, scoped to that page. A test fails
+  if a page sheet leaves `@layer pages`, styles anything outside its own `[data-page]`, uses a
+  viewport breakpoint, or reads a `--step-*` or `--space-*` that is not a token.
+  `web/approvals/mod.rs` shrank to 597 lines, because its layout moved to `layout.rs`.
+
 ### Every hub tool follows one pattern, with no exceptions left (B4)
 
 - Every tool the hub serves passes every tool check and leaves one audit line, refusals

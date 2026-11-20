@@ -1,7 +1,8 @@
 //! `tokens.json`: the design tokens the stylesheet reads as custom properties, and the
-//! fonts a site serves itself. The hub's stylesheet (`web/hub.css`, `web/landing.css`)
-//! only ever uses `var(--…)`; the tokens set them, light and dark, so a site restyles every
-//! page without touching a rule.
+//! fonts a site serves itself. The hub's stylesheet (`web/hub.css`, `web/landing.css`, and
+//! the sheets `web/style/mod.rs` lists) only ever uses `var(--…)`; the tokens set them, light
+//! and dark, so a site restyles every page without touching a rule. `steps` and `space` are
+//! the fluid scales (`--step-0`, `--space-s`, …): each a `clamp()` from a phone to a desktop.
 //!
 //! ```jsonc
 //! {
@@ -10,6 +11,8 @@
 //!   "fonts":  { "ui": "…", "display": "…", "mono": "…" },     // --font-ui, …
 //!   "radii":  { "s": "6px", "m": "8px", "l": "12px", "xl": "20px", "pill": "999px" },
 //!   "layout": { "bar-h": "60px", "gutter": "20px", "wide": "1120px", "narrow": "728px" },
+//!   "steps":  { "0": "clamp(1rem, 0.9489rem + 0.2273vw, 1.125rem)", … },   // --step-0, …
+//!   "space":  { "s": "clamp(1rem, 0.9489rem + 0.2273vw, 1.125rem)", … },   // --space-s, …
 //!   "theme_color": "#2f6b4f",                // the installed app's bar; its splash is --bg
 //!   "font_files": [ { "family": "Inter", "file": "inter.woff2", "weight": "100 900" } ]
 //! }
@@ -24,7 +27,7 @@ use serde::Deserialize;
 
 use super::{Asset, SiteFile};
 
-/// The hub's own rules, after the tokens.
+/// The hub's base rules, after the tokens: `@layer base`.
 const BASE: &str = concat!(
     include_str!("../web/hub.css"),
     include_str!("../web/landing.css")
@@ -39,6 +42,12 @@ pub struct Tokens {
     pub fonts: BTreeMap<String, String>,
     pub radii: BTreeMap<String, String>,
     pub layout: BTreeMap<String, String>,
+    /// The fluid type scale: `--step-<name>`.
+    #[serde(default)]
+    pub steps: BTreeMap<String, String>,
+    /// The fluid spacing scale: `--space-<name>`.
+    #[serde(default)]
+    pub space: BTreeMap<String, String>,
     pub theme_color: String,
     #[serde(default)]
     pub font_files: Vec<FontFile>,
@@ -86,6 +95,8 @@ fn known() -> &'static BTreeMap<&'static str, Vec<String>> {
             ("fonts", names(&builtin.fonts)),
             ("radii", names(&builtin.radii)),
             ("layout", names(&builtin.layout)),
+            ("steps", names(&builtin.steps)),
+            ("space", names(&builtin.space)),
         ])
     })
 }
@@ -114,6 +125,8 @@ impl Style {
             ("fonts", &tokens.fonts),
             ("radii", &tokens.radii),
             ("layout", &tokens.layout),
+            ("steps", &tokens.steps),
+            ("space", &tokens.space),
         ] {
             for (name, value) in map {
                 if !known[group].contains(name) {
@@ -135,7 +148,10 @@ impl Style {
                 tokens.theme_color
             ));
         }
-        let mut css = String::from(":root {\n");
+        // The cascade order comes first, so a page's rule wins by its layer, not its selector.
+        let mut css = String::from(
+            "@layer reset, tokens, base, components, pages;\n@layer tokens {\n:root {\n",
+        );
         let line = |css: &mut String, entries: Vec<(String, &String)>| {
             let joined: Vec<String> = entries
                 .into_iter()
@@ -169,6 +185,22 @@ impl Style {
             &mut css,
             tokens.layout.iter().map(|(k, v)| (k.clone(), v)).collect(),
         );
+        line(
+            &mut css,
+            tokens
+                .steps
+                .iter()
+                .map(|(k, v)| (format!("step-{k}"), v))
+                .collect(),
+        );
+        line(
+            &mut css,
+            tokens
+                .space
+                .iter()
+                .map(|(k, v)| (format!("space-{k}"), v))
+                .collect(),
+        );
         css.push_str("  color-scheme: light dark;\n}\n");
         if !tokens.dark.is_empty() {
             css.push_str("@media (prefers-color-scheme: dark) {\n  :root {\n  ");
@@ -195,6 +227,7 @@ impl Style {
             );
             css.push_str("  color-scheme: light;\n}\n");
         }
+        css.push_str("}\n");
         for font in &tokens.font_files {
             let asset = assets.get(&font.file).ok_or_else(|| {
                 format!("tokens.json font_files: there is no assets/{}", font.file)
@@ -226,7 +259,13 @@ impl Style {
                 font.style,
             ));
         }
+        css.push_str("@layer base {\n");
         css.push_str(BASE);
+        css.push_str("}\n");
+        css.push_str(crate::web::style::PRIMITIVES);
+        for (_, sheet) in crate::web::style::PAGES {
+            css.push_str(sheet);
+        }
         css.push_str(&rail(site));
         use sha2::Digest;
         let etag = format!(
