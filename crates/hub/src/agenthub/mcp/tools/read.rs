@@ -166,7 +166,15 @@ impl Hub {
         context: RequestContext<RoleServer>,
     ) -> Result<Json<EventsOut>, Json<BoardError>> {
         let limit = input.limit.unwrap_or(100).clamp(1, 1000) as usize;
-        let after = input.after_seq;
+        let filter = crate::agenthub::EventFilter {
+            after_seq: input.after_seq,
+            before_seq: input.before_seq,
+            actor: input.actor,
+            action_prefix: input.action_prefix,
+            ticket: input.ticket,
+            descending: input.descending,
+            limit: Some(limit),
+        };
         self.board_call(
             "board_events",
             &input.project,
@@ -174,7 +182,7 @@ impl Hub {
             &context,
             move |board, _| {
                 board
-                    .events(after, limit)
+                    .events_matching(&filter)
                     .map(|events| EventsOut { events })
             },
         )

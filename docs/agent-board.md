@@ -38,6 +38,16 @@ can also search closed tasks unless `open_only` / `--open` is set. `%`, `_` and 
 literal characters, not search wildcards.
 Use `--human` for readable CLI output when piping; `ls --text QUERY` always names a search.
 
+Choose **Audit history** on a board to see who changed its work and the recorded details.
+Filter by actor, task ID, or the beginning of an action name (for example `note.`).
+**Older events** pages backward; **Verify history** checks the complete event chain and
+reports a broken entry if one is found. The newest page refreshes when work changes. If
+you are typing a filter, it offers a refresh link so your input is kept. Older pages stay
+where you left them.
+
+MCP `board_events` supports `actor`, `action_prefix`, `ticket`, `descending` and the exclusive
+`before_seq` cursor as well as `after_seq` and `limit`. Its default remains ascending order.
+
 ## 1. What a ticket is, and is not
 
 A **ticket** is a unit of coordination and memory between people and agents: "port the claim

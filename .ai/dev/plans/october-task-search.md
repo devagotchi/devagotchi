@@ -42,4 +42,5 @@ E2E and stdio protocol passed. Edge exercised owner and ordinary-user board/task
 creation, comments and ID/comment searches at 1280/390 widths on a single-environment hub
 with isolated Docker PostgreSQL; both passed, without horizontal overflow.
 Local Windows E2E does not run the Linux deployment or ClickHouse probe; those remain CI
-gates. Parent push/PR/main and official Docker image acceptance remain pending.
+gates. Parent [PR #273](https://github.com/devagotchi/devagotchi/pull/273) merged to main as
+`2ce4e91` with all 18 checks passing. Official Docker image acceptance remains pending.
