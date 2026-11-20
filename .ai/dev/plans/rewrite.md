@@ -20,8 +20,8 @@
 | B2 | The machine link and join ([plan](link-and-join-b2.md)) | merged | #261 (`86b9d8b`) |
 | B2a | Main builds again: no build of main existed since 2b3feec ([plan](main-builds.md)) | merged | #262 (`3e2e5b9`) |
 | B3 | AgentHub board operations (an agenthub PR, then a submodule bump and a hub PR) ([plan](board-operations-b3.md)) | merged | #263 (`ec69ed6`); agenthub `3866d18`, #8 (`f4af7f9`) |
-| B4 | The rest of the hub MCP surface ([plan](hub-mcp-surface-b4.md)) | in review | not_created |
-| B5 | Hub pages, identity and configuration | waits on B3 | not_created |
+| B4 | The rest of the hub MCP surface ([plan](hub-mcp-surface-b4.md)) | merged | #264 (`726af4e`) |
+| B5 | Hub pages, identity and configuration (ordered by [the standalone build](standalone-build.md), W2, after the W1 moves) | pending | not_created |
 | B6 | Persistence and the shape of the test suite | waits on B4, B5 | not_created |
 
 Every batch runs the alpha way: if it fails, leave it failed and work it through. Every batch

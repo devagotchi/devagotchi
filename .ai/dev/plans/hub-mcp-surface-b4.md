@@ -3,7 +3,7 @@
 - Contract: DG-DELIVERY-1; stage: read [project.json](../../project.json)
 - Issue / request: the operator, 2026-11-19: carry out the rewrite plan batch by batch
   ([rewrite](rewrite.md), B4).
-- PR: not_created
+- PR: #264, merged as `726af4e`
 - Branch / baseline: `increment-274/hub-mcp-surface` from main `ec69ed6` (B3).
 - Objective: every hub tool outside the machines and the boards follows
   [mcp-tools.md](../../patterns/mcp-tools.md), so the `NOT_YET` lists are empty and deleted.
@@ -19,7 +19,7 @@
 | M4 refusals | `early_access` as `structured_error` `{code, message}` (`key_denied` already was); `gate.rs` doc corrected | `tenancy/tests/access.rs`, `workflows/tests.rs` | done |
 | M5 layout and docs | connection tools to `connections/mcp.rs`; `WhoAmI`/`Machine` comments say `skip_serializing_if` keeps a field out of `required`; `connection_call` says its answer is data | `check_tools` D3; review | done |
 | M6 checks | `tools-not-yet.txt` and `audit-not-yet.txt` deleted; `tools.rs` and `scan.rs` require no violation; behaviour tests over HTTP-MCP: a bad seat, a missing fence, a bad dependency kind, a refused wait, a bind, a wait that answered, each one line with `ok` or its code; `get_usage_stats` counts no success a failure | `agenthub/tests/audited.rs` | done |
-| M7 validate, publish, merge | full workspace suite; e2e on a fresh database; PR | receipts below | pending |
+| M7 validate, publish, merge | full workspace suite; e2e on a fresh database; PR | receipts below; CI 18 of 18 on #264 | done |
 
 Found done already: B1 had moved the machine tools' inline audit copies (`machines/files.rs`,
 `run.rs`) onto `record_completion`; the D5 instructions test exists in `offers/tests.rs`
@@ -48,6 +48,5 @@ refusal. `workflow_browser.py` and `first_connect_browser.py` run in CI's ubuntu
 
 ## Delivery
 
-Implementation: done. Validation: pending. Push: not_verified.
-PR: not_created. Main: not_verified.
-**DELIVERY INCOMPLETE: NOT PUSHED / NOT MERGED TO MAIN**
+Implementation: done. Validation: done (local suite, e2e, SDK check; CI 18 of 18). Push: done.
+PR: #264. Main: merged as `726af4e`.

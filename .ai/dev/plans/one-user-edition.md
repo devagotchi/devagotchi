@@ -26,6 +26,9 @@
   [mobile experience](mobile-experience.md), [plugins](plugins.md),
   [free edition](free-edition.md), [self-hosted and provenance](self-hosted-and-provenance.md).
   Their milestones keep their detail; the rows below name them.
+- Order and file locations since 2026-11-20: [the standalone build](standalone-build.md). It
+  orders these increments with B5, B6 and the S8 moves, and where a **Files** line below names
+  a file that has moved, its target tree wins.
 
 How this was made: six read-only gap maps, one per area, each re-checked claim by claim by a
 second reader against the code at `f1b48e8`, then ordered. "Map I2", "update map U-H3" and
