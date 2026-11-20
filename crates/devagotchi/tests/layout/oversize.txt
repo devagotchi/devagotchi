@@ -18,7 +18,6 @@
 585	crates/hub/src/notify/signals/mod.rs
 844	crates/hub/src/offers/tests.rs
 574	crates/hub/src/ops/analytics/tests.rs
-658	crates/hub/src/site.rs
 1650	crates/hub/src/site/model.rs
 842	crates/hub/src/site/tests.rs
 564	crates/hub/src/site/workflows.rs

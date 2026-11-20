@@ -331,7 +331,7 @@ Each wave proceeds on the default shown, except D6, which W1 waits for.
 | Wave | State | PR |
 |---|---|---|
 | W0 | 210 and 211 pending; Phase 0 waits for the operator's server and phone, and for the test deployment on `:main` | not_created |
-| W1 | W1.1, W1.2 and W1.11 may start; W1.3 to W1.9 wait on D6 | not_created |
+| W1 | W1.1 in review; W1.2 and W1.11 may start; W1.3 to W1.9 wait on D6 | not_created |
 | W2 to W10 | pending | not_created |
 
 Phase 0 findings: none yet.

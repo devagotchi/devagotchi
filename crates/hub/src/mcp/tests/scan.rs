@@ -6,7 +6,7 @@ use std::collections::BTreeSet;
 fn tool_names_are_unique_and_every_body_reaches_its_audit_owner() {
     let mut names = BTreeSet::new();
     let mut broken = Vec::new();
-    for (_, text, test_only) in crate::source_tests::sources() {
+    for (_, text, test_only) in crate::tests::sources::sources() {
         if test_only {
             continue;
         }

@@ -3,12 +3,6 @@
 # shorter. Never add a line: see .ai/patterns/layout.md, rule 2.
 crates/contracts/src/interactive.rs
 crates/contracts/src/system.rs
-crates/hub/src/config/live.rs
-crates/hub/src/machines/files.rs
-crates/hub/src/machines/operations.rs
-crates/hub/src/ops/audit.rs
-crates/hub/src/site.rs
-crates/hub/src/site/walkthrough.rs
 crates/hub/src/web/landing.rs
 crates/hub/src/web/pages.rs
 crates/ipc/src/windows.rs
