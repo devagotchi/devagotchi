@@ -356,7 +356,7 @@ Each landed with the fix it guards (G12), in B3.
    `every_code_the_store_refuses_with_names_the_next_call` scans the files where the store
    decides for `fail("` and `BridgeError::new("` and asks `refuse` for each. Titles, hints,
    closed and documented inputs and object outputs are `check_tools`
-   (`crates/mcp/src/pattern.rs`: N1 to D3, with O4 for object answers), run by `crates/hub/src/mcp/tests/tools.rs`
+   (`crates/mcp/src/pattern.rs`: N1 to D3, with O4 for object answers and O5 for no boolean schemas), run by `crates/hub/src/mcp/tests/tools.rs`
    against `tools-not-yet.txt`, which holds no board tool.
 2. **`crates/agenthub/src/cli/tests/output.rs`** (rule 9, CLI side): the same scan against the
    CLI `next_for`, and the conflict class.

@@ -86,6 +86,23 @@ pub fn check_tools(tools: &[rmcp::model::Tool]) -> Vec<String> {
                 ),
             );
         }
+        // O5. No boolean where a schema goes, in or out: the MCP TypeScript SDK refuses the
+        // whole tool list over one (`outputs::open` turns them into objects).
+        let output = tool
+            .output_schema
+            .as_ref()
+            .map(|schema| Value::Object(schema.as_ref().clone()));
+        for (side, schema) in [("input", Some(&input)), ("output", output.as_ref())] {
+            for at in schema
+                .map(crate::outputs::boolean_schemas)
+                .unwrap_or_default()
+            {
+                no(
+                    "O5",
+                    format!("a boolean schema in the {side} schema at {at}"),
+                );
+            }
+        }
         let said = tool.description.as_deref().unwrap_or_default();
         if said.trim().is_empty() {
             no("D1", "no description".into());

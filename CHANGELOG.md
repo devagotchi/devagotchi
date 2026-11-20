@@ -111,7 +111,8 @@ install, not a production promotion. The gap that is still open is in
   `{"deps": [...]}`. Every board tool now declares an output schema, takes only the fields it
   documents (a mistyped field is refused), and has a hint for every refusal an agent can act
   on. `board_claim` no longer claims to be idempotent; `board_settings` says it is
-  destructive.
+  destructive. No tool schema holds a boolean where a schema goes: the MCP TypeScript SDK
+  refused the whole tool list over the `true` schemars writes for a ticket's `progress`.
 - AgentHub's store is one file per subject (`crates/agenthub/src/hosted/`), and the hub runs no
   SQL on board tables (`hosted::registry`).
 

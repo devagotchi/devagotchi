@@ -202,7 +202,7 @@ review.
 | SQL scan: qualified tables, `AssertSqlSafe`, `QueryBuilder`, `tenant_id` ratchet | persistence 12-18 | `crates/devagotchi/tests/sql.rs` | planned (B6) |
 | Link wire golden (append-only) | G2 | `crates/contracts/src/link/tests.rs` (`SEEN`) | in place (B2) |
 | `describe::BROKER_TOOLS` covers `REQUEST_METHODS` | machine-capability 7 | `crates/contracts/src/system/tests.rs` | in place (B1) |
-| Every tool's form, through shared `check_tools` | mcp-tools N1, T1, A1, A2, I1, I2, O1, O4, D1, D3 | `crates/mcp/src/pattern.rs`, called by `crates/mcp/src/adapter/tests.rs` and `crates/hub/src/mcp/tests/tools.rs` | in place (B1; O4 in B3); no board tool on the allow-list since B3; workflow, kernel and connection tools until B4 |
+| Every tool's form, through shared `check_tools` | mcp-tools N1, T1, A1, A2, I1, I2, O1, O4, O5, D1, D3 | `crates/mcp/src/pattern.rs`, called by `crates/mcp/src/adapter/tests.rs` and `crates/hub/src/mcp/tests/tools.rs` | in place (B1; O4 and O5 in B3); no board tool on the allow-list since B3; workflow, kernel and connection tools until B4 |
 | Hub audit and uniqueness scan | G7, N1 | `crates/hub/src/mcp/tests/scan.rs` | in place (B1); allow-list as above, no board tool since B3 |
 | Local/hub parity | G1, G3, machine-capability 8, 14-16 | `crates/hub/src/machines/tests/parity.rs` | in place (B1) |
 | Board contract: viewer tools match hints; every code has a `next`; wait bounds | board-operations 9, 11 | `crates/hub/src/agenthub/mcp/tests/contract.rs`; the CLI side in `crates/agenthub/src/cli/tests/output.rs` | in place (B3) |

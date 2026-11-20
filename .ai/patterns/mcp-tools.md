@@ -202,6 +202,12 @@ hints. Its input is the contracts type itself, since the adapter has no `machine
   answers inside one (`TicketsOut { tickets }`, B3). rmcp writes the schema from the return type
   as written, so a tool spells out `Json<T>` or `Result<Json<T>, E>`; an alias hides it and the
   tool declares none.
+- **O5.** No schema, in or out, holds a boolean where a schema goes (`additionalProperties:
+  false` excepted: it closes an input). schemars writes `true` for an undocumented
+  `serde_json::Value` (`Ticket.progress`), and the MCP TypeScript SDK refuses the whole tool
+  list over one: in B3's first CI run every AI client on the SDK would have failed to connect
+  (`tools[5].outputSchema.properties.progress: Invalid input`). `outputs::open` writes each as
+  the object that means the same (`{}`, `{"not": {}}`); `outputs::boolean_schemas` finds any.
 
 ### Refusals
 
@@ -291,7 +297,7 @@ Layout is [G10][shared] and [layout.md](layout.md). For MCP tools in particular:
 Test shape is [G13][shared]. A new tool is covered at four levels:
 
 1. **The tool list (unit, no I/O).** `check_tools` (below) holds every tool on both surfaces to
-   N1, T1, A1, A2, I1, I2, O1, O4, D1 and D3. The parity test holds A3 and D2.
+   N1, T1, A1, A2, I1, I2, O1, O4, O5, D1 and D3. The parity test holds A3 and D2.
 2. **Source scan.** Every `#[tool(` name is defined once per surface (N1), and every hub tool body
    reaches an audit helper with no early return before it (AU1).
 3. **Behaviour (hosted harness, test Postgres).** The shape is
@@ -337,7 +343,7 @@ loses entries and is deleted when B4 is done.
 
 | Check | Holds | Lives in |
 |---|---|---|
-| `check_tools`, one shared function | N1 (form), T1, A1, A2 (stated), I1, I2, O1, O4, D1, D3 | `crates/mcp/src/pattern.rs` (new, B1), called by `crates/mcp/src/adapter/tests.rs` and `crates/hub/src/mcp/tests/tools.rs` (new, B1) |
+| `check_tools`, one shared function | N1 (form), T1, A1, A2 (stated), I1, I2, O1, O4, O5, D1, D3 | `crates/mcp/src/pattern.rs` (new, B1), called by `crates/mcp/src/adapter/tests.rs` and `crates/hub/src/mcp/tests/tools.rs` (new, B1) |
 | Audit and uniqueness scan | N1 (unique), AU1 | `crates/hub/src/mcp/tests/scan.rs` (new, B1) |
 | Local/hub parity | A3, D2 | `crates/hub/src/machines/tests/parity.rs` (new, B1) |
 | Board-only checks: `READ_ONLY_TOOLS` against hints, `PER_CALLER_WRITES`, `next_for` coverage | board-operations | `crates/hub/src/agenthub/mcp/tests/contract.rs` (new, B3) |
