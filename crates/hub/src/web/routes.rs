@@ -62,7 +62,7 @@ pub fn router(hub_authorization: bool, multi_tenant: bool) -> Router<AppState> {
         .merge(sign_in::routes())
         // The phone control app (`app/`).
         .merge(super::app::routes())
-        .merge(super::one_user::orgs(multi_tenant))
+        .merge(super::one_user::routes(multi_tenant))
         .route("/auth/password/set", post(set_password))
         .route("/api/v1/me", get(me))
         .route("/api/v1/machines", post(machines::add_json))

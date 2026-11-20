@@ -1,5 +1,5 @@
-//! A one-user hub (`tenancy.mode single`) shows its owner none of the multi-user surfaces: no
-//! People section on `/admin`, no Organisations card on You, no organisation link on Boards,
+//! A single-environment hub (`tenancy.mode single`) has owner-managed local users,
+//! no Organisations card on You, no organisation link on Boards,
 //! and `/orgs*`, `/invite` and `/assets/invite.js` answer as an unknown path does. A hosted
 //! hub (`tenancy.mode multi`) keeps all of them. The whole router as it serves, on the test
 //! Postgres (`DEVAGOTCHI_TEST_POSTGRES_URL`; CI sets it).
@@ -31,17 +31,18 @@ async fn unknown(hub: &Hosted, cookie: Option<&str>) -> (u16, String) {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
-async fn a_one_user_hub_hides_the_multi_user_surfaces() {
+async fn a_single_environment_has_local_users_without_organization_surfaces() {
     let (hub, owner) = or_skip!(hub("single"));
     assert!(!hub.config.multi_tenant());
 
-    // `/admin`: no People section, no chip for it, no sign-up limits; the rest is there.
+    // `/admin`: local users, without hosted sign-up limits or organizations.
     let (status, admin) = Hosted::text(hub.get("/admin", Some(&owner)).await).await;
     assert_eq!(status, 200, "{admin}");
     assert!(admin.contains("id=\"sign-in\""), "{admin}");
     assert!(admin.contains("id=\"access\""), "{admin}");
-    assert!(!admin.contains("id=\"people\""), "{admin}");
-    assert!(!admin.contains("href=\"#people\""), "{admin}");
+    assert!(admin.contains("id=\"people\""), "{admin}");
+    assert!(admin.contains("href=\"/admin/users\""), "{admin}");
+    assert!(admin.contains("href=\"#people\""), "{admin}");
     assert!(!admin.contains("name=\"tenancy."), "{admin}");
     assert!(!admin.contains("href=\"/orgs\""), "{admin}");
     // The count of AI clients is the catalog's, not a number written into the page.
@@ -80,6 +81,7 @@ async fn a_one_user_hub_hides_the_multi_user_surfaces() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_hosted_hub_keeps_the_multi_user_surfaces() {
     let (hub, owner) = or_skip!(hub("multi"));
+    assert_eq!(hub.get("/admin/users", Some(&owner)).await.status(), 404);
     assert!(hub.config.multi_tenant());
 
     let (status, admin) = Hosted::text(hub.get("/admin", Some(&owner)).await).await;
@@ -176,6 +178,7 @@ async fn a_single_environment_hides_organisation_apis_but_keeps_project_permissi
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_hosted_environment_keeps_its_organisation_api() {
     let (hub, owner) = or_skip!(hub("multi"));
+    assert_eq!(hub.get("/admin/users", Some(&owner)).await.status(), 404);
     let response = hub.get("/api/v1/orgs", Some(&owner)).await;
     assert_eq!(response.status(), 200);
     let body: serde_json::Value = response.json().await.expect("organisation list");

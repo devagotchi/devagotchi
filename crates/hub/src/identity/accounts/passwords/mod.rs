@@ -29,7 +29,7 @@ fn hash_with(password: &[u8], salt: &[u8]) -> Option<String> {
 }
 
 /// The argon2id PHC string of `password`, under a fresh salt, off the async threads.
-async fn hash_of(password: &str) -> BridgeResult<String> {
+pub(super) async fn hash_of(password: &str) -> BridgeResult<String> {
     let (password, salt) = (password.to_string(), crate::machines::random::<16>());
     tokio::task::spawn_blocking(move || hash_with(password.as_bytes(), &salt))
         .await
@@ -60,7 +60,7 @@ async fn matches(hash: Option<String>, password: &str) -> bool {
 impl Accounts {
     /// A password at least as long as `/admin` → Passwords says (`passwords.min_length`, 8 by
     /// default, never under 8), counted in characters.
-    fn checked(&self, password: &str) -> BridgeResult<()> {
+    pub(super) fn checked(&self, password: &str) -> BridgeResult<()> {
         let min = self.live.get().password_min.max(8) as usize;
         if password.chars().count() >= min {
             Ok(())

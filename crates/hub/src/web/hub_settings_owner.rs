@@ -53,3 +53,22 @@ pub(super) async fn owner(state: &AppState, headers: &HeaderMap) -> Option<Subje
 pub(super) fn is_owner(state: &AppState, subject: &Subject) -> bool {
     state.passkeys.is_some() && state.hub.config.is_owner(&subject.id)
 }
+
+/// Owner-only pages preserve a failed session lookup as 503, rather than hiding it.
+pub(super) async fn required(
+    state: &AppState,
+    headers: &HeaderMap,
+) -> Result<Subject, axum::response::Response> {
+    use super::routes::{Who, unavailable, who};
+    match who(state, headers).await {
+        Who::Person(subject) => {
+            if is_owner(state, &subject) {
+                Ok(subject)
+            } else {
+                Err(super::operator::hidden())
+            }
+        }
+        Who::SignedOut | Who::NotSetUp => Err(super::operator::hidden()),
+        Who::Unavailable => Err(unavailable()),
+    }
+}

@@ -2,11 +2,11 @@
 //! Depends on the existing hub owner guard and ops::audit's PostgreSQL chain.
 use super::{
     encode,
-    operator::hidden,
+    hub_settings_owner::required as owner,
     pages::{self, Tab, escape},
-    routes::{Who, unavailable, who},
+    routes::unavailable,
 };
-use crate::{AppState, identity::Subject, ops::audit::HistoryFilter};
+use crate::{AppState, ops::audit::HistoryFilter};
 use axum::{
     Json, Router,
     extract::{Query, State},
@@ -70,20 +70,6 @@ pub(super) fn routes() -> Router<AppState> {
     Router::new()
         .route("/admin/audit", get(page))
         .route("/admin/audit/changes", get(changes))
-}
-
-async fn owner(state: &AppState, headers: &HeaderMap) -> Result<Subject, Response> {
-    match who(state, headers).await {
-        Who::Person(subject) => {
-            if super::hub_settings::is_owner(state, &subject) {
-                Ok(subject)
-            } else {
-                Err(hidden())
-            }
-        }
-        Who::SignedOut | Who::NotSetUp => Err(hidden()),
-        Who::Unavailable => Err(unavailable()),
-    }
 }
 
 async fn page(

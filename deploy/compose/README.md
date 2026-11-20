@@ -69,8 +69,15 @@ Record the following on the running self-hosted build:
 6. Link a machine and use a supported AI client against this hub, then exercise a board
    workflow from the desktop and phone.
 
-These are acceptance requirements. The local-user administration and build separation are
-still incomplete; the existing test-account command alone does not satisfy them. Track
+The owner manages local users in **Hub settings ? Local users ? Manage users**: add an
+email/password login, edit a name, disable access or reset a password. Users share this
+environment; organization management stays unavailable. Disabling ends browser sessions
+and OAuth connections and revokes API keys. Re-enabling requires fresh sign-in. Password
+reset ends browser sessions and OAuth connections; API keys keep their separate lifecycle.
+Give newly created or reset passwords to their users privately; the hub does not email them.
+
+These are acceptance requirements. Build separation remains incomplete; the test-account
+command alone does not satisfy them. Track
 results in [release readiness](../../.ai/dev/plans/v0.1-release-readiness.md#self-hosted-baseline-2026-11-20).
 
 ## Connect a GitHub issue repository to the shared board

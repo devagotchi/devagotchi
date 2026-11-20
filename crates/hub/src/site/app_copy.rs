@@ -114,6 +114,7 @@ pub struct AppCopy {
     pub creation: CreationCopy,
     pub audit: AuditCopy,
     pub hub_audit: HubAuditCopy,
+    pub people: PeopleCopy,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -172,4 +173,37 @@ pub struct HubAuditCopy {
     pub via: String,
     pub operation: String,
     pub broken: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct PeopleCopy {
+    pub access_help: String,
+    pub title: String,
+    pub description: String,
+    pub manage: String,
+    pub add: String,
+    pub name: String,
+    pub email: String,
+    pub password: String,
+    pub password_help: String,
+    pub create: String,
+    pub save: String,
+    pub enabled: String,
+    pub active: String,
+    pub disabled: String,
+    pub owner: String,
+    pub user: String,
+    pub back: String,
+    pub settings: String,
+    pub more: String,
+    pub reset: String,
+    pub reset_help: String,
+    pub external: String,
+    pub empty: String,
+    pub created: String,
+    pub updated: String,
+    pub reset_done: String,
+    pub refused: String,
+    pub edit: String,
 }
