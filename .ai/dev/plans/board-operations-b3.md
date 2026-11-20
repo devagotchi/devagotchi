@@ -38,10 +38,11 @@ Also in this batch, found on the way:
   modules outside AgentHub that break it today; each goes in the batch that owns its crate.
 - `suggestions` read only the first 200 approvals, oldest first, so a busy board stopped
   suggesting; it now asks for the last 30 days directly.
-- `platinum`, a private host name, came out of the hub's tests, its add-a-machine placeholder,
-  the turnkey video and the agenthub standing test; `Texas` and `dabo` came out of the
-  approval tool's docs. The docs still name hosts (`deploy/linux/README.md`,
-  `docs/product-and-platform-plan.md`, `docs/documentation-map.md`): for the operator.
+- Private host names came out of the hub's tests, its add-a-machine placeholder, the turnkey
+  video, the agenthub standing test and the approval tool's docs (now `lab`, `studio` and
+  generic words). Some docs still name the operator's hosts (`deploy/linux/README.md`,
+  `docs/product-and-platform-plan.md`, `docs/documentation-map.md`, older CHANGELOG entries):
+  for the operator to decide.
 - `web/approvals.rs` became `web/approvals/` with the approve-ahead handlers in `ahead.rs`, so
   it shrank under its ratchet entry.
 
