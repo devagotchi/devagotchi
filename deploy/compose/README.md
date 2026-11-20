@@ -121,11 +121,12 @@ image pinned by digest, and two systemd timers:
   off the host too.
 
 A self-hosted install follows the release channel: `ghcr.io/devagotchi/devagotchi:latest`.
-`:latest` moves only when a stable tag is published (a `v*` tag with no prerelease suffix).
-A prerelease such as `v0.1.0-alpha.1` is published as `:0.1.0-alpha.1` and does not move
-`:latest`. Until the first stable tag exists, pass `--tag v0.1.0-alpha.1` or
-`--channel main`. `--channel main` follows `:main`, so every merge reaches that hub within
-minutes. `--track IMAGE` names an image outright.
+`:latest` moves when a stable tag is published (a `v*` tag with no prerelease suffix). A
+prerelease such as `v0.1.0-alpha.1` is published as `:0.1.0-alpha.1` and does not move
+`:latest`. While no release is current (pre-release, 2026-11-20), every build of main moves
+`:latest` too. The release channel still takes its compose files from the newest release tag,
+so install with `--channel main` until the next release: it follows `:main` and main's files,
+so every merge reaches that hub within minutes. `--track IMAGE` names an image outright.
 
 The stack's own files (`compose.yaml`, `update.sh`, `backup.sh`) come from the same place as the
 image, so they always match it: the newest release's tag for the release channel, the tag for

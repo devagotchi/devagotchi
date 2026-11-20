@@ -9,7 +9,8 @@ name: image
 # configured, and a machine joins it the way a person's AI tells them to (tests/compose_join.py).
 # Then, for main and release tags only: one multi-arch tag set with a signed build-provenance
 # attestation. Tags: `main` and `sha-<short>` for every main build; the version for every
-# `v*` tag; `latest` only for a stable tag (no prerelease suffix). The registry path comes
+# `v*` tag; `latest` for a stable tag (no prerelease suffix) and, while no release is current,
+# every main build too (the Tags step says when that ends). The registry path comes
 # from the repository's owner; nothing is named here.
 on:
   workflow_call:
@@ -227,7 +228,9 @@ jobs:
             type=ref,event=branch
             type=sha,prefix=sha-
             type=semver,pattern={{version}}
-            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') && !contains(github.ref_name, '-') }}
+            # Pre-release (operator, 2026-11-20): no release is current, so `latest` follows
+            # main as well. Drop `github.ref == 'refs/heads/main' ||` when the next release is cut.
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' || (startsWith(github.ref, 'refs/tags/v') && !contains(github.ref_name, '-')) }}
       - name: One multi-arch tag set
         working-directory: ${{ runner.temp }}/digests
         run: |
