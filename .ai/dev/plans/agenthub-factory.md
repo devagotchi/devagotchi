@@ -50,9 +50,19 @@ Source order (original work dates, not the dates preservation commits were creat
   dependency audit, generated contracts and AI contract checks passed. Edge acceptance
   exercised owner/ordinary-user board and dependent task creation at desktop/phone widths
   against a single-environment native hub and isolated Docker PostgreSQL.
-- Delivery: backend merged; parent application push/PR/main and deployed-image acceptance
-  pending. Linux/macOS/ARM, real ClickHouse export and Docker-compose checks remain remote
-  CI gates.
+- Delivery: backend merged; parent [PR #272](https://github.com/devagotchi/devagotchi/pull/272)
+  merged to main as `53c5c93`, with all 18 checks passing, including Linux/macOS/ARM,
+  real ClickHouse export and Docker Compose. Official-image deployment acceptance pending.
+
+### First source: task search
+
+The next concrete gap is exact task-ID, note-body and PostgreSQL full-text search from
+`a703761`. See [the scoped plan](october-task-search.md) and backend
+[PR #10](https://github.com/devagotchi/agenthub/pull/10). Bound-CLI acceptance exposed a
+parser conflict that discarded the query; [PR #11](https://github.com/devagotchi/agenthub/pull/11)
+fixes it. Both backend changes merged; parent pins `6912c3e`. All 94 backend and 495 hub
+tests passed against required PostgreSQL, including browser/MCP/bound-CLI search and
+account isolation. Parent publication/main and deployed-image acceptance remain pending.
 
 The baseline also still requires a source-to-implementation audit of principal roles,
 presence, WIP overrides, policy editing/enforcement, workflows/settings, request idempotency,

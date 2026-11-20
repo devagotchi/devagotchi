@@ -68,7 +68,7 @@ pub struct ListIn {
     /// Leave out done and cancelled tickets.
     #[serde(default)]
     pub open_only: bool,
-    /// Substring of the title or description.
+    /// Exact ticket ID, title/description web-search, or literal substring of title, description or notes.
     #[serde(default)]
     pub text: Option<String>,
     /// Only tickets on this machine.

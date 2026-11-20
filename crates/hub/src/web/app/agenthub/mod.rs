@@ -8,4 +8,6 @@ pub(super) mod ticket;
 pub(super) mod ticket_actions;
 
 #[cfg(test)]
+mod search_tests;
+#[cfg(test)]
 mod ticket_tests;

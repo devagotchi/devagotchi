@@ -1,4 +1,4 @@
-//! Actual CLI creation preserves dependency flags in the PostgreSQL transaction.
+//! Actual CLI creation, dependencies and search use the same PostgreSQL board.
 use devagotchi_store::{or_skip, testing::empty_postgres};
 use serde_json::{Value, json};
 use std::process::Command;
@@ -37,6 +37,18 @@ async fn cli_creates_dependencies_atomically() {
     ]);
     assert_eq!(failed.status.code(), Some(4), "{failed:?}");
     assert_eq!(call(&["ls"]).stdout, before.stdout);
+    assert!(
+        call(&["note", id, "Unique search evidence"])
+            .status
+            .success()
+    );
+    for query in [id, "Unique search evidence"] {
+        let found = call(&["ls", "--text", query]);
+        assert!(found.status.success(), "{found:?}");
+        let tickets: Value = serde_json::from_slice(&found.stdout).unwrap();
+        assert_eq!(tickets.as_array().unwrap().len(), 1, "{tickets}");
+        assert_eq!(tickets[0]["id"], id);
+    }
     let verified: Value = serde_json::from_slice(&call(&["verify"]).stdout).unwrap();
     assert_eq!(verified["ok"], true);
 }
