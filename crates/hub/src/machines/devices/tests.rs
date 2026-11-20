@@ -82,23 +82,14 @@ async fn revoke_sticks_until_a_new_code_re_enrolls() {
 async fn an_owned_code_binds_a_machine_to_its_account_only() {
     let devices = or_skip!(test_registry());
     let code = devices
-        .issue_owned_code("acct-a", "platinum", [20; 16], OWNED_LIMIT)
+        .issue_owned_code("acct-a", "lab", [20; 16], OWNED_LIMIT)
         .await
         .unwrap();
     // Not in the hub config, yet it joins: the code says whose it is.
-    let device = devices
-        .enroll("platinum", &code, "aa", false)
-        .await
-        .unwrap();
+    let device = devices.enroll("lab", &code, "aa", false).await.unwrap();
     assert_eq!(device.owner.as_deref(), Some("acct-a"));
     assert_eq!(
-        devices
-            .get("platinum")
-            .await
-            .unwrap()
-            .unwrap()
-            .owner
-            .as_deref(),
+        devices.get("lab").await.unwrap().unwrap().owner.as_deref(),
         Some("acct-a")
     );
     assert_eq!(devices.owned_by("acct-a").await.unwrap().len(), 1);
@@ -106,7 +97,7 @@ async fn an_owned_code_binds_a_machine_to_its_account_only() {
     // Another account cannot take the name, nor revoke it, nor learn more than "not yours".
     assert_eq!(
         devices
-            .issue_owned_code("acct-b", "platinum", [21; 16], OWNED_LIMIT)
+            .issue_owned_code("acct-b", "lab", [21; 16], OWNED_LIMIT)
             .await
             .unwrap_err()
             .code,
@@ -114,7 +105,7 @@ async fn an_owned_code_binds_a_machine_to_its_account_only() {
     );
     assert_eq!(
         devices
-            .revoke_owned("acct-b", "platinum")
+            .revoke_owned("acct-b", "lab")
             .await
             .unwrap_err()
             .code,
@@ -122,19 +113,16 @@ async fn an_owned_code_binds_a_machine_to_its_account_only() {
     );
     // The owner re-adds it with a new key after revoking it.
     assert_eq!(
-        devices.revoke_owned("acct-a", "platinum").await.unwrap(),
+        devices.revoke_owned("acct-a", "lab").await.unwrap(),
         (true, 0)
     );
-    assert!(devices.is_revoked("platinum").await.unwrap());
+    assert!(devices.is_revoked("lab").await.unwrap());
     let again = devices
-        .issue_owned_code("acct-a", "platinum", [22; 16], OWNED_LIMIT)
+        .issue_owned_code("acct-a", "lab", [22; 16], OWNED_LIMIT)
         .await
         .unwrap();
-    devices
-        .enroll("platinum", &again, "bb", false)
-        .await
-        .unwrap();
-    let record = devices.get("platinum").await.unwrap().unwrap();
+    devices.enroll("lab", &again, "bb", false).await.unwrap();
+    let record = devices.get("lab").await.unwrap().unwrap();
     assert_eq!(
         (record.public_key.as_str(), record.revoked_at),
         ("bb", None)
@@ -266,22 +254,19 @@ async fn an_account_holds_at_most_its_limit_and_revoking_frees_a_place() {
 async fn a_live_code_names_its_machine_until_it_is_spent_or_expires() {
     let devices = or_skip!(test_registry());
     let code = devices
-        .issue_owned_code("acct-a", "platinum", [60; 16], OWNED_LIMIT)
+        .issue_owned_code("acct-a", "lab", [60; 16], OWNED_LIMIT)
         .await
         .unwrap();
     assert_eq!(
         devices.live_code(&code).await.unwrap().as_deref(),
-        Some("platinum")
+        Some("lab")
     );
     // Looking does not spend it.
     assert_eq!(
         devices.live_code(&code).await.unwrap().as_deref(),
-        Some("platinum")
+        Some("lab")
     );
-    devices
-        .enroll("platinum", &code, "aa", false)
-        .await
-        .unwrap();
+    devices.enroll("lab", &code, "aa", false).await.unwrap();
     assert_eq!(devices.live_code(&code).await.unwrap(), None);
     let other = devices
         .issue_owned_code("acct-a", "spare", [61; 16], OWNED_LIMIT)

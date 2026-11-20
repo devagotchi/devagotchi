@@ -114,7 +114,7 @@ async fn an_account_names_its_boards_repo_and_environments_and_nobody_else_can()
         .await;
     let events: Value =
         serde_json::from_str(events["content"][0]["text"].as_str().unwrap()).unwrap();
-    let changes = events
+    let changes = events["events"]
         .as_array()
         .unwrap()
         .iter()

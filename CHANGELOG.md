@@ -80,6 +80,42 @@ install, not a production promotion. The gap that is still open is in
   already forgotten past 4096 retirements cannot be brought back. An earlier build run on a
   journal this one opened fails each retirement once the journal holds 4096 tombstones.
 
+### Every board operation is one transaction, and every board call is audited once (B3)
+
+- Asking for an approval that a standing grant covers, approving and allowing, delegating a
+  ticket, undoing a close, setting a webhook, and ending what a person allowed for a kind
+  that now always asks them are each one transaction now. Before, each was two or more, so a
+  failure could leave half of it: an approval decided with no grant, an assignment with no
+  note, a lost webhook when two were set at once.
+- Standing approvals, the undo window and the approvals page's list are judged by the
+  database's clock, as leases always were, not the hub machine's.
+- A repeated request writes nothing and wakes nobody: the same dependency, the same settings
+  or workflow, an empty change. `board_dep` and `board_settings` had grown the chain on every
+  repeat.
+- A new ticket with no repo takes the board's from the command line and the pages too, not
+  only from `board_create`.
+- Damaged stored data (an inbox cursor, a webhook row, an event) is refused as
+  `board_damaged` instead of read as empty.
+- Every board tool call leaves exactly one audit line, refusals included (a bad seat header,
+  a missing fence, an unknown dependency kind, a refused webhook URL, an unmapped issue
+  repository). A failed audit write no longer turns a change that happened into an error; it
+  raises the operator alert. The approvals page and the issue checkpoint route write their
+  lines too.
+- Renamed on new events (alpha, D7; events already on a chain keep their names):
+  `ticket.heartbeat` is `lease.extended`, `ticket.handoff` is `ticket.handed_off`,
+  `admin.settings.put` is `board.settings_replaced` (it now names the changed keys),
+  `admin.workflow.put` is `board.workflow_replaced`, and `notes.wake_set` is `wake.set`. A
+  handoff's event now names its recipient (`assignee`).
+- MCP answers that were lists are objects: `board_list` and `board_ready` answer
+  `{"tickets": [...]}`, `board_events` and `board_wait` `{"events": [...]}`, `board_dep`
+  `{"deps": [...]}`. Every board tool now declares an output schema, takes only the fields it
+  documents (a mistyped field is refused), and has a hint for every refusal an agent can act
+  on. `board_claim` no longer claims to be idempotent; `board_settings` says it is
+  destructive. No tool schema holds a boolean where a schema goes: the MCP TypeScript SDK
+  refused the whole tool list over the `true` schemars writes for a ticket's `progress`.
+- AgentHub's store is one file per subject (`crates/agenthub/src/hosted/`), and the hub runs no
+  SQL on board tables (`hosted::registry`).
+
 ### Every commit on main is built again (B2a)
 
 - From `2b3feec` to `86b9d8b` the release workflow passed on main but built nothing: making

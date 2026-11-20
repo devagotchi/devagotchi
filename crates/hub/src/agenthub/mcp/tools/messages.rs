@@ -9,8 +9,8 @@ use rmcp::{
 };
 
 use super::super::{
-    ApprovalOut, ApprovalRequestIn, ApprovalWaitIn, BoardOut, InboxIn, InboxOut, WakeIn, WakeOut,
-    refuse,
+    APPROVAL_WAIT_DEFAULT_MS, APPROVAL_WAIT_MAX_MS, ApprovalOut, ApprovalRequestIn, ApprovalWaitIn,
+    BoardError, InboxIn, InboxOut, WakeIn, WakeOut, refuse,
 };
 use crate::mcp::Hub;
 
@@ -32,7 +32,7 @@ impl Hub {
         &self,
         Parameters(input): Parameters<InboxIn>,
         context: RequestContext<RoleServer>,
-    ) -> BoardOut<InboxOut> {
+    ) -> Result<Json<InboxOut>, Json<BoardError>> {
         let names = self.client_names(&context);
         self.board_call(
             "board_inbox",
@@ -66,17 +66,20 @@ impl Hub {
         &self,
         Parameters(input): Parameters<WakeIn>,
         context: RequestContext<RoleServer>,
-    ) -> BoardOut<WakeOut> {
+    ) -> Result<Json<WakeOut>, Json<BoardError>> {
         let subject = self.board_subject(&context)?;
         let owner = match self.board_access(&subject, &input.project) {
             Ok((_, _, role)) => role.may_configure(),
             Err(_) => true,
         };
-        if let Some(url) = &input.url {
-            crate::agenthub::wake::target(url, !self.config.multi_tenant())
+        // The URL is checked (resolved, public) before the call and refused inside it, so a
+        // refused URL is audited like any other refusal (G7).
+        let checked = match &input.url {
+            Some(url) => crate::agenthub::wake::target(url, !self.config.multi_tenant())
                 .await
-                .map_err(|error| refuse(error, None))?;
-        }
+                .map(drop),
+            None => Ok(()),
+        };
         self.board_call(
             "board_wake",
             &input.project,
@@ -89,6 +92,7 @@ impl Hub {
                         "this board's webhooks are its owner's",
                     ));
                 }
+                checked?;
                 let secret = board.set_wake(actor, &input.recipient, input.url.as_deref())?;
                 Ok(WakeOut {
                     recipient: input.recipient.clone(),
@@ -115,7 +119,7 @@ impl Hub {
         &self,
         Parameters(input): Parameters<ApprovalRequestIn>,
         context: RequestContext<RoleServer>,
-    ) -> BoardOut<ApprovalOut> {
+    ) -> Result<Json<ApprovalOut>, Json<BoardError>> {
         let project = input.project.clone();
         let Json((approval, standing)) = self
             .board_call(
@@ -172,15 +176,44 @@ impl Hub {
         &self,
         Parameters(input): Parameters<ApprovalWaitIn>,
         context: RequestContext<RoleServer>,
-    ) -> BoardOut<ApprovalOut> {
+    ) -> Result<Json<ApprovalOut>, Json<BoardError>> {
         let subject = self.board_subject(&context)?;
-        let (board, _) = self
-            .board_for(&subject, &input.project)
-            .map_err(|e| refuse(e, Some(&input.id)))?;
+        let result = self.wait_for_decision(&subject, &input, &context).await;
+        // One audit line per wait, however long it blocked: the outcome, with the status
+        // the wait ended on beside the id.
+        let (target, outcome) = match &result {
+            Ok(approval) => (
+                format!("{} {}", input.id, approval.status),
+                "ok".to_string(),
+            ),
+            Err(error) => (input.id.clone(), error.code.clone()),
+        };
+        self.record_completion(&subject, "approval_wait", &input.project, &target, &outcome)
+            .await;
+        result
+            .map(|approval| Json(self.approval_out(&input.project, approval)))
+            .map_err(|error| refuse(error, Some(&input.id)))
+    }
+}
+
+impl Hub {
+    /// The approval as it is once it is decided, or when the wait runs out.
+    async fn wait_for_decision(
+        &self,
+        subject: &crate::identity::Subject,
+        input: &ApprovalWaitIn,
+        context: &RequestContext<RoleServer>,
+    ) -> devagotchi_contracts::BridgeResult<crate::agenthub::approval::ApprovalStatus> {
+        let (board, _) = self.board_for(subject, &input.project)?;
         let deadline = tokio::time::Instant::now()
-            + Duration::from_millis(input.timeout_ms.unwrap_or(25_000).min(50_000));
+            + Duration::from_millis(
+                input
+                    .timeout_ms
+                    .unwrap_or(APPROVAL_WAIT_DEFAULT_MS)
+                    .min(APPROVAL_WAIT_MAX_MS),
+            );
         let mut changes = board.changes();
-        let approval = loop {
+        loop {
             changes.borrow_and_update();
             let (board, id) = (board.clone(), input.id.clone());
             let status = tokio::task::spawn_blocking(move || board.approval_status(&id))
@@ -190,34 +223,20 @@ impl Hub {
                         "board_store",
                         format!("board call did not complete: {join}"),
                     ))
-                })
-                .map_err(|e| refuse(e, Some(&input.id)))?;
+                })?;
             if status.status != "pending" || tokio::time::Instant::now() >= deadline {
-                break status;
+                return Ok(status);
             }
             // The decision is a board write: sleep until the board commits a change.
             tokio::select! {
                 biased;
-                _ = context.ct.cancelled() => break status,
+                _ = context.ct.cancelled() => return Ok(status),
                 changed = tokio::time::timeout_at(deadline, changes.changed()) => {
                     if !matches!(changed, Ok(Ok(()))) {
-                        break status;
+                        return Ok(status);
                     }
                 }
             }
-        };
-        if let Err(error) = self
-            .audited(
-                &subject,
-                "approval_wait",
-                &input.project,
-                &input.id,
-                &approval.status,
-            )
-            .await
-        {
-            return Err(refuse(error, Some(&input.id)));
         }
-        Ok(Json(self.approval_out(&input.project, approval)))
     }
 }

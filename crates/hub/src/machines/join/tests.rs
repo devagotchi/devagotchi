@@ -115,30 +115,20 @@ fn nothing_unsafe_is_ever_written_into_a_script() {
     let (_dir, downloads) = downloads(&["install-devagotchi.sh"]);
     let hub = "https://app.devagotchi.com";
     for (hub, device, code) in [
-        ("https://evil.example/'; rm -rf / #", "platinum", CODE),
-        ("ftp://hub.example", "platinum", CODE),
+        ("https://evil.example/'; rm -rf / #", "lab", CODE),
+        ("ftp://hub.example", "lab", CODE),
         (hub, "Plat'inum", CODE),
-        (hub, "platinum", "dvg-0123456789ABCDEF0123456789abcdef"),
-        (hub, "platinum", "dvg-'$(id)'"),
+        (hub, "lab", "dvg-0123456789ABCDEF0123456789abcdef"),
+        (hub, "lab", "dvg-'$(id)'"),
     ] {
         assert!(
-            script(Shell::Sh, hub, device, "platinum", code, &downloads).is_none(),
+            script(Shell::Sh, hub, device, "lab", code, &downloads).is_none(),
             "{hub} {device} {code}"
         );
     }
-    assert!(script(Shell::Sh, hub, "platinum", "plat'inum", CODE, &downloads).is_none());
+    assert!(script(Shell::Sh, hub, "lab", "la'b", CODE, &downloads).is_none());
     // A hub without the PowerShell installer writes no PowerShell script.
-    assert!(
-        script(
-            Shell::PowerShell,
-            hub,
-            "platinum",
-            "platinum",
-            CODE,
-            &downloads
-        )
-        .is_none()
-    );
+    assert!(script(Shell::PowerShell, hub, "lab", "lab", CODE, &downloads).is_none());
     assert!(valid_code(CODE) && !valid_code("dvg-") && !valid_code(&format!("{CODE}0")));
 }
 
@@ -149,8 +139,8 @@ fn the_shell_script_parses_and_refuses_a_machine_it_cannot_serve() {
     let sh = script(
         Shell::Sh,
         "http://127.0.0.1:9",
-        "platinum",
-        "platinum",
+        "lab",
+        "lab",
         CODE,
         &downloads,
     )

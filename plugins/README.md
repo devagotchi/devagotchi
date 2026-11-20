@@ -46,7 +46,7 @@ then install `devagotchi`. Not yet checked in a real Grok session.
 
 ## For maintainers
 
-`crates/hub/src/plugin_tests.rs` holds these files to the code: the hooks equal
+`crates/hub/src/mcp/tests/plugins.rs` holds these files to the code: the hooks equal
 `agenthub::cli::plugin_hooks()`, every tool a skill names is served by the hub, the connector
 points at the hosted hub, and Codex's version is the release's. Check a change with
 `claude plugin validate plugins/devagotchi` and an install into a throwaway `CODEX_HOME`. The

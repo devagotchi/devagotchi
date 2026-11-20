@@ -28,7 +28,41 @@ pub fn open_outputs<S>(mut router: ToolRouter<S>) -> ToolRouter<S> {
     router
 }
 
-/// `schema` and every schema inside it, without `additionalProperties: false`.
+/// Keywords whose value is one schema.
+pub const ONE_SCHEMA: [&str; 11] = [
+    "items",
+    "additionalProperties",
+    "additionalItems",
+    "not",
+    "if",
+    "then",
+    "else",
+    "contains",
+    "propertyNames",
+    "unevaluatedItems",
+    "unevaluatedProperties",
+];
+/// Keywords whose value is a list of schemas.
+pub const SCHEMA_LISTS: [&str; 4] = ["anyOf", "allOf", "oneOf", "prefixItems"];
+/// Keywords whose value maps names to schemas.
+pub const NAMED_SCHEMAS: [&str; 4] = ["properties", "patternProperties", "$defs", "definitions"];
+
+/// A boolean where a schema goes, as the object schema that means the same (`true` is `{}`,
+/// `false` is `{"not": {}}`). schemars writes `true` for a `serde_json::Value` with no doc
+/// comment (`Ticket.progress`), and an MCP client on the TypeScript SDK refuses the whole tool
+/// list over one (B3: `outputSchema.properties.progress: Invalid input`).
+fn as_object(schema: &mut Value) {
+    match schema {
+        Value::Bool(true) => *schema = Value::Object(Default::default()),
+        Value::Bool(false) => {
+            *schema = serde_json::json!({ "not": {} });
+        }
+        _ => {}
+    }
+}
+
+/// `schema` and every schema inside it, without `additionalProperties: false`, and with no
+/// boolean where a schema goes.
 pub fn open(schema: &mut Value) {
     match schema {
         Value::Object(rules) => {
@@ -36,16 +70,31 @@ pub fn open(schema: &mut Value) {
                 rules.remove("additionalProperties");
             }
             for (keyword, rule) in rules.iter_mut() {
-                match keyword.as_str() {
+                let keyword = keyword.as_str();
+                if NAMED_SCHEMAS.contains(&keyword) {
                     // Maps of names to schemas: each value is a schema, the names are not.
-                    "properties" | "patternProperties" | "$defs" | "definitions" => {
-                        if let Value::Object(named) = rule {
-                            named.values_mut().for_each(open);
+                    if let Value::Object(named) = rule {
+                        for each in named.values_mut() {
+                            as_object(each);
+                            open(each);
                         }
                     }
-                    // Values, not schemas.
-                    "enum" | "const" | "default" | "examples" | "required" => {}
-                    _ => open(rule),
+                } else if ONE_SCHEMA.contains(&keyword) {
+                    as_object(rule);
+                    open(rule);
+                } else if SCHEMA_LISTS.contains(&keyword) {
+                    if let Value::Array(schemas) = rule {
+                        for each in schemas.iter_mut() {
+                            as_object(each);
+                            open(each);
+                        }
+                    }
+                } else if !matches!(
+                    keyword,
+                    "enum" | "const" | "default" | "examples" | "required"
+                ) {
+                    // Not schemas, but they may hold some (`$defs` under another name).
+                    open(rule);
                 }
             }
         }
@@ -54,11 +103,77 @@ pub fn open(schema: &mut Value) {
     }
 }
 
+/// Where `schema` holds a boolean in a schema's place, as `/`-joined paths; empty when it
+/// holds none. A boolean `additionalProperties` is not counted: `false` is how an input is
+/// closed, and clients take it.
+pub fn boolean_schemas(schema: &Value) -> Vec<String> {
+    fn walk(schema: &Value, path: &str, found: &mut Vec<String>) {
+        let Value::Object(rules) = schema else { return };
+        for (keyword, rule) in rules {
+            let here = format!("{path}/{keyword}");
+            let keyword = keyword.as_str();
+            let mut check = |each: &Value, at: String, found: &mut Vec<String>| {
+                if each.is_boolean() {
+                    found.push(at);
+                } else {
+                    walk(each, &at, found);
+                }
+            };
+            if NAMED_SCHEMAS.contains(&keyword) {
+                if let Value::Object(named) = rule {
+                    for (name, each) in named {
+                        check(each, format!("{here}/{name}"), found);
+                    }
+                }
+            } else if keyword == "additionalProperties" && rule.is_boolean() {
+                // `false` closes an input (I1); every client takes a boolean here.
+            } else if ONE_SCHEMA.contains(&keyword) {
+                check(rule, here, found);
+            } else if SCHEMA_LISTS.contains(&keyword) {
+                if let Value::Array(schemas) = rule {
+                    for (n, each) in schemas.iter().enumerate() {
+                        check(each, format!("{here}/{n}"), found);
+                    }
+                }
+            }
+        }
+    }
+    let mut found = Vec::new();
+    walk(schema, "", &mut found);
+    found
+}
+
 #[cfg(test)]
 mod tests {
     use serde_json::json;
 
     use super::open;
+
+    #[test]
+    fn a_boolean_in_a_schemas_place_becomes_the_object_that_means_the_same() {
+        let mut schema = json!({
+            "type": "object",
+            "properties": { "progress": true, "never": false, "list": { "type": "array", "items": true } },
+            "anyOf": [true, { "type": "object" }],
+            "uniqueItems": true,
+        });
+        assert_eq!(super::boolean_schemas(&schema).len(), 4, "{schema}");
+        open(&mut schema);
+        assert_eq!(
+            schema,
+            json!({
+                "type": "object",
+                "properties": {
+                    "progress": {},
+                    "never": { "not": {} },
+                    "list": { "type": "array", "items": {} }
+                },
+                "anyOf": [{}, { "type": "object" }],
+                "uniqueItems": true,
+            })
+        );
+        assert!(super::boolean_schemas(&schema).is_empty());
+    }
 
     #[test]
     fn every_closed_object_opens_and_names_and_values_stay() {

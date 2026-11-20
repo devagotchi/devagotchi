@@ -196,17 +196,17 @@ review.
 | Check | Holds | Lives in | Status |
 |---|---|---|---|
 | Size ratchet | layout 6 | `crates/devagotchi/tests/layout.rs` | in place |
-| One home per domain | layout 2 | `crates/devagotchi/tests/layout.rs` | planned; held by review |
+| One home per module: no `<x>.rs` beside `<x>/` | layout 2 | `crates/devagotchi/tests/layout.rs` (`layout/beside.txt`, shrink-only) | in place (B3) |
 | Test shape: names, skip shapes, scripts run by CI, workflow pins and timeouts | G13, tests-and-ci | `crates/devagotchi/tests/test_shape.rs` | planned (B6) |
 | Link wire scan: dispatch wildcards, compared literals, personal paths | G5, G3, link 11 | `crates/devagotchi/tests/link_protocol.rs` | in place (B2) |
 | SQL scan: qualified tables, `AssertSqlSafe`, `QueryBuilder`, `tenant_id` ratchet | persistence 12-18 | `crates/devagotchi/tests/sql.rs` | planned (B6) |
 | Link wire golden (append-only) | G2 | `crates/contracts/src/link/tests.rs` (`SEEN`) | in place (B2) |
 | `describe::BROKER_TOOLS` covers `REQUEST_METHODS` | machine-capability 7 | `crates/contracts/src/system/tests.rs` | in place (B1) |
-| Every tool's form, through shared `check_tools` | mcp-tools N1, T1, A1, A2, I1, I2, O1, D1, D3 | `crates/mcp/src/pattern.rs`, called by `crates/mcp/src/adapter/tests.rs` and `crates/hub/src/mcp/tests/tools.rs` | in place (B1); the hub's board, workflow and other non-machine tools are allow-listed until B3/B4 |
-| Hub audit and uniqueness scan | G7, N1 | `crates/hub/src/mcp/tests/scan.rs` | in place (B1); allow-list as above |
+| Every tool's form, through shared `check_tools` | mcp-tools N1, T1, A1, A2, I1, I2, O1, O4, O5, D1, D3 | `crates/mcp/src/pattern.rs`, called by `crates/mcp/src/adapter/tests.rs` and `crates/hub/src/mcp/tests/tools.rs` | in place (B1; O4 and O5 in B3); no board tool on the allow-list since B3; workflow, kernel and connection tools until B4 |
+| Hub audit and uniqueness scan | G7, N1 | `crates/hub/src/mcp/tests/scan.rs` | in place (B1); allow-list as above, no board tool since B3 |
 | Local/hub parity | G1, G3, machine-capability 8, 14-16 | `crates/hub/src/machines/tests/parity.rs` | in place (B1) |
-| Board contract: viewer tools match hints; every code has a `next` | board-operations 9, 11 | `crates/hub/src/agenthub/mcp/tests/contract.rs` | planned (B3) |
-| Board actions and no-op silence | board-operations 6, 7 | `crates/agenthub/src/tests/actions.rs` | planned (B3) |
+| Board contract: viewer tools match hints; every code has a `next`; wait bounds | board-operations 9, 11 | `crates/hub/src/agenthub/mcp/tests/contract.rs`; the CLI side in `crates/agenthub/src/cli/tests/output.rs` | in place (B3) |
+| Board actions, no-op silence, atomic operations | board-operations 6, 7, 1 | `crates/agenthub/src/tests/actions.rs`, `crates/agenthub/src/tests/operations.rs` | in place (B3) |
 | RLS, grants and lookup-function locks from the catalog | G8, persistence 8-10 | `crates/hub/src/store/tests.rs` | planned (B6); replaces `TENANT_TABLES` in `crates/hub/src/identity/accounts/tenants/tests.rs` |
 | Table prefixes | layout 8 | `crates/hub/src/store/tests.rs` (`every_table_in_the_hub_schema_carries_its_domain_prefix`) | in place |
 | Migration names and checksums ratchet | persistence 2, 3 | `crates/hub/src/store/tests.rs`, `crates/agenthub/src/migrations/tests.rs` | planned (B6); both files exist |

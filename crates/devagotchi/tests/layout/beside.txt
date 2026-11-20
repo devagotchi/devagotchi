@@ -1,0 +1,29 @@
+# Modules that were both <x>.rs and a folder <x>/ of Rust when layout rule 2 got its check
+# (B3, 2026-11-19). Each becomes <x>/mod.rs in the batch that owns it; the list only gets
+# shorter. Never add a line: see .ai/patterns/layout.md, rule 2.
+crates/contracts/src/interactive.rs
+crates/contracts/src/system.rs
+crates/hub/src/config/live.rs
+crates/hub/src/machines/files.rs
+crates/hub/src/machines/operations.rs
+crates/hub/src/ops/audit.rs
+crates/hub/src/site.rs
+crates/hub/src/site/walkthrough.rs
+crates/hub/src/web/landing.rs
+crates/hub/src/web/pages.rs
+crates/ipc/src/windows.rs
+crates/machine-engine/src/broker.rs
+crates/machine-engine/src/broker/system.rs
+crates/machine-engine/src/broker/system/web.rs
+crates/machine-engine/src/execution.rs
+crates/machine-engine/src/execution/platform.rs
+crates/machine-engine/src/execution/platform/linux.rs
+crates/machine-engine/src/execution/platform/windows.rs
+crates/machine-engine/src/files.rs
+crates/machine-engine/src/files/lines.rs
+crates/machine-engine/src/files/manage.rs
+crates/machine-engine/src/journal.rs
+crates/mcp/src/adapter.rs
+crates/mcp/src/capabilities.rs
+crates/mcp/src/image.rs
+crates/mcp/src/run.rs

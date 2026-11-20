@@ -1,3 +1,7 @@
+//! The hub's boards in its Postgres: which tenant an owner's boards live in, opening one, and
+//! the lease reaper's view across tenants. What it asks of the board tables, it asks
+//! AgentHub (`hosted::registry`); it runs no SQL on them itself (rule 1).
+
 use crate::agenthub::{Board, fail, hosted::*};
 use crate::store::{Lookup, Store, transaction};
 use devagotchi_contracts::BridgeResult;
@@ -65,12 +69,7 @@ impl Registry {
 
     pub(crate) async fn names(&self, owner: &str) -> BridgeResult<Vec<String>> {
         let tenant = self.tenant(owner).await?;
-        transaction!(&self.store, |connection| {
-            self.store.scope(connection, &tenant).await?;
-            Ok(sqlx::query_scalar(
-                "SELECT project_name FROM board_projects WHERE tenant_id=$1 AND owner_id=$2 ORDER BY project_name COLLATE \"C\"",
-            ).bind(&tenant).bind(owner).fetch_all(&mut *connection).await?)
-        })
+        registry::names(&self.store, &tenant, owner).await
     }
 
     async fn leases(&self) -> BridgeResult<Vec<(String, String, i64)>> {
@@ -83,13 +82,7 @@ impl Registry {
         };
         let mut leases = Vec::new();
         for tenant in tenants {
-            let rows: Vec<(String, i64)> = transaction!(&self.store, |connection| {
-                self.store.scope(connection, &tenant).await?;
-                Ok(sqlx::query_as(
-                    "SELECT board_id, min(lease_expires_at)-(extract(epoch FROM clock_timestamp())*1000)::bigint
-                     FROM board_tickets WHERE tenant_id=$1 AND holder IS NOT NULL GROUP BY board_id",
-                ).bind(&tenant).fetch_all(&mut *connection).await?)
-            })?;
+            let rows = registry::lease_delays(&self.store, &tenant).await?;
             leases.extend(
                 rows.into_iter()
                     .map(|(board, delay)| (tenant.clone(), board, delay)),
@@ -131,14 +124,7 @@ impl Registry {
         let created = if create {
             board.initialize_limited(limit).await?
         } else {
-            let exists = transaction!(&self.store, |connection| {
-                self.store.scope(connection, &tenant).await?;
-                let count:i64=sqlx::query_scalar(
-                    "SELECT count(*) FROM board_projects WHERE tenant_id=$1 AND owner_id=$2 AND project_name=$3",
-                ).bind(&tenant).bind(owner).bind(project).fetch_one(&mut *connection).await?;
-                Ok(count == 1)
-            })?;
-            if !exists {
+            if !registry::has_board(&self.store, &tenant, owner, project).await? {
                 return Ok(None);
             }
             false

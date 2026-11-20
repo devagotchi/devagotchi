@@ -1,6 +1,3 @@
-approval_wait: missing audit helper
-board_bind: missing audit helper
-board_wait: missing audit helper
 connection_call: missing audit helper
 connections: missing audit helper
 dictionary_get: missing audit helper

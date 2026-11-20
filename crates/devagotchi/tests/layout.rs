@@ -234,3 +234,60 @@ fn lines_are_counted_as_wc_counts_them() {
     assert_eq!(line_count(b"a\r\nb\r\n"), 2);
     assert_eq!(line_count(b"a\nb"), 2);
 }
+
+/// Modules that were both `<x>.rs` and a folder `<x>/` of Rust when layout rule 2 got its
+/// check (B3, 2026-11-19). The list only gets shorter.
+fn beside_path() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/layout/beside.txt")
+}
+
+/// Every `<x>.rs` with a folder `<x>/` beside it that holds Rust, except `main`, `lib` and
+/// `build`: one module in two places (layout rule 2). A folder holds its module as `mod.rs`.
+fn beside(root: &Path) -> Vec<String> {
+    let mut found: Vec<String> = support::rust_files(root)
+        .into_iter()
+        .filter_map(|(relative, path)| {
+            let stem = path.file_stem()?.to_str()?.to_string();
+            let folder = path.with_extension("");
+            let holds_rust = folder.is_dir() && support::rust_files_under(&folder).next().is_some();
+            (holds_rust && !["main", "lib", "build", "mod"].contains(&stem.as_str()))
+                .then_some(relative)
+        })
+        .collect();
+    found.sort();
+    found
+}
+
+#[test]
+fn no_module_is_both_a_file_and_a_folder_beyond_those_listed() {
+    let path = beside_path();
+    let text = fs::read_to_string(&path)
+        .unwrap_or_else(|e| panic!("{}: {e}", path.display()))
+        .replace("\r\n", "\n");
+    let listed: Vec<&str> = text
+        .lines()
+        .filter(|line| !line.is_empty() && !line.starts_with('#'))
+        .collect();
+    let found = beside(&workspace_root());
+    let new: Vec<&String> = found
+        .iter()
+        .filter(|f| !listed.contains(&f.as_str()))
+        .collect();
+    assert!(
+        new.is_empty(),
+        "layout rule 2: make each a folder with mod.rs, never list it:\n  {}",
+        new.iter()
+            .map(|s| s.as_str())
+            .collect::<Vec<_>>()
+            .join("\n  ")
+    );
+    let gone: Vec<&&str> = listed
+        .iter()
+        .filter(|l| !found.iter().any(|f| f == *l))
+        .collect();
+    assert!(
+        gone.is_empty(),
+        "fixed, so take them out of layout/beside.txt:\n  {}",
+        gone.iter().map(|s| **s).collect::<Vec<_>>().join("\n  ")
+    );
+}

@@ -11,7 +11,10 @@ it one step at a time; until a step lands, the code it covers stays where it is.
 2. **A folder per domain.** Inside a crate, each domain is `src/<domain>/`, and
    `src/<domain>/mod.rs` is its front door: the module docs, the `mod` lines and the names
    the rest of the crate may use. A domain has exactly one home. No `<domain>.rs` beside a
-   `<domain>/` folder, and no two homes whose names differ by a letter.
+   `<domain>/` folder, and no two homes whose names differ by a letter. Checked by
+   `crates/devagotchi/tests/layout.rs`
+   (`no_module_is_both_a_file_and_a_folder_beyond_those_listed`): the modules that were both
+   when the check arrived are in `layout/beside.txt`, which only gets shorter.
 3. **Tests sit with their domain.** `src/<domain>/tests.rs`, declared from the domain's
    `mod.rs` as `#[cfg(test)] mod tests;`. No `<domain>_tests.rs` at the crate's top level.
    Tests that drive a built binary stay in the crate's `tests/` folder.

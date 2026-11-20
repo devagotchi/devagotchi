@@ -6,7 +6,7 @@ use rmcp::{
     tool_router,
 };
 
-use super::super::{BoardOut, Boards, Bound, ProjectIn, SettingsIn, refuse};
+use super::super::{BoardError, Boards, Bound, ProjectIn, SettingsIn, refuse};
 use crate::{mcp::Hub, site::Cap};
 
 #[tool_router(router = board_settings_router, vis = "pub(super)")]
@@ -18,7 +18,8 @@ impl Hub {
         annotations(
             title = "A board's repo and environments",
             read_only_hint = false,
-            destructive_hint = false,
+            // A new list of environments replaces the old one.
+            destructive_hint = true,
             idempotent_hint = true,
             open_world_hint = false
         )
@@ -27,7 +28,7 @@ impl Hub {
         &self,
         Parameters(input): Parameters<SettingsIn>,
         context: RequestContext<RoleServer>,
-    ) -> BoardOut<crate::agenthub::Settings> {
+    ) -> Result<Json<crate::agenthub::Settings>, Json<BoardError>> {
         let subject = self.board_subject(&context)?;
         // Whose settings these are: the owning account's, and its AI's, on its own board
         // (or its org's); the people the config names on a shared one. Unknown boards are
@@ -74,22 +75,11 @@ impl Hub {
         &self,
         Parameters(input): Parameters<ProjectIn>,
         context: RequestContext<RoleServer>,
-    ) -> BoardOut<Bound> {
+    ) -> Result<Json<Bound>, Json<BoardError>> {
         let subject = self.board_subject(&context)?;
         if let Some((slug, name)) = input.project.split_once('/') {
             let result = self.bind_org(&subject, slug, name).await;
-            let outcome = match &result {
-                Ok(bound) if bound.created => "created".to_string(),
-                Ok(_) => "ok".to_string(),
-                Err(error) => error.code.clone(),
-            };
-            if let Err(error) = self
-                .audited(&subject, "board_bind", &input.project, "", &outcome)
-                .await
-            {
-                return Err(refuse(error, None));
-            }
-            return result.map(Json).map_err(|error| refuse(error, None));
+            return self.bound(&subject, &input.project, result).await;
         }
         let shared: Vec<String> = self
             .config
@@ -124,19 +114,12 @@ impl Hub {
         });
         let result = match (result, plan) {
             (Err(error), Some((plan, Cap::AtMost(most)))) if error.code == "plan_limit" => {
-                let held = self
-                    .boards
+                // A store that cannot count is the refusal, audited like the rest.
+                self.boards
                     .account_boards(&held_by)
-                    .map_err(|error| refuse(error, None))?
-                    .len();
-                Err(self.plan_limit(&plan, "projects", most, held))
+                    .and_then(|held| Err(self.plan_limit(&plan, "projects", most, held.len())))
             }
             (result, _) => result,
-        };
-        let outcome = match &result {
-            Ok(bound) if bound.created => "created".to_string(),
-            Ok(_) => "ok".to_string(),
-            Err(error) => error.code.clone(),
         };
         // A board made is its tenant's board milestone (`analytics::funnel`).
         if let (Ok(bound), Some(analytics), Some(tenant)) =
@@ -145,12 +128,26 @@ impl Hub {
         {
             analytics.tenant_event(tenant, crate::ops::analytics::funnel::BOARD);
         }
-        if let Err(error) = self
-            .audited(&subject, "board_bind", &input.project, "", &outcome)
-            .await
-        {
-            return Err(refuse(error, None));
-        }
+        self.bound(&subject, &input.project, result).await
+    }
+}
+
+impl Hub {
+    /// One audit line for a bind, whatever it found: `ok` with `created` as its target when
+    /// it made the board, the refusal's code otherwise.
+    async fn bound(
+        &self,
+        subject: &crate::identity::Subject,
+        project: &str,
+        result: devagotchi_contracts::BridgeResult<Bound>,
+    ) -> Result<Json<Bound>, Json<BoardError>> {
+        let (target, outcome) = match &result {
+            Ok(bound) if bound.created => ("created", "ok".to_string()),
+            Ok(_) => ("", "ok".to_string()),
+            Err(error) => ("", error.code.clone()),
+        };
+        self.record_completion(subject, "board_bind", project, target, &outcome)
+            .await;
         result.map(Json).map_err(|error| refuse(error, None))
     }
 }

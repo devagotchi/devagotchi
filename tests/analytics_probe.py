@@ -141,7 +141,8 @@ def all_events():
     """Every event the board's own history holds, by sequence."""
     seen, after = [], 0
     while True:
-        ok, events = mcp.call("board_events", {"project": args.project, "after_seq": after, "limit": 1000})
+        ok, answer = mcp.call("board_events", {"project": args.project, "after_seq": after, "limit": 1000})
+        events = answer.get("events") if ok else None
         if not ok or not events:
             return seen
         seen.extend(events)

@@ -3,8 +3,8 @@
 //! restart a machine and the person taps "Approve, and allow"; the same command there is
 //! approved the moment it is asked and no phone is notified; another command under the same
 //! label waits for the person; the approvals page lists it with Stop, and once stopped the
-//! next one waits for the person again. Only the person's page changes any of it. On SQLite,
-//! and on Postgres when the test server is set (CI).
+//! next one waits for the person again. Only the person's page changes any of it. On the test
+//! Postgres (`DEVAGOTCHI_TEST_POSTGRES_URL`; CI's hub-postgres job sets it).
 
 use serde_json::{Value, json};
 
