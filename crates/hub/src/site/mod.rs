@@ -27,11 +27,11 @@
 
 mod analytics_copy;
 mod assets;
-mod check;
 #[cfg(test)]
 mod assets_tests;
 #[cfg(test)]
 mod brand_tests;
+mod check;
 pub mod discovery;
 mod load;
 mod markdown;
