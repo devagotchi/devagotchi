@@ -3,7 +3,7 @@
 - Contract: DG-DELIVERY-1; stage: read [project.json](../../project.json)
 - Issue / request: operator, 2026-11-19: test B2 on the dev deploy. Its `/healthz` reports
   `main-18a4096`, five merges behind main, because no newer build exists.
-- PR: not_created
+- PR: #262 (merged as `3e2e5b9`)
 - Branch / baseline: `increment-272/main-builds` from main `86b9d8b`
 - Objective: every commit on main is built and attested again, and its hub image is pushed
   as `:main` and `:sha-<short>`, as `release.yml`'s push trigger and `dist-workspace.toml`
@@ -30,8 +30,8 @@ without its attestation, could never have accepted one.
 |---|---|---|---|---|
 | M1 | `plan` gains a `building` output (main or a tag); `build-local-artifacts` and its Attest step use it | none | `crates/devagotchi/tests/release_builds.rs` passes on the new file and fails on the old condition and five other ways main could stop building | done |
 | M2 | Plans, status and changelog say what happened | M1 | this file, [rewrite](rewrite.md) status, CHANGELOG | done |
-| M3 | Validate and publish | M2 | `cargo test -p devagotchi --test release_builds`, fmt, PR checks green | pending |
-| M4 | Merge, then the push to main builds | M3 | the release run on the merge commit shows `build-local-artifacts`, `custom-hub-image` and `custom-install-check` succeeded, and `ghcr.io/devagotchi/devagotchi:sha-<short>` exists | pending |
+| M3 | Validate and publish | M2 | `cargo test -p devagotchi --test release_builds`, fmt, PR checks green | done: 18 of 18 |
+| M4 | Merge, then the push to main builds | M3 | the release run on the merge commit shows `build-local-artifacts`, `custom-hub-image` and `custom-install-check` succeeded, and `ghcr.io/devagotchi/devagotchi:sha-<short>` exists | done: run 44657553081 |
 
 ## Risks and approved decisions
 
@@ -45,8 +45,14 @@ without its attestation, could never have accepted one.
 2026-11-19, Windows 11: `cargo test -p devagotchi --test release_builds`, 2 passed. The YAML
 parses (PyYAML), and `plan.outputs.building` reads as written.
 
+2026-11-19, the push of `3e2e5b9` to main: release run 44657553081 succeeded. Built: all
+four `build-local-artifacts` targets (Linux and Windows, x86_64 and ARM64) with their Attest
+step, `build-global-artifacts`, the hub image on both architectures, and `custom-install-check`
+on seven runners. `custom-hub-image / publish` pushed `ghcr.io/devagotchi/devagotchi:sha-3e2e5b9`
+(`docker manifest inspect` finds it). `host` and `announce` skipped: no tag, nothing published.
+
 ## Delivery
 
-Implementation: done. Validation: focused test only. Push: not_verified.
-PR: not_created. Main: not_verified.
-**DELIVERY INCOMPLETE: NOT PUSHED / NOT MERGED TO MAIN**
+Implementation: done. Validation: done. Push: done. PR: #262, squash-merged.
+Main: `3e2e5b9`; its own release run built and pushed the image (above).
+Not yet: the dev deploy runs it (the operator's step).

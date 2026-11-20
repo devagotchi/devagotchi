@@ -103,11 +103,18 @@ rows in the board, validated before they land; state *kinds* (`queue`, `active`,
 8. Every mutation appends its event in the same transaction; the chain is
    `sha256(prev ‖ canonical{seq, at, actor, action, ticket, data, fence})`.
 
-Error codes are stable across CLI, MCP and REST: `not_found`, `invalid`, `held_by_other`,
-`not_claimable`, `blocked`, `distinct_required`, `wip_limit`, `stale_fence`, `not_holder`,
-`lease_expired`, `version_conflict`, `transition_not_allowed`, `use_lease_ops`, `humans_only`,
-`dependency_cycle`, `parent_closed`, `source_conflict` (§10), `no_board`, `no_storage`,
-`invalid_storage`.
+Error codes are stable across CLI, MCP and REST. The store refuses with `not_found`,
+`invalid`, `held_by_other`, `not_claimable`, `blocked`, `distinct_required`, `wip_limit`,
+`stale_fence`, `not_holder`, `not_held`, `lease_expired`, `version_conflict`,
+`transition_not_allowed`, `use_lease_ops`, `humans_only`, `dependency_cycle`, `parent_closed`,
+`source_conflict` (§10), `request_conflict`, `invalid_settings`, `unknown_environment`,
+`plan_limit`, `board_damaged`; on approvals `not_an_approval`, `already_decided`,
+`approval_changed`, `approval_decide_only`, `too_many`; on the hub's pages `undo_too_late`; on
+webhooks and the issue route `delivery_conflict`, `wake_failed`; and `no_done_state` when a
+workflow has none. The hub adds `not_owner`, `read_only`, `not_granted` and `unknown_board`; the
+command line `no_board`, `no_storage` and `invalid_storage`. Every code an agent can act on has a
+`next` of its own on MCP and the command line: the source of this list is the scan in
+`crates/hub/src/agenthub/mcp/tests/contract.rs` and `crates/agenthub/src/cli/tests/output.rs`.
 
 ## 5. Where the board lives and how an agent starts it (increment 8)
 
@@ -164,7 +171,11 @@ it is a person only when its grant says `human` or it is the owner (`whoami` rep
 `boards`). Agents never are, whatever they claim. No grant, no board: `not_granted`; a project the
 hub does not serve: `unknown_board`.
 
-Nineteen tools (with `board_inbox` and `board_wake`), each taking `project`: `board_prime` (start here), `board_ready`, `board_list`,
+The tools, each taking `project`, by what they do (the hub serves them from
+`crates/hub/src/agenthub/mcp/tools/`; `crate::mcp::tool_names()` lists them, and the contract
+test holds their hints): reading (`read.rs`), working tickets (`tickets.rs`), messages and
+approvals (`messages.rs`), settings and binding (`settings.rs`), and GitHub issues (`issues.rs`:
+`board_attach`, `board_issue_context`, `board_issue_checkpoint`). They are `board_prime` (start here), `board_ready`, `board_list`,
 `board_get`, `board_create`, `board_claim` (by id, or the best ready ticket when `id` is omitted;
 `claimed: false` when nothing is ready), `board_heartbeat`, `board_update`, `board_note`,
 `board_handoff`, `board_release`, `board_complete`, `board_dep`, `board_force_release` (people
@@ -177,13 +188,17 @@ same on the command line, locally or on the hub for a bound project.
 `board_wait` and `approval_wait` sleep on the board's commit signal: every write that records an
 event wakes them, nothing re-reads the store on a timer. A write by another process (the board
 command line on a project not bound to this hub) is seen at the next change or when the wait ends.
-Outputs are the store's records with JSON Schemas; a refusal is `{code, message, ticket?, next}`
+Outputs are the store's records with JSON Schemas, always an object: a list answers inside one
+(`board_list` and `board_ready` as `{tickets}`, `board_events` and `board_wait` as `{events}`,
+`board_dep` as `{deps}`). A refusal is `{code, message, ticket?, next}`
 with the store's stable code (§4) and what to call next, as the CLI's `next` does. The fence may
 be omitted on a held ticket: the hub keeps the fence it last handed that subject for that ticket
 (claim or heartbeat), as the CLI's claim cache does, and forgets it on complete, handoff or
 release; the store still checks whatever is passed, so a lost lease is refused either way. Every
-call lands on the hub's audit chain (`tool`, the project under `broker`, the ticket under
-`operation_id`, the outcome), and a lapsed lease is reaped every minute as well as lazily on claim.
+call lands on the hub's audit chain once (`tool`, the project under `broker`, the ticket under
+`operation_id`, the outcome), refusals included; the line is written after the call, and a failed
+append returns the call's real result and raises the operator alert (`audit.write_failed`). A
+lapsed lease is reaped every minute as well as lazily on claim.
 `tests/board_probe.py` works a board as three subscriptions (a person, two agents) and then reads
 it back with the command line; `tests/e2e.py` runs it.
 

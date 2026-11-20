@@ -1,22 +1,24 @@
-//! The board's MCP face: `board_*` tools on the hub's `/mcp`, one per protocol verb,
-//! for agents on any machine. The command line (`cli.rs`) and these tools open the
-//! same store, so an agent on the hub's host and one across the world see one board.
+//! The board's MCP face: `board_*` and `approval_*` tools on the hub's `/mcp`, one per
+//! protocol verb, for agents on any machine. The command line (`crates/agenthub/src/cli/`)
+//! and these tools reach the same boards in the hub's Postgres, so an agent on the hub's host
+//! and one across the world see one board. Every tool follows
+//! `.ai/patterns/board-operations.md`: one call into the board per intent, one audit line
+//! per call, refusals with a `next` of their own (`refusals.rs`).
 //!
-//! Identity is the hub's: the actor is the authenticated subject, a person only when
-//! the config says so (`grants[].human`, or the owner). A fence may be omitted on a
-//! held ticket; the hub then supplies the one it handed that subject at claim or
-//! heartbeat, the way the command line's claim cache does. The store still checks it,
-//! so a lost lease is refused either way. Every call lands on the audit chain under
-//! the project's name.
+//! Identity is the hub's: the actor is the authenticated subject, a person only when its
+//! role says so. A fence may be omitted on a held ticket; the hub then supplies the one it
+//! handed that subject at claim or heartbeat, the way the command line's claim cache does.
+//! The store still checks it, so a lost lease is refused either way. Every call lands on the
+//! audit chain under the project's name.
 //!
 //! Two kinds of board answer to a project name. A configured board (`boards` in the hub
-//! config) is a directory on this host that grants open to several accounts. An account
-//! board (D23, packet 15) is the hosted tier's: `board_bind` makes one for the calling
-//! account under `account_boards.dir`, reached by that account alone, counted against the
-//! free limit. On either, a caller may name its seat (`X-Devagotchi-Seat: claude`): the
-//! account's own agent on that machine. On the account's own board the seat is the
-//! actor outright; on a shared board it is `<account>/<seat>`, so no account can pose
-//! as another's seat. A seat is never a person.
+//! config) is shared by grant and lives in the hub's Postgres under `SHARED_OWNER`. An
+//! account board (D23, packet 15) is the hosted tier's: `board_bind` makes one for the
+//! calling account, reached by that account alone, counted against
+//! `account_boards.free_limit`. On either, a caller may name its seat
+//! (`X-Devagotchi-Seat: claude`): the account's own agent on that machine. On the account's
+//! own board the seat is the actor outright; on a shared board it is `<account>/<seat>`, so
+//! no account can pose as another's seat. A seat is never a person.
 
 use std::{
     collections::{BTreeMap, BTreeSet, HashMap, HashSet},
@@ -104,7 +106,9 @@ pub enum Kind {
     Workspace,
 }
 
-/// The board tools that change nothing: a viewer may call these and no other.
+/// The board tools that change nothing (`read_only_hint = true`). A viewer may call these
+/// and the [`PER_CALLER_WRITES`], and no other (`viewer_may_call`); the contract test holds
+/// both lists to the tools' hints.
 const READ_ONLY_TOOLS: &[&str] = &[
     "board_attach",
     "board_issue_context",
@@ -114,10 +118,18 @@ const READ_ONLY_TOOLS: &[&str] = &[
     "board_get",
     "board_events",
     "board_wait",
-    "board_inbox",
     "board_verify",
     "approval_wait",
 ];
+
+/// Viewer tools that write, but only the caller's own position: `board_inbox` moves the
+/// caller's read cursor (`ack_through`) and changes nothing anyone else sees.
+const PER_CALLER_WRITES: &[&str] = &["board_inbox"];
+
+/// Whether a viewer (a role that may not work the board) may call `tool`.
+fn viewer_may_call(tool: &str) -> bool {
+    READ_ONLY_TOOLS.contains(&tool) || PER_CALLER_WRITES.contains(&tool)
+}
 
 mod access;
 mod approvals;

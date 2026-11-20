@@ -15,6 +15,10 @@
 //! turned offers off or set that kind to always ask them. Every one of these is a person's
 //! act from this hub's own page, as deciding is.
 
+mod ahead;
+
+pub use ahead::{grant, revoke};
+
 use axum::{
     Form,
     extract::{Query, State},
@@ -58,21 +62,6 @@ pub struct Decide {
     /// "Approve and allow": approve this one, and this exact step ahead of time for this many days.
     #[serde(default)]
     allow_days: Option<u32>,
-}
-
-#[derive(Deserialize)]
-pub struct Grant {
-    project: String,
-    kind: String,
-    #[serde(default)]
-    target: Option<String>,
-    what: String,
-}
-
-#[derive(Deserialize)]
-pub struct Revoke {
-    project: String,
-    id: String,
 }
 
 /// One board's approvals given ahead of time, and the kinds worth giving.
@@ -135,7 +124,7 @@ pub async fn list(
             }
         };
     let preferences = super::app::me::of(&state, &subject).await;
-    let ahead = match ahead(&state, &subject, &preferences).await {
+    let ahead = match ahead::ahead(&state, &subject, &preferences).await {
         Ok(ahead) => ahead,
         Err(error) => {
             eprintln!("devagotchi hub: approvals ahead of time: {error}");
@@ -151,165 +140,6 @@ pub async fn list(
         &ahead,
         &preferences,
     )
-}
-
-/// On every board `subject` decides on: what is approved ahead of time there now, and what
-/// the person keeps approving.
-async fn ahead(
-    state: &AppState,
-    subject: &Subject,
-    preferences: &Preferences,
-) -> devagotchi_contracts::BridgeResult<Vec<Ahead>> {
-    let boards = state.hub.approval_boards(subject)?;
-    let preferences = preferences.clone();
-    tokio::task::spawn_blocking(move || {
-        let mut all = Vec::new();
-        for (project, board) in boards {
-            let now = board.now();
-            let standing: Vec<Standing> = board
-                .standing()?
-                .into_iter()
-                .filter(|s| s.live(now))
-                .collect();
-            let suggestions: Vec<Suggestion> = if preferences.offer_ahead {
-                board
-                    .suggestions()?
-                    .into_iter()
-                    .filter(|s| !preferences.always_asks(&s.kind))
-                    .collect()
-            } else {
-                Vec::new()
-            };
-            if !standing.is_empty() || !suggestions.is_empty() {
-                all.push(Ahead {
-                    project,
-                    standing,
-                    suggestions,
-                });
-            }
-        }
-        Ok(all)
-    })
-    .await
-    .map_err(|error| devagotchi_contracts::BridgeError::new("board_store", error.to_string()))?
-}
-
-/// The person on a board they decide on, for a change to what is approved ahead of time:
-/// from this hub's page, signed in, let in. The page that answers instead otherwise.
-async fn decider(
-    state: &AppState,
-    headers: &HeaderMap,
-    project: &str,
-) -> Result<(Subject, std::sync::Arc<crate::agenthub::Board>), Response> {
-    if !same_origin(headers, &state.hub.config.public_url) {
-        return Err(pages::message(
-            StatusCode::FORBIDDEN,
-            "Not from this hub",
-            "Change this from the approvals page itself.",
-            Some(("/approvals", "Approvals")),
-        ));
-    }
-    let subject = match who(state, headers).await {
-        Who::Person(subject) => subject,
-        Who::SignedOut => return Err(see_other("/auth/login?return_to=/approvals", &[])),
-        Who::Unavailable => return Err(unavailable()),
-        Who::NotSetUp => return Err(not_set_up()),
-    };
-    if let Some(refused) = state.hub.waiting_refusal(&subject) {
-        return Err(waiting_page(&refused));
-    }
-    match state.hub.approval_board(&subject, project) {
-        Ok(board) => Ok((subject, board)),
-        Err(_) => Err(pages::message(
-            StatusCode::FORBIDDEN,
-            "Not yours to decide",
-            "This account cannot decide approvals on that board.",
-            Some(("/approvals", "Approvals")),
-        )),
-    }
-}
-
-/// "Approve automatically for 30 days": a suggestion taken.
-pub async fn grant(
-    State(state): State<AppState>,
-    headers: HeaderMap,
-    Form(form): Form<Grant>,
-) -> Response {
-    let (subject, board) = match decider(&state, &headers, &form.project).await {
-        Ok(found) => found,
-        Err(response) => return response,
-    };
-    let preferences = super::app::me::of(&state, &subject).await;
-    if preferences.always_asks(&form.kind) {
-        return pages::message(
-            StatusCode::CONFLICT,
-            "Not changed",
-            "You set this kind of step to always ask you. Change that on your page first.",
-            Some(("/app/me", "Your page")),
-        );
-    }
-    let days = preferences.allow_days;
-    // A browser sends a multi-line field with CRLF; the command was stored with LF.
-    let what = form.what.replace("\r\n", "\n");
-    let id = subject.id.clone();
-    let result = tokio::task::spawn_blocking(move || {
-        board.grant_standing(
-            &Actor {
-                id: &id,
-                human: true,
-                wip_limit: None,
-            },
-            &form.kind,
-            form.target.as_deref().filter(|t| !t.is_empty()),
-            &what,
-            days,
-        )
-    })
-    .await;
-    match result {
-        Ok(Ok(_)) => see_other("/approvals?ahead=granted", &[]),
-        Ok(Err(error)) => pages::message(
-            StatusCode::CONFLICT,
-            "Not changed",
-            &error.message,
-            Some(("/approvals", "Back to approvals")),
-        ),
-        Err(_) => unavailable(),
-    }
-}
-
-/// "Stop": a standing authorization ended at once.
-pub async fn revoke(
-    State(state): State<AppState>,
-    headers: HeaderMap,
-    Form(form): Form<Revoke>,
-) -> Response {
-    let (subject, board) = match decider(&state, &headers, &form.project).await {
-        Ok(found) => found,
-        Err(response) => return response,
-    };
-    let id = subject.id.clone();
-    let result = tokio::task::spawn_blocking(move || {
-        board.revoke_standing(
-            &Actor {
-                id: &id,
-                human: true,
-                wip_limit: None,
-            },
-            &form.id,
-        )
-    })
-    .await;
-    match result {
-        Ok(Ok(_)) => see_other("/approvals?ahead=revoked", &[]),
-        Ok(Err(error)) => pages::message(
-            StatusCode::CONFLICT,
-            "Not changed",
-            &error.message,
-            Some(("/approvals", "Back to approvals")),
-        ),
-        Err(_) => unavailable(),
-    }
 }
 
 /// The approvals waiting for `subject`, by project: on every board it decides on, its
@@ -385,9 +215,12 @@ pub async fn test(State(state): State<AppState>, headers: HeaderMap) -> Response
             "Nothing to undo.",
         )
     })
-    .await;
+    .await
+    .unwrap_or_else(|_| Err(not_answered()));
+    let target = made.as_ref().map(|a| a.id.clone()).unwrap_or_default();
+    audited(&state, &subject, "approval_request", &project, &target, &made).await;
     match made {
-        Ok(Ok(approval)) => {
+        Ok(approval) => {
             state
                 .hub
                 .announce_approval_to(vec![subject.id.clone()], &project, &approval)
@@ -437,48 +270,83 @@ pub async fn decide(
     };
     let preferences = super::app::me::of(&state, &subject).await;
     let id = subject.id.clone();
+    let (project, ticket) = (form.project.clone(), form.id.clone());
     let result = tokio::task::spawn_blocking(move || {
         let actor = Actor {
             id: &id,
             human: true,
             wip_limit: None,
         };
-        let decided =
-            board.decide_approval(&actor, &form.id, form.version, form.verdict, &form.note)?;
-        // "Approve and allow": this exact step, ahead of time from now on.
-        if let (Some(days), Verdict::Approved, Some(kind), Some(what)) = (
-            form.allow_days,
-            form.verdict,
-            decided.kind.as_deref(),
-            decided.what(),
-        ) && !preferences.always_asks(kind)
-        {
-            board.grant_standing(
-                &actor,
-                kind,
-                decided.target.as_deref(),
-                what,
-                days.min(MAX_STANDING_DAYS),
-            )?;
+        // "Approve and allow": this one, and this exact step ahead of time from now on, in
+        // one transaction, unless the person set its kind to always ask them. Whether it has
+        // a kind is the store's to read; the preference is the person's.
+        match form.allow_days {
+            Some(days) if form.verdict == Verdict::Approved => {
+                let asked = board.approval_status(&form.id)?;
+                if asked.kind.as_deref().is_some_and(|kind| preferences.always_asks(kind)) {
+                    board.decide_approval(&actor, &form.id, form.version, form.verdict, &form.note)
+                } else {
+                    board
+                        .decide_and_allow(
+                            &actor,
+                            &form.id,
+                            form.version,
+                            &form.note,
+                            days.min(MAX_STANDING_DAYS),
+                        )
+                        .map(|(decided, _)| decided)
+                }
+            }
+            _ => board.decide_approval(&actor, &form.id, form.version, form.verdict, &form.note),
         }
-        Ok::<_, devagotchi_contracts::BridgeError>(decided)
     })
-    .await;
+    .await
+    .unwrap_or_else(|_| Err(not_answered()));
+    let target = match &result {
+        Ok(decided) => format!("{ticket} {}", decided.status),
+        Err(_) => ticket,
+    };
+    audited(&state, &subject, "approval_decide", &project, &target, &result).await;
     match result {
-        Ok(Ok(decided)) => see_other(&format!("/approvals?done={}", decided.id), &[]),
-        Ok(Err(error)) => pages::message(
-            StatusCode::CONFLICT,
-            "Not decided",
-            &error.message,
-            Some(("/approvals", "Back to approvals")),
-        ),
-        Err(_) => pages::message(
+        Ok(decided) => see_other(&format!("/approvals?done={}", decided.id), &[]),
+        Err(error) if error.code == "board_store" => pages::message(
             StatusCode::INTERNAL_SERVER_ERROR,
             "Not decided",
             "The board did not answer; nothing changed.",
             Some(("/approvals", "Back to approvals")),
         ),
+        Err(error) => pages::message(
+            StatusCode::CONFLICT,
+            "Not decided",
+            &error.message,
+            Some(("/approvals", "Back to approvals")),
+        ),
     }
+}
+
+/// A board call that never came back (its blocking task ended).
+fn not_answered() -> devagotchi_contracts::BridgeError {
+    devagotchi_contracts::BridgeError::new("board_store", "the board did not answer")
+}
+
+/// One audit line for a write made from these pages, after it (rule 12, G7): `tool` is the
+/// MCP tool for the same intent, the project the place, `target` what it touched.
+async fn audited<T>(
+    state: &AppState,
+    subject: &Subject,
+    tool: &str,
+    project: &str,
+    target: &str,
+    result: &devagotchi_contracts::BridgeResult<T>,
+) {
+    let outcome = match result {
+        Ok(_) => "ok",
+        Err(error) => error.code.as_str(),
+    };
+    state
+        .hub
+        .record_completion(subject, tool, project, target, outcome)
+        .await;
 }
 
 struct Flash<'a> {
@@ -487,7 +355,7 @@ struct Flash<'a> {
     ahead: Option<&'a str>,
 }
 
-/// "restart", or "restart on dabo".
+/// "restart", or "restart on lab".
 fn kind_words(kind: &str, target: Option<&str>) -> String {
     match target {
         Some(target) => format!("{kind} on {target}"),

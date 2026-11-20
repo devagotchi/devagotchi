@@ -373,63 +373,41 @@ impl Sink {
         signal
     }
 
+    /// Every board's events after this sink's position, through AgentHub's own reads
+    /// (`hosted::registry::boards`, `HostedBoard::events_page`): an event whose stored data is
+    /// damaged is a refusal (`board_damaged`), never a signal with no data.
     async fn board(&self, batch: &mut Batch, sent: &mut usize) -> BridgeResult<()> {
-        type Row = (
-            i64,
-            i64,
-            String,
-            String,
-            Option<String>,
-            String,
-            Option<i64>,
-            String,
-        );
+        use crate::agenthub::hosted::{HostedBoard, registry};
         for tenant in self.tenants().await? {
-            let boards: Vec<(String, Option<String>, Option<String>)> =
-                transaction!(&self.store, |connection| {
-                    self.store.scope(connection, &tenant).await?;
-                    Ok(sqlx::query_as(
-                        "SELECT id, owner_id, project_name FROM board_projects
-                         WHERE tenant_id = $1 ORDER BY id",
-                    )
-                    .bind(&tenant)
-                    .fetch_all(&mut *connection)
-                    .await?)
-                })?;
-            for (board, owner, project) in boards {
+            for row in registry::boards(&self.store, &tenant).await? {
+                let board = row.id;
                 let scope = format!("{tenant}/{board}");
                 let after = self.position(Source::Board, &scope).await?;
-                let room = (BATCH - batch.signals.len()).max(1) as i64;
-                let rows: Vec<Row> = transaction!(&self.store, |connection| {
-                    self.store.scope(connection, &tenant).await?;
-                    Ok(sqlx::query_as(
-                        "SELECT seq, at, actor, action, ticket, data, fence, hash FROM board_events
-                         WHERE tenant_id = $1 AND board_id = $2 AND seq > $3 ORDER BY seq LIMIT $4",
-                    )
-                    .bind(&tenant)
-                    .bind(&board)
-                    .bind(after)
-                    .bind(room)
-                    .fetch_all(&mut *connection)
-                    .await?)
-                })?;
-                let Some(last) = rows.last().map(|row| row.0) else {
+                let room = (BATCH - batch.signals.len()).max(1);
+                let events = HostedBoard::new(self.store.clone(), &tenant, &board)?
+                    .events_page(after, room)
+                    .await?;
+                let Some(last) = events.last().map(|event| event.seq) else {
                     continue;
                 };
-                for (seq, at, actor, action, ticket, data, fence, hash) in rows {
+                for event in events {
                     let mut signal = Signal::new(
-                        format!("board:{tenant}:{board}:{seq}:{}", hash16(&hash)),
+                        format!(
+                            "board:{tenant}:{board}:{}:{}",
+                            event.seq,
+                            hash16(&event.hash)
+                        ),
                         Source::Board,
-                        action,
-                        at,
+                        event.action,
+                        event.at,
                     );
                     signal.tenant = Some(tenant.clone());
-                    signal.owner = owner.clone();
-                    signal.project = Some(project.clone().unwrap_or_else(|| board.clone()));
-                    signal.actor = Some(actor);
-                    signal.ticket = ticket;
-                    let mut data: Value = serde_json::from_str(&data).unwrap_or(Value::Null);
-                    if let Some(fence) = fence
+                    signal.owner = row.owner.clone();
+                    signal.project = Some(row.project_name.clone().unwrap_or_else(|| board.clone()));
+                    signal.actor = Some(event.actor);
+                    signal.ticket = event.ticket;
+                    let mut data = event.data;
+                    if let Some(fence) = event.fence
                         && let Some(object) = data.as_object_mut()
                     {
                         object.insert("fence".into(), json!(fence));

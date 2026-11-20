@@ -14,11 +14,10 @@ use devagotchi_contracts::BridgeResult;
 use serde::Deserialize;
 
 use super::super::{person, words};
-use super::ticket::{UNDO_MS, now_ms, unknown};
+use super::ticket::unknown;
 use crate::{
     AppState,
     agenthub::{Actor, Board, Patch, workflow::StateKind},
-    ops::audit::AuditEntry,
     web::{approvals::same_origin, encode, pages, routes::see_other},
 };
 
@@ -116,24 +115,12 @@ pub async fn act(
         Ok(_) => "ok".to_string(),
         Err(error) => error.code.clone(),
     };
-    if let Err(error) = state
+    // After the store committed: a failed append raises the operator alert and the page
+    // still says what happened (G7, D1).
+    state
         .hub
-        .audit
-        .record(&AuditEntry {
-            subject: &subject.id,
-            via: subject.via,
-            tool,
-            broker: &project,
-            operation_id: &id,
-            outcome: &outcome,
-        })
-        .await
-    {
-        return see_other(
-            &format!("{here}?done=no&why={}", encode(&error.message)),
-            &[],
-        );
-    }
+        .record_completion(&subject, tool, &project, &id, &outcome)
+        .await;
     match done {
         Ok(next) => see_other(&format!("{here}?{next}"), &[]),
         Err(error) => see_other(
@@ -175,12 +162,9 @@ fn apply(
             if !crate::agenthub::valid_name(to) {
                 return Err(crate::agenthub::fail("invalid", copy.invalid.clone()));
             }
-            update(Patch {
-                assignee: Some(Some(to.to_string())),
-                ..Patch::default()
-            })?;
+            // The assignee and the note saying so, in one transaction.
             board
-                .add_note(actor, id, "note", &copy.note, Some(to), None)
+                .delegate(actor, id, act.version, to, &copy.note)
                 .map(|_| "done=delegate".into())
         }
         "close" => {
@@ -203,36 +187,13 @@ fn apply(
             })
             .map(|_| format!("done=close&from={}", encode(&current.state)))
         }
-        "undo" => {
-            let current = board.get(id)?.ticket;
-            if current
-                .closed_at
-                .is_none_or(|closed| now_ms() >= closed + UNDO_MS)
-            {
-                return Ok("done=late".into());
-            }
-            // Back where it was, or to the queue when the workflow reopens only there.
-            let to = if workflow.allows(&current.state, &act.from) {
-                act.from
-            } else {
-                workflow.initial_state.clone()
-            };
-            // A workflow someone changed keeps its own rules: say which one Undo needs.
-            if !workflow.allows(&current.state, &to) {
-                return Err(crate::agenthub::fail(
-                    "transition_not_allowed",
-                    format!(
-                        "this board's workflow ({}) has no transition {} -> {}; add {{\"from\": \"{}\", \"to\": \"{}\"}} to its transitions to undo here",
-                        workflow.id, current.state, to, current.state, to
-                    ),
-                ));
-            }
-            update(Patch {
-                state: Some(to),
-                ..Patch::default()
-            })
-            .map(|_| "done=undo".into())
-        }
+        // Back where it was, or to the queue when the workflow reopens only there, while the
+        // window is open by the database's clock (`HostedBoard::undo_close`).
+        "undo" => match board.undo_close(actor, id, act.version, &act.from) {
+            Ok(_) => Ok("done=undo".into()),
+            Err(error) if error.code == "undo_too_late" => Ok("done=late".into()),
+            Err(error) => Err(error),
+        },
         _ => {
             let queue = workflow
                 .lanes

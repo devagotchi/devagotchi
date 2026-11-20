@@ -189,10 +189,10 @@ async fn a_person_works_a_ticket_from_the_phone_and_the_board_records_it() {
     let events = hub
         .call(&mut alice, "board_events", json!({ "project": "alpha" }))
         .await;
-    // An array of events (as text: a structured result is an object).
+    // The events, inside an object (`EventsOut`): a structured result is one.
     let events: Value =
         serde_json::from_str(events["content"][0]["text"].as_str().unwrap()).unwrap();
-    let mine: Vec<&Value> = events
+    let mine: Vec<&Value> = events["events"]
         .as_array()
         .unwrap()
         .iter()

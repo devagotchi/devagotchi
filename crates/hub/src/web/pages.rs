@@ -512,7 +512,7 @@ pub fn account(viewer: &Viewer<'_>, machines: &[Machine]) -> Response {
     let add = "<h2>Add a machine</h2>\
 <form method=\"post\" action=\"/machines/add\"><label>Name it (lowercase letters, digits, dashes)\
 <input type=\"text\" name=\"name\" required maxlength=\"63\" pattern=\"[a-z0-9][a-z0-9\\-]{0,62}\" \
-autocapitalize=\"none\" autocomplete=\"off\" spellcheck=\"false\" placeholder=\"platinum\"></label>\
+autocapitalize=\"none\" autocomplete=\"off\" spellcheck=\"false\" placeholder=\"lab\"></label>\
 <p class=\"actions\"><button class=\"approve\" type=\"submit\">Get a one-time code</button></p></form>";
     let secure = viewer
         .unsecured_until

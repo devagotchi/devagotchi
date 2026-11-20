@@ -66,7 +66,7 @@ export const Machine: React.FC<{ dur: number }> = ({ dur }) => {
                 <>
                   <H2>Add a machine</H2>
                   <div style={{ color: c.muted, fontSize: 15 }}>Name it (lowercase letters, digits, dashes)</div>
-                  <div style={{ ...field, maxWidth: 688 }}>{typed("server", f, 16, 10) || <span style={{ color: "#9aa79f" }}>platinum</span>}</div>
+                  <div style={{ ...field, maxWidth: 688 }}>{typed("server", f, 16, 10) || <span style={{ color: "#9aa79f" }}>lab</span>}</div>
                   <div style={{ position: "relative", marginTop: 12 }}>
                     <div style={{ ...button(true, { display: "block", padding: 14, background: c.online, borderColor: c.online, color: "#fff" }) }}>
                       Get a one-time code

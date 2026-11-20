@@ -149,4 +149,5 @@ fn refusals_name_what_to_call_next() {
 }
 
 mod accounts;
+mod contract;
 mod tickets;

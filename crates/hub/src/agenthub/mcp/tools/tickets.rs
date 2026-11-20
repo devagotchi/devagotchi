@@ -7,12 +7,13 @@ use rmcp::{
 };
 
 use super::super::{
-    BoardOut, ClaimIn, ClaimOut, CompleteIn, CreateIn, DepIn, ForceIn, HandoffIn, HeartbeatIn,
-    NoteIn, ReleaseIn, UpdateIn, given_or, mcp_session, refuse,
+    BoardError, ClaimIn, ClaimOut, CompleteIn, CreateIn, DepIn, DepsOut, ForceIn, HandoffIn,
+    HeartbeatIn,
+    NoteIn, ReleaseIn, UpdateIn, given_or, mcp_session,
 };
 use crate::{
     agenthub::{
-        AnchorPatch, Anchors, Dep, DepKind, Lease, NewTicket, NextFilter, Note, Patch, Ticket,
+        AnchorPatch, Anchors, DepKind, Lease, NewTicket, NextFilter, Note, Patch, Ticket,
     },
     mcp::Hub,
 };
@@ -35,7 +36,7 @@ impl Hub {
         &self,
         Parameters(input): Parameters<CreateIn>,
         context: RequestContext<RoleServer>,
-    ) -> BoardOut<Ticket> {
+    ) -> Result<Json<Ticket>, Json<BoardError>> {
         let new = NewTicket {
             title: input.title,
             description: input.description,
@@ -74,18 +75,8 @@ impl Hub {
             &input.project,
             None,
             &context,
-            move |board, actor| {
-                let mut new = new;
-                if new
-                    .anchors
-                    .repo
-                    .as_deref()
-                    .is_none_or(|r| r.trim().is_empty())
-                {
-                    new.anchors.repo = board.settings()?.repo;
-                }
-                board.create(actor, new)
-            },
+            // No repo given: the store takes the board's (`create_in`), on every face.
+            move |board, actor| board.create(actor, new),
         )
         .await
     }
@@ -98,7 +89,8 @@ impl Hub {
             title = "Claim a ticket",
             read_only_hint = false,
             destructive_hint = false,
-            idempotent_hint = true,
+            // Without an id, each call claims the next ready ticket.
+            idempotent_hint = false,
             open_world_hint = false
         )
     )]
@@ -106,7 +98,7 @@ impl Hub {
         &self,
         Parameters(input): Parameters<ClaimIn>,
         context: RequestContext<RoleServer>,
-    ) -> BoardOut<ClaimOut> {
+    ) -> Result<Json<ClaimOut>, Json<BoardError>> {
         let subject = self.subject_id(&context)?;
         let project = input.project.clone();
         let id = input.id.clone();
@@ -158,12 +150,11 @@ impl Hub {
         &self,
         Parameters(input): Parameters<HeartbeatIn>,
         context: RequestContext<RoleServer>,
-    ) -> BoardOut<Lease> {
+    ) -> Result<Json<Lease>, Json<BoardError>> {
         let subject = self.subject_id(&context)?;
         let fence = self
             .boards
-            .fence_for(&subject, &input.project, &input.id, input.fence)
-            .map_err(|e| refuse(e, Some(&input.id)))?;
+            .fence_for(&subject, &input.project, &input.id, input.fence);
         let id = input.id.clone();
         let result = self
             .board_call(
@@ -171,7 +162,7 @@ impl Hub {
                 &input.project,
                 Some(&input.id),
                 &context,
-                move |board, actor| board.heartbeat(actor, &id, fence, input.progress),
+                move |board, actor| board.heartbeat(actor, &id, fence?, input.progress),
             )
             .await?;
         self.boards
@@ -195,7 +186,7 @@ impl Hub {
         &self,
         Parameters(input): Parameters<UpdateIn>,
         context: RequestContext<RoleServer>,
-    ) -> BoardOut<Ticket> {
+    ) -> Result<Json<Ticket>, Json<BoardError>> {
         let patch = Patch {
             title: input.title,
             description: input.description,
@@ -245,7 +236,7 @@ impl Hub {
         &self,
         Parameters(input): Parameters<NoteIn>,
         context: RequestContext<RoleServer>,
-    ) -> BoardOut<Note> {
+    ) -> Result<Json<Note>, Json<BoardError>> {
         // A fence is only needed while the caller holds the ticket; use the cached one
         // when the caller gave none and the hub knows one, and let the store decide.
         let subject = self.subject_id(&context)?;
@@ -298,12 +289,11 @@ impl Hub {
         &self,
         Parameters(input): Parameters<HandoffIn>,
         context: RequestContext<RoleServer>,
-    ) -> BoardOut<Ticket> {
+    ) -> Result<Json<Ticket>, Json<BoardError>> {
         let subject = self.subject_id(&context)?;
         let fence = self
             .boards
-            .fence_for(&subject, &input.project, &input.id, input.fence)
-            .map_err(|e| refuse(e, Some(&input.id)))?;
+            .fence_for(&subject, &input.project, &input.id, input.fence);
         let id = input.id.clone();
         let result = self
             .board_call(
@@ -312,7 +302,7 @@ impl Hub {
                 Some(&input.id),
                 &context,
                 move |board, actor| {
-                    board.handoff(actor, &id, fence, &input.note, input.to.as_deref())
+                    board.handoff(actor, &id, fence?, &input.note, input.to.as_deref())
                 },
             )
             .await?;
@@ -337,12 +327,11 @@ impl Hub {
         &self,
         Parameters(input): Parameters<ReleaseIn>,
         context: RequestContext<RoleServer>,
-    ) -> BoardOut<Ticket> {
+    ) -> Result<Json<Ticket>, Json<BoardError>> {
         let subject = self.subject_id(&context)?;
         let fence = self
             .boards
-            .fence_for(&subject, &input.project, &input.id, input.fence)
-            .map_err(|e| refuse(e, Some(&input.id)))?;
+            .fence_for(&subject, &input.project, &input.id, input.fence);
         let id = input.id.clone();
         let result = self
             .board_call(
@@ -350,7 +339,7 @@ impl Hub {
                 &input.project,
                 Some(&input.id),
                 &context,
-                move |board, actor| board.release(actor, &id, fence, &input.reason),
+                move |board, actor| board.release(actor, &id, fence?, &input.reason),
             )
             .await?;
         self.boards
@@ -374,12 +363,11 @@ impl Hub {
         &self,
         Parameters(input): Parameters<CompleteIn>,
         context: RequestContext<RoleServer>,
-    ) -> BoardOut<Ticket> {
+    ) -> Result<Json<Ticket>, Json<BoardError>> {
         let subject = self.subject_id(&context)?;
         let fence = self
             .boards
-            .fence_for(&subject, &input.project, &input.id, input.fence)
-            .map_err(|e| refuse(e, Some(&input.id)))?;
+            .fence_for(&subject, &input.project, &input.id, input.fence);
         let id = input.id.clone();
         let result = self
             .board_call(
@@ -387,7 +375,7 @@ impl Hub {
                 &input.project,
                 Some(&input.id),
                 &context,
-                move |board, actor| board.complete(actor, &id, fence, &input.summary),
+                move |board, actor| board.complete(actor, &id, fence?, &input.summary),
             )
             .await?;
         self.boards
@@ -411,18 +399,16 @@ impl Hub {
         &self,
         Parameters(input): Parameters<DepIn>,
         context: RequestContext<RoleServer>,
-    ) -> BoardOut<Vec<Dep>> {
+    ) -> Result<Json<DepsOut>, Json<BoardError>> {
+        // An unknown kind is refused inside the call, so it is audited (G7).
         let kind = match input.kind.as_deref() {
-            None => DepKind::Blocks,
+            None => Ok(DepKind::Blocks),
             Some(name) => DepKind::parse(name).ok_or_else(|| {
-                refuse(
-                    BridgeError::new(
-                        "invalid",
-                        format!("kind {name:?} is not blocks, parent, related, discovered-from, duplicates or supersedes"),
-                    ),
-                    Some(&input.id),
+                BridgeError::new(
+                    "invalid",
+                    format!("kind {name:?} is not blocks, parent, related, discovered-from, duplicates or supersedes"),
                 )
-            })?,
+            }),
         };
         let id = input.id.clone();
         self.board_call(
@@ -431,11 +417,13 @@ impl Hub {
             Some(&input.id),
             &context,
             move |board, actor| {
+                let kind = kind?;
                 if input.remove {
                     board.remove_dep(actor, &id, &input.depends_on, kind)
                 } else {
                     board.add_dep(actor, &id, &input.depends_on, kind)
                 }
+                .map(|deps| DepsOut { deps })
             },
         )
         .await
@@ -457,7 +445,7 @@ impl Hub {
         &self,
         Parameters(input): Parameters<ForceIn>,
         context: RequestContext<RoleServer>,
-    ) -> BoardOut<Ticket> {
+    ) -> Result<Json<Ticket>, Json<BoardError>> {
         let id = input.id.clone();
         self.board_call(
             "board_force_release",

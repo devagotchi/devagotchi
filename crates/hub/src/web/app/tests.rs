@@ -32,7 +32,7 @@ async fn real_postgres_mcp_and_app_share_one_board_and_surface_storage_failures(
         .call(&mut alice, "board_list", json!({"project":"alpha"}))
         .await;
     assert!(!refused(&listed), "{listed}");
-    let id = listed["structuredContent"]
+    let id = listed["structuredContent"]["tickets"]
         .as_array()
         .unwrap_or_else(|| panic!("board_list shape: {listed}"))
         .iter()

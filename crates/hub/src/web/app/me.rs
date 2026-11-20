@@ -378,37 +378,45 @@ async fn stop_own(state: &AppState, subject: &Subject, kinds: Vec<String>) -> us
             return 0;
         }
     };
-    let id = subject.id.clone();
-    tokio::task::spawn_blocking(move || {
-        let actor = Actor {
-            id: &id,
-            human: true,
-            wip_limit: None,
-        };
-        let mut stopped = 0;
-        for (project, board) in boards {
-            let now = board.now();
-            let live = match board.standing() {
-                Ok(live) => live,
-                Err(error) => {
-                    eprintln!("devagotchi hub: standing approvals on {project}: {error}");
-                    continue;
-                }
+    let mut stopped = 0;
+    for (project, board) in boards {
+        let (id, kinds) = (subject.id.clone(), kinds.clone());
+        // One transaction per board, on its clock: every live one this person granted for
+        // these kinds (`HostedBoard::revoke_own`).
+        let ended = tokio::task::spawn_blocking(move || {
+            let actor = Actor {
+                id: &id,
+                human: true,
+                wip_limit: None,
             };
-            for standing in live {
-                if standing.live(now) && standing.granted_by == id && kinds.contains(&standing.kind)
-                {
-                    match board.revoke_standing(&actor, &standing.id) {
-                        Ok(_) => stopped += 1,
-                        Err(error) => {
-                            eprintln!("devagotchi hub: stopping on {project}: {error}");
-                        }
-                    }
-                }
-            }
+            board.revoke_own(&actor, &kinds)
+        })
+        .await
+        .unwrap_or_else(|_| {
+            Err(crate::agenthub::fail(
+                "board_store",
+                "the board did not answer",
+            ))
+        });
+        let (target, outcome) = match &ended {
+            Ok(ended) => (
+                ended
+                    .iter()
+                    .map(|s| s.id.as_str())
+                    .collect::<Vec<_>>()
+                    .join(","),
+                "ok".to_string(),
+            ),
+            Err(error) => (String::new(), error.code.clone()),
+        };
+        state
+            .hub
+            .record_completion(subject, "approval_revoke", &project, &target, &outcome)
+            .await;
+        match ended {
+            Ok(ended) => stopped += ended.len(),
+            Err(error) => eprintln!("devagotchi hub: stopping on {project}: {error}"),
         }
-        stopped
-    })
-    .await
-    .unwrap_or(0)
+    }
+    stopped
 }

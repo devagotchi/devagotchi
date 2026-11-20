@@ -25,8 +25,8 @@ use crate::{
     },
 };
 
-/// How long Close can be undone.
-pub const UNDO_MS: i64 = 10_000;
+/// How long Close can be undone: the store decides it on its clock; the page counts down.
+pub use crate::agenthub::UNDO_MS;
 
 #[derive(Deserialize, Default)]
 pub struct Shown {
@@ -121,7 +121,7 @@ pub async fn page(
     let read = tokio::task::spawn_blocking(move || {
         let view = board.get(&wanted)?;
         let source = board.issue_source(&wanted)?;
-        let wakes: Vec<String> = board.wakes().unwrap_or_default().into_keys().collect();
+        let wakes: Vec<String> = board.wakes()?.into_keys().collect();
         // The ticket's own history: the board's chain, read a page at a time.
         let mut events = Vec::new();
         let mut after = 0;

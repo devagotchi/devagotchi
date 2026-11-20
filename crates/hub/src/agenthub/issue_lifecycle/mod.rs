@@ -171,7 +171,7 @@ async fn authorized_board(
     headers: &HeaderMap,
     repository: &str,
     write: bool,
-) -> BridgeResult<(Arc<Board>, u64, String)> {
+) -> BridgeResult<IssueBoard> {
     if let Some(refusal) = state.hub.waiting_refusal(subject) {
         return Err(BridgeError::new("waiting", refusal.message));
     }
@@ -200,8 +200,23 @@ async fn authorized_board(
             ),
         ));
     }
-    let (actor, _) = state.hub.actor_for(subject, seat, kind, role);
-    Ok((board, mapped.repository_id, actor))
+    let (actor, human) = state.hub.actor_for(subject, seat, kind, role);
+    Ok(IssueBoard {
+        board,
+        repository: mapped.repository_id,
+        project: mapped.project.clone(),
+        actor,
+        human,
+    })
+}
+
+/// The configured shared board a GitHub repository maps to, and who the caller is on it.
+struct IssueBoard {
+    board: Arc<Board>,
+    repository: u64,
+    project: String,
+    actor: String,
+    human: bool,
 }
 
 pub(crate) async fn issue_state_route(
@@ -218,11 +233,11 @@ pub(crate) async fn issue_state_route(
         {
             return Err(invalid("invalid issue number or notes page"));
         }
-        let (board, repository, _) =
-            authorized_board(&state, &subject, &headers, &query.repository, false).await?;
-        let context = board
+        let found = authorized_board(&state, &subject, &headers, &query.repository, false).await?;
+        let context = found
+            .board
             .hosted()
-            .issue_context(repository, query.issue_number, query.after, query.limit)
+            .issue_context(found.repository, query.issue_number, query.after, query.limit)
             .await?;
         Ok(Json(context).into_response())
     }
@@ -245,18 +260,36 @@ pub(crate) async fn shared_state_write_route(
     headers: HeaderMap,
     Json(payload): Json<ContextWrite>,
 ) -> Response {
+    let mut place = payload.repository.clone();
     let result = async {
         payload.validate()?;
-        let (board, repository, actor) =
-            authorized_board(&state, &subject, &headers, &payload.repository, true).await?;
-        let receipt = board
+        let found = authorized_board(&state, &subject, &headers, &payload.repository, true).await?;
+        place = found.project.clone();
+        let actor = crate::agenthub::Actor {
+            id: &found.actor,
+            human: found.human,
+            wip_limit: None,
+        };
+        // An async route awaits the store's method itself (rule 13).
+        found
+            .board
             .hosted()
-            .write_issue_context(&actor, repository, &payload)
-            .await?;
-        Ok(Json(receipt).into_response())
+            .write_issue_context(&actor, found.repository, &payload)
+            .await
     }
     .await;
-    result.unwrap_or_else(error_response)
+    // One audit line, as `board_issue_checkpoint` leaves on MCP (rule 12).
+    let (target, outcome) = match &result {
+        Ok(receipt) => (receipt.ticket.clone(), "ok".to_string()),
+        Err(error) => (String::new(), error.code.clone()),
+    };
+    state
+        .hub
+        .record_completion(&subject, "board_issue_checkpoint", &place, &target, &outcome)
+        .await;
+    result
+        .map(|receipt| Json(receipt).into_response())
+        .unwrap_or_else(error_response)
 }
 
 #[cfg(test)]

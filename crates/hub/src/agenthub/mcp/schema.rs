@@ -9,13 +9,16 @@ use crate::agenthub::{Lease, approval::ApprovalStatus};
 // ----- inputs ------------------------------------------------------------------
 
 #[derive(Debug, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub struct ProjectIn {
     /// The project whose board to use, as the hub names it (whoami lists yours).
     pub project: String,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub struct PrimeIn {
+    /// The project whose board to use, as the hub names it (whoami lists yours).
     pub project: String,
     /// How many ready tickets to list (1..=10, default 10).
     #[serde(default)]
@@ -23,7 +26,9 @@ pub struct PrimeIn {
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub struct ReadyIn {
+    /// The project whose board to use, as the hub names it (whoami lists yours).
     pub project: String,
     /// At most this many (default 20).
     #[serde(default)]
@@ -31,8 +36,11 @@ pub struct ReadyIn {
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub struct ListIn {
+    /// The project whose board to use, as the hub names it (whoami lists yours).
     pub project: String,
+    /// Only tickets in this workflow state (board_prime names them).
     #[serde(default)]
     pub state: Option<String>,
     /// A holder's name, or `@me` for yourself as this board knows you.
@@ -41,6 +49,7 @@ pub struct ListIn {
     /// An assignee's name, or `@me`.
     #[serde(default)]
     pub assignee: Option<String>,
+    /// Only tickets carrying this label.
     #[serde(default)]
     pub label: Option<String>,
     /// Children of this ticket only.
@@ -79,16 +88,22 @@ pub struct ListIn {
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub struct TicketIn {
+    /// The project whose board to use, as the hub names it (whoami lists yours).
     pub project: String,
+    /// The ticket's id (from board_list, board_ready or board_get).
     pub id: String,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub struct CreateIn {
+    /// The project whose board to use, as the hub names it (whoami lists yours).
     pub project: String,
     /// 1 to 300 characters.
     pub title: String,
+    /// What the work is, in as much detail as the next worker needs.
     #[serde(default)]
     pub description: String,
     /// task (default), epic or message.
@@ -97,11 +112,13 @@ pub struct CreateIn {
     /// 0 is most urgent; the board default is 2.
     #[serde(default)]
     pub priority: Option<i64>,
+    /// Free-form labels; board_list and board_claim can filter by one.
     #[serde(default)]
     pub labels: Vec<String>,
     /// Makes this a child (`parent.n` id) and records a `parent` dependency.
     #[serde(default)]
     pub parent: Option<String>,
+    /// Who should take it; it is ready for them first.
     #[serde(default)]
     pub assignee: Option<String>,
     /// The ticket you were working when you found this one; recorded as `discovered-from`.
@@ -134,7 +151,9 @@ pub struct CreateIn {
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub struct ClaimIn {
+    /// The project whose board to use, as the hub names it (whoami lists yours).
     pub project: String,
     /// A ticket to claim. Omit it to claim the best ready ticket for you.
     #[serde(default)]
@@ -153,6 +172,25 @@ pub struct ClaimIn {
     pub parent: Option<String>,
 }
 
+/// Tickets: as filtered (`board_list`), or ready for you, best first (`board_ready`). An
+/// answer is an object, so the list is inside one (MCP `structuredContent`).
+#[derive(Debug, Serialize, JsonSchema)]
+pub struct TicketsOut {
+    pub tickets: Vec<crate::agenthub::Ticket>,
+}
+
+/// Events on the board's chain, oldest first (`board_events`, `board_wait`).
+#[derive(Debug, Serialize, JsonSchema)]
+pub struct EventsOut {
+    pub events: Vec<crate::agenthub::Event>,
+}
+
+/// A ticket's dependencies as they are now (`board_dep`).
+#[derive(Debug, Serialize, JsonSchema)]
+pub struct DepsOut {
+    pub deps: Vec<crate::agenthub::Dep>,
+}
+
 #[derive(Debug, Serialize, JsonSchema)]
 pub struct ClaimOut {
     /// False when nothing was ready for you; `lease` is then absent.
@@ -162,8 +200,11 @@ pub struct ClaimOut {
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub struct HeartbeatIn {
+    /// The project whose board to use, as the hub names it (whoami lists yours).
     pub project: String,
+    /// The ticket's id (from board_list, board_ready or board_get).
     pub id: String,
     /// The fence from your claim. Omit it to use the one this hub last gave you for this ticket.
     #[serde(default)]
@@ -174,22 +215,30 @@ pub struct HeartbeatIn {
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub struct UpdateIn {
+    /// The project whose board to use, as the hub names it (whoami lists yours).
     pub project: String,
+    /// The ticket's id (from board_list, board_ready or board_get).
     pub id: String,
     /// The ticket's current version (optimistic concurrency); from board_get.
     pub version: i64,
+    /// A new title, 1 to 300 characters.
     #[serde(default)]
     pub title: Option<String>,
+    /// A new description; replaces the old one.
     #[serde(default)]
     pub description: Option<String>,
+    /// A new priority; 0 is most urgent.
     #[serde(default)]
     pub priority: Option<i64>,
     /// Replaces the label set.
     #[serde(default)]
     pub labels: Option<Vec<String>>,
+    /// A new assignee.
     #[serde(default)]
     pub assignee: Option<String>,
+    /// True to leave the ticket unassigned.
     #[serde(default)]
     pub clear_assignee: bool,
     /// A declared workflow transition for an unheld ticket (blocked, cancelled, back to
@@ -218,8 +267,11 @@ pub struct UpdateIn {
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub struct NoteIn {
+    /// The project whose board to use, as the hub names it (whoami lists yours).
     pub project: String,
+    /// The ticket's id (from board_list, board_ready or board_get).
     pub id: String,
     /// 1 to 20000 characters; notes are append-only and travel with the ticket.
     pub body: String,
@@ -236,9 +288,13 @@ pub struct NoteIn {
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub struct HandoffIn {
+    /// The project whose board to use, as the hub names it (whoami lists yours).
     pub project: String,
+    /// The ticket's id (from board_list, board_ready or board_get).
     pub id: String,
+    /// The fence from your claim. Omit it to use the one this hub last gave you for this ticket.
     #[serde(default)]
     pub fence: Option<i64>,
     /// What the next worker must know. Required.
@@ -249,9 +305,13 @@ pub struct HandoffIn {
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub struct ReleaseIn {
+    /// The project whose board to use, as the hub names it (whoami lists yours).
     pub project: String,
+    /// The ticket's id (from board_list, board_ready or board_get).
     pub id: String,
+    /// The fence from your claim. Omit it to use the one this hub last gave you for this ticket.
     #[serde(default)]
     pub fence: Option<i64>,
     /// Why you are letting it go without finishing.
@@ -259,9 +319,13 @@ pub struct ReleaseIn {
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub struct CompleteIn {
+    /// The project whose board to use, as the hub names it (whoami lists yours).
     pub project: String,
+    /// The ticket's id (from board_list, board_ready or board_get).
     pub id: String,
+    /// The fence from your claim. Omit it to use the one this hub last gave you for this ticket.
     #[serde(default)]
     pub fence: Option<i64>,
     /// What was done, for the reviewer. Required.
@@ -269,28 +333,38 @@ pub struct CompleteIn {
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub struct DepIn {
+    /// The project whose board to use, as the hub names it (whoami lists yours).
     pub project: String,
+    /// The ticket that depends.
     pub id: String,
+    /// The ticket it depends on.
     pub depends_on: String,
     /// blocks (default; the only kind readiness uses), parent, related, discovered-from,
     /// duplicates or supersedes.
     #[serde(default)]
     pub kind: Option<String>,
+    /// True to remove the dependency instead of recording it.
     #[serde(default)]
     pub remove: bool,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub struct ForceIn {
+    /// The project whose board to use, as the hub names it (whoami lists yours).
     pub project: String,
+    /// The ticket to take away from whoever holds it.
     pub id: String,
     /// At least three characters; recorded on the ticket.
     pub reason: String,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub struct EventsIn {
+    /// The project whose board to use, as the hub names it (whoami lists yours).
     pub project: String,
     /// Events with a higher sequence number than this (0 for all).
     #[serde(default)]
@@ -301,7 +375,9 @@ pub struct EventsIn {
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub struct WaitIn {
+    /// The project whose board to use, as the hub names it (whoami lists yours).
     pub project: String,
     /// Return as soon as an event newer than this exists.
     pub after_seq: i64,
@@ -311,7 +387,9 @@ pub struct WaitIn {
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub struct InboxIn {
+    /// The project whose board to use, as the hub names it (whoami lists yours).
     pub project: String,
     /// Mark everything through this note's seq as read.
     #[serde(default)]
@@ -324,7 +402,9 @@ pub struct InboxOut {
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub struct WakeIn {
+    /// The project whose board to use, as the hub names it (whoami lists yours).
     pub project: String,
     /// The seat or AI name notes are addressed to.
     pub recipient: String,
@@ -342,9 +422,11 @@ pub struct WakeOut {
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub struct ApprovalRequestIn {
+    /// The project whose board to use, as the hub names it (whoami lists yours).
     pub project: String,
-    /// One line a person reads on their phone, e.g. "Restart the hub on Texas".
+    /// One line a person reads on their phone, e.g. "Restart the web server".
     pub title: String,
     /// Exactly what will run or change.
     pub what: String,
@@ -359,13 +441,15 @@ pub struct ApprovalRequestIn {
     /// time, and then the same kind, target and `what` is approved at once.
     #[serde(default)]
     pub kind: Option<String>,
-    /// What it is aimed at, when that matters: the machine or the service (`dabo`, `api`).
+    /// What it is aimed at, when that matters: the machine or the service (`lab`, `api`).
     #[serde(default)]
     pub target: Option<String>,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub struct SettingsIn {
+    /// The project whose board to use, as the hub names it (whoami lists yours).
     pub project: String,
     /// The project's repository, an https URL (https://github.com/you/project). New tickets
     /// carry it when they name none.
@@ -377,8 +461,11 @@ pub struct SettingsIn {
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub struct ApprovalWaitIn {
+    /// The project whose board to use, as the hub names it (whoami lists yours).
     pub project: String,
+    /// The approval's id, from approval_request.
     pub id: String,
     /// How long to wait for the decision (default 25000, max 50000). 0 reads the status now.
     #[serde(default)]

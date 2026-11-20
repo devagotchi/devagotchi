@@ -140,11 +140,11 @@ check("empty board primes empty", prime.get("held") == [] and prime.get("ready")
 first = operator.ok("board_create", {"project": P, "title": "Write the hub deploy packet", "priority": 1,
                                      "labels": ["deploy"], "description": "config, unit, installer role"})
 second = operator.ok("board_create", {"project": P, "title": "Announce the packet", "priority": 2})
-deps = operator.ok("board_dep", {"project": P, "id": second["id"], "depends_on": first["id"]})
+deps = operator.ok("board_dep", {"project": P, "id": second["id"], "depends_on": first["id"]})["deps"]
 check("blocks dependency recorded", any(d["kind"] == "blocks" for d in deps), json.dumps(deps))
 operator.refused("board_dep", {"project": P, "id": first["id"], "depends_on": second["id"]}, "dependency_cycle")
 
-ready = claude.ok("board_ready", {"project": P})
+ready = claude.ok("board_ready", {"project": P})["tickets"]
 check("only the unblocked ticket is ready", [t["id"] for t in ready] == [first["id"]], json.dumps([t["id"] for t in ready]))
 
 claimed = claude.ok("board_claim", {"project": P})
@@ -182,7 +182,7 @@ check("review lease", review.get("claimed") is True and review["lease"]["ticket"
 reviewed = codex.ok("board_complete", {"project": P, "id": first["id"], "summary": "reviewed: ok"})
 check("review completes to done", reviewed.get("state") == "done", json.dumps(reviewed)[:120])
 
-ready = codex.ok("board_ready", {"project": P})
+ready = codex.ok("board_ready", {"project": P})["tickets"]
 check("the blocked ticket is ready once its blocker is done", second["id"] in [t["id"] for t in ready],
       json.dumps([t["id"] for t in ready]))
 held = codex.ok("board_claim", {"project": P, "id": second["id"]})
@@ -210,11 +210,11 @@ claude.refused("board_update", {"project": P, "id": second["id"], "version": bac
 reader.refused("board_prime", {"project": P}, "not_granted")
 claude.refused("board_prime", {"project": "no-such-project"}, "unknown_board")
 
-events = claude.ok("board_events", {"project": P, "after_seq": 0, "limit": 1000})
+events = claude.ok("board_events", {"project": P, "after_seq": 0, "limit": 1000})["events"]
 check("events chain every act", len(events) >= 12 and events[-1]["seq"] == len(events), f"{len(events)} events")
 last = events[-1]["seq"]
 started = time.monotonic()
-waited = claude.ok("board_wait", {"project": P, "after_seq": last, "timeout_ms": 1200})
+waited = claude.ok("board_wait", {"project": P, "after_seq": last, "timeout_ms": 1200})["events"]
 elapsed = time.monotonic() - started
 check("wait returns empty after the timeout", waited == [] and 1.0 <= elapsed < 10, f"{elapsed:.1f}s")
 # A note written while the wait is held wakes it: the hub sleeps on the board's commit
@@ -223,7 +223,7 @@ import threading
 writer = threading.Timer(0.8, lambda: operator.ok("board_note", {"project": P, "id": second["id"], "body": "wake the waiter"}))
 started = time.monotonic()
 writer.start()
-waited = claude.ok("board_wait", {"project": P, "after_seq": last, "timeout_ms": 20000})
+waited = claude.ok("board_wait", {"project": P, "after_seq": last, "timeout_ms": 20000})["events"]
 elapsed = time.monotonic() - started
 writer.join()
 check("a held wait wakes when the note lands", len(waited) == 1 and waited[0]["action"].startswith("note")
@@ -279,7 +279,7 @@ check("without a seat the account itself is the actor, and the person on its own
       plain.get("actor") == me.get("subject") and plain.get("human") is True, json.dumps({k: plain.get(k) for k in ("actor", "human")}))
 freed = reader.ok("board_force_release", {"project": mine, "id": t["id"], "reason": "the account decides on its own board"})
 check("the account may force a seat's lease free on its own board", freed.get("state") == "ready", json.dumps(freed)[:120])
-listed = seat_codex.ok("board_list", {"project": mine, "holder": "@me"})
+listed = seat_codex.ok("board_list", {"project": mine, "holder": "@me"})["tickets"]
 check("@me is the caller as the board names it", listed == [], json.dumps(listed)[:120])
 bad_seat = Client("reader", seat="Not Valid")
 is_error, answer = bad_seat.call("board_prime", {"project": mine})
@@ -311,7 +311,7 @@ if all(who in tokens for who in ("alice", "bob", "carol")):
     carol.refused("board_prime", {"project": "acme-site"}, "unknown_board", "another org never sees it")
     hers = carol.ok("board_bind", {"project": "acme-site"})
     check("another org's project of the same name is its own board", hers.get("created") is True, json.dumps(hers))
-    listed = carol.ok("board_list", {"project": "acme-site"})
+    listed = carol.ok("board_list", {"project": "acme-site"})["tickets"]
     check("and holds none of the first org's tickets", task["id"] not in [t["id"] for t in listed], json.dumps(listed)[:160])
     bob.refused("board_bind", {"project": "acme-second"}, "plan_limit", "the free limit counts the org's projects")
 

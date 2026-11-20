@@ -3,41 +3,17 @@
 use devagotchi_contracts::{BridgeError, BridgeResult};
 use rmcp::{Json, RoleServer, service::RequestContext};
 
-use super::{BoardError, BoardOut, Kind, READ_ONLY_TOOLS, SEAT_HEADER, refuse};
+use super::{BoardError, BoardOut, Kind, SEAT_HEADER, refuse, viewer_may_call};
 use crate::{
     agenthub::{Actor, Board},
     config::valid_name,
     identity::Subject,
     mcp::Hub,
-    ops::audit::AuditEntry,
     tenancy::orgs::Role,
 };
 
 impl Hub {
-    /// One line on the audit chain for `subject`'s board call (`tool` on `project`). A call that
-    /// cannot be audited is not a call this bastion made: callers refuse it.
-    pub(super) async fn audited(
-        &self,
-        subject: &Subject,
-        tool: &str,
-        project: &str,
-        operation_id: &str,
-        outcome: &str,
-    ) -> BridgeResult<u64> {
-        let (id, via) = (&subject.id, subject.via);
-        let entry = AuditEntry {
-            subject: id,
-            via,
-            tool,
-            broker: project,
-            operation_id,
-            outcome,
-        };
-        self.audit.record(&entry).await
-    }
-
-    /// The seat the caller named (`X-Devagotchi-Seat`), checked like any board name.
-    /// The seat this request names, when it names a valid one.
+    /// The seat this request names (`X-Devagotchi-Seat`), when it names a valid one.
     pub(crate) fn request_seat(&self, context: &RequestContext<RoleServer>) -> Option<String> {
         self.seat(context).ok().flatten()
     }
@@ -116,6 +92,10 @@ impl Hub {
             .await
     }
 
+    /// The call itself. Every refusal from here on is audited, the seat's included (G7): a
+    /// bad `X-Devagotchi-Seat` is a call that was made and refused. The audit line comes
+    /// after the store committed, so a failed append never turns a write that happened into
+    /// a refusal: the real result goes back and the operator alert goes up (D1).
     pub(super) async fn board_call_scoped<T, F>(
         &self,
         tool: &'static str,
@@ -130,15 +110,46 @@ impl Hub {
         F: FnOnce(&Board, &Actor<'_>) -> BridgeResult<T> + Send + 'static,
     {
         let subject = self.board_subject(context)?;
-        let seat = self.seat(context)?;
-        let result = match self.board_access(&subject, project) {
-            Ok((_, kind, _)) if required_kind.is_some_and(|required| kind != required) => {
+        let result = match self.seat(context) {
+            Err(Json(refused)) => Err(BridgeError::new(&refused.code, refused.message)),
+            Ok(seat) => self.run_scoped(&subject, seat, tool, project, required_kind, f).await,
+        };
+        let outcome = match &result {
+            Ok(_) => "ok".to_string(),
+            Err(error) => error.code.clone(),
+        };
+        self.record_completion(
+            &subject,
+            tool,
+            project,
+            ticket.unwrap_or_default(),
+            &outcome,
+        )
+        .await;
+        result.map(Json).map_err(|error| refuse(error, ticket))
+    }
+
+    async fn run_scoped<T, F>(
+        &self,
+        subject: &Subject,
+        seat: Option<String>,
+        tool: &'static str,
+        project: &str,
+        required_kind: Option<Kind>,
+        f: F,
+    ) -> BridgeResult<T>
+    where
+        T: Send + 'static,
+        F: FnOnce(&Board, &Actor<'_>) -> BridgeResult<T> + Send + 'static,
+    {
+        match self.board_access(subject, project)? {
+            (_, kind, _) if required_kind.is_some_and(|required| kind != required) => {
                 Err(BridgeError::new(
                     "not_granted",
                     "issue repository belongs to the configured shared board",
                 ))
             }
-            Ok((_, _, role)) if !role.may_work() && !READ_ONLY_TOOLS.contains(&tool) => {
+            (_, _, role) if !role.may_work() && !viewer_may_call(tool) => {
                 Err(BridgeError::new(
                     "read_only",
                     format!(
@@ -147,8 +158,8 @@ impl Hub {
                     ),
                 ))
             }
-            Ok((board, kind, role)) => {
-                let (id, human) = self.actor_for(&subject, seat.as_deref(), kind, role);
+            (board, kind, role) => {
+                let (id, human) = self.actor_for(subject, seat.as_deref(), kind, role);
                 tokio::task::spawn_blocking(move || {
                     let actor = Actor {
                         id: &id,
@@ -165,26 +176,7 @@ impl Hub {
                     ))
                 })
             }
-            Err(error) => Err(error),
-        };
-        let outcome = match &result {
-            Ok(_) => "ok".to_string(),
-            Err(error) => error.code.clone(),
-        };
-        if let Err(error) = self
-            .audited(
-                &subject,
-                tool,
-                project,
-                ticket.unwrap_or_default(),
-                &outcome,
-            )
-            .await
-        {
-            // A call that cannot be audited is not a call this bastion made.
-            return Err(refuse(error, ticket));
         }
-        result.map(Json).map_err(|error| refuse(error, ticket))
     }
 
     pub(super) fn board_subject(
@@ -196,13 +188,14 @@ impl Hub {
     }
 
     /// The key the fence memory uses: the account, and the seat when one is named, so two
-    /// seats of one account never pick up each other's fences.
+    /// seats of one account never pick up each other's fences. A seat that is not a name is
+    /// left out here; the call itself refuses it, with its audit line (`board_call_scoped`).
     pub(super) fn subject_id(
         &self,
         context: &RequestContext<RoleServer>,
     ) -> Result<String, Json<BoardError>> {
         let subject = self.board_subject(context)?;
-        Ok(match self.seat(context)? {
+        Ok(match self.seat(context).ok().flatten() {
             Some(seat) => format!("{}#{seat}", subject.id),
             None => subject.id,
         })

@@ -40,6 +40,18 @@ fn next_for(code: &str, id: Option<&str>) -> String {
         "nothing_ready" => "board_create what you found, or wait with board_wait".into(),
         "source_conflict" => "board_get the ticket the message names and reconcile it with board_update; never change the origin's path or item to get past it".into(),
         "unknown_environment" => "pass one of the board's environments the message lists, or leave environment out".into(),
+        "invalid" => "fix the argument the message names and call again".into(),
+        "invalid_settings" => "fix the setting the message names, then call board_settings again".into(),
+        "parent_closed" => "board_create without parent, or reopen the parent with board_update".into(),
+        "not_held" => format!("board_get {id}: nobody holds it; nothing to release"),
+        "dependency_cycle" => "board_get both tickets: one already depends on the other".into(),
+        "approval_decide_only" => "approvals change only by a person's decision on the approvals page".into(),
+        "approval_changed" | "already_decided" => format!("approval_wait {id} to see it as it is now"),
+        "not_an_approval" => format!("board_get {id}: it is a ticket, not an approval"),
+        "read_only" => "you are a viewer here; ask the board's owner for a member role".into(),
+        "request_conflict" => "retry with the same content, or use a new request_id for new content".into(),
+        "board_damaged" => "the board's stored data is damaged; tell the hub's operator (board_verify shows the chain)".into(),
+        "too_many" => "a person revokes an approval given ahead of time on the approvals page first".into(),
         _ => "board_prime to re-orient".into(),
     }
 }

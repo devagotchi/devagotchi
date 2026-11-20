@@ -3,8 +3,6 @@
 # not listed may not exceed the cap. Never add a line or raise a number to make the test
 # pass: see .ai/patterns/layout.md.
 588	crates/agenthub/src/clickhouse.rs
-823	crates/agenthub/src/hosted.rs
-709	crates/agenthub/src/hosted/operations.rs
 855	crates/devagotchi/tests/one_binary.rs
 623	crates/hub/src/agenthub/issue_lifecycle/tests.rs
 647	crates/hub/src/identity/accounts/oauth/mod.rs
@@ -28,7 +26,7 @@
 768	crates/hub/src/tenancy/tests/tenants.rs
 607	crates/hub/src/web/analytics.rs
 509	crates/hub/src/web/app/agenthub/ticket_tests.rs
-713	crates/hub/src/web/approvals.rs
+581	crates/hub/src/web/approvals/mod.rs
 633	crates/hub/src/web/discovery_tests.rs
 542	crates/hub/src/web/hub_settings_tests.rs
 664	crates/hub/src/web/landing.rs
