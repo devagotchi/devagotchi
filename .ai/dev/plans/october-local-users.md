@@ -66,3 +66,11 @@ organization, signals, machine link/reconnect/revoke, CLI/browser sign-in and no
 hub state. Linux boundary/MCP smoke, ClickHouse and deployment checks remain CI gates.
 Implementation and local validation are complete; publication and merge follow only after
 the operator policy gates and green PR checks. No release-readiness claim.
+
+Delivered: PR276 merged as `9c6dc6e43374e3bf35cdb0d2b073f67fb98500d4` after all18
+checks completed successfully. Local and remote increment282 branches were deleted.
+Official Release44823993998 succeeded; its immutable image was deployed to the development
+Docker stack. Edge user creation, rename, disable/enable, password reset, session revocation,
+owner boundary and390/1280 layouts passed. Existing accounts also passed HTTP access checks
+and restart persistence; owner credentials were preserved. This closes local-user delivery,
+not agent-principal/policy parity or the oldest source as a whole.

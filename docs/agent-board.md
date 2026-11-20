@@ -45,6 +45,17 @@ reports a broken entry if one is found. The newest page refreshes when work chan
 you are typing a filter, it offers a refresh link so your input is kept. Older pages stay
 where you left them.
 
+Owners and administrators can choose **Board settings** to edit lease durations, work limits,
+default task priority, repository and environments. Durations are shown in seconds. The
+**Workflow** page edits state labels/types, initial and attention states, work stages and
+manual moves. Add/remove controls keep an unsaved draft and work without JavaScript.
+Saving uses the version originally opened: a stale save is refused and keeps the draft
+until you reload the current configuration. Standing approvals are preserved. A workflow
+cannot remove or change the type of a state used by existing tasks, or leave an active state
+without a work stage. These pages configure one board; shared workflow catalogs and project
+rebinding are not yet restored. See the [configuration plan](../.ai/dev/plans/october-board-configuration.md)
+for delivery and acceptance status.
+
 The hub owner can open **Hub settings → Hub activity** for recorded calls and
 administrative actions across the environment. Filter by actor, action prefix, machine
 or board, and result; expand an entry for its connection and operation. This view has

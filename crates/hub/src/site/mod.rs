@@ -33,6 +33,7 @@ mod assets_tests;
 #[cfg(test)]
 mod brand_tests;
 mod check;
+pub(crate) mod configuration_copy;
 pub mod discovery;
 mod load;
 mod markdown;

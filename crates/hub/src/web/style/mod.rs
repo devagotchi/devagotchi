@@ -16,8 +16,12 @@
 pub(crate) const PRIMITIVES: &str = include_str!("primitives.css");
 
 /// Each page's sheet, by the `data-page` it is scoped to.
-pub(crate) const PAGES: [(&str, &str); 3] = [
+pub(crate) const PAGES: [(&str, &str); 4] = [
     ("board", include_str!("../app/agenthub/board.css")),
+    (
+        "board-configuration",
+        include_str!("../app/agenthub/configuration/page.css"),
+    ),
     ("ticket", include_str!("../app/agenthub/ticket.css")),
     ("approvals", include_str!("../approvals/page.css")),
 ];
