@@ -4,6 +4,7 @@
 
 pub(super) mod audit;
 pub(super) mod board;
+pub(super) mod configuration;
 pub(super) mod create;
 pub(super) mod ticket;
 pub(super) mod ticket_actions;

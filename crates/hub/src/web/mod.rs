@@ -139,10 +139,14 @@ pub(crate) async fn session_subject(
     }
 }
 
-/// Whether a request that changes something came from this hub's own pages, as every form
-/// here requires (`approvals::same_origin`).
+/// A browser change must name this hub's exact origin; fetch metadata cannot override it.
 pub(crate) fn from_this_hub(headers: &axum::http::HeaderMap, public_url: &str) -> bool {
-    approvals::same_origin(headers, public_url)
+    let origin = passkeys::origin_of(public_url);
+    origin.is_some()
+        && headers.get(header::ORIGIN).and_then(|v| v.to_str().ok()) == origin.as_deref()
+        && headers
+            .get("sec-fetch-site")
+            .is_none_or(|v| v == "same-origin")
 }
 
 /// Every web page's top bar says whether the browser is signed in: the account and a

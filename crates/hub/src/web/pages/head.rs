@@ -142,7 +142,7 @@ pub(super) fn render(
     );
     headers.insert(
         header::REFERRER_POLICY,
-        HeaderValue::from_static("no-referrer"),
+        HeaderValue::from_static("same-origin"),
     );
     response
 }

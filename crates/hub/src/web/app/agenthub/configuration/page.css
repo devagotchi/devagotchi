@@ -1,0 +1,12 @@
+/* Configuration forms use the shared grid so rows stack without horizontal scrolling. */
+@layer pages {
+  [data-page="board-configuration"] { --stack-gap: var(--space-m); }
+  [data-page="board-configuration"] .auto-grid { --grid-min: 13rem; }
+  [data-page="board-configuration"] fieldset { min-inline-size: 0; margin: 0;
+    padding: var(--space-s); border: 1px solid var(--line); border-radius: var(--radius-s); }
+  [data-page="board-configuration"] legend { padding-inline: var(--space-2xs); }
+  [data-page="board-configuration"] label { min-inline-size: 0; --stack-gap: var(--space-3xs); }
+  [data-page="board-configuration"] input:not([type="checkbox"]),
+  [data-page="board-configuration"] select { box-sizing: border-box; inline-size: 100%; min-inline-size: 0; max-inline-size: 100%; min-block-size: 44px; }
+  [data-page="board-configuration"] nav [aria-current="page"] { font-weight: 700; }
+}

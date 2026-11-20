@@ -237,6 +237,15 @@ placeholder=\"{l}\"><button type=\"submit\">{}</button></form>",
         escape(&copy.search_button),
         l = escape(&copy.search_label),
     );
+    let configure = match state.hub.board_access(&subject, &project) {
+        Ok((_, _, role)) if role.may_configure() => format!(
+            "<a class=\"button\" href=\"/app/boards/{}/settings\">{}</a>",
+            encode(&project),
+            escape(&copy.configuration.title)
+        ),
+        Ok(_) => String::new(),
+        Err(_) => return crate::web::routes::unavailable(),
+    };
     let create = match state.hub.board_access(&subject, &project) {
         Ok((_, _, role)) if role.is_person() => format!(
             "<a class=\"button primary\" href=\"/app/boards/{}/new\">{}</a>",
@@ -252,7 +261,7 @@ placeholder=\"{l}\"><button type=\"submit\">{}</button></form>",
         escape(&copy.audit.title)
     );
     let body = format!(
-        "<div class=\"stack\" data-page=\"board\"><header class=\"cluster board-head\"><h1>{}</h1>{create}{audit}{search}</header>\
+        "<div class=\"stack\" data-page=\"board\"><header class=\"cluster board-head\"><h1>{}</h1>{create}{audit}{configure}{search}</header>\
 <div class=\"sidebar\"><aside class=\"stack board-filters\">{}{}{}{}{}{}{}</aside>\
 <section class=\"card query board-list\">{list}</section></div></div>",
         escape(&project),

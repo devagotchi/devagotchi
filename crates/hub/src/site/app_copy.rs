@@ -115,6 +115,7 @@ pub struct AppCopy {
     pub audit: AuditCopy,
     pub hub_audit: HubAuditCopy,
     pub people: PeopleCopy,
+    pub configuration: super::configuration_copy::ConfigurationCopy,
 }
 
 #[derive(Debug, Clone, Deserialize)]
