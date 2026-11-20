@@ -112,6 +112,30 @@ pub struct AppCopy {
     pub push_update_failed_title: String,
     pub push_update_failed_body: String,
     pub creation: CreationCopy,
+    pub audit: AuditCopy,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct AuditCopy {
+    pub title: String,
+    pub description: String,
+    pub actor: String,
+    pub action: String,
+    pub ticket: String,
+    pub filter: String,
+    pub refresh: String,
+    pub verify: String,
+    pub verified: String,
+    pub broken: String,
+    pub unverified: String,
+    pub details: String,
+    pub hash: String,
+    pub empty: String,
+    pub older: String,
+    pub updated: String,
+    pub unavailable: String,
+    pub invalid_cursor: String,
 }
 
 #[derive(Debug, Clone, Deserialize)]

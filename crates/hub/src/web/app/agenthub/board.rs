@@ -246,8 +246,13 @@ placeholder=\"{l}\"><button type=\"submit\">{}</button></form>",
         Ok(_) => String::new(),
         Err(_) => return crate::web::routes::unavailable(),
     };
+    let audit = format!(
+        "<a class=\"button\" href=\"/app/boards/{}/audit\">{}</a>",
+        encode(&project),
+        escape(&copy.audit.title)
+    );
     let body = format!(
-        "<div class=\"stack\" data-page=\"board\"><header class=\"cluster board-head\"><h1>{}</h1>{create}{search}</header>\
+        "<div class=\"stack\" data-page=\"board\"><header class=\"cluster board-head\"><h1>{}</h1>{create}{audit}{search}</header>\
 <div class=\"sidebar\"><aside class=\"stack board-filters\">{}{}{}{}{}{}{}</aside>\
 <section class=\"card query board-list\">{list}</section></div></div>",
         escape(&project),

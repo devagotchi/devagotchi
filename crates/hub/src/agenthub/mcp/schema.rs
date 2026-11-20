@@ -322,6 +322,21 @@ pub struct EventsIn {
     /// Events with a higher sequence number than this (0 for all).
     #[serde(default)]
     pub after_seq: i64,
+    /// Events before this sequence number (exclusive), for paging backwards.
+    #[serde(default)]
+    pub before_seq: Option<i64>,
+    /// Only events by this exact actor.
+    #[serde(default)]
+    pub actor: Option<String>,
+    /// Literal action prefix, for example ticket. or note.; a trailing * is optional.
+    #[serde(default)]
+    pub action_prefix: Option<String>,
+    /// Only events on this ticket.
+    #[serde(default)]
+    pub ticket: Option<String>,
+    /// Newest first; default false preserves ascending event reads.
+    #[serde(default)]
+    pub descending: bool,
     /// At most this many (default 100, max 1000).
     #[serde(default)]
     pub limit: Option<u32>,

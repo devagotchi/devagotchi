@@ -2,6 +2,7 @@
 //! (`/app/tickets/{project}/{id}`) and what a person does to one. The board itself and its rules
 //! are in `crate::agenthub`; these only show it and act through it.
 
+pub(super) mod audit;
 pub(super) mod board;
 pub(super) mod create;
 pub(super) mod ticket;

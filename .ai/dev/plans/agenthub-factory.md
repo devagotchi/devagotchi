@@ -62,7 +62,17 @@ The next concrete gap is exact task-ID, note-body and PostgreSQL full-text searc
 parser conflict that discarded the query; [PR #11](https://github.com/devagotchi/agenthub/pull/11)
 fixes it. Both backend changes merged; parent pins `6912c3e`. All 94 backend and 495 hub
 tests passed against required PostgreSQL, including browser/MCP/bound-CLI search and
-account isolation. Parent publication/main and deployed-image acceptance remain pending.
+account isolation. Parent [PR #273](https://github.com/devagotchi/devagotchi/pull/273) merged
+as `2ce4e91`, all 18 checks passed. Deployed-image acceptance remains pending.
+
+### First source: audit history
+
+[Scoped plan](october-audit-history.md): restore actor/action filters, event details,
+newest-first paging, chain verification and live history in the browser. Backend
+[PR #12](https://github.com/devagotchi/agenthub/pull/12) merged as `fce03e2`, with 96 local
+PostgreSQL tests and its GitHub PostgreSQL check passed. Parent branch
+`increment-280/restore-audit-history` starts from `2ce4e91`; interface tests/validation are
+in progress. The original global administrative audit surface remains a separate gap.
 
 The baseline also still requires a source-to-implementation audit of principal roles,
 presence, WIP overrides, policy editing/enforcement, workflows/settings, request idempotency,

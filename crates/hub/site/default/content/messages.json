@@ -373,6 +373,26 @@
     "push_offline_title": "{machine} is offline",
     "push_offline_body": "It has been offline for 10 minutes. Tap to see it.",
     "push_update_failed_title": "{machine} update failed",
-    "push_update_failed_body": "Tap to see what happened."
+    "push_update_failed_body": "Tap to see what happened.",
+    "audit": {
+      "title": "Audit history",
+      "description": "See who changed work on this board, when it changed, and the recorded details.",
+      "actor": "Actor",
+      "action": "Action prefix",
+      "ticket": "Task ID",
+      "filter": "Filter history",
+      "refresh": "Refresh history",
+      "verify": "Verify history",
+      "verified": "Verified {count} recorded events.",
+      "broken": "History verification failed at event #{seq}.",
+      "unverified": "Verify history checks for broken links or altered records.",
+      "details": "Recorded details",
+      "hash": "Event hash",
+      "empty": "No recorded events match these filters.",
+      "older": "Older events",
+      "updated": "New events are available. Refresh when you are ready.",
+      "unavailable": "Live history is unavailable. Refresh to check your connection and access.",
+      "invalid_cursor": "This history page is invalid. Open the board history again."
+    }
   }
 }

@@ -399,6 +399,8 @@ async fn pages(store: Option<&str>) {
     .unwrap();
     assert_eq!(location(&demoted), "/orgs/acme?done=1");
     assert_eq!(hub.get(task_form, Some(&bob.cookie)).await.status(), 403);
+    let audit_path = "/app/boards/acme%2Fsite/audit";
+    assert_eq!(hub.get(audit_path, Some(&bob.cookie)).await.status(), 200);
     let denied = form(
         task_form,
         &bob.cookie,
@@ -442,6 +444,7 @@ async fn pages(store: Option<&str>) {
     assert_eq!(location(&left), "/orgs?done=1");
     let (status, _) = Hosted::text(hub.get("/orgs/acme", Some(&bob.cookie)).await).await;
     assert_eq!(status, 404);
+    assert_eq!(hub.get(audit_path, Some(&bob.cookie)).await.status(), 404);
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
