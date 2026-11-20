@@ -52,7 +52,7 @@ Source order (original work dates, not the dates preservation commits were creat
   against a single-environment native hub and isolated Docker PostgreSQL.
 - Delivery: backend merged; parent [PR #272](https://github.com/devagotchi/devagotchi/pull/272)
   merged to main as `53c5c93`, with all 18 checks passing, including Linux/macOS/ARM,
-  real ClickHouse export and Docker Compose. Official-image deployment acceptance pending.
+  real ClickHouse export and Docker Compose. Official-image Docker acceptance passed for both existing accounts on `2ce4e91`.
 
 ### First source: task search
 
@@ -63,16 +63,16 @@ parser conflict that discarded the query; [PR #11](https://github.com/devagotchi
 fixes it. Both backend changes merged; parent pins `6912c3e`. All 94 backend and 495 hub
 tests passed against required PostgreSQL, including browser/MCP/bound-CLI search and
 account isolation. Parent [PR #273](https://github.com/devagotchi/devagotchi/pull/273) merged
-as `2ce4e91`, all 18 checks passed. Deployed-image acceptance remains pending.
+as `2ce4e91`, all 18 checks passed. Deployed-image creation/dependency/search acceptance passed for both existing accounts on `2ce4e91`.
 
 ### First source: audit history
 
 [Scoped plan](october-audit-history.md): restore actor/action filters, event details,
 newest-first paging, chain verification and live history in the browser. Backend
 [PR #12](https://github.com/devagotchi/agenthub/pull/12) merged as `fce03e2`, with 96 local
-PostgreSQL tests and its GitHub PostgreSQL check passed. Parent branch
-`increment-280/restore-audit-history` starts from `2ce4e91`; interface tests/validation are
-in progress. The original global administrative audit surface remains a separate gap.
+PostgreSQL tests and its GitHub PostgreSQL check passed. Parent [PR274](https://github.com/devagotchi/devagotchi/pull/274)
+merged as `bf74369` after all 18 pre-merge checks; its feature branches were deleted.
+The owner-visible hub activity view continues in [its scoped plan](october-hub-audit.md).
 
 The baseline also still requires a source-to-implementation audit of principal roles,
 presence, WIP overrides, policy editing/enforcement, workflows/settings, request idempotency,

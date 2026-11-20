@@ -113,6 +113,7 @@ pub struct AppCopy {
     pub push_update_failed_body: String,
     pub creation: CreationCopy,
     pub audit: AuditCopy,
+    pub hub_audit: HubAuditCopy,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -158,4 +159,17 @@ pub struct CreationCopy {
     pub cancel: String,
     pub refused: String,
     pub read_only: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct HubAuditCopy {
+    pub title: String,
+    pub description: String,
+    pub back: String,
+    pub machine: String,
+    pub outcome: String,
+    pub via: String,
+    pub operation: String,
+    pub broken: String,
 }

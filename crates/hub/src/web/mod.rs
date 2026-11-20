@@ -29,6 +29,7 @@ mod analytics;
 mod analytics_tests;
 mod app;
 mod approvals;
+mod audit_live;
 mod claim;
 #[cfg(test)]
 mod claim_tests;
@@ -40,6 +41,7 @@ mod discovery;
 mod discovery_tests;
 mod email;
 mod hosted;
+mod hub_audit;
 mod hub_settings;
 mod hub_settings_live;
 #[cfg(test)]

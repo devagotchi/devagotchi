@@ -245,7 +245,8 @@ Google, GitHub, Shippin, or any OpenID Connect provider. Shippin's switch is on 
 {people}\
 <section class=\"card\" id=\"running\"><h2>Machines and workflows</h2>{machines}{workflows}</section>\
 <section class=\"card\" id=\"data\"><h2>Data and signals</h2><p class=\"note help\">Where AgentHub keeps its boards, \
-and where it sends their events for statistics.</p>{database}{analytics}{visits}{signals}{deploy_time}</section>",
+and where it sends their events for statistics.</p><p><a href=\"/admin/audit\">{audit_title}</a></p>{database}{analytics}{visits}{signals}{deploy_time}</section>",
+        audit_title = escape(&pages::site().messages.app.hub_audit.title),
         deploy_time = hub_settings_live::deploy_time_card(),
         passwords = live(Group::Passwords),
         machines = live(Group::Machines),

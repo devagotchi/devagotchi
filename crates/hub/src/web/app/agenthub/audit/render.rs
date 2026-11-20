@@ -69,11 +69,11 @@ pub(super) fn body(
     };
     let refresh = shown.href(project, None, false);
     format!(
-        "<div class=\"stack\" data-page=\"board-audit\" data-changes=\"{path}/changes?after={head}\" data-refresh=\"{refresh}\"><header><a href=\"/app/boards/{}\">{}</a><h1>{}</h1><p>{}</p></header>\
+        "<div class=\"stack\" data-page=\"audit-history\" data-changes=\"{path}/changes?after={head}\" data-refresh=\"{refresh}\"><header><a href=\"/app/boards/{}\">{}</a><h1>{}</h1><p>{}</p></header>\
 <form class=\"stack\" method=\"get\" action=\"{path}\">{fields}<button type=\"submit\">{}</button></form>\
 <div class=\"cluster\"><a class=\"button\" href=\"{refresh}\">{}</a><a class=\"button\" href=\"{}\">{}</a></div>{status}\
 <p role=\"status\" id=\"audit-updated\" hidden><a href=\"{refresh}\">{}</a></p><p role=\"alert\" id=\"audit-unavailable\" hidden>{}</p>\
-<section class=\"card\">{history}</section>{older}</div><script src=\"/assets/board-audit.js\" defer></script>",
+<section class=\"card\">{history}</section>{older}</div><script src=\"/assets/audit-history.js\" defer></script>",
         encode(project),
         escape(project),
         escape(&copy.title),

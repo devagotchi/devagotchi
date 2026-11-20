@@ -45,6 +45,12 @@ reports a broken entry if one is found. The newest page refreshes when work chan
 you are typing a filter, it offers a refresh link so your input is kept. Older pages stay
 where you left them.
 
+The hub owner can open **Hub settings → Hub activity** for recorded calls and
+administrative actions across the environment. Filter by actor, action prefix, machine
+or board, and result; expand an entry for its connection and operation. This view has
+its own integrity check and live refresh. Ordinary users cannot read this global log;
+their board history continues to use board permissions.
+
 MCP `board_events` supports `actor`, `action_prefix`, `ticket`, `descending` and the exclusive
 `before_seq` cursor as well as `after_seq` and `limit`. Its default remains ascending order.
 
