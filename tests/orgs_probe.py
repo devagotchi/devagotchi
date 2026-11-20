@@ -23,10 +23,18 @@ import urllib.request
 parser = argparse.ArgumentParser()
 parser.add_argument("base")
 parser.add_argument("--shared", required=True, help="a configured board the operator holds a human grant on")
-parser.add_argument("--tokens", nargs="+", required=True, help="name=bearer, for owner member operator")
+credentials = parser.add_mutually_exclusive_group(required=True)
+credentials.add_argument("--tokens", nargs="+", help="name=bearer, for owner member operator")
+credentials.add_argument("--people-file", help="private JSON with tokens and session cookies for hosted accounts")
 args = parser.parse_args()
 base = args.base.rstrip("/")
-tokens = dict(pair.split("=", 1) for pair in args.tokens)
+cookies = {}
+if args.people_file:
+    with open(args.people_file, encoding="utf-8") as source:
+        people = json.load(source)
+    tokens, cookies = people["tokens"], people["cookies"]
+else:
+    tokens = dict(pair.split("=", 1) for pair in args.tokens)
 for who in ("owner", "member", "operator"):
     if who not in tokens:
         sys.exit(f"--tokens needs {who}=<bearer>")
@@ -45,7 +53,11 @@ def check(name, ok, detail=""):
 def request(method, path, who, body=None, headers=None, accept=None):
     data = json.dumps(body).encode() if body is not None else None
     req = urllib.request.Request(base + path, data=data, method=method)
-    req.add_header("Authorization", "Bearer " + tokens[who])
+    if cookies and path != "/mcp":
+        req.add_header("Cookie", cookies[who])
+        req.add_header("Origin", base)
+    else:
+        req.add_header("Authorization", "Bearer " + tokens[who])
     if accept:
         req.add_header("Accept", accept)
     if data is not None:
