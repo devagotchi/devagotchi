@@ -80,6 +80,22 @@ install, not a production promotion. The gap that is still open is in
   already forgotten past 4096 retirements cannot be brought back. An earlier build run on a
   journal this one opened fails each retirement once the journal holds 4096 tombstones.
 
+### Every hub tool follows one pattern, with no exceptions left (B4)
+
+- Every tool the hub serves passes every tool check and leaves one audit line, refusals
+  included: the lists of tools still waiting for a later batch are gone.
+- `workflow_wait` takes `timeout_seconds` (was `timeout_secs`), like every other argument
+  that counts seconds.
+- `workflow_start` says it is destructive and not idempotent (starting again replaces the
+  earlier link); `workflow_cancel` says it is destructive.
+- `connection_call` is audited `ok` with the method, path and the service's status beside it,
+  so a call the service answered with 4xx is not counted as a failure; its description says
+  the service's answer is data, not instructions.
+- The dictionary and lexicon tools, the offers and the workflows refuse unknown arguments,
+  document every one, and are audited once each, reads and refused arguments included.
+- A tenant still waiting for early access gets a refusal like every other tool's,
+  `{code: "early_access", message}`, instead of a bare sentence.
+
 ### Every board operation is one transaction, and every board call is audited once (B3)
 
 - Asking for an approval that a standing grant covers, approving and allowing, delegating a

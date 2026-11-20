@@ -45,9 +45,7 @@ fn tool_names_are_unique_and_every_body_reaches_its_audit_owner() {
     broken.sort();
     assert!(
         broken.is_empty(),
-        "every tool body reaches its audit owner (AU1):
-  {}",
-        broken.join("
-  ")
+        "every tool body reaches its audit owner (AU1):\n  {}",
+        broken.join("\n  ")
     );
 }

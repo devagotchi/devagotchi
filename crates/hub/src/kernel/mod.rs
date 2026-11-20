@@ -17,6 +17,7 @@
 pub mod authority;
 pub(crate) mod handoff;
 pub(crate) mod mcp;
+pub(crate) mod schema;
 pub mod stored;
 #[cfg(test)]
 mod tests;

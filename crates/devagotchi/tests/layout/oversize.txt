@@ -42,7 +42,7 @@
 531	crates/hub/src/workflows/mcp.rs
 541	crates/hub/src/workflows/mod.rs
 625	crates/hub/src/workflows/stored/mod.rs
-1766	crates/hub/src/workflows/tests.rs
+1764	crates/hub/src/workflows/tests.rs
 516	crates/ipc/src/windows/security.rs
 1017	crates/kernel/src/capture/mod.rs
 647	crates/kernel/src/capture/tests.rs

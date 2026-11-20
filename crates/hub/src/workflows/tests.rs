@@ -1303,21 +1303,15 @@ async fn a_waiting_tenant_gets_the_early_access_message() {
         json!({ "downloads": dist(dir).to_string_lossy(), "site": { "dir": site.to_string_lossy() } })
     }));
     let mut person = hub.first_connect("Claude").await;
-    let note = structured(&hub, &mut person, "whoami", json!({})).await["access_note"]
-        .as_str()
-        .unwrap()
-        .to_string();
+    let whoami = structured(&hub, &mut person, "whoami", json!({})).await;
+    let expected = json!({ "code": "early_access", "message": whoami["access_note"] });
     for (tool, arguments) in [
         ("workflow_list", json!({})),
         ("workflow_start", json!({ "workflow": "connect-linux" })),
     ] {
         let answer = hub.call(&mut person, tool, arguments).await;
         assert_eq!(answer["isError"], true, "{tool}");
-        assert_eq!(
-            answer["structuredContent"],
-            json!({ "code": "early_access", "message": note }),
-            "{tool}"
-        );
+        assert_eq!(answer["structuredContent"], expected, "{tool}");
     }
 }
 
