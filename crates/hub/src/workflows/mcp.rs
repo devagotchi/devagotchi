@@ -16,9 +16,10 @@ use crate::{
     identity::Subject, machines::now_secs, mcp::Hub, site::Ctx, workflows::stored::WorkflowRow,
 };
 
-/// The longest a `workflow_wait` holds.
-pub const WAIT_MAX_SECS: u64 = 60;
-const WAIT_DEFAULT_SECS: u64 = 50;
+/// The longest a `workflow_wait` holds, and how long it waits when `timeout_seconds` is not
+/// given.
+pub const WAIT_MAX_SECONDS: u64 = 60;
+pub const WAIT_DEFAULT_SECONDS: u64 = 50;
 /// How often a wait looks again when nothing on this hub woke it (a change another hub
 /// instance saw, or one nothing signals: an account secured).
 const LOOK_EVERY: Duration = Duration::from_secs(1);
@@ -92,7 +93,7 @@ pub struct WaitIn {
     pub id: String,
     /// Seconds to wait for a change, 1 to 60 (default 50).
     #[serde(default)]
-    pub timeout_secs: Option<u64>,
+    pub timeout_seconds: Option<u64>,
 }
 
 #[derive(Debug, Serialize, JsonSchema)]
@@ -150,21 +151,11 @@ impl Hub {
         }
     }
 
-    /// Audit one workflow tool call like every other.
-    async fn record_workflow<T>(
-        &self,
-        subject: &Subject,
-        tool: &str,
-        id: &str,
-        result: Result<T, Json<BridgeError>>,
-    ) -> Result<Json<T>, Json<BridgeError>> {
-        let outcome = match &result {
-            Ok(_) => "ok".to_string(),
-            Err(Json(error)) => error.code.clone(),
-        };
-        self.record(subject, tool, "", id, &outcome).await?;
-        result.map(Json)
-    }
+}
+
+/// A workflow result as `Hub::recorded` takes it.
+fn plain<T>(result: Result<T, Json<BridgeError>>) -> devagotchi_contracts::BridgeResult<T> {
+    result.map_err(|Json(error)| error)
 }
 
 #[tool_router(router = workflow_router, vis = "pub(crate)")]
@@ -215,7 +206,7 @@ impl Hub {
                     .collect(),
             }
         });
-        self.record_workflow(&subject, "workflow_list", "", result)
+        self.recorded(&subject, "workflow_list", "", "", plain(result))
             .await
     }
 
@@ -226,7 +217,9 @@ impl Hub {
         annotations(
             title = "Start a setup for the user",
             read_only_hint = false,
-            destructive_hint = false,
+            // Starting the same workflow again replaces its earlier link.
+            destructive_hint = true,
+            idempotent_hint = false,
             open_world_hint = false
         )
     )]
@@ -241,7 +234,7 @@ impl Hub {
             .as_ref()
             .map(|started| started.id.clone())
             .unwrap_or_default();
-        self.record_workflow(&subject, "workflow_start", &id, result)
+        self.recorded(&subject, "workflow_start", "", &id, plain(result))
             .await
     }
 
@@ -268,13 +261,13 @@ impl Hub {
                 .map_err(Json),
             Err(error) => Err(error),
         };
-        self.record_workflow(&subject, "workflow_status", &input.id, result)
+        self.recorded(&subject, "workflow_status", "", &input.id, plain(result))
             .await
     }
 
     #[tool(
         name = "workflow_wait",
-        description = "Wait until a workflow you started changes (a step done, the link expiring) or timeout_secs (1 to 60, default 50) passes, then return where it stands, with changed true when something moved; it returns the moment something does. Use it right after giving the user the link, and again after each change, instead of calling workflow_status repeatedly. A wait that times out returns changed false: wait again, or ask the user how it is going.",
+        description = "Wait until a workflow you started changes (a step done, the link expiring) or timeout_seconds (1 to 60, default 50) passes, then return where it stands, with changed true when something moved; it returns the moment something does. Use it right after giving the user the link, and again after each change, instead of calling workflow_status repeatedly. A wait that times out returns changed false: wait again, or ask the user how it is going.",
         title = "Wait for the user's next step",
         annotations(
             title = "Wait for the user's next step",
@@ -289,7 +282,7 @@ impl Hub {
     ) -> Result<Json<WorkflowWaited>, Json<BridgeError>> {
         let subject = self.subject(&context)?;
         let result = self.wait_workflow(&subject, &input, &context).await;
-        self.record_workflow(&subject, "workflow_wait", &input.id, result)
+        self.recorded(&subject, "workflow_wait", "", &input.id, plain(result))
             .await
     }
 
@@ -300,7 +293,8 @@ impl Hub {
         annotations(
             title = "Cancel a setup",
             read_only_hint = false,
-            destructive_hint = false,
+            // Its link stops working at once.
+            destructive_hint = true,
             idempotent_hint = true,
             open_world_hint = false
         )
@@ -311,20 +305,18 @@ impl Hub {
         context: RequestContext<RoleServer>,
     ) -> Result<Json<Cancelled>, Json<BridgeError>> {
         let subject = self.subject(&context)?;
-        let result = match self.own_workflow(&subject, &input.id).await {
-            Ok(row) => {
-                let workflows = self.workflows().map_err(Json)?;
+        let result = match (self.own_workflow(&subject, &input.id).await, self.workflows()) {
+            (Ok(row), Ok(workflows)) => {
                 let cancelled = workflows
                     .accounts()
                     .cancel_workflow(&row.tenant, &row.id, now_secs())
-                    .await
-                    .map_err(Json);
+                    .await;
                 workflows.changed();
                 cancelled.map(|cancelled| Cancelled { cancelled })
             }
-            Err(error) => Err(error),
+            (Err(Json(error)), _) | (_, Err(error)) => Err(error),
         };
-        self.record_workflow(&subject, "workflow_cancel", &input.id, result)
+        self.recorded(&subject, "workflow_cancel", "", &input.id, result)
             .await
     }
 }
@@ -453,9 +445,9 @@ impl Hub {
         context: &RequestContext<RoleServer>,
     ) -> Result<WorkflowWaited, Json<BridgeError>> {
         let secs = input
-            .timeout_secs
-            .unwrap_or(WAIT_DEFAULT_SECS)
-            .clamp(1, WAIT_MAX_SECS);
+            .timeout_seconds
+            .unwrap_or(WAIT_DEFAULT_SECONDS)
+            .clamp(1, WAIT_MAX_SECONDS);
         let deadline = tokio::time::Instant::now() + Duration::from_secs(secs);
         let workflows = self.workflows().map_err(Json)?.clone();
         let first = self.own_workflow(subject, &input.id).await?;

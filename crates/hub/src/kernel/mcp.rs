@@ -11,7 +11,7 @@
 //! - `lexicon_review` lists entries and their history, and confirms, dismisses, retires,
 //!   deletes or rewords one.
 
-use devagotchi_contracts::BridgeError;
+use devagotchi_contracts::{BridgeError, BridgeResult};
 use devagotchi_kernel::{
     dictionary::{Concept, Dictionary, LabelKind, Rule},
     lexicon::{
@@ -29,16 +29,17 @@ use serde::{Deserialize, Serialize};
 use super::owner_of;
 use crate::mcp::Hub;
 
-pub(super) fn refused(error: LexiconError) -> Json<BridgeError> {
+/// A lexicon refusal as every tool says no: its stable code and a message.
+pub(super) fn bridge(error: LexiconError) -> BridgeError {
     let message = match &error {
         LexiconError::Invalid(m) | LexiconError::Conflict(m) | LexiconError::Store(m) => m.clone(),
         LexiconError::NotFound => "no entry with that id is yours".to_string(),
     };
-    Json(BridgeError::new(error.code(), message))
+    BridgeError::new(error.code(), message)
 }
 
-fn invalid(message: &str) -> Json<BridgeError> {
-    Json(BridgeError::new("invalid_request", message))
+fn invalid(message: &str) -> BridgeError {
+    BridgeError::new("invalid_request", message)
 }
 
 fn scope_of(project_id: Option<String>) -> Scope {
@@ -49,6 +50,7 @@ fn scope_of(project_id: Option<String>) -> Scope {
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub struct DictionaryInput {
     /// One concept by id (`boundary/iam`, `stack/nextjs`).
     #[serde(default)]
@@ -77,6 +79,7 @@ pub struct DictionaryOutput {
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub struct ResolveInput {
     /// One phrase to resolve. Give this or `text`.
     #[serde(default)]
@@ -119,9 +122,11 @@ pub enum Start {
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub struct ProposeInput {
     /// Your id for this change: the same id again returns the first answer.
     pub request_id: String,
+    /// The phrase as the person says it (`the admin page`, `IAM`).
     pub phrase: String,
     /// What the phrase means, in the person's words.
     #[serde(default)]
@@ -129,13 +134,16 @@ pub struct ProposeInput {
     /// Dictionary concepts it means (`boundary/iam`); none when it is the person's own.
     #[serde(default)]
     pub concepts: Vec<String>,
+    /// Sentences where the phrase means this, in the person's words.
     #[serde(default)]
     pub examples: Vec<String>,
+    /// Sentences where the same words mean something else.
     #[serde(default)]
     pub counterexamples: Vec<String>,
     /// The project it belongs to; omit for the person's own words.
     #[serde(default)]
     pub project_id: Option<String>,
+    /// How the entry starts: `proposed` (default), `inconclusive` or `confirmed`.
     #[serde(default)]
     pub start: Start,
 }
@@ -166,11 +174,14 @@ pub enum Which {
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub struct ReviewInput {
+    /// What to do: `list`, `history`, `confirm`, `dismiss`, `retire`, `delete` or `revise`.
     pub action: Action,
     /// The project whose entries these are; omit for the person's own.
     #[serde(default)]
     pub project_id: Option<String>,
+    /// With `list`: `confirmed`, `reviewable` (default: every state but deleted) or `all`.
     #[serde(default)]
     pub filter: Which,
     /// The entry, for every action but `list`.
@@ -182,14 +193,19 @@ pub struct ReviewInput {
     /// Your id for a change: the same id again returns the first answer.
     #[serde(default)]
     pub request_id: Option<String>,
+    /// With `revise`: the phrase, changed or not.
     #[serde(default)]
     pub phrase: Option<String>,
+    /// With `revise`: what it means, in the person's words.
     #[serde(default)]
     pub meaning: Option<String>,
+    /// With `revise`: the dictionary concepts it means (`boundary/iam`).
     #[serde(default)]
     pub concepts: Vec<String>,
+    /// With `revise`: sentences where the phrase means this.
     #[serde(default)]
     pub examples: Vec<String>,
+    /// With `revise`: sentences where the same words mean something else.
     #[serde(default)]
     pub counterexamples: Vec<String>,
 }
@@ -213,7 +229,7 @@ pub struct ReviewOutput {
 fn dictionary_answer(
     dictionary: &Dictionary,
     input: DictionaryInput,
-) -> Result<DictionaryOutput, Json<BridgeError>> {
+) -> BridgeResult<DictionaryOutput> {
     let mut out = DictionaryOutput {
         source: dictionary.data().source.clone(),
         concepts: Vec::new(),
@@ -224,7 +240,7 @@ fn dictionary_answer(
         (Some(id), None) => {
             let concept = dictionary
                 .concept(&id)
-                .ok_or_else(|| Json(BridgeError::new("not_found", format!("no concept {id}"))))?;
+                .ok_or_else(|| BridgeError::new("not_found", format!("no concept {id}")))?;
             out.concepts.push(Named {
                 concept: concept.clone(),
                 label: None,
@@ -256,22 +272,104 @@ fn dictionary_answer(
 }
 
 impl Hub {
-    /// One change for the signed-in subject, recorded in the audit chain with its outcome.
-    async fn change(
-        &self,
-        tool: &str,
-        context: &RequestContext<RoleServer>,
-        build: impl FnOnce(String) -> Change,
-    ) -> Result<Entry, Json<BridgeError>> {
-        let subject = self.subject(context)?;
-        let change = build(owner_of(&subject));
+    /// One change for `subject`, and the entry it names for the audit line: the entry made
+    /// or changed, else the one asked for. The tool writes the line (`recorded`).
+    async fn change(&self, change: Change) -> (BridgeResult<Entry>, String) {
         let answer = self.lexicon().apply(&change).await;
-        let (id, outcome) = match &answer {
-            Ok(entry) => (entry.id.clone(), "ok"),
-            Err(error) => (change.record_id.clone().unwrap_or_default(), error.code()),
+        let id = match &answer {
+            Ok(entry) => entry.id.clone(),
+            Err(_) => change.record_id.clone().unwrap_or_default(),
         };
-        self.record(&subject, tool, "", &id, outcome).await?;
-        answer.map_err(refused)
+        (answer.map_err(bridge), id)
+    }
+
+    async fn resolve_for(&self, owner: &str, input: ResolveInput) -> BridgeResult<ResolveOutput> {
+        let lexicon = self.lexicon();
+        let project = input.project_id.as_deref().filter(|p| !p.trim().is_empty());
+        let mut out = ResolveOutput {
+            resolution: None,
+            found: Vec::new(),
+        };
+        match (input.phrase, input.text) {
+            (Some(phrase), None) if !phrase.trim().is_empty() => {
+                let context = input.context.unwrap_or_default();
+                out.resolution = Some(
+                    lexicon
+                        .resolve(owner, project, &phrase, &context)
+                        .await
+                        .map_err(bridge)?,
+                );
+            }
+            (None, Some(text)) => {
+                out.found = lexicon
+                    .scan(owner, project, &text, input.weak)
+                    .await
+                    .map_err(bridge)?;
+            }
+            _ => return Err(invalid("give a phrase or text, one of them")),
+        }
+        Ok(out)
+    }
+
+    /// `list` or `history`: what the review shows, changing nothing.
+    async fn review_read(&self, owner: &str, input: &ReviewInput) -> BridgeResult<ReviewOutput> {
+        let scope = scope_of(input.project_id.clone());
+        let lexicon = self.lexicon();
+        let mut out = ReviewOutput::default();
+        if let Action::List = input.action {
+            let filter = match input.filter {
+                Which::Confirmed => Filter::Confirmed,
+                Which::Reviewable => Filter::Reviewable,
+                Which::All => Filter::All,
+            };
+            out.entries = lexicon.list(owner, &scope, filter).await.map_err(bridge)?;
+        } else {
+            let id = input
+                .id
+                .as_deref()
+                .ok_or_else(|| invalid("history names the entry's id"))?;
+            out.events = lexicon.history(owner, id).await.map_err(bridge)?;
+        }
+        Ok(out)
+    }
+
+    /// A change the review makes: the change to apply, or why the arguments do not name one.
+    fn review_change(owner_id: String, input: ReviewInput) -> BridgeResult<Change> {
+        let scope = scope_of(input.project_id);
+        let operation = match input.action {
+            Action::List | Action::History => unreachable!("reads take review_read"),
+            Action::Confirm => Operation::Confirm,
+            Action::Dismiss => Operation::Dismiss,
+            Action::Retire => Operation::Retire,
+            Action::Delete => Operation::Delete,
+            Action::Revise => Operation::Revise {
+                wording: Wording {
+                    phrase: input
+                        .phrase
+                        .ok_or_else(|| invalid("revise gives the phrase, changed or not"))?,
+                    meaning: input.meaning.unwrap_or_default(),
+                    concepts: input.concepts,
+                    examples: input.examples,
+                    counterexamples: input.counterexamples,
+                },
+            },
+        };
+        let (Some(id), Some(expected), Some(request_id)) =
+            (input.id, input.expected_revision, input.request_id)
+        else {
+            return Err(invalid(
+                "a change names the entry's id, the expected_revision you read and a request_id",
+            ));
+        };
+        Ok(Change {
+            request_id,
+            owner_id,
+            provenance: provenance("user", &scope),
+            scope,
+            record_id: Some(id),
+            expected_revision: Some(expected),
+            operation,
+        })
     }
 }
 
@@ -292,8 +390,11 @@ impl Hub {
         Parameters(input): Parameters<DictionaryInput>,
         context: RequestContext<RoleServer>,
     ) -> Result<Json<DictionaryOutput>, Json<BridgeError>> {
-        self.subject(&context)?;
-        dictionary_answer(Dictionary::seed(), input).map(Json)
+        let subject = self.subject(&context)?;
+        let target = input.concept.clone().or(input.phrase.clone()).unwrap_or_default();
+        let result = dictionary_answer(Dictionary::seed(), input);
+        self.recorded(&subject, "dictionary_get", "", &target, result)
+            .await
     }
 
     #[tool(
@@ -311,32 +412,11 @@ impl Hub {
         Parameters(input): Parameters<ResolveInput>,
         context: RequestContext<RoleServer>,
     ) -> Result<Json<ResolveOutput>, Json<BridgeError>> {
-        let owner = owner_of(&self.subject(&context)?);
-        let lexicon = self.lexicon();
-        let project = input.project_id.as_deref().filter(|p| !p.trim().is_empty());
-        let mut out = ResolveOutput {
-            resolution: None,
-            found: Vec::new(),
-        };
-        match (input.phrase, input.text) {
-            (Some(phrase), None) if !phrase.trim().is_empty() => {
-                let context = input.context.unwrap_or_default();
-                out.resolution = Some(
-                    lexicon
-                        .resolve(&owner, project, &phrase, &context)
-                        .await
-                        .map_err(refused)?,
-                );
-            }
-            (None, Some(text)) => {
-                out.found = lexicon
-                    .scan(&owner, project, &text, input.weak)
-                    .await
-                    .map_err(refused)?;
-            }
-            _ => return Err(invalid("give a phrase or text, one of them")),
-        }
-        Ok(Json(out))
+        let subject = self.subject(&context)?;
+        let place = input.project_id.clone().unwrap_or_default();
+        let result = self.resolve_for(&owner_of(&subject), input).await;
+        self.recorded(&subject, "lexicon_resolve", &place, "", result)
+            .await
     }
 
     #[tool(
@@ -369,18 +449,20 @@ impl Hub {
             Start::Inconclusive => (Operation::Park { wording }, "conversation"),
             Start::Confirmed => (Operation::Define { wording }, "user"),
         };
-        let entry = self
-            .change("lexicon_propose", &context, |owner_id| Change {
-                request_id: input.request_id,
-                owner_id,
-                provenance: provenance(source, &scope),
-                scope,
-                record_id: None,
-                expected_revision: None,
-                operation,
-            })
-            .await?;
-        Ok(Json(EntryOutput { entry }))
+        let subject = self.subject(&context)?;
+        let change = Change {
+            request_id: input.request_id,
+            owner_id: owner_of(&subject),
+            provenance: provenance(source, &scope),
+            scope,
+            record_id: None,
+            expected_revision: None,
+            operation,
+        };
+        let (result, id) = self.change(change).await;
+        let result = result.map(|entry| EntryOutput { entry });
+        self.recorded(&subject, "lexicon_propose", "", &id, result)
+            .await
     }
 
     #[tool(
@@ -400,68 +482,28 @@ impl Hub {
         Parameters(input): Parameters<ReviewInput>,
         context: RequestContext<RoleServer>,
     ) -> Result<Json<ReviewOutput>, Json<BridgeError>> {
-        let scope = scope_of(input.project_id.clone());
-        let operation = match input.action {
-            Action::List | Action::History => {
-                let owner = owner_of(&self.subject(&context)?);
-                let lexicon = self.lexicon();
-                let mut out = ReviewOutput::default();
-                if let Action::List = input.action {
-                    let filter = match input.filter {
-                        Which::Confirmed => Filter::Confirmed,
-                        Which::Reviewable => Filter::Reviewable,
-                        Which::All => Filter::All,
-                    };
-                    out.entries = lexicon
-                        .list(&owner, &scope, filter)
-                        .await
-                        .map_err(refused)?;
-                } else {
-                    let id = input
-                        .id
-                        .ok_or_else(|| invalid("history names the entry's id"))?;
-                    out.events = lexicon.history(&owner, &id).await.map_err(refused)?;
+        let subject = self.subject(&context)?;
+        let owner = owner_of(&subject);
+        let asked = input.id.clone().unwrap_or_default();
+        // Every action, reads and refused arguments too, leaves one line (AU1).
+        let (result, id) = match input.action {
+            Action::List | Action::History => (self.review_read(&owner, &input).await, asked),
+            _ => match Self::review_change(owner, input) {
+                Ok(change) => {
+                    let (entry, id) = self.change(change).await;
+                    (
+                        entry.map(|entry| ReviewOutput {
+                            entry: Some(entry),
+                            ..ReviewOutput::default()
+                        }),
+                        id,
+                    )
                 }
-                return Ok(Json(out));
-            }
-            Action::Confirm => Operation::Confirm,
-            Action::Dismiss => Operation::Dismiss,
-            Action::Retire => Operation::Retire,
-            Action::Delete => Operation::Delete,
-            Action::Revise => Operation::Revise {
-                wording: Wording {
-                    phrase: input
-                        .phrase
-                        .ok_or_else(|| invalid("revise gives the phrase, changed or not"))?,
-                    meaning: input.meaning.unwrap_or_default(),
-                    concepts: input.concepts,
-                    examples: input.examples,
-                    counterexamples: input.counterexamples,
-                },
+                Err(error) => (Err(error), asked),
             },
         };
-        let (Some(id), Some(expected), Some(request_id)) =
-            (input.id, input.expected_revision, input.request_id)
-        else {
-            return Err(invalid(
-                "a change names the entry's id, the expected_revision you read and a request_id",
-            ));
-        };
-        let entry = self
-            .change("lexicon_review", &context, |owner_id| Change {
-                request_id,
-                owner_id,
-                provenance: provenance("user", &scope),
-                scope,
-                record_id: Some(id),
-                expected_revision: Some(expected),
-                operation,
-            })
-            .await?;
-        Ok(Json(ReviewOutput {
-            entry: Some(entry),
-            ..ReviewOutput::default()
-        }))
+        self.recorded(&subject, "lexicon_review", "", &id, result)
+            .await
     }
 }
 

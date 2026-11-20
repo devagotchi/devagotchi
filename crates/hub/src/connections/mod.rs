@@ -9,19 +9,16 @@
 use std::{sync::Arc, time::Duration};
 
 pub(crate) mod catalog;
+mod mcp;
 pub mod stored;
 
 use catalog::Service;
 use devagotchi_contracts::BridgeError;
-use rmcp::{
-    Json, RoleServer, handler::server::wrapper::Parameters, service::RequestContext, tool,
-    tool_router,
-};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::{identity::Sealer, identity::Subject, identity::accounts::Accounts, mcp::Hub};
+use crate::{identity::Sealer, identity::accounts::Accounts};
 
 /// The longest answer a call returns; more is cut, and says so.
 const MAX_ANSWER: usize = 256 * 1024;
@@ -37,7 +34,7 @@ pub struct Connections {
     base_override: std::sync::RwLock<Option<String>>,
 }
 
-fn refuse(code: &str, message: impl Into<String>) -> BridgeError {
+pub(super) fn refuse(code: &str, message: impl Into<String>) -> BridgeError {
     BridgeError::new(code, message)
 }
 
@@ -71,6 +68,7 @@ pub struct ConnectionsView {
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub struct CallIn {
     /// The connection's name, from `connections`.
     pub connection: String,
@@ -297,92 +295,6 @@ impl Connections {
             connections,
             add_at: format!("{}/app/connections", public_url.trim_end_matches('/')),
         })
-    }
-}
-
-impl Hub {
-    fn connections_for(&self, subject: &Subject) -> Result<(&Connections, String), BridgeError> {
-        let connections = self.connections.as_deref().ok_or_else(|| {
-            refuse(
-                "not_offered",
-                "this hub keeps no accounts, so it holds no connections",
-            )
-        })?;
-        let tenant = subject
-            .tenant
-            .clone()
-            .ok_or_else(|| refuse("not_offered", "connections belong to an account"))?;
-        Ok((connections, tenant))
-    }
-}
-
-#[tool_router(router = connections_router, vis = "pub(crate)")]
-impl Hub {
-    #[tool(
-        name = "connections",
-        description = "The outside services this account connected for you to call through the hub (Resend, Stripe, GitHub, Slack, Vercel, Supabase, Linear, OpenAI, Anthropic, Postmark, Notion), by name. You never get their keys: call one with connection_call. None yet: give the person add_at, where they add one.",
-        title = "Services you may call",
-        annotations(
-            title = "Services you may call",
-            read_only_hint = true,
-            open_world_hint = false
-        )
-    )]
-    async fn connections(
-        &self,
-        context: RequestContext<RoleServer>,
-    ) -> Result<Json<ConnectionsView>, Json<BridgeError>> {
-        let subject = self.subject(&context)?;
-        let result = match self.connections_for(&subject) {
-            Ok((connections, tenant)) => connections.view(&tenant, &self.config.public_url).await,
-            Err(error) => Err(error),
-        };
-        let outcome = result
-            .as_ref()
-            .map(|_| "ok")
-            .unwrap_or_else(|e| e.code.as_str())
-            .to_string();
-        self.record(&subject, "connections", "", "", &outcome)
-            .await?;
-        result.map(Json).map_err(Json)
-    }
-
-    #[tool(
-        name = "connection_call",
-        description = "Call an outside service through one of this account's connections (see connections): method, path on that service (like /emails), optional query and JSON body. The hub adds the key, sends it only to that service, and returns its status and answer with the key taken out. Follow the service's own API documentation for paths and bodies. Sending email, money or messages acts in the person's name: ask with approval_request first when they have not asked for it.",
-        title = "Call a connected service",
-        annotations(
-            title = "Call a connected service",
-            read_only_hint = false,
-            destructive_hint = true,
-            idempotent_hint = false,
-            open_world_hint = true
-        )
-    )]
-    async fn connection_call(
-        &self,
-        Parameters(input): Parameters<CallIn>,
-        context: RequestContext<RoleServer>,
-    ) -> Result<Json<CallAnswer>, Json<BridgeError>> {
-        let subject = self.subject(&context)?;
-        let result = match self.connections_for(&subject) {
-            Ok((connections, tenant)) => connections.call(&tenant, &input).await,
-            Err(error) => Err(error),
-        };
-        let outcome = match &result {
-            Ok(answer) => format!("http_{}", answer.status),
-            Err(error) => error.code.clone(),
-        };
-        let what = format!("{} {}", input.method.to_ascii_uppercase(), input.path);
-        self.record(
-            &subject,
-            "connection_call",
-            &input.connection,
-            &what,
-            &outcome,
-        )
-        .await?;
-        result.map(Json).map_err(Json)
     }
 }
 

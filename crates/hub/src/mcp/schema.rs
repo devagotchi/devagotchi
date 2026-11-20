@@ -20,8 +20,9 @@ pub struct Machine {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub enrolled_at: Option<u64>,
     /// The account added this machine itself ("Add a machine"); only it reaches the
-    /// machine, and it can revoke it. Left out when false, so `default` keeps it out of the
-    /// output schema's `required` (a client that checks refuses `machines` otherwise).
+    /// machine, and it can revoke it. Left out when false: `skip_serializing_if` keeps it out
+    /// of the output schema's `required` (a client that checks refuses `machines`
+    /// otherwise), and `default` lets an older answer without it deserialize.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub owned: bool,
     /// The build the machine runs, as its link said when it connected (online linked
@@ -123,9 +124,10 @@ pub struct WhoAmI {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub claim_code: Option<String>,
     /// Time left is under a seventh of the live provisional ttl (at least an hour).
-    /// `default` keeps it out of the schema's `required`, since it is left out when false:
-    /// clients check `structuredContent` against the output schema (the MCP TypeScript SDK
-    /// refuses the call otherwise).
+    /// Left out when false: `skip_serializing_if` keeps it out of the schema's `required`,
+    /// since clients check `structuredContent` against the output schema (the MCP
+    /// TypeScript SDK refuses the call otherwise); `default` lets an older answer
+    /// deserialize.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub provisional_warning: bool,
     /// `{public_url}/claim?code=…` while the account is provisional.
@@ -166,7 +168,8 @@ pub struct WhoAmI {
     /// for, then its organisations' projects as `<org>/<project>`.
     pub boards: Vec<String>,
     /// The organisations of this hub the subject belongs to, with its role in each.
-    /// `default` keeps it out of the schema's `required`: it is left out when empty.
+    /// Left out when empty: `skip_serializing_if` keeps it out of the schema's `required`,
+    /// and `default` lets an older answer deserialize.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub orgs: Vec<OrgRole>,
 }

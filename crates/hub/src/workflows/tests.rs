@@ -641,7 +641,7 @@ async fn another_account_reaches_nothing_of_a_workflow_through_its_ai() {
         for (tool, arguments) in [
             ("workflow_status", json!({ "id": id })),
             ("workflow_cancel", json!({ "id": id })),
-            ("workflow_wait", json!({ "id": id, "timeout_secs": 1 })),
+            ("workflow_wait", json!({ "id": id, "timeout_seconds": 1 })),
         ] {
             let answer = hub.call(&mut bob, tool, arguments).await;
             assert_eq!(answer["isError"], true, "{tool}: {answer}");
@@ -1088,7 +1088,7 @@ async fn each_step_kind_is_done_when_the_hub_sees_it_and_a_wait_returns_the_mome
                 &hub,
                 &mut person,
                 "workflow_wait",
-                json!({ "id": id, "timeout_secs": 60 })
+                json!({ "id": id, "timeout_seconds": 60 })
             ),
             async {
                 tokio::time::sleep(Duration::from_millis(300)).await;
@@ -1121,7 +1121,7 @@ async fn each_step_kind_is_done_when_the_hub_sees_it_and_a_wait_returns_the_mome
                 &hub,
                 &mut person,
                 "workflow_wait",
-                json!({ "id": id, "timeout_secs": 60 })
+                json!({ "id": id, "timeout_seconds": 60 })
             ),
             async {
                 tokio::time::sleep(Duration::from_millis(300)).await;
@@ -1155,7 +1155,7 @@ async fn each_step_kind_is_done_when_the_hub_sees_it_and_a_wait_returns_the_mome
             &hub,
             &mut person,
             "workflow_wait",
-            json!({ "id": id, "timeout_secs": 60 }),
+            json!({ "id": id, "timeout_seconds": 60 }),
         )
         .await;
         assert!(at.elapsed() < Duration::from_secs(10), "{:?}", at.elapsed());
@@ -1174,7 +1174,7 @@ async fn each_step_kind_is_done_when_the_hub_sees_it_and_a_wait_returns_the_mome
             &hub,
             &mut person,
             "workflow_wait",
-            json!({ "id": open["id"], "timeout_secs": 1 }),
+            json!({ "id": open["id"], "timeout_seconds": 1 }),
         )
         .await;
         assert!(at.elapsed() >= Duration::from_secs(1));
@@ -1575,7 +1575,7 @@ async fn an_ai_client_step_is_done_when_a_client_of_its_family_calls_for_the_ten
                 &hub,
                 &mut claude,
                 "workflow_wait",
-                json!({ "id": id, "timeout_secs": 60 })
+                json!({ "id": id, "timeout_seconds": 60 })
             ),
             async {
                 tokio::time::sleep(Duration::from_millis(300)).await;
