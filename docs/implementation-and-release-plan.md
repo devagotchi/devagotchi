@@ -8,9 +8,14 @@ AI development/capture execution is tracked in the
 [linked task plan](../.ai/dev/plans/ai-development-capture.md); it does not replace this
 product plan or turn local session capture into hosted project transcript synchronization.
 
-Delivery decision: finish a complete self-hosted Devagotchi release first, then create and
-build the separate private commercial WardenMesh repository. The commercial repository
-does not exist yet. Do not create it or copy code into it as an incidental planning action.
+Delivery decision (clarified 2026-11-20): first integrate branch work into `main` and finish
+the GitHub self-hosted / indie release: one environment with its owner and local users,
+without multiple customer tenants. Test that edition in Docker during development. Then
+build the separate optimized commercial public offering with a free tier. The current
+repository boundary is [editions](../.ai/docs/editions.md), which records the private
+`shippinAI/devagotchi-cloud` repository; the older claim here that it did not exist is stale.
+The current acceptance and integration receipt is
+[release readiness](../.ai/dev/plans/v0.1-release-readiness.md#self-hosted-baseline-2026-11-20).
 
 This is the execution checklist for the user's issue-lifecycle, collaboration, connector,
 desktop-competitor, benchmark and commercial-hosting request. It replaces the speculative

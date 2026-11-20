@@ -35,6 +35,44 @@ each one once while signed in, and the hub issues and checks their tokens itself
 the hub's `/device` page, signed in to your account, and the CLI (and `devagotchi mcp --hub`)
 works as your account.
 
+## Development acceptance
+
+During development, test the self-hosted edition: one environment with its owner and local
+users. Set `DEVAGOTCHI_HUB_TENANCY=single` explicitly in this deployment's `.env`; do not use
+`multi` to make local users available. With the installer, pass `--tenancy single` explicitly:
+reruns otherwise preserve a previous hosted setting. Keep existing data and accounts; do
+not repurpose a populated multi-tenant deployment by simply flipping this setting. Use a
+separate Compose project and volumes for the self-hosted development instance in that case.
+
+Use an image built from the integrated `main` revision and record its resolved digest and
+source commit. An image tagged `main` alone is not a record of which build was tested.
+Development credentials are supplied by the operator for that instance. They are not image
+defaults and are not committed in `.env.example`, Compose, source, logs or release assets.
+
+On a fresh deployment, use the claim flow above and choose the local email/password option.
+For an existing owner, `hub owner` prints a one-time setup link; open it to set the requested
+local login through the normal account flow. To reset a known existing account from the
+host, use `hub set-password --password-stdin` with its actual account ID. Do not put the
+password in command arguments. `hub test-accounts` rotates both test accounts' passwords;
+it is not an idempotent bootstrap command and is not run automatically at startup.
+
+Record the following on the running self-hosted build:
+
+1. `/healthz`, source SHA and image digest; deployment is in single mode with hub accounts.
+2. Owner login, logout and login again; normal authentication remains enabled.
+3. A second local user belongs to the same environment. Granted resources work; owner-only
+   settings and ungranted resources are refused. Disabling the user removes its access.
+4. Customer tenant provisioning, hosted operator and billing surfaces are unavailable,
+   including their API and MCP paths, not merely hidden navigation.
+5. Restart the containers without removing volumes. Credentials, users, grants, machines
+   and boards remain; startup has not reset the password.
+6. Link a machine and use a supported AI client against this hub, then exercise a board
+   workflow from the desktop and phone.
+
+These are acceptance requirements. The local-user administration and build separation are
+still incomplete; the existing test-account command alone does not satisfy them. Track
+results in [release readiness](../../.ai/dev/plans/v0.1-release-readiness.md#self-hosted-baseline-2026-11-20).
+
 ## Connect a GitHub issue repository to the shared board
 
 After claiming the hub, set these optional JSON values in `.env` (examples are in
