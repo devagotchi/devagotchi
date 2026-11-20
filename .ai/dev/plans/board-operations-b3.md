@@ -3,7 +3,8 @@
 - Contract: DG-DELIVERY-1; stage: read [project.json](../../project.json)
 - Issue / request: the operator, 2026-11-19: carry out the rewrite plan batch by batch, B3 next
   ([rewrite](rewrite.md), B3).
-- PR: not_created (an agenthub PR first, then this repository's PR with the submodule bump)
+- PR: agenthub: the store work went to its main directly (`d149bdc`, `3866d18`, the operator's
+  push), then devagotchi/agenthub#8 (`f4af7f9`, formatting). This repository: not_created.
 - Branch / baseline: `increment-273/board-operations` in both repositories, from devagotchi
   main `3e2e5b9` and agenthub main `5c1499c`.
 - Objective: every board operation is one transaction with one event per action, every surface
@@ -57,7 +58,21 @@ Also in this batch, found on the way:
 
 ## Verification receipts
 
-Recorded at validation (M10).
+2026-11-19, Windows 11, devagotchi at this branch with `crates/agenthub` at `f4af7f9`:
+
+- `cargo fmt --all -- --check`: clean. `cargo build --locked --bins`: ok.
+- `cargo test --workspace --features devagotchi-store/testing` with
+  `DEVAGOTCHI_TEST_REQUIRE_POSTGRES=1` on the test Postgres: 32 binaries, 861 passed, 0
+  failed, nothing skipped.
+- `python tests/e2e.py` on a fresh database: E2E PASSED, including the board probe (three
+  subscriptions on one board, reading the new `{tickets}`, `{events}` and `{deps}` answers),
+  the signals probe (the board sink on `events_page`) and the orgs probe.
+- AgentHub alone (`cargo test -p devagotchi-agenthub`): 87 passed. Its own CI, `test
+  (postgres)`, passed on `3866d18` and on #8.
+- Not run here: `tests/app_browser.py` (the approvals page and ticket actions in Chrome) stages
+  the Linux installer through bash and runs only on Linux; CI's `ubuntu-24.04` job runs it.
+- Found while validating: the web tests' world configures a broker named `lab`, so the
+  add-a-machine test's machine is `studio`.
 
 ## Delivery
 

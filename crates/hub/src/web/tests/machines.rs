@@ -15,7 +15,7 @@ async fn a_person_adds_a_machine_of_their_own_and_revokes_it() {
             .header("sec-fetch-site", site)
             .form(&[("name", name)])
     };
-    let refused = post("/machines/add", &other, "cross-site", "lab")
+    let refused = post("/machines/add", &other, "cross-site", "studio")
         .send()
         .await
         .unwrap();
@@ -25,7 +25,7 @@ async fn a_person_adds_a_machine_of_their_own_and_revokes_it() {
         "another site cannot mint codes"
     );
 
-    let page = post("/machines/add", &other, "same-origin", "Lab")
+    let page = post("/machines/add", &other, "same-origin", "Studio")
         .send()
         .await
         .unwrap();
@@ -37,7 +37,7 @@ async fn a_person_adds_a_machine_of_their_own_and_revokes_it() {
         .find(|word| word.starts_with("dvg-") && word.len() == 36)
         .expect("the code is on the page")
         .to_string();
-    assert!(body.contains("Add lab") && body.contains("--device lab"));
+    assert!(body.contains("Add studio") && body.contains("--device studio"));
     // A configured broker's name and an impossible name get no code.
     for name in ["gus", "no spaces"] {
         let taken = post("/machines/add", &other, "same-origin", name)
@@ -50,7 +50,7 @@ async fn a_person_adds_a_machine_of_their_own_and_revokes_it() {
     // The machine enrolls with the code (the link's own tests cover the handshake).
     let devices = w.devices.clone();
     devices
-        .enroll("lab", &code, "lab-key", false)
+        .enroll("studio", &code, "studio-key", false)
         .await
         .unwrap();
     let mine: Value = w
@@ -64,7 +64,7 @@ async fn a_person_adds_a_machine_of_their_own_and_revokes_it() {
             .as_array()
             .unwrap()
             .iter()
-            .any(|m| m["name"] == "lab" && m["owned"] == true && m["status"] == "offline"),
+            .any(|m| m["name"] == "studio" && m["owned"] == true && m["status"] == "offline"),
         "{mine}"
     );
     // It is that account's alone: not even the hub's owner sees or reaches it.
@@ -74,7 +74,7 @@ async fn a_person_adds_a_machine_of_their_own_and_revokes_it() {
         .json()
         .await
         .unwrap();
-    assert!(!theirs.to_string().contains("lab"), "{theirs}");
+    assert!(!theirs.to_string().contains("studio"), "{theirs}");
     let subject = |id: &str| crate::identity::Subject {
         id: id.into(),
         via: "dev",
@@ -89,12 +89,12 @@ async fn a_person_adds_a_machine_of_their_own_and_revokes_it() {
         access: None,
     };
     assert!(matches!(
-        w.hub.route(&subject(OTHER), "lab").await,
-        Ok(crate::mcp::Route::Link(name)) if name == "lab"
+        w.hub.route(&subject(OTHER), "studio").await,
+        Ok(crate::mcp::Route::Link(name)) if name == "studio"
     ));
     assert_eq!(
         w.hub
-            .route(&subject(OWNER), "lab")
+            .route(&subject(OWNER), "studio")
             .await
             .err()
             .unwrap()
@@ -104,25 +104,25 @@ async fn a_person_adds_a_machine_of_their_own_and_revokes_it() {
     );
 
     // Only its owner revokes it, and only from this hub's page.
-    let not_theirs = post("/machines/revoke", &owner, "same-origin", "lab")
+    let not_theirs = post("/machines/revoke", &owner, "same-origin", "studio")
         .send()
         .await
         .unwrap();
     assert_eq!(not_theirs.status(), StatusCode::CONFLICT);
-    let cross = post("/machines/revoke", &other, "cross-site", "lab")
+    let cross = post("/machines/revoke", &other, "cross-site", "studio")
         .send()
         .await
         .unwrap();
     assert_eq!(cross.status(), StatusCode::FORBIDDEN);
-    let revoked = post("/machines/revoke", &other, "same-origin", "lab")
+    let revoked = post("/machines/revoke", &other, "same-origin", "studio")
         .send()
         .await
         .unwrap();
     assert_eq!(revoked.status(), StatusCode::SEE_OTHER);
-    assert!(devices.is_revoked("lab").await.unwrap());
+    assert!(devices.is_revoked("studio").await.unwrap());
     let html = w.get("/account", Some(&other)).await.text().await.unwrap();
     assert!(
-        html.contains("<tr id=\"lab\">") && html.contains("Revoked"),
+        html.contains("<tr id=\"studio\">") && html.contains("Revoked"),
         "{html}"
     );
     // Machines, codes and phones are kept in the hub's Postgres (free-edition R3), never a file.
@@ -159,7 +159,7 @@ async fn the_one_line_joins_once_and_downloads_only_what_the_hub_vouches_for() {
         .post(format!("{}/machines/add", w.url))
         .header(header::COOKIE, &other)
         .header("sec-fetch-site", "same-origin")
-        .form(&[("name", "lab")])
+        .form(&[("name", "studio")])
         .send()
         .await
         .unwrap()
@@ -186,7 +186,7 @@ async fn the_one_line_joins_once_and_downloads_only_what_the_hub_vouches_for() {
         assert_eq!(script.status(), StatusCode::OK);
         assert_eq!(script.headers()[header::CACHE_CONTROL], "no-store");
         let text = script.text().await.unwrap();
-        assert!(text.contains("device='lab'") && text.contains("version='main-test123'"));
+        assert!(text.contains("device='studio'") && text.contains("version='main-test123'"));
         assert!(
             text.contains(
                 downloads
@@ -201,7 +201,7 @@ async fn the_one_line_joins_once_and_downloads_only_what_the_hub_vouches_for() {
         .text()
         .await
         .unwrap();
-    assert!(ps.contains("$device = 'lab'"), "{ps}");
+    assert!(ps.contains("$device = 'studio'"), "{ps}");
     // A build never published as an image has no Docker machine to hand out, and says so.
     let docker = w.get(&format!("/join/{code}.compose.yml"), None).await;
     assert_eq!(docker.status(), StatusCode::CONFLICT);
@@ -235,7 +235,7 @@ async fn the_one_line_joins_once_and_downloads_only_what_the_hub_vouches_for() {
     // Enrolling spends it; the same line then only says so.
     let devices = w.devices.clone();
     devices
-        .enroll("lab", &code, "lab-key", false)
+        .enroll("studio", &code, "studio-key", false)
         .await
         .unwrap();
     let spent = w
