@@ -83,7 +83,13 @@ impl Hub {
             ),
             Err(_) => format!("{} {}", input.method.to_ascii_uppercase(), input.path),
         };
-        self.recorded(&subject, "connection_call", &input.connection, &what, result)
-            .await
+        self.recorded(
+            &subject,
+            "connection_call",
+            &input.connection,
+            &what,
+            result,
+        )
+        .await
     }
 }

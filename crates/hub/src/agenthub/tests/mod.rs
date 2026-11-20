@@ -1,4 +1,5 @@
 mod ahead;
+mod audited;
 mod hosted;
 mod notes;
 mod scanned;

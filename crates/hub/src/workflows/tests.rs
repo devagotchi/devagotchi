@@ -1313,7 +1313,11 @@ async fn a_waiting_tenant_gets_the_early_access_message() {
     ] {
         let answer = hub.call(&mut person, tool, arguments).await;
         assert_eq!(answer["isError"], true, "{tool}");
-        assert_eq!(answer["content"][0]["text"], note.as_str(), "{tool}");
+        assert_eq!(
+            answer["structuredContent"],
+            json!({ "code": "early_access", "message": note }),
+            "{tool}"
+        );
     }
 }
 

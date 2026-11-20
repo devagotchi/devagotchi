@@ -391,7 +391,11 @@ impl Hub {
         context: RequestContext<RoleServer>,
     ) -> Result<Json<DictionaryOutput>, Json<BridgeError>> {
         let subject = self.subject(&context)?;
-        let target = input.concept.clone().or(input.phrase.clone()).unwrap_or_default();
+        let target = input
+            .concept
+            .clone()
+            .or(input.phrase.clone())
+            .unwrap_or_default();
         let result = dictionary_answer(Dictionary::seed(), input);
         self.recorded(&subject, "dictionary_get", "", &target, result)
             .await

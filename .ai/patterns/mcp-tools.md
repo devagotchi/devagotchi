@@ -337,9 +337,10 @@ Test shape is [G13][shared]. A new tool is covered at four levels:
 
 ## The mechanical check
 
-Every check is a ratchet ([G12][shared]). The checks land green with the rewrites they guard;
-until a family is fixed it sits on a shrinking `NOT_YET` list of `(tool, rule)` pairs, which only
-loses entries and is deleted when B4 is done.
+Every check is a ratchet ([G12][shared]). The checks landed green with the rewrites they guard;
+the shrinking `NOT_YET` lists of `(tool, rule)` pairs that held the families not yet fixed
+(`tools-not-yet.txt`, `audit-not-yet.txt`) were emptied and deleted in B4: every hub tool now
+passes every check, with no exception.
 
 | Check | Holds | Lives in |
 |---|---|---|
@@ -494,7 +495,7 @@ it is in brackets.
 - `crates/hub/src/workflows/mcp.rs` (`WaitIn.timeout_secs`, and the `workflow_wait`
   description): the only seconds argument spelt `_secs` -> rename to `timeout_seconds` (same
   unit, range and default); update the description and `crates/hub/src/workflows/tests.rs`;
-  note it in the changelog. [B4]
+  note it in the changelog. [B4, done]
 - The `broker` name: see I5. [B1]
 
 ### T1 title equals annotations.title
@@ -519,9 +520,9 @@ it is in brackets.
   the machine restarts and, with `force`, running jobs end -> `destructive_hint = true`. [B1]
 - `crates/hub/src/workflows/mcp.rs` (`workflow_start`): no `idempotent_hint`, and
   `destructive_hint = false` though starting again replaces the earlier link ->
-  `destructive_hint = true, idempotent_hint = false`. [B4]
+  `destructive_hint = true, idempotent_hint = false`. [B4, done]
 - `crates/hub/src/workflows/mcp.rs` (`workflow_cancel`): `destructive_hint = false` though the
-  link stops working at once -> `destructive_hint = true`. [B4]
+  link stops working at once -> `destructive_hint = true`. [B4, done]
 - `crates/hub/src/agenthub/mcp/tools/settings.rs` (`board_settings`): `destructive_hint =
   false`, but it replaces the board's repo and environments -> `destructive_hint = true`. [B3, done]
 
@@ -534,10 +535,10 @@ it is in brackets.
 - `crates/hub/src/mcp/schema.rs` (`MachineAdd`, `MachineUpdate`): open -> add
   `deny_unknown_fields`. [B1]
 - `crates/hub/src/connections/mod.rs` (`CallIn`): open; a misspelt `body` or `query` is dropped
-  and the request still goes out in the person's name -> add `deny_unknown_fields`. [B4]
+  and the request still goes out in the person's name -> add `deny_unknown_fields`. [B4, done]
 - `crates/hub/src/kernel/mcp.rs` (`DictionaryInput`, `ResolveInput`, `ProposeInput`,
   `ReviewInput`) and `crates/hub/src/kernel/handoff.rs` (`HandoffInput`): open -> add
-  `deny_unknown_fields`. [B4]
+  `deny_unknown_fields`. [B4, done]
 - The routed operation structs: see I5. [B1]
 
 ### I2 every input field documented
@@ -554,7 +555,7 @@ it is in brackets.
 - `crates/hub/src/kernel/mcp.rs` (`ProposeInput`: `phrase`, `examples`, `counterexamples`,
   `start`; `ReviewInput`: `action`, `filter`, `phrase`, `meaning`, `concepts`, `examples`,
   `counterexamples`) and `crates/hub/src/kernel/handoff.rs` (`HandoffInput.action`): no `///`
-  -> document each; on `action`, list the allowed steps. [B4]
+  -> document each; on `action`, list the allowed steps. [B4, done]
 - `crates/contracts/src/lib.rs` (`operation_id` on `GetInput`, `WaitInput`, `ReadInput`;
   `ListInput.offset`, `ListInput.limit`), `crates/contracts/src/interactive.rs` (`operation_id`
   on `SendInput`, `ResizeInput`; `InteractiveInput.mode`), `crates/contracts/src/files.rs`
@@ -601,7 +602,7 @@ it is in brackets.
 
 - `crates/hub/src/mcp/schema.rs` (the `WhoAmI` and `Machine` field comments): they say
   `default` keeps a field out of `required`; under rmcp 3.9 it is `skip_serializing_if` -> "skip_serializing_if
-  keeps it out of the output schema's required; default lets an old answer deserialize". [B4]
+  keeps it out of the output schema's required; default lets an old answer deserialize". [B4, done]
 
 ### E2 protocol errors and refusals around the tools
 
@@ -614,7 +615,7 @@ it is in brackets.
   `CallToolResult::error`, no `structuredContent.code`; the doc on `waiting_result` justifies it
   by a client misreading the success schema, which the TS SDK does not do ->
   `CallToolResult::structured_error` of the `BridgeError` (`waiting_refusal` already builds it),
-  and correct the doc. [B4]
+  and correct the doc. [B4, done]
 
 ### AU1 every hub call audited, true outcome, no early return
 
@@ -625,7 +626,7 @@ it is in brackets.
   `crates/hub/src/kernel/mcp.rs` (`dictionary_get`, `lexicon_resolve`; `lexicon_review`'s list
   and history, which `return Ok` before `change`), `crates/hub/src/kernel/handoff.rs`
   (`lexicon_handoff`, which skips `Status` and `Preview`): reads with no audit line -> record
-  each with `ok` or the code. [B1 for whoami and machines; B4 for the kernel]
+  each with `ok` or the code. [B1 for whoami and machines; B4 for the kernel, done]
 - `crates/hub/src/machines/run.rs` (`run`, `shared::bounded(..).map_err(Json)?`): an
   out-of-range `wait_seconds` or `timeout_seconds` returns before any audit line -> record the
   code, then refuse, as the route refusal does. [B1]
@@ -656,17 +657,17 @@ it is in brackets.
   `board_call_scoped` variant. [B3, done]
 - `crates/hub/src/kernel/mcp.rs` (`lexicon_review`, `invalid(..)?` and `return
   Err(invalid(..))`): argument refusals before `change` audits -> build the change as a
-  `Result` and pass refusals through the same record. [B4]
+  `Result` and pass refusals through the same record. [B4, done]
 - `crates/hub/src/workflows/mcp.rs` (`workflow_cancel`, `self.workflows().map_err(Json)?`): an
   unreachable `?` before `record_workflow` (`own_workflow` refuses first, audited); only the
-  shape is off -> use the `Workflows` already reached, or a match arm. [B4]
+  shape is off -> use the `Workflows` already reached, or a match arm. [B4, done]
 - `crates/hub/src/connections/mod.rs` (`connection_call`, outcome `http_<status>`),
   `crates/hub/src/agenthub/mcp/tools/settings.rs` (`board_bind`, outcome `created`, at both
   sites), `crates/hub/src/agenthub/mcp/tools/messages.rs` (`approval_wait`, outcome
   `approved`/`denied`/`pending`): outcomes outside the vocabulary, so `get_usage_stats` counts
   these successes as failures -> outcome `ok`; method, path and status, or id and status, go in
   the target; `board_bind` still fires its milestone from `bound.created`. [B3 for board, done; B4 for
-  connections]
+  connections, done]
 - `crates/hub/src/workflows/mcp.rs` (`record_workflow`), `crates/hub/src/offers/mcp.rs`
   (`record_offers`), `crates/hub/src/connections/mod.rs` (inline in `connections` and
   `connection_call`), `crates/hub/src/kernel/mcp.rs` (`change`),
@@ -719,7 +720,7 @@ it is in brackets.
 
 - `crates/hub/src/connections/mod.rs` (`connections_router`: `connections`,
   `connection_call`, `CallIn`, `CallAnswer`, `ConnectionsView`, `connections_for`): tools in a
-  front door -> move to `crates/hub/src/connections/mcp.rs`. [B4]
+  front door -> move to `crates/hub/src/connections/mcp.rs`. [B4, done]
 - `crates/hub/src/mcp/callers/mod.rs` (`operation_list`, `operation_input`,
   `operation_resize`) and `crates/hub/src/mcp/tools/operations.rs` (the other five
   `operation_*`): machine tools outside the machines domain, three of them in a front door ->

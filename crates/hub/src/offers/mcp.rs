@@ -276,7 +276,13 @@ impl Hub {
     ) -> Result<Json<Accepted>, Json<BridgeError>> {
         let subject = self.subject(&context)?;
         let result = self.accept(&subject, &input.consent).await;
-        self.recorded(&subject, "offers_accept", "", "", result.map_err(|Json(e)| e))
-            .await
+        self.recorded(
+            &subject,
+            "offers_accept",
+            "",
+            "",
+            result.map_err(|Json(e)| e),
+        )
+        .await
     }
 }

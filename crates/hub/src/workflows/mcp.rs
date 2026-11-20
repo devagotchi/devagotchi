@@ -150,7 +150,6 @@ impl Hub {
             _ => Err(not_found()),
         }
     }
-
 }
 
 /// A workflow result as `Hub::recorded` takes it.
@@ -305,7 +304,10 @@ impl Hub {
         context: RequestContext<RoleServer>,
     ) -> Result<Json<Cancelled>, Json<BridgeError>> {
         let subject = self.subject(&context)?;
-        let result = match (self.own_workflow(&subject, &input.id).await, self.workflows()) {
+        let result = match (
+            self.own_workflow(&subject, &input.id).await,
+            self.workflows(),
+        ) {
             (Ok(row), Ok(workflows)) => {
                 let cancelled = workflows
                     .accounts()

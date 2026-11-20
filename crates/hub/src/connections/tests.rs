@@ -183,6 +183,28 @@ async fn run(store: Option<&str>) {
     assert_eq!(answer["status"], 200, "{answer}");
     assert_eq!(answer["body"]["auth"], "Bearer [redacted]");
     assert_eq!(answer["body"]["path"], "/emails?dry+run=yes");
+    // One audit line, outcome `ok`; the method, path and the service's status in the target
+    // (AU1: a call made is never counted a failure).
+    let whoami = hub.call(&mut alice, "whoami", json!({})).await;
+    let subject = whoami["structuredContent"]["subject"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    let (lines, matched) = hub
+        .hub
+        .audit
+        .calls_of(&subject, Some("connection_call"), None, 10)
+        .await
+        .unwrap();
+    assert_eq!(matched, 1, "{lines:?}");
+    assert_eq!(
+        (
+            lines[0].outcome.as_str(),
+            lines[0].operation_id.as_str(),
+            lines[0].broker.as_str()
+        ),
+        ("ok", "POST /emails 200", "resend")
+    );
     assert!(
         answer["body"]["body"]
             .as_str()

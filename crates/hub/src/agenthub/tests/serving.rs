@@ -25,6 +25,15 @@ pub(crate) async fn hub(dir: &Path) -> Option<String> {
 
 /// The hub, with `extra` merged into its config and more dev tokens.
 pub(crate) async fn hub_with(dir: &Path, extra: Value, tokens: &[(&str, &str)]) -> Option<String> {
+    Some(hub_audited(dir, extra, tokens).await?.0)
+}
+
+/// [`hub_with`], and the audit chain it writes, for a test that reads the lines a call left.
+pub(crate) async fn hub_audited(
+    dir: &Path,
+    extra: Value,
+    tokens: &[(&str, &str)],
+) -> Option<(String, std::sync::Arc<crate::ops::audit::Audit>)> {
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let url = format!("http://{}", listener.local_addr().unwrap());
     let mut value = json!({
@@ -59,7 +68,7 @@ pub(crate) async fn hub_with(dir: &Path, extra: Value, tokens: &[(&str, &str)]) 
             push: None,
             boards: Arc::new(crate::agenthub::mcp::Boards::new(&config, store).unwrap()),
             config,
-            audit,
+            audit: audit.clone(),
             links,
         },
         issue_store: Arc::new(crate::agenthub::issue_lifecycle::IssueLifecycleStore::disabled()),
@@ -68,7 +77,7 @@ pub(crate) async fn hub_with(dir: &Path, extra: Value, tokens: &[(&str, &str)]) 
     };
     let app = crate::serve::app(state);
     tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
-    Some(url)
+    Some((url, audit))
 }
 
 /// `path` holds a signed-in account: [`MEMBER`], with `token`.
@@ -119,6 +128,17 @@ pub(crate) fn run(
 /// One tool call over MCP as `token`, in a session of its own: initialize, then the call;
 /// its `result`.
 pub(crate) async fn tool(url: &str, token: &str, name: &str, arguments: Value) -> Value {
+    tool_as(url, token, None, name, arguments).await
+}
+
+/// [`tool`], naming a seat (`X-Devagotchi-Seat`) when `seat` is given.
+pub(crate) async fn tool_as(
+    url: &str,
+    token: &str,
+    seat: Option<&str>,
+    name: &str,
+    arguments: Value,
+) -> Value {
     let http = reqwest::Client::new();
     let post = |body: Value, session: Option<&str>| {
         let mut request = http
@@ -126,6 +146,9 @@ pub(crate) async fn tool(url: &str, token: &str, name: &str, arguments: Value) -
             .bearer_auth(token)
             .header("accept", "application/json, text/event-stream")
             .json(&body);
+        if let Some(seat) = seat {
+            request = request.header(crate::agenthub::mcp::SEAT_HEADER, seat);
+        }
         if let Some(session) = session {
             request = request.header("mcp-session-id", session);
         }

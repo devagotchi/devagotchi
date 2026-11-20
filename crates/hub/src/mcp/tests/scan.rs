@@ -1,4 +1,5 @@
-//! Registration and audit ratchet over actual source, before routers can hide duplicates.
+//! Registration and audit over actual source, before routers can hide duplicates: every tool
+//! name once, and every tool body reaching its audit helper (no exceptions since B4).
 use std::collections::BTreeSet;
 
 #[test]
@@ -42,13 +43,11 @@ fn tool_names_are_unique_and_every_body_reaches_its_audit_owner() {
     let served: BTreeSet<_> = crate::mcp::tool_names().into_iter().collect();
     assert_eq!(names, served);
     broken.sort();
-    let expected: Vec<_> = include_str!("audit-not-yet.txt")
-        .lines()
-        .filter(|s| !s.is_empty())
-        .map(str::to_owned)
-        .collect();
-    assert_eq!(
-        broken, expected,
-        "Only the recorded B3/B4 audit gaps remain; remove fixed entries."
+    assert!(
+        broken.is_empty(),
+        "every tool body reaches its audit owner (AU1):
+  {}",
+        broken.join("
+  ")
     );
 }

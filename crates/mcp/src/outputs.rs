@@ -112,7 +112,7 @@ pub fn boolean_schemas(schema: &Value) -> Vec<String> {
         for (keyword, rule) in rules {
             let here = format!("{path}/{keyword}");
             let keyword = keyword.as_str();
-            let mut check = |each: &Value, at: String, found: &mut Vec<String>| {
+            let check = |each: &Value, at: String, found: &mut Vec<String>| {
                 if each.is_boolean() {
                     found.push(at);
                 } else {
