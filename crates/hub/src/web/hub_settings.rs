@@ -213,7 +213,7 @@ pub async fn page(
     };
     let live = |group| hub_settings_live::card(&state, group);
     // Visits are counted only on a hosted hub, so only its owner sees how long they are kept.
-    // A one-user hub manages no other people: no People section, no chip for it (`one_user`).
+    // A single environment offers local users; organizations remain on hosted hubs.
     let (visits, people_chip, people) = if state.hub.config.multi_tenant() {
         let orgs = row(
             "Organisations",
@@ -222,14 +222,14 @@ pub async fn page(
         );
         (
             live(Group::Analytics),
-            "<a class=\"chip\" href=\"#people\">People</a>",
+            "<a class=\"chip\" href=\"#people\">People</a>".to_string(),
             format!(
                 "<section class=\"card\" id=\"people\"><h2>People</h2>{}<ul class=\"rows\">{orgs}</ul></section>",
                 live(Group::SignUp)
             ),
         )
     } else {
-        (String::new(), "", String::new())
+        super::people::section()
     };
     let clients = format!("{} clients", devagotchi_connectors::all().len());
     let body = format!(

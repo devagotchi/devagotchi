@@ -45,3 +45,14 @@ passed. Edge owner/user workflows passed board creation/search and both audit vi
 including filters, verification, live refresh, edited filters retained after blur, and
 ordinary-user denial of hub history. Desktop and phone layouts had no horizontal overflow.
 Linux boundary, ClickHouse, deployment and all platform jobs remain PR CI gates.
+
+Delivery update: PR #275 merged as `e01c7b2c7dcad5e7cb1005ac2346ec431f8ae0b1` after
+all 18 PR checks passed. Local and remote feature branches were deleted. Official release
+image build and Docker acceptance are tracked separately; the full oldest source remains open.
+
+Official Release 44816164363 passed. Docker development now runs the verified e01c7b2
+image at digest `sha256:5d2b0116456465cfb86d202a72fefe0e27222a9bc2288ef5021eecc061c70853`.
+Both existing users passed login/logout, same-environment boundaries and restart persistence.
+Edge passed board creation/dependencies/search/audit plus owner global activity filters,
+verification, live updates and draft preservation; ordinary-user global access returned 404.
+No data volumes were replaced and no credentials were reseeded.

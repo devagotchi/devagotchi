@@ -87,6 +87,7 @@ mod pages;
 #[cfg(test)]
 mod passkey_tests;
 mod passkeys;
+mod people;
 mod providers;
 mod public;
 mod routes;

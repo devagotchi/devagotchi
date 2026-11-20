@@ -403,6 +403,36 @@
       "via": "Connection",
       "operation": "Operation",
       "broken": "The history integrity check failed. Recorded entries may have been changed."
+    },
+    "people": {
+      "title": "Local users",
+      "description": "People who can sign in to this environment. Only its owner can manage users.",
+      "manage": "Manage users",
+      "add": "Add a user",
+      "name": "Display name",
+      "email": "Sign-in email",
+      "password": "Password",
+      "password_help": "Use at least {min} characters. Give the password to the user privately.",
+      "create": "Create user",
+      "save": "Save changes",
+      "enabled": "Access enabled",
+      "active": "Enabled",
+      "disabled": "Disabled",
+      "owner": "Owner",
+      "user": "User",
+      "back": "All users",
+      "settings": "Hub settings",
+      "more": "More users",
+      "reset": "Reset password",
+      "reset_help": "The user will need to sign in again. Browser sessions and AI sign-ins will end. API keys remain active.",
+      "external": "This user signs in through another method and has no local password.",
+      "empty": "No users match this page.",
+      "created": "User created. They can sign in now.",
+      "updated": "User saved.",
+      "reset_done": "Password reset. The user can sign in with the new password.",
+      "refused": "The change was not saved.",
+      "edit": "Edit user",
+      "access_help": "Turning off access signs the user out and revokes their API keys. Turning it on requires fresh sign-in and new keys."
     }
   }
 }
