@@ -178,13 +178,10 @@ try:
     # token's subject names its org after an @.
     org_tokens = {who: f"e2e-{who}-" + os.urandom(12).hex() for who in ("alice", "bob", "carol")}
     org_of = {"alice": "e2e-acme", "bob": "e2e-acme", "carol": "e2e-other"}
-    # Two people with no grants for the hub's own organisations (tests/orgs_probe.py).
-    team_tokens = {who: f"e2e-{who}-" + os.urandom(12).hex() for who in ("ann", "ben")}
     tokens = work / "tokens.json"
     tokens.write_text(json.dumps({token: "e2e-operator",
                                   **{t: f"e2e-{who}" for who, t in board_tokens.items()},
-                                  **{t: f"e2e-{who}@{org_of[who]}" for who, t in org_tokens.items()},
-                                  **{t: f"e2e-{who}" for who, t in team_tokens.items()}}))
+                                  **{t: f"e2e-{who}@{org_of[who]}" for who, t in org_tokens.items()}}))
     if os.name != "nt":
         tokens.chmod(0o600)
     # One project's board on the hub's host, initialised the way an operator would.
@@ -245,8 +242,7 @@ try:
         print("--- analytics probe: skipped (needs --clickhouse-container and DEVAGOTCHI_CLICKHOUSE_URL)", flush=True)
         analytics_ok = True
     orgs_ok = run_probe(
-        [str(HERE / "orgs_probe.py"), hub_url, "--shared", "e2e-board",
-         "--tokens", f"owner={team_tokens['ann']}", f"member={team_tokens['ben']}", f"operator={token}"],
+        [str(HERE / "orgs_fixture.py"), "--devagotchi", str(devagotchi), "--shared", "e2e-board"],
         "orgs probe: an organisation, its roles, and a change that holds from the next call",
     )
 
