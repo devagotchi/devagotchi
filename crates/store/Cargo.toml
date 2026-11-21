@@ -25,6 +25,9 @@ devagotchi-contracts = { workspace = true }
 sqlx = { workspace = true }
 tokio = { workspace = true }
 hex = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+sha2 = { workspace = true }
 getrandom = "0.4"
 tempfile = { workspace = true, optional = true }
 

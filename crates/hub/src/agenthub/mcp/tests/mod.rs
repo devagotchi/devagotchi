@@ -151,5 +151,7 @@ fn refusals_name_what_to_call_next() {
 mod accounts;
 mod contract;
 mod held_updates;
+mod lease_receipts;
+mod mutation_receipts;
 mod registered_agents;
 mod tickets;

@@ -55,6 +55,8 @@ fn next_for(code: &str, id: Option<&str>) -> String {
         "approval_changed" | "already_decided" => format!("approval_wait {id} to see it as it is now"),
         "not_an_approval" => format!("board_get {id}: it is a ticket, not an approval"),
         "read_only" => "you are a viewer here; ask the board's owner for a member role".into(),
+        "request_retired" => "this key cannot be reused; reconcile the original outcome with board_get and the operator's archived history before starting new work".into(),
+        "receipt_damaged" | "receipt_incomplete" => "stop retrying this mutation and ask the hub operator to inspect its stored receipt; do not change the key to bypass it".into(),
         "request_conflict" => "retry with the same content, or use a new request_id for new content".into(),
         "board_damaged" => "the board's stored data is damaged; tell the hub's operator (board_verify shows the chain)".into(),
         "too_many" => "a person revokes an approval given ahead of time on the approvals page first".into(),

@@ -5,6 +5,45 @@ use std::{future::Future, pin::Pin};
 pub(crate) struct Directory(pub(crate) crate::config::Live);
 
 impl devagotchi_agenthub::hosted::PrincipalDirectory for Directory {
+    fn authorize_request<'a>(
+        &'a self,
+        connection: &'a mut AnyConnection,
+        tenant: &'a str,
+        principal: &'a str,
+        actor: &'a devagotchi_agenthub::Actor<'_>,
+    ) -> Pin<Box<dyn Future<Output = Result<(), Failed>> + Send + 'a>> {
+        Box::pin(async move {
+            if !self.enabled(connection, tenant, principal).await? {
+                return Err(BridgeError::new(
+                    "not_granted",
+                    "request principal is no longer enabled",
+                )
+                .into());
+            }
+            if let Some(rest) = principal.strip_prefix("@agent:") {
+                let (account, id) = rest.split_once(':').expect("enabled canonical agent");
+                let profile = agent_in(connection, tenant, account, id).await?;
+                let matches = actor.policy.as_ref().is_some_and(|identity| {
+                    identity.kind == profile.kind && identity.roles == profile.roles
+                });
+                if actor.id != principal || actor.human || !matches {
+                    return Err(BridgeError::new(
+                        "not_granted",
+                        "request profile authority changed; authenticate again",
+                    )
+                    .into());
+                }
+            } else if actor.policy.is_some() && !actor.human {
+                return Err(BridgeError::new(
+                    "not_granted",
+                    "registered actor needs its canonical request principal",
+                )
+                .into());
+            }
+            Ok(())
+        })
+    }
+
     fn enabled<'a>(
         &'a self,
         connection: &'a mut AnyConnection,

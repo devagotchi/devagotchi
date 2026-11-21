@@ -4990,9 +4990,18 @@
       "mode": "100644",
       "kind": "blob",
       "packet": "A03",
-      "status": "unverified",
-      "target_paths": [],
-      "evidence": []
+      "status": "partial",
+      "target_paths": [
+        "crates/hub/src/agenthub/mcp/mutations.rs",
+        "crates/hub/src/agenthub/mcp/tools/tickets.rs",
+        "crates/hub/src/agenthub/mcp/create_input.rs",
+        "crates/hub/src/agenthub/mcp/schema.rs",
+        "crates/hub/src/agenthub/mcp/tests/mutation_receipts.rs",
+        "crates/agenthub/src/hosted/updates.rs"
+      ],
+      "evidence": [
+        "Pinned source read; PostgreSQL receipt engine and initial board/MCP adapters authored. Focused evidence and outstanding operations are in .ai/dev/plans/absorption/a03-review.md. No main delivery or source closure."
+      ]
     },
     {
       "path": "server/internal/mcptools/ext.go",
@@ -5935,10 +5944,14 @@
       "target_paths": [
         "crates/agenthub/src/hosted/leases.rs",
         "crates/agenthub/src/lease.rs",
-        "crates/agenthub/src/tests/lease_absorption.rs"
+        "crates/agenthub/src/tests/lease_absorption.rs",
+        "crates/agenthub/src/tests/lease_receipts.rs",
+        "crates/hub/src/agenthub/mcp/tests/lease_receipts.rs",
+        "crates/hub/src/agenthub/mcp/tools/leases.rs"
       ],
       "evidence": [
-        "Local comparison and source-backed changes: .ai/dev/plans/absorption/a01-review.md. Not source closure; policy, replay, identity and other file behaviors remain open."
+        "Local comparison and source-backed changes: .ai/dev/plans/absorption/a01-review.md. Not source closure; policy, replay, identity and other file behaviors remain open.",
+        "Pinned source read and lease receipt adapters authored; six board receipt and fourteen MCP checks passed, see a03-review.md. REST/CLI/event request identity and source closure remain open."
       ]
     },
     {
@@ -5998,9 +6011,17 @@
       "mode": "100644",
       "kind": "blob",
       "packet": "A03",
-      "status": "unverified",
-      "target_paths": [],
-      "evidence": []
+      "status": "partial",
+      "target_paths": [
+        "crates/store/src/receipts/mod.rs",
+        "crates/store/src/receipts/request.rs",
+        "crates/store/migrations/0001_request_receipts.sql",
+        "crates/agenthub/src/hosted/receipts.rs",
+        "crates/agenthub/src/tests/mutation_receipts.rs"
+      ],
+      "evidence": [
+        "Pinned source read; PostgreSQL receipt engine and initial board/MCP adapters authored. Focused evidence and outstanding operations are in .ai/dev/plans/absorption/a03-review.md. No main delivery or source closure."
+      ]
     },
     {
       "path": "server/internal/store/tasks.go",

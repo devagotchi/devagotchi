@@ -48,4 +48,3 @@
 519	crates/machine-engine/src/execution/platform/linux.rs
 583	crates/machine-engine/src/execution/platform/windows.rs
 802	crates/mcp/src/connect.rs
-522	crates/store/src/lib.rs

@@ -155,7 +155,11 @@ async fn on_postgres_the_hubs_tables_live_in_their_own_schema() {
     // The two version histories: the hub's and AgentHub's.
     assert_eq!(
         placed["devagotchi_hub"],
-        ["_agenthub_migrations", "_sqlx_migrations"],
+        [
+            "_agenthub_migrations",
+            "_sqlx_migrations",
+            "_store_migrations"
+        ],
         "{placed:?}"
     );
     let hub = &placed["devagotchi"];
@@ -217,7 +221,8 @@ async fn a_store_a_newer_hub_migrated_still_opens() {
 }
 
 /// Each domain's table prefixes (`.ai/patterns/layout.md`, "Tables carry their domain").
-const DOMAIN_PREFIXES: [(&str, &[&str]); 9] = [
+const DOMAIN_PREFIXES: [(&str, &[&str]); 10] = [
+    ("store receipts", &["store_"]),
     ("identity", &["auth_", "oauth_"]),
     ("tenancy", &["tenancy_", "org_", "project_"]),
     ("agenthub", &["board_"]),

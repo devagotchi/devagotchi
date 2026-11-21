@@ -85,10 +85,23 @@ async fn bound_credentials_share_fences_capacity_and_live_revocation_on_existing
             .call(
                 &mut a,
                 "board_create",
-                json!({"project":project,"title":"Work"}),
+                json!({"project":project,"title":"Work","request_id":format!("create-{project}")}),
             )
             .await;
         assert!(!refused(&made), "{made}");
+        let replay = hub
+            .call(
+                &mut b,
+                "board_create",
+                json!({"project":project,"title":"Work","request_id":format!("create-{project}")}),
+            )
+            .await;
+        assert!(!refused(&replay), "{replay}");
+        assert_eq!(replay["structuredContent"]["replayed"], true);
+        assert_eq!(
+            replay["structuredContent"]["id"],
+            made["structuredContent"]["id"]
+        );
         ids.push(
             made["structuredContent"]["id"]
                 .as_str()

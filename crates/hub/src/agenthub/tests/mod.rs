@@ -1,5 +1,6 @@
 mod ahead;
 mod audited;
+mod heartbeat_progress;
 mod hosted;
 mod notes;
 mod scanned;

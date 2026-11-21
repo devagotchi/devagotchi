@@ -7,6 +7,7 @@ use rmcp::handler::server::tool::ToolRouter;
 use crate::mcp::Hub;
 
 mod issues;
+mod leases;
 mod messages;
 mod read;
 mod settings;
@@ -18,6 +19,7 @@ impl Hub {
         Self::board_read_router()
             + Self::board_issue_router()
             + Self::board_ticket_router()
+            + Self::board_lease_router()
             + Self::board_message_router()
             + Self::board_settings_router()
     }
