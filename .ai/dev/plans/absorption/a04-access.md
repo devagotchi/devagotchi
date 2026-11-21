@@ -526,3 +526,24 @@ tests passed, including unknown-display warning preservation. Layout passed all 
 checks after moving the schema argument generator into `tenancy/tests/schema.rs` and
 tightening the existing oversized fixture's limit; no size limit was raised. This is a
 local authored checkpoint only; the browser/native/full integration work above remains.
+
+Browser review implementation is now authored on the same S1 integration branch. Home,
+Approvals and the app badge expose owner review; owners retain the management link when
+there are no pending requests. Review shows requester identity, original immutable scope,
+risk text, duration and task. Decisions use the existing scoped PostgreSQL transaction,
+version and retry receipt. Narrowing retains untouched selectors and distinguishes no
+allowed paths from an unrestricted selector. Refusals retain submitted scope, note, key,
+version and invalid duration. History shows the actual granted scope; grant listing shows
+requester names, limits, expiry, paused/ended state and revocation. Ended filtering occurs
+before the cursor limit, with a regression covering live grants ahead of ended records.
+
+Required-PostgreSQL access regression passed 90 tests, zero failed/ignored, using eight
+threads (target/absorption-browser-access-regression.log). The preceding unrestricted
+run exhausted PostgreSQL connections in one fixture setup; it was not counted as a pass.
+All five new browser tests and the ended-pagination regression passed in the final run.
+Site/neutral-copy tests passed 11/11 and the existing real-browser-route board approval
+regression passed 1/1. The extracted Approvals renderer reduced the oversized original
+module below its cap; layout passed eight checks without raising any limits. These are
+local validation results, not a merge or full native/browser/Docker acceptance claim.
+Source UI coverage remains partial until the remaining machine controls, policy/resume
+surfaces and actual execution integration are completed.
