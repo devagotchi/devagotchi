@@ -15,6 +15,12 @@ pub const APPROVAL_WAIT_MAX_MS: u64 = 50_000;
 
 // ----- inputs ------------------------------------------------------------------
 
+fn present_progress<'de, D: serde::Deserializer<'de>>(
+    deserializer: D,
+) -> Result<Option<serde_json::Value>, D::Error> {
+    serde_json::Value::deserialize(deserializer).map(Some)
+}
+
 #[derive(Debug, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ProjectIn {
@@ -176,6 +182,12 @@ pub struct UpdateIn {
     pub id: String,
     /// The ticket's current version (optimistic concurrency); from board_get.
     pub version: i64,
+    /// Required while you hold the ticket; omit to use this hub's remembered claim fence.
+    #[serde(default)]
+    pub fence: Option<i64>,
+    /// Replace progress without extending the lease; null clears it. Omission keeps it.
+    #[serde(default, deserialize_with = "present_progress")]
+    pub progress: Option<serde_json::Value>,
     /// A new title, 1 to 300 characters.
     #[serde(default)]
     pub title: Option<String>,

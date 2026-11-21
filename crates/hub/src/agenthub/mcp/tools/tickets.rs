@@ -170,7 +170,7 @@ impl Hub {
 
     #[tool(
         name = "board_update",
-        description = "Edit a ticket's title, description, priority, labels or assignee, or move an unheld ticket along a declared workflow transition (blocked, cancelled, back to ready). version must be current; active states and held tickets change only through claim / complete / handoff / release.",
+        description = "Edit ticket metadata or progress at its current version. A live holder must supply its claim fence (or use this hub's remembered fence); another agent cannot edit it. Move an unheld ticket along a declared workflow transition. Held tickets change state only through lease operations.",
         title = "Update a ticket",
         annotations(
             title = "Update a ticket",
@@ -185,7 +185,15 @@ impl Hub {
         Parameters(input): Parameters<UpdateIn>,
         context: RequestContext<RoleServer>,
     ) -> Result<Json<Ticket>, Json<BoardError>> {
+        let subject = self.subject_id(&context)?;
+        let fence = input.fence.or_else(|| {
+            self.boards
+                .fence_for(&subject, &input.project, &input.id, None)
+                .ok()
+        });
         let patch = Patch {
+            fence,
+            progress: input.progress,
             title: input.title,
             description: input.description,
             priority: input.priority,

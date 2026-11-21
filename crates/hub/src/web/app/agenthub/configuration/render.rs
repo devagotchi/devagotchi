@@ -163,8 +163,23 @@ pub(super) fn settings(
     };
     let duration = "type=\"number\" min=\"0.001\" step=\"0.001\" required";
     let nonnegative = "type=\"number\" min=\"0\" step=\"1\" required";
+    let options = format!(
+        "<section class=\"card stack\">{}<p>{}</p>{}<p>{}</p></section>",
+        input(
+            "heartbeat_hint",
+            &c.heartbeat_hint,
+            "type=\"number\" min=\"1\" step=\"0.001\" required"
+        ),
+        escape(&c.heartbeat_help),
+        input(
+            "note_kinds",
+            &c.note_kinds,
+            "type=\"text\" maxlength=\"4096\""
+        ),
+        escape(&c.note_kinds_help),
+    );
     let body = format!(
-        "<form class=\"stack\" method=\"post\" action=\"{}\">{}<section class=\"card stack\"><h2>{}</h2><p>{}</p><div class=\"auto-grid\">{}{}{}</div></section><section class=\"card stack\"><div class=\"auto-grid\"><div class=\"stack\">{}<p>{}</p></div><div class=\"stack\">{}<p>{}</p></div><div class=\"stack\">{}<p>{}</p></div></div>{}{}<p>{}</p></section><button class=\"primary\" type=\"submit\">{}</button></form>",
+        "<form class=\"stack\" method=\"post\" action=\"{}\">{}<section class=\"card stack\"><h2>{}</h2><p>{}</p><div class=\"auto-grid\">{}{}{}</div></section><section class=\"card stack\"><div class=\"auto-grid\"><div class=\"stack\">{}<p>{}</p></div><div class=\"stack\">{}<p>{}</p></div><div class=\"stack\">{}<p>{}</p></div></div>{}{}<p>{}</p></section>{options}<button class=\"primary\" type=\"submit\">{}</button></form>",
         href(project, false),
         hidden("version", draft.version),
         escape(&c.settings),

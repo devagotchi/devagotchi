@@ -1,0 +1,213 @@
+{
+  "source": "S2",
+  "ref": "master",
+  "sha": "ca626db10456b8597704032e80944b359b892312",
+  "previous": "46419c697964016eb547c60416a8f2f5e854a95f",
+  "tree": "adf3b4ff5360da4dd6cbbabbe96babf0359e37f7",
+  "head_path_count": 741,
+  "scope": "delta from previous source",
+  "commits": [
+    {
+      "sha": "ab616ee045175072278f9afaee9477f9636a38d6",
+      "authored": "2026-10-18T13:37:19-07:00",
+      "subject": "docs: Chatmaton on Gold build plan (39, 39a-39g): app-shell and offline-sync research, SWEBOK-organised architecture, P1 chat page (Claude Code/Codex/Grok over WebSocket via bridge proc ops) to P5 devpulse sync; gaps G-28, G-29; index",
+      "status": "unverified"
+    },
+    {
+      "sha": "ca626db10456b8597704032e80944b359b892312",
+      "authored": "2026-10-20T18:10:35-07:00",
+      "subject": "chore: gitleaksignore test fixtures, ignore env/key files, add dockerignore and CI",
+      "status": "unverified"
+    }
+  ],
+  "files": [
+    {
+      "path": ".gitignore",
+      "change": "M",
+      "blob": "2730f144f0e4ea8212ef8db3bc0375160087dd1b",
+      "mode": "100644",
+      "kind": "blob",
+      "packet": "B01",
+      "status": "unverified",
+      "target_paths": [],
+      "evidence": []
+    },
+    {
+      "path": ".gitleaksignore",
+      "change": "A",
+      "blob": "6fbda656d878abe3f31a6e14faecfa1cffdebe37",
+      "mode": "100644",
+      "kind": "blob",
+      "packet": "B01",
+      "status": "unverified",
+      "target_paths": [],
+      "evidence": []
+    },
+    {
+      "path": ".goreleaser.yaml",
+      "change": "D",
+      "blob": "4fe71d4a632957edb1afef5d320be55da17552f8",
+      "mode": "100644",
+      "kind": "blob",
+      "packet": "B01",
+      "status": "unverified",
+      "target_paths": [],
+      "evidence": []
+    },
+    {
+      "path": ".release-please-manifest.json",
+      "change": "D",
+      "blob": "2be9c43c857fca145301323da8127cd1c0908131",
+      "mode": "100644",
+      "kind": "blob",
+      "packet": "B01",
+      "status": "unverified",
+      "target_paths": [],
+      "evidence": []
+    },
+    {
+      "path": "deploy/docker/bridge.Dockerfile",
+      "change": "D",
+      "blob": "b7ec13f70fefcad211020162120d47756568c1b7",
+      "mode": "100644",
+      "kind": "blob",
+      "packet": "B01",
+      "status": "unverified",
+      "target_paths": [],
+      "evidence": []
+    },
+    {
+      "path": "deploy/docker/hub-server.Dockerfile",
+      "change": "D",
+      "blob": "42dcb79d0b42edb353edb03a9781d5b05a21a29c",
+      "mode": "100644",
+      "kind": "blob",
+      "packet": "B01",
+      "status": "unverified",
+      "target_paths": [],
+      "evidence": []
+    },
+    {
+      "path": "docs/devagotchi-spec.md",
+      "change": "M",
+      "blob": "c926219f98891964ec74603f99790ff9a8d410bf",
+      "mode": "100644",
+      "kind": "blob",
+      "packet": "B01",
+      "status": "unverified",
+      "target_paths": [],
+      "evidence": []
+    },
+    {
+      "path": "docs/devagotchi/27-gap-tracking.md",
+      "change": "M",
+      "blob": "8feaadaa2476459c1341ee0feadf2112eac8e802",
+      "mode": "100644",
+      "kind": "blob",
+      "packet": "B01",
+      "status": "unverified",
+      "target_paths": [],
+      "evidence": []
+    },
+    {
+      "path": "docs/devagotchi/39-chatmaton-gold-build-plan.md",
+      "change": "A",
+      "blob": "76587238b98f82c07bdc237f4fa4abec0caa6efe",
+      "mode": "100644",
+      "kind": "blob",
+      "packet": "B01",
+      "status": "unverified",
+      "target_paths": [],
+      "evidence": []
+    },
+    {
+      "path": "docs/devagotchi/39a-research-app-shells.md",
+      "change": "A",
+      "blob": "0af3d5bf4f472f395ac3364ea2019a9c41067f12",
+      "mode": "100644",
+      "kind": "blob",
+      "packet": "B01",
+      "status": "unverified",
+      "target_paths": [],
+      "evidence": []
+    },
+    {
+      "path": "docs/devagotchi/39b-research-offline-sync.md",
+      "change": "A",
+      "blob": "4cf5a22417f407e8b5edb573c4222e0946f49067",
+      "mode": "100644",
+      "kind": "blob",
+      "packet": "B01",
+      "status": "unverified",
+      "target_paths": [],
+      "evidence": []
+    },
+    {
+      "path": "docs/devagotchi/39c-architecture-on-gold.md",
+      "change": "A",
+      "blob": "b7fb56a1ecb23d5b902df0d79d3133199360a1b4",
+      "mode": "100644",
+      "kind": "blob",
+      "packet": "B01",
+      "status": "unverified",
+      "target_paths": [],
+      "evidence": []
+    },
+    {
+      "path": "docs/devagotchi/39d-p1-chat-page.md",
+      "change": "A",
+      "blob": "b5fd0540772946fe73cb6370d5b31850e1af44d9",
+      "mode": "100644",
+      "kind": "blob",
+      "packet": "B01",
+      "status": "unverified",
+      "target_paths": [],
+      "evidence": []
+    },
+    {
+      "path": "docs/devagotchi/39e-p2-approvals-audit-pwa.md",
+      "change": "A",
+      "blob": "79a6920fe8d3592c5e40765b0e2f6eed5a4d742d",
+      "mode": "100644",
+      "kind": "blob",
+      "packet": "B01",
+      "status": "unverified",
+      "target_paths": [],
+      "evidence": []
+    },
+    {
+      "path": "docs/devagotchi/39f-p3-assignment-stats.md",
+      "change": "A",
+      "blob": "4a7c84a3dca50889f87915e2d5b2eb49b4ba3a27",
+      "mode": "100644",
+      "kind": "blob",
+      "packet": "B01",
+      "status": "unverified",
+      "target_paths": [],
+      "evidence": []
+    },
+    {
+      "path": "docs/devagotchi/39g-p4-p5-shells-update-sync.md",
+      "change": "A",
+      "blob": "7eb11fd211293645dd4aa467af7454607d2e5440",
+      "mode": "100644",
+      "kind": "blob",
+      "packet": "B01",
+      "status": "unverified",
+      "target_paths": [],
+      "evidence": []
+    },
+    {
+      "path": "release-please-config.json",
+      "change": "D",
+      "blob": "c000a54640bc97df4073e5b375aa8c84a0e9e718",
+      "mode": "100644",
+      "kind": "blob",
+      "packet": "B01",
+      "status": "unverified",
+      "target_paths": [],
+      "evidence": []
+    }
+  ],
+  "note": "Assignment is an inventory, not proof of implementation. No row is closed by this generator."
+}

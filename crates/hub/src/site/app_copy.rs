@@ -76,6 +76,7 @@ pub struct AppCopy {
     pub ticket_labels: String,
     pub ticket_assignee: String,
     pub ticket_holder: String,
+    pub ticket_progress: String,
     pub issue_source: String,
     pub issue_source_state: String,
     pub issue_source_revision: String,

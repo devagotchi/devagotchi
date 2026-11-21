@@ -407,13 +407,17 @@ spellcheck=\"false\" placeholder=\"{}\"></label></div>\
             escape(&copy.creation.dependencies)
         )
     };
+    let progress = ticket.progress.as_ref().filter(|value| !value.is_null()).map(|value| {
+        format!("<section class=\"card\" id=\"progress\"><h2>{}</h2><pre class=\"what\">{}</pre></section>",
+            escape(&copy.ticket_progress), escape(&value.to_string()))
+    }).unwrap_or_default();
     let body = format!(
         "<div class=\"stack\" data-page=\"ticket\"><header class=\"stack ticket-head\">\
 <p class=\"meta\"><a href=\"/app/boards/{}\">{}</a> · {}</p><h1>{}</h1>{flash}{undo}</header>\
 <div class=\"sidebar\" data-side=\"end\"><div class=\"stack ticket-main\">\
 <section class=\"card query\" id=\"ticket\"><dl class=\"facts\"><dt>{}</dt><dd id=\"state\">{}</dd>\
 <dt>{}</dt><dd>P{}</dd><dt>{}</dt><dd>{}</dd><dt>{}</dt><dd id=\"assignee\">{}</dd><dt>{}</dt><dd>{}</dd>{anchors}{dependencies}</dl>\
-<pre class=\"what\">{}</pre></section>{source}<h2>{}</h2>{notes}{comment}</div>\
+<pre class=\"what\">{}</pre></section>{progress}{source}<h2>{}</h2>{notes}{comment}</div>\
 <aside class=\"stack ticket-side\"><section class=\"card\">{actions}<div class=\"delegate\">{delegate}</div></section>\
 <section class=\"card\"><h2>{}</h2><ul class=\"rows\" id=\"history\">{history}</ul></section></aside></div></div>",
         encode(&project),

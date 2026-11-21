@@ -1,0 +1,3316 @@
+[
+  {
+    "path": "bridge/buildinfo/buildinfo.go",
+    "packet": "A12",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "CommitOrVCS",
+      "String"
+    ]
+  },
+  {
+    "path": "bridge/cli/main.go",
+    "packet": "A12",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Main"
+    ]
+  },
+  {
+    "path": "bridge/cli/policyfile.go",
+    "packet": "A12",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "String",
+      "Set"
+    ]
+  },
+  {
+    "path": "bridge/config/config.go",
+    "packet": "A12",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Dir",
+      "Load",
+      "Save",
+      "WriteToken",
+      "ReadToken",
+      "UserDir"
+    ]
+  },
+  {
+    "path": "bridge/docx/create.go",
+    "packet": "A09",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Create"
+    ]
+  },
+  {
+    "path": "bridge/docx/docx_test.go",
+    "packet": "A09",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [
+      "TestCreateOutlineReplace"
+    ],
+    "exported_functions": [
+      "TestCreateOutlineReplace"
+    ]
+  },
+  {
+    "path": "bridge/docx/edit.go",
+    "packet": "A09",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Replace"
+    ]
+  },
+  {
+    "path": "bridge/docx/outline.go",
+    "packet": "A09",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Parts",
+      "Part",
+      "Outline"
+    ]
+  },
+  {
+    "path": "bridge/docx/pretty.go",
+    "packet": "A09",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Pretty",
+      "Compact"
+    ]
+  },
+  {
+    "path": "bridge/fsops/atomic.go",
+    "packet": "A09",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "AtomicWrite"
+    ]
+  },
+  {
+    "path": "bridge/fsops/fsops.go",
+    "packet": "A09",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Do",
+      "Marshal"
+    ]
+  },
+  {
+    "path": "bridge/fsops/fsops_test.go",
+    "packet": "A09",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [
+      "TestWriteEditDelete"
+    ],
+    "exported_functions": [
+      "TestWriteEditDelete"
+    ]
+  },
+  {
+    "path": "bridge/fsops/sandboxed_linux.go",
+    "packet": "A09",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "DoSandboxed"
+    ]
+  },
+  {
+    "path": "bridge/fsops/sandboxed_other.go",
+    "packet": "A09",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "DoSandboxed"
+    ]
+  },
+  {
+    "path": "bridge/gui/agent.go",
+    "packet": "A10",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "SocketPath",
+      "Serve",
+      "Call"
+    ]
+  },
+  {
+    "path": "bridge/gui/gui.go",
+    "packet": "A10",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Handle"
+    ]
+  },
+  {
+    "path": "bridge/gui/open_linux.go",
+    "packet": "A10",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Open"
+    ]
+  },
+  {
+    "path": "bridge/gui/open_other.go",
+    "packet": "A10",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Open"
+    ]
+  },
+  {
+    "path": "bridge/gui/wayland_linux.go",
+    "packet": "A10",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "NewWayland",
+      "Size",
+      "Screenshot",
+      "Input",
+      "Tree",
+      "Windows",
+      "App",
+      "Close"
+    ]
+  },
+  {
+    "path": "bridge/gui/x11.go",
+    "packet": "A10",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "NewX11",
+      "Size",
+      "Close",
+      "Screenshot",
+      "Input"
+    ]
+  },
+  {
+    "path": "bridge/gui/x11_win.go",
+    "packet": "A10",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Tree",
+      "Windows",
+      "App"
+    ]
+  },
+  {
+    "path": "bridge/history/history.go",
+    "packet": "A09",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Open",
+      "Record",
+      "Recent"
+    ]
+  },
+  {
+    "path": "bridge/history/history_test.go",
+    "packet": "A09",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [
+      "TestRecordRecentStats"
+    ],
+    "exported_functions": [
+      "TestRecordRecentStats"
+    ]
+  },
+  {
+    "path": "bridge/history/stats.go",
+    "packet": "A09",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Summary"
+    ]
+  },
+  {
+    "path": "bridge/hubclient/client.go",
+    "packet": "A04",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "New",
+      "Enroll",
+      "Poll",
+      "Send",
+      "GrantLive",
+      "GUIReady"
+    ]
+  },
+  {
+    "path": "bridge/markdown/blocks.go",
+    "packet": "A09",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Parse"
+    ]
+  },
+  {
+    "path": "bridge/markdown/inline.go",
+    "packet": "A09",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Spans",
+      "Plain"
+    ]
+  },
+  {
+    "path": "bridge/markdown/markdown_test.go",
+    "packet": "A09",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [
+      "TestParse"
+    ],
+    "exported_functions": [
+      "TestParse"
+    ]
+  },
+  {
+    "path": "bridge/mcpserve/http.go",
+    "packet": "A03",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Token",
+      "Handler",
+      "RunHTTP"
+    ]
+  },
+  {
+    "path": "bridge/mcpserve/server.go",
+    "packet": "A03",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "New",
+      "Close",
+      "RunStdio"
+    ]
+  },
+  {
+    "path": "bridge/netproxy/forward.go",
+    "packet": "A04",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Forward"
+    ]
+  },
+  {
+    "path": "bridge/netproxy/proxy.go",
+    "packet": "A04",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Listen"
+    ]
+  },
+  {
+    "path": "bridge/netproxy/proxy_test.go",
+    "packet": "A04",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [
+      "TestAllowlistConnect"
+    ],
+    "exported_functions": [
+      "TestAllowlistConnect"
+    ]
+  },
+  {
+    "path": "bridge/netproxy/start_linux.go",
+    "packet": "A04",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Start"
+    ]
+  },
+  {
+    "path": "bridge/netproxy/start_other.go",
+    "packet": "A04",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Start"
+    ]
+  },
+  {
+    "path": "bridge/parity/files_test.go",
+    "packet": "A09",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [
+      "TestParityFiles"
+    ],
+    "exported_functions": [
+      "TestParityFiles"
+    ]
+  },
+  {
+    "path": "bridge/parity/procs_test.go",
+    "packet": "A09",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [
+      "TestParitySearchProcs"
+    ],
+    "exported_functions": [
+      "TestParitySearchProcs"
+    ]
+  },
+  {
+    "path": "bridge/parity/setup_test.go",
+    "packet": "A09",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [
+      "TestMain"
+    ],
+    "exported_functions": [
+      "TestMain"
+    ]
+  },
+  {
+    "path": "bridge/parity/transport_test.go",
+    "packet": "A09",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [
+      "TestParityProtocol",
+      "TestParityHTTP"
+    ],
+    "exported_functions": [
+      "TestParityProtocol",
+      "TestParityHTTP",
+      "RoundTrip"
+    ]
+  },
+  {
+    "path": "bridge/pdfdoc/modify.go",
+    "packet": "A09",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Modify"
+    ]
+  },
+  {
+    "path": "bridge/pdfdoc/pdf_test.go",
+    "packet": "A09",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [
+      "TestCreateReadModify"
+    ],
+    "exported_functions": [
+      "TestCreateReadModify"
+    ]
+  },
+  {
+    "path": "bridge/pdfdoc/read.go",
+    "packet": "A09",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Read",
+      "PageCount"
+    ]
+  },
+  {
+    "path": "bridge/pdfdoc/write.go",
+    "packet": "A09",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Create"
+    ]
+  },
+  {
+    "path": "bridge/policy/defaults.go",
+    "packet": "A04",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Defaults",
+      "DefaultLimits"
+    ]
+  },
+  {
+    "path": "bridge/policy/gate.go",
+    "packet": "A04",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Error",
+      "NewGate",
+      "Narrow",
+      "Level",
+      "Limits",
+      "Has",
+      "Need",
+      "Path",
+      "Host"
+    ]
+  },
+  {
+    "path": "bridge/policy/load.go",
+    "packet": "A04",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Load",
+      "Validate",
+      "Profile",
+      "Save",
+      "Set"
+    ]
+  },
+  {
+    "path": "bridge/policy/paths.go",
+    "packet": "A04",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Resolve",
+      "Within"
+    ]
+  },
+  {
+    "path": "bridge/policy/policy.go",
+    "packet": "A04",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Live"
+    ]
+  },
+  {
+    "path": "bridge/policy/policy_test.go",
+    "packet": "A04",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [
+      "TestGatePathsAndSymlinks",
+      "TestGrantsAndReadOnly",
+      "TestSetAndValidate"
+    ],
+    "exported_functions": [
+      "TestGatePathsAndSymlinks",
+      "TestGrantsAndReadOnly",
+      "TestSetAndValidate"
+    ]
+  },
+  {
+    "path": "bridge/policy/roots.go",
+    "packet": "A04",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Roots",
+      "Narrowed"
+    ]
+  },
+  {
+    "path": "bridge/procs/buffer.go",
+    "packet": "A09",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "NewBuffer",
+      "Write",
+      "Changed",
+      "Seq",
+      "Since",
+      "Lines",
+      "TailLine"
+    ]
+  },
+  {
+    "path": "bridge/procs/conpty_windows.go",
+    "packet": "A09",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Pid",
+      "Stdin",
+      "Wait",
+      "Kill"
+    ]
+  },
+  {
+    "path": "bridge/procs/list.go",
+    "packet": "A09",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "ListAll",
+      "KillPID"
+    ]
+  },
+  {
+    "path": "bridge/procs/procs_test.go",
+    "packet": "A09",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [
+      "TestPipeSessionAndReads",
+      "TestPTYPromptAndKill",
+      "TestReapLeaseAndBuffer"
+    ],
+    "exported_functions": [
+      "TestPipeSessionAndReads",
+      "TestPTYPromptAndKill",
+      "TestReapLeaseAndBuffer"
+    ]
+  },
+  {
+    "path": "bridge/procs/prompt.go",
+    "packet": "A09",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "NewPrompts",
+      "Match",
+      "Invalid"
+    ]
+  },
+  {
+    "path": "bridge/procs/read.go",
+    "packet": "A09",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "ReadLines",
+      "Reap",
+      "Run",
+      "KillAll"
+    ]
+  },
+  {
+    "path": "bridge/procs/session.go",
+    "packet": "A09",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "NewManager",
+      "Start",
+      "Get",
+      "ByLease",
+      "List",
+      "Terminate"
+    ]
+  },
+  {
+    "path": "bridge/procs/start_unix.go",
+    "packet": "A09",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Pid",
+      "Stdin",
+      "Wait",
+      "Kill"
+    ]
+  },
+  {
+    "path": "bridge/procs/start_windows.go",
+    "packet": "A09",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Pid",
+      "Stdin",
+      "Wait",
+      "Kill"
+    ]
+  },
+  {
+    "path": "bridge/procs/state.go",
+    "packet": "A09",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "ExitCode",
+      "State",
+      "Output",
+      "Write",
+      "Kill",
+      "Heartbeat",
+      "Wait",
+      "Done",
+      "MarkRead"
+    ]
+  },
+  {
+    "path": "bridge/redact/redact.go",
+    "packet": "A09",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "New",
+      "String"
+    ]
+  },
+  {
+    "path": "bridge/redact/redact_test.go",
+    "packet": "A09",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [
+      "TestRedact"
+    ],
+    "exported_functions": [
+      "TestRedact"
+    ]
+  },
+  {
+    "path": "bridge/runner/capped.go",
+    "packet": "A04",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Write",
+      "String"
+    ]
+  },
+  {
+    "path": "bridge/runner/proc_test.go",
+    "packet": "A04",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [
+      "TestProcLeaseOps",
+      "TestToolOpUsesGrantScope"
+    ],
+    "exported_functions": [
+      "TestProcLeaseOps",
+      "TestToolOpUsesGrantScope"
+    ]
+  },
+  {
+    "path": "bridge/runner/runner.go",
+    "packet": "A04",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "New",
+      "Handle"
+    ]
+  },
+  {
+    "path": "bridge/runner/ws.go",
+    "packet": "A04",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "WSRun"
+    ]
+  },
+  {
+    "path": "bridge/sandbox/darwin.go",
+    "packet": "A04",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Profile",
+      "Kill"
+    ]
+  },
+  {
+    "path": "bridge/sandbox/linux.go",
+    "packet": "A04",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Kill"
+    ]
+  },
+  {
+    "path": "bridge/sandbox/spec.go",
+    "packet": "A04",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Kind",
+      "Command"
+    ]
+  },
+  {
+    "path": "bridge/sandbox/windows.go",
+    "packet": "A04",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Kill"
+    ]
+  },
+  {
+    "path": "bridge/scope/match.go",
+    "packet": "A04",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "CapabilityFor",
+      "Fits",
+      "RiskWhen"
+    ]
+  },
+  {
+    "path": "bridge/scope/narrow.go",
+    "packet": "A04",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "SelectorWithin"
+    ]
+  },
+  {
+    "path": "bridge/scope/scope.go",
+    "packet": "A04",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Strs",
+      "Prefixes",
+      "Any",
+      "Num",
+      "Within",
+      "HasPrefix",
+      "HostOK",
+      "LevelWithin",
+      "Hours",
+      "DurationWithin"
+    ]
+  },
+  {
+    "path": "bridge/scope/scope_test.go",
+    "packet": "A04",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [
+      "TestNarrowing",
+      "TestLevelsAndDurations",
+      "TestFits",
+      "TestRiskWhen"
+    ],
+    "exported_functions": [
+      "TestNarrowing",
+      "TestLevelsAndDurations",
+      "TestFits",
+      "TestRiskWhen"
+    ]
+  },
+  {
+    "path": "bridge/search/page.go",
+    "packet": "A09",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Page",
+      "Status",
+      "Wait"
+    ]
+  },
+  {
+    "path": "bridge/search/search_test.go",
+    "packet": "A09",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [
+      "TestContentSearch",
+      "TestFileSearch"
+    ],
+    "exported_functions": [
+      "TestContentSearch",
+      "TestFileSearch"
+    ]
+  },
+  {
+    "path": "bridge/search/session.go",
+    "packet": "A09",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "NewManager",
+      "Start",
+      "Get",
+      "Stop",
+      "List"
+    ]
+  },
+  {
+    "path": "bridge/search/walk.go",
+    "packet": "A09",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Run"
+    ]
+  },
+  {
+    "path": "bridge/textio/lines.go",
+    "packet": "A09",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "ReadLines",
+      "IsBinary",
+      "CountLines"
+    ]
+  },
+  {
+    "path": "bridge/textio/lines_test.go",
+    "packet": "A09",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [
+      "TestReadLines"
+    ],
+    "exported_functions": [
+      "TestReadLines"
+    ]
+  },
+  {
+    "path": "bridge/tools/caps_test.go",
+    "packet": "A09",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [
+      "TestCapsTable",
+      "TestSchemasAreObjects"
+    ],
+    "exported_functions": [
+      "TestCapsTable",
+      "TestSchemasAreObjects"
+    ]
+  },
+  {
+    "path": "bridge/tools/env.go",
+    "packet": "A09",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "NewEnv",
+      "Close"
+    ]
+  },
+  {
+    "path": "bridge/tools/files_test.go",
+    "packet": "A09",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [
+      "TestWriteReadEditHash",
+      "TestGateRefusals",
+      "TestDirsMoveDelete",
+      "TestOfficeAndPDF"
+    ],
+    "exported_functions": [
+      "TestWriteReadEditHash",
+      "TestGateRefusals",
+      "TestDirsMoveDelete",
+      "TestOfficeAndPDF"
+    ]
+  },
+  {
+    "path": "bridge/tools/fileutil.go",
+    "packet": "A09",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Error"
+    ]
+  },
+  {
+    "path": "bridge/tools/helpers_test.go",
+    "packet": "A09",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [
+      "TestMain"
+    ],
+    "exported_functions": [
+      "TestMain"
+    ]
+  },
+  {
+    "path": "bridge/tools/procs_test.go",
+    "packet": "A09",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [
+      "TestSearch",
+      "TestProcessSession",
+      "TestPTYPrompt",
+      "TestHonestTimeouts",
+      "TestSandboxConfinesProcess",
+      "TestConfigAndAnalytics"
+    ],
+    "exported_functions": [
+      "TestSearch",
+      "TestProcessSession",
+      "TestPTYPrompt",
+      "TestHonestTimeouts",
+      "TestSandboxConfinesProcess",
+      "TestConfigAndAnalytics"
+    ]
+  },
+  {
+    "path": "bridge/tools/registry.go",
+    "packet": "A09",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "All",
+      "Find"
+    ]
+  },
+  {
+    "path": "bridge/tools/run_once.go",
+    "packet": "A09",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Write",
+      "String"
+    ]
+  },
+  {
+    "path": "bridge/webfetch/fetch.go",
+    "packet": "A09",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Fetch"
+    ]
+  },
+  {
+    "path": "bridge/webfetch/fetch_test.go",
+    "packet": "A09",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [
+      "TestFetchRules"
+    ],
+    "exported_functions": [
+      "TestFetchRules"
+    ]
+  },
+  {
+    "path": "bridge/wire/wire.go",
+    "packet": "A04",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "SignKey",
+      "Sign",
+      "Verify"
+    ]
+  },
+  {
+    "path": "bridge/wire/wire_test.go",
+    "packet": "A04",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [
+      "TestSignVerify"
+    ],
+    "exported_functions": [
+      "TestSignVerify"
+    ]
+  },
+  {
+    "path": "bridge/xlsx/edit.go",
+    "packet": "A09",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "SetRange"
+    ]
+  },
+  {
+    "path": "bridge/xlsx/grid.go",
+    "packet": "A09",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Grid"
+    ]
+  },
+  {
+    "path": "bridge/xlsx/read.go",
+    "packet": "A09",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Open",
+      "Close",
+      "Find"
+    ]
+  },
+  {
+    "path": "bridge/xlsx/ref.go",
+    "packet": "A09",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "ParseRef",
+      "String",
+      "ColName",
+      "ParseRange"
+    ]
+  },
+  {
+    "path": "bridge/xlsx/write.go",
+    "packet": "A09",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Write",
+      "Cell"
+    ]
+  },
+  {
+    "path": "bridge/xlsx/xlsx_test.go",
+    "packet": "A09",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [
+      "TestWriteReadEdit"
+    ],
+    "exported_functions": [
+      "TestWriteReadEdit"
+    ]
+  },
+  {
+    "path": "server/cmd/hub/client.go",
+    "packet": "A03",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Error"
+    ]
+  },
+  {
+    "path": "server/hubtest/access_test.go",
+    "packet": "A04",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [
+      "TestAccessFlowExecRevoke"
+    ],
+    "exported_functions": [
+      "TestAccessFlowExecRevoke"
+    ]
+  },
+  {
+    "path": "server/hubtest/actiondemo_test.go",
+    "packet": "A08",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [
+      "TestActionFeedDemo"
+    ],
+    "exported_functions": [
+      "TestActionFeedDemo"
+    ]
+  },
+  {
+    "path": "server/hubtest/actionfeed_test.go",
+    "packet": "A08",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [
+      "TestActionFeedMachineCalls",
+      "TestActionFeedCategorySwitch"
+    ],
+    "exported_functions": [
+      "TestActionFeedMachineCalls",
+      "TestActionFeedCategorySwitch"
+    ]
+  },
+  {
+    "path": "server/hubtest/auth_test.go",
+    "packet": "A02",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [
+      "TestAuthTokensAndCSRF"
+    ],
+    "exported_functions": [
+      "TestAuthTokensAndCSRF"
+    ]
+  },
+  {
+    "path": "server/hubtest/chain_test.go",
+    "packet": "A01",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [
+      "TestHashChainVerifyAndAppendOnly"
+    ],
+    "exported_functions": [
+      "TestHashChainVerifyAndAppendOnly"
+    ]
+  },
+  {
+    "path": "server/hubtest/fencing_test.go",
+    "packet": "A01",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [
+      "TestExpiredLeaseReclaimedAndStaleFenceRejected",
+      "TestReaperExpiresAndEscalates"
+    ],
+    "exported_functions": [
+      "TestExpiredLeaseReclaimedAndStaleFenceRejected",
+      "TestReaperExpiresAndEscalates"
+    ]
+  },
+  {
+    "path": "server/hubtest/guides_test.go",
+    "packet": "A07",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [
+      "TestGuidesEditPublishImportRun"
+    ],
+    "exported_functions": [
+      "TestGuidesEditPublishImportRun"
+    ]
+  },
+  {
+    "path": "server/hubtest/idem_test.go",
+    "packet": "A03",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [
+      "TestIdempotencyKeys",
+      "TestOptimisticConcurrency"
+    ],
+    "exported_functions": [
+      "TestIdempotencyKeys",
+      "TestOptimisticConcurrency"
+    ]
+  },
+  {
+    "path": "server/hubtest/mcp_test.go",
+    "packet": "A03",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [
+      "TestMCPToolsOverHTTP"
+    ],
+    "exported_functions": [
+      "RoundTrip",
+      "TestMCPToolsOverHTTP"
+    ]
+  },
+  {
+    "path": "server/hubtest/migrate007_test.go",
+    "packet": "A01",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [
+      "TestMigration007KeepsData"
+    ],
+    "exported_functions": [
+      "TestMigration007KeepsData"
+    ]
+  },
+  {
+    "path": "server/hubtest/policy_test.go",
+    "packet": "A02",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [
+      "TestPolicyAndSafetyRules"
+    ],
+    "exported_functions": [
+      "TestPolicyAndSafetyRules"
+    ]
+  },
+  {
+    "path": "server/hubtest/policydoc_test.go",
+    "packet": "A04",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [
+      "TestPolicyDocEditAndFailClosed"
+    ],
+    "exported_functions": [
+      "TestPolicyDocEditAndFailClosed"
+    ]
+  },
+  {
+    "path": "server/hubtest/policygate_test.go",
+    "packet": "A04",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [
+      "TestPolicyGateBlocksBridgeCalls",
+      "TestPolicyGateRealPDP"
+    ],
+    "exported_functions": [
+      "ServeHTTP",
+      "TestPolicyGateBlocksBridgeCalls",
+      "TestPolicyGateRealPDP"
+    ]
+  },
+  {
+    "path": "server/hubtest/providers_mcp_test.go",
+    "packet": "A06",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [
+      "TestProvidersMCP"
+    ],
+    "exported_functions": [
+      "TestProvidersMCP"
+    ]
+  },
+  {
+    "path": "server/hubtest/providers_test.go",
+    "packet": "A06",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [
+      "TestProvidersREST"
+    ],
+    "exported_functions": [
+      "TestProvidersREST"
+    ]
+  },
+  {
+    "path": "server/hubtest/race_test.go",
+    "packet": "A01",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [
+      "TestClaimNextRaceNeverDoubleClaims"
+    ],
+    "exported_functions": [
+      "TestClaimNextRaceNeverDoubleClaims"
+    ]
+  },
+  {
+    "path": "server/hubtest/realbridge_test.go",
+    "packet": "A04",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [
+      "TestRealBridgeExecRevoke"
+    ],
+    "exported_functions": [
+      "TestRealBridgeExecRevoke"
+    ]
+  },
+  {
+    "path": "server/hubtest/realgui_test.go",
+    "packet": "A10",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [
+      "TestRealBridgeGUI"
+    ],
+    "exported_functions": [
+      "TestRealBridgeGUI"
+    ]
+  },
+  {
+    "path": "server/hubtest/retention_test.go",
+    "packet": "A08",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [
+      "TestRetentionArchivesThenDropsPartitions",
+      "TestRetentionRowCapAndArchiveFailure",
+      "TestRetentionStorageNeverFills"
+    ],
+    "exported_functions": [
+      "TestRetentionArchivesThenDropsPartitions",
+      "TestRetentionRowCapAndArchiveFailure",
+      "TestRetentionStorageNeverFills"
+    ]
+  },
+  {
+    "path": "server/hubtest/review_test.go",
+    "packet": "A01",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [
+      "TestReviewerPassUnlocksChange"
+    ],
+    "exported_functions": [
+      "TestReviewerPassUnlocksChange"
+    ]
+  },
+  {
+    "path": "server/hubtest/sse_test.go",
+    "packet": "A03",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [
+      "TestSSEStreamsEventsAndResumes"
+    ],
+    "exported_functions": [
+      "TestSSEStreamsEventsAndResumes"
+    ]
+  },
+  {
+    "path": "server/hubtest/subs_test.go",
+    "packet": "A06",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [
+      "TestSubscriptionsSecretsRouting"
+    ],
+    "exported_functions": [
+      "TestSubscriptionsSecretsRouting"
+    ]
+  },
+  {
+    "path": "server/hubtest/unsandboxed_test.go",
+    "packet": "A04",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [
+      "TestUnsandboxedPolicyResumeAlertsDefaultPreset"
+    ],
+    "exported_functions": [
+      "TestUnsandboxedPolicyResumeAlertsDefaultPreset"
+    ]
+  },
+  {
+    "path": "server/internal/access/authorize.go",
+    "packet": "A04",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Authorize",
+      "Fingerprint",
+      "Used"
+    ]
+  },
+  {
+    "path": "server/internal/access/decide.go",
+    "packet": "A04",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Approve",
+      "Deny"
+    ]
+  },
+  {
+    "path": "server/internal/access/defaults.go",
+    "packet": "A04",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "SetDefaultPreset"
+    ]
+  },
+  {
+    "path": "server/internal/access/policygate.go",
+    "packet": "A04",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Decide"
+    ]
+  },
+  {
+    "path": "server/internal/access/read.go",
+    "packet": "A04",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Requests",
+      "Grants",
+      "Lookup",
+      "Summary",
+      "Wait"
+    ]
+  },
+  {
+    "path": "server/internal/access/reaper.go",
+    "packet": "A04",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "ReapOnce",
+      "RunReaper"
+    ]
+  },
+  {
+    "path": "server/internal/access/request.go",
+    "packet": "A04",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Request"
+    ]
+  },
+  {
+    "path": "server/internal/access/resume.go",
+    "packet": "A04",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "IdleMinutes",
+      "Check",
+      "AgentResumed"
+    ]
+  },
+  {
+    "path": "server/internal/access/resume_ack.go",
+    "packet": "A04",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Open",
+      "Ack"
+    ]
+  },
+  {
+    "path": "server/internal/access/revoke.go",
+    "packet": "A04",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Revoke",
+      "RevokeAll",
+      "Live"
+    ]
+  },
+  {
+    "path": "server/internal/access/sandbox.go",
+    "packet": "A04",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "SetPolicy",
+      "Policies"
+    ]
+  },
+  {
+    "path": "server/internal/actionfeed/a2ui.go",
+    "packet": "A08",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "A2UI"
+    ]
+  },
+  {
+    "path": "server/internal/actionfeed/diff.go",
+    "packet": "A08",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "DiffFromArgs"
+    ]
+  },
+  {
+    "path": "server/internal/actionfeed/event.go",
+    "packet": "A08",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "CategoryFor"
+    ]
+  },
+  {
+    "path": "server/internal/actionfeed/query.go",
+    "packet": "A08",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "List",
+      "Head"
+    ]
+  },
+  {
+    "path": "server/internal/actionfeed/record.go",
+    "packet": "A08",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Record",
+      "ParseID"
+    ]
+  },
+  {
+    "path": "server/internal/actionfeed/redact.go",
+    "packet": "A08",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "NewScrubber",
+      "Text",
+      "Argv",
+      "JSON"
+    ]
+  },
+  {
+    "path": "server/internal/actionfeed/redact_test.go",
+    "packet": "A08",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [
+      "TestScrubberMasksSecrets",
+      "TestDiffFromArgs",
+      "TestA2UIMessages"
+    ],
+    "exported_functions": [
+      "TestScrubberMasksSecrets",
+      "TestDiffFromArgs",
+      "TestA2UIMessages"
+    ]
+  },
+  {
+    "path": "server/internal/auditkeep/archive.go",
+    "packet": "A08",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Archive",
+      "ManifestHash"
+    ]
+  },
+  {
+    "path": "server/internal/auditkeep/config.go",
+    "packet": "A08",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Categories",
+      "Lookup",
+      "Put"
+    ]
+  },
+  {
+    "path": "server/internal/auditkeep/job.go",
+    "packet": "A08",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Flush",
+      "Run"
+    ]
+  },
+  {
+    "path": "server/internal/auditkeep/partition.go",
+    "packet": "A08",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "EnsureCategory",
+      "EnsureDay",
+      "EnsureAll",
+      "Partitions"
+    ]
+  },
+  {
+    "path": "server/internal/auditkeep/prune.go",
+    "packet": "A08",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Prune"
+    ]
+  },
+  {
+    "path": "server/internal/auditkeep/sink.go",
+    "packet": "A08",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Put",
+      "KeyID",
+      "Sign",
+      "SignerFromFile"
+    ]
+  },
+  {
+    "path": "server/internal/auditkeep/verify.go",
+    "packet": "A08",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "VerifySegment",
+      "VerifyChainOfSegments"
+    ]
+  },
+  {
+    "path": "server/internal/auditkeep/verify_test.go",
+    "packet": "A08",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [
+      "TestVerifySegmentDetectsTampering",
+      "TestFileSinkRefusesOverwriteAndTraversal"
+    ],
+    "exported_functions": [
+      "TestVerifySegmentDetectsTampering",
+      "TestFileSinkRefusesOverwriteAndTraversal"
+    ]
+  },
+  {
+    "path": "server/internal/auth/auth.go",
+    "packet": "A02",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "New",
+      "Bearer",
+      "Identify",
+      "Token"
+    ]
+  },
+  {
+    "path": "server/internal/bridgehub/hub.go",
+    "packet": "A04",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "New",
+      "Connected",
+      "Call",
+      "Push",
+      "Next",
+      "Deliver"
+    ]
+  },
+  {
+    "path": "server/internal/bridgehub/socket.go",
+    "packet": "A04",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Serve"
+    ]
+  },
+  {
+    "path": "server/internal/catalog/crud.go",
+    "packet": "A05",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "List",
+      "Put",
+      "Delete"
+    ]
+  },
+  {
+    "path": "server/internal/catalog/kinds.go",
+    "packet": "A05",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Kinds",
+      "Lookup"
+    ]
+  },
+  {
+    "path": "server/internal/catalog/seed.go",
+    "packet": "A05",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "SeedRows",
+      "SeedPolicies"
+    ]
+  },
+  {
+    "path": "server/internal/changepolicy/decide.go",
+    "packet": "A04",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Decide",
+      "Decide"
+    ]
+  },
+  {
+    "path": "server/internal/changepolicy/docs.go",
+    "packet": "A04",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Put",
+      "Rollback",
+      "Current",
+      "Versions",
+      "SeedDoc"
+    ]
+  },
+  {
+    "path": "server/internal/changepolicy/evidence.go",
+    "packet": "A04",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "AddEvidence"
+    ]
+  },
+  {
+    "path": "server/internal/changepolicy/facts.go",
+    "packet": "A04",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Ticket",
+      "Evidence",
+      "Reviews"
+    ]
+  },
+  {
+    "path": "server/internal/changepolicy/read.go",
+    "packet": "A04",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Get",
+      "List"
+    ]
+  },
+  {
+    "path": "server/internal/changepolicy/reviews.go",
+    "packet": "A04",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Review"
+    ]
+  },
+  {
+    "path": "server/internal/changepolicy/tickets.go",
+    "packet": "A04",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Create",
+      "Update",
+      "Submit"
+    ]
+  },
+  {
+    "path": "server/internal/config/config.go",
+    "packet": "A12",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Load"
+    ]
+  },
+  {
+    "path": "server/internal/db/pool.go",
+    "packet": "A00",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Open",
+      "Migrate",
+      "MigrateUntil"
+    ]
+  },
+  {
+    "path": "server/internal/devapi/access_routes.go",
+    "packet": "A04",
+    "routes_literal": [
+      "GET /api/v1/access-requests",
+      "POST /api/v1/access-requests",
+      "POST /api/v1/access-requests/{id}/approve",
+      "POST /api/v1/access-requests/{id}/deny",
+      "GET /api/v1/grants",
+      "POST /api/v1/grants/{id}/revoke",
+      "GET /api/v1/sandbox-policies",
+      "PUT /api/v1/sandbox-policies",
+      "PUT /api/v1/settings/grant_default_preset",
+      "POST /api/v1/resume-alerts/check",
+      "GET /api/v1/resume-alerts",
+      "POST /api/v1/resume-alerts/{id}/{action}",
+      "GET /api/v1/access-summary"
+    ],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": []
+  },
+  {
+    "path": "server/internal/devapi/api.go",
+    "packet": "A04",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Mount"
+    ]
+  },
+  {
+    "path": "server/internal/devapi/audit_routes.go",
+    "packet": "A08",
+    "routes_literal": [
+      "GET /api/v1/actions",
+      "GET /api/v1/actions/a2ui",
+      "GET /api/v1/audit/retention",
+      "PUT /api/v1/audit/categories/{category}",
+      "POST /api/v1/audit/prune",
+      "POST /api/v1/audit/flush"
+    ],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": []
+  },
+  {
+    "path": "server/internal/devapi/bridge_routes.go",
+    "packet": "A04",
+    "routes_literal": [
+      "POST /bridge/v1/enroll",
+      "POST /bridge/v1/poll",
+      "POST /bridge/v1/result",
+      "GET /bridge/v1/grant/{id}",
+      "POST /bridge/v1/gui-ready",
+      "GET /bridge/v1"
+    ],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": []
+  },
+  {
+    "path": "server/internal/devapi/build.go",
+    "packet": "A04",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Build"
+    ]
+  },
+  {
+    "path": "server/internal/devapi/catalog_routes.go",
+    "packet": "A05",
+    "routes_literal": [
+      "GET /api/v1/",
+      "POST /api/v1/",
+      "PUT /api/v1/",
+      "PATCH /api/v1/",
+      "DELETE /api/v1/"
+    ],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": []
+  },
+  {
+    "path": "server/internal/devapi/guides_routes.go",
+    "packet": "A07",
+    "routes_literal": [
+      "GET /api/v1/guides",
+      "GET /api/v1/guides/{id}",
+      "PATCH /api/v1/guides/{id}",
+      "GET /api/v1/guides/{id}/versions",
+      "POST /api/v1/guides",
+      "POST /api/v1/guides/{id}/versions",
+      "POST /api/v1/guides/{id}/versions/{v}/publish",
+      "POST /api/v1/guides/{id}/versions/{v}/retire",
+      "GET /api/v1/guides/{id}/diff",
+      "POST /api/v1/guides/import",
+      "GET /api/v1/guide-updates",
+      "POST /api/v1/guide-updates/{id}/{decision}",
+      "GET /api/v1/guide-runs",
+      "POST /api/v1/guide-runs",
+      "GET /api/v1/guide-runs/{id}",
+      "POST /api/v1/guide-runs/{id}/step"
+    ],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": []
+  },
+  {
+    "path": "server/internal/devapi/hooks.go",
+    "packet": "A04",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Exec",
+      "Request"
+    ]
+  },
+  {
+    "path": "server/internal/devapi/machines_routes.go",
+    "packet": "A04",
+    "routes_literal": [
+      "GET /api/v1/machines",
+      "GET /api/v1/machines/{id}",
+      "POST /api/v1/machines",
+      "PATCH /api/v1/machines/{id}",
+      "POST /api/v1/machines/{id}/enroll-code",
+      "POST /api/v1/machines/{id}/test",
+      "POST /api/v1/machines/{id}/",
+      "POST /api/v1/machines/{id}/revoke-all",
+      "DELETE /api/v1/machines/{id}",
+      "GET /api/v1/gui-sessions",
+      "POST /api/v1/gui-sessions/{id}/end",
+      "GET /api/v1/gui-sessions/{id}",
+      "GET /api/v1/proc-leases",
+      "POST /api/v1/proc-leases/{id}/kill"
+    ],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": []
+  },
+  {
+    "path": "server/internal/devapi/mcp_access.go",
+    "packet": "A04",
+    "routes_literal": [],
+    "tools_literal": [
+      "machines_list",
+      "capabilities_list",
+      "request_access",
+      "wait_for_access",
+      "my_grants",
+      "role_route"
+    ],
+    "tests": [],
+    "exported_functions": []
+  },
+  {
+    "path": "server/internal/devapi/mcp_gui.go",
+    "packet": "A04",
+    "routes_literal": [],
+    "tools_literal": [
+      "gui_session_start",
+      "gui_session_end"
+    ],
+    "tests": [],
+    "exported_functions": []
+  },
+  {
+    "path": "server/internal/devapi/mcp_guides.go",
+    "packet": "A07",
+    "routes_literal": [],
+    "tools_literal": [
+      "guides_search",
+      "guide_get",
+      "guide_run_start",
+      "guide_run_step"
+    ],
+    "tests": [],
+    "exported_functions": []
+  },
+  {
+    "path": "server/internal/devapi/mcp_ops.go",
+    "packet": "A04",
+    "routes_literal": [],
+    "tools_literal": [
+      "exec"
+    ],
+    "tests": [],
+    "exported_functions": []
+  },
+  {
+    "path": "server/internal/devapi/mcp_policy.go",
+    "packet": "A04",
+    "routes_literal": [],
+    "tools_literal": [
+      "policy_check",
+      "ticket_create",
+      "ticket_update",
+      "ticket_evidence_add",
+      "ticket_submit",
+      "review_queue",
+      "review_ticket",
+      "review_submit"
+    ],
+    "tests": [],
+    "exported_functions": []
+  },
+  {
+    "path": "server/internal/devapi/mcp_proc.go",
+    "packet": "A04",
+    "routes_literal": [],
+    "tools_literal": [
+      "proc_start",
+      "proc_"
+    ],
+    "tests": [],
+    "exported_functions": []
+  },
+  {
+    "path": "server/internal/devapi/mcp_providers.go",
+    "packet": "A06",
+    "routes_literal": [],
+    "tools_literal": [
+      "provider_schema",
+      "provider_list",
+      "provider_get",
+      "provider_validate",
+      "provider_create",
+      "provider_update",
+      "provider_disable"
+    ],
+    "tests": [],
+    "exported_functions": []
+  },
+  {
+    "path": "server/internal/devapi/mcp_tool.go",
+    "packet": "A04",
+    "routes_literal": [],
+    "tools_literal": [
+      "machine_tool"
+    ],
+    "tests": [],
+    "exported_functions": []
+  },
+  {
+    "path": "server/internal/devapi/policy_routes.go",
+    "packet": "A04",
+    "routes_literal": [
+      "GET /api/v1/policy/doc",
+      "GET /api/v1/policy/versions",
+      "PUT /api/v1/policy/doc",
+      "POST /api/v1/policy/rollback",
+      "POST /api/v1/policy/decide",
+      "GET /api/v1/policy/decisions",
+      "GET /api/v1/change-tickets",
+      "GET /api/v1/change-tickets/{id}",
+      "POST /api/v1/change-tickets",
+      "PUT /api/v1/change-tickets/{id}",
+      "POST /api/v1/change-tickets/{id}/evidence",
+      "POST /api/v1/change-tickets/{id}/submit",
+      "POST /api/v1/change-tickets/{id}/reviews"
+    ],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": []
+  },
+  {
+    "path": "server/internal/devapi/provider_routes.go",
+    "packet": "A06",
+    "routes_literal": [
+      "GET /api/v1/providers",
+      "GET /api/v1/providers/{id}",
+      "GET /api/v1/provider-schema",
+      "POST /api/v1/providers/validate",
+      "POST /api/v1/providers",
+      "PUT /api/v1/providers/{id}",
+      "PATCH /api/v1/providers/{id}",
+      "POST /api/v1/providers/{id}/",
+      "PUT /api/v1/providers/{id}/models"
+    ],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": []
+  },
+  {
+    "path": "server/internal/devapi/subs_routes.go",
+    "packet": "A06",
+    "routes_literal": [
+      "GET /api/v1/subscriptions",
+      "POST /api/v1/subscriptions",
+      "PATCH /api/v1/subscriptions/{id}",
+      "PUT /api/v1/subscriptions/{id}/secret",
+      "POST /api/v1/subscriptions/{id}/test",
+      "GET /api/v1/role-bindings",
+      "POST /api/v1/role-bindings",
+      "PATCH /api/v1/role-bindings/{id}",
+      "DELETE /api/v1/",
+      "GET /api/v1/role-route"
+    ],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": []
+  },
+  {
+    "path": "server/internal/guidekit/diff.go",
+    "packet": "A07",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Diff"
+    ]
+  },
+  {
+    "path": "server/internal/guidekit/dryrun.go",
+    "packet": "A07",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "DryRun"
+    ]
+  },
+  {
+    "path": "server/internal/guidekit/flow.go",
+    "packet": "A07",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Match",
+      "Settle",
+      "Advance"
+    ]
+  },
+  {
+    "path": "server/internal/guidekit/guidekit_test.go",
+    "packet": "A07",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [
+      "TestSeedGuidesValidateAndLint",
+      "TestDockerDryRunPaths",
+      "TestRetriesPause",
+      "TestBadRefsAndSecrets",
+      "TestSignVerifyDiff"
+    ],
+    "exported_functions": [
+      "TestSeedGuidesValidateAndLint",
+      "TestDockerDryRunPaths",
+      "TestRetriesPause",
+      "TestBadRefsAndSecrets",
+      "TestSignVerifyDiff"
+    ]
+  },
+  {
+    "path": "server/internal/guidekit/lint.go",
+    "packet": "A07",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Lint",
+      "Blocking",
+      "Reachable"
+    ]
+  },
+  {
+    "path": "server/internal/guidekit/render.go",
+    "packet": "A07",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Fill",
+      "Render"
+    ]
+  },
+  {
+    "path": "server/internal/guidekit/sign.go",
+    "packet": "A07",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Canonical",
+      "ContentSHA",
+      "Sign",
+      "Verify",
+      "Semver",
+      "Bump"
+    ]
+  },
+  {
+    "path": "server/internal/guidekit/step.go",
+    "packet": "A07",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Parse",
+      "Validate",
+      "Find"
+    ]
+  },
+  {
+    "path": "server/internal/guides/commands.go",
+    "packet": "A07",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Commands"
+    ]
+  },
+  {
+    "path": "server/internal/guides/edit.go",
+    "packet": "A07",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "SaveDraft",
+      "SetEnabled"
+    ]
+  },
+  {
+    "path": "server/internal/guides/importer.go",
+    "packet": "A07",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Import"
+    ]
+  },
+  {
+    "path": "server/internal/guides/publish.go",
+    "packet": "A07",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Publish",
+      "Retire"
+    ]
+  },
+  {
+    "path": "server/internal/guides/read.go",
+    "packet": "A07",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "List",
+      "Get",
+      "Effective",
+      "Versions",
+      "Diff"
+    ]
+  },
+  {
+    "path": "server/internal/guides/runs.go",
+    "packet": "A07",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "GetRun",
+      "ListRuns",
+      "View"
+    ]
+  },
+  {
+    "path": "server/internal/guides/runstep.go",
+    "packet": "A07",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Step"
+    ]
+  },
+  {
+    "path": "server/internal/guides/seed.go",
+    "packet": "A07",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "SecretRes",
+      "Seed"
+    ]
+  },
+  {
+    "path": "server/internal/guides/start.go",
+    "packet": "A07",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Start"
+    ]
+  },
+  {
+    "path": "server/internal/guides/updates.go",
+    "packet": "A07",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Updates",
+      "Decide"
+    ]
+  },
+  {
+    "path": "server/internal/httpapi/admin.go",
+    "packet": "A03",
+    "routes_literal": [
+      "GET /api/v1/config",
+      "GET /api/v1/principals",
+      "POST /api/v1/principals",
+      "PUT /api/v1/principals/{id}",
+      "GET /api/v1/principals/{id}/tokens",
+      "POST /api/v1/principals/{id}/tokens",
+      "DELETE /api/v1/tokens/{id}",
+      "PUT /api/v1/",
+      "POST /api/v1/",
+      "DELETE /api/v1/"
+    ],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": []
+  },
+  {
+    "path": "server/internal/httpapi/events.go",
+    "packet": "A03",
+    "routes_literal": [
+      "GET /api/v1/events",
+      "GET /api/v1/events/verify",
+      "GET /api/v1/protocol",
+      "GET /api/v1/stream"
+    ],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": []
+  },
+  {
+    "path": "server/internal/httpapi/export.go",
+    "packet": "A03",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Authed",
+      "Decode",
+      "JSON",
+      "WriteErr"
+    ]
+  },
+  {
+    "path": "server/internal/httpapi/protocol.go",
+    "packet": "A03",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "AgentsMD",
+      "ConnectSnippets"
+    ]
+  },
+  {
+    "path": "server/internal/httpapi/server.go",
+    "packet": "A03",
+    "routes_literal": [
+      "GET /healthz"
+    ],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Handler"
+    ]
+  },
+  {
+    "path": "server/internal/httpapi/tasks.go",
+    "packet": "A03",
+    "routes_literal": [
+      "GET /api/v1/me",
+      "GET /api/v1/tasks",
+      "POST /api/v1/tasks",
+      "GET /api/v1/tasks/{id}",
+      "PATCH /api/v1/tasks/{id}",
+      "POST /api/v1/claim-next",
+      "POST /api/v1/tasks/{id}/{op}"
+    ],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": []
+  },
+  {
+    "path": "server/internal/machineops/gui.go",
+    "packet": "A04",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "GUIStart",
+      "GUIOp",
+      "GUIEnd"
+    ]
+  },
+  {
+    "path": "server/internal/machineops/ops.go",
+    "packet": "A04",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Call",
+      "Probe",
+      "GrantsEnded"
+    ]
+  },
+  {
+    "path": "server/internal/machineops/proc.go",
+    "packet": "A04",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "ProcStart",
+      "ProcOp"
+    ]
+  },
+  {
+    "path": "server/internal/machines/admin.go",
+    "packet": "A04",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Patch",
+      "SetPaused",
+      "Remove"
+    ]
+  },
+  {
+    "path": "server/internal/machines/enroll.go",
+    "packet": "A04",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "SignKey",
+      "Enroll",
+      "CacheSeconds",
+      "SignKeyFor"
+    ]
+  },
+  {
+    "path": "server/internal/machines/list.go",
+    "packet": "A04",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "List",
+      "Get",
+      "ByPrincipal",
+      "Seen",
+      "CallDone"
+    ]
+  },
+  {
+    "path": "server/internal/machines/machines.go",
+    "packet": "A04",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Create",
+      "NewCode",
+      "GUIReady"
+    ]
+  },
+  {
+    "path": "server/internal/mcptools/ext.go",
+    "packet": "A03",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "ErrResult",
+      "PrincipalOf"
+    ]
+  },
+  {
+    "path": "server/internal/mcptools/server.go",
+    "packet": "A03",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Handler"
+    ]
+  },
+  {
+    "path": "server/internal/policy/policy.go",
+    "packet": "A02",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Decide",
+      "Glob"
+    ]
+  },
+  {
+    "path": "server/internal/policy/policy_test.go",
+    "packet": "A02",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [
+      "TestDecide"
+    ],
+    "exported_functions": [
+      "TestDecide"
+    ]
+  },
+  {
+    "path": "server/internal/policygate/client.go",
+    "packet": "A04",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "FromEnv",
+      "New",
+      "Decide"
+    ]
+  },
+  {
+    "path": "server/internal/policyrules/classify.go",
+    "packet": "A04",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Classify",
+      "Hosts",
+      "RegionsFor"
+    ]
+  },
+  {
+    "path": "server/internal/policyrules/eval.go",
+    "packet": "A04",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Normalize",
+      "Evaluate",
+      "Reason"
+    ]
+  },
+  {
+    "path": "server/internal/policyrules/facts.go",
+    "packet": "A04",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Value",
+      "ValidID"
+    ]
+  },
+  {
+    "path": "server/internal/policyrules/review_test.go",
+    "packet": "A04",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [
+      "TestReviewCheck",
+      "TestApprovalNeedsHuman"
+    ],
+    "exported_functions": [
+      "Ticket",
+      "Evidence",
+      "Reviews",
+      "TestReviewCheck",
+      "TestApprovalNeedsHuman"
+    ]
+  },
+  {
+    "path": "server/internal/policyrules/validate.go",
+    "packet": "A04",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Validate",
+      "Validate"
+    ]
+  },
+  {
+    "path": "server/internal/presets/changepolicy.go",
+    "packet": "A04",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "LoadReview"
+    ]
+  },
+  {
+    "path": "server/internal/presets/devagotchi.go",
+    "packet": "A05",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "LoadDevagotchi"
+    ]
+  },
+  {
+    "path": "server/internal/presets/presets.go",
+    "packet": "A05",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Default"
+    ]
+  },
+  {
+    "path": "server/internal/presets/seedall.go",
+    "packet": "A05",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "SeedAll"
+    ]
+  },
+  {
+    "path": "server/internal/providers/adapters.go",
+    "packet": "A06",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "AdapterConfig"
+    ]
+  },
+  {
+    "path": "server/internal/providers/adapters_test.go",
+    "packet": "A06",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [
+      "TestAdapterKindsAreExactlyFive",
+      "TestRouterOption",
+      "TestResolveTargets"
+    ],
+    "exported_functions": [
+      "TestAdapterKindsAreExactlyFive",
+      "TestRouterOption",
+      "TestResolveTargets"
+    ]
+  },
+  {
+    "path": "server/internal/providers/convert.go",
+    "packet": "A06",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Convert"
+    ]
+  },
+  {
+    "path": "server/internal/providers/convert_test.go",
+    "packet": "A06",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [
+      "TestSchemaVersion",
+      "TestOlderRowsAreConverted",
+      "TestSeedRowsValidate"
+    ],
+    "exported_functions": [
+      "TestSchemaVersion",
+      "TestOlderRowsAreConverted",
+      "TestSeedRowsValidate"
+    ]
+  },
+  {
+    "path": "server/internal/providers/db.go",
+    "packet": "A06",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Invalid"
+    ]
+  },
+  {
+    "path": "server/internal/providers/endpoint.go",
+    "packet": "A06",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Resolve"
+    ]
+  },
+  {
+    "path": "server/internal/providers/enums.go",
+    "packet": "A06",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "IsAPI"
+    ]
+  },
+  {
+    "path": "server/internal/providers/enums_ts_test.go",
+    "packet": "A06",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [
+      "TestEnumsMatchWebTypes"
+    ],
+    "exported_functions": [
+      "TestEnumsMatchWebTypes"
+    ]
+  },
+  {
+    "path": "server/internal/providers/errors.go",
+    "packet": "A06",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Error"
+    ]
+  },
+  {
+    "path": "server/internal/providers/seed.go",
+    "packet": "A06",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Seed"
+    ]
+  },
+  {
+    "path": "server/internal/providers/service.go",
+    "packet": "A06",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "List",
+      "Get",
+      "Check"
+    ]
+  },
+  {
+    "path": "server/internal/providers/validate.go",
+    "packet": "A06",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Parse",
+      "Validate"
+    ]
+  },
+  {
+    "path": "server/internal/providers/validate_test.go",
+    "packet": "A06",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [
+      "TestDocExampleRowIsValid",
+      "TestFieldErrors",
+      "TestDuplicateFallbackKind",
+      "TestMCPHostOnlyRowNeedsNoAdapter"
+    ],
+    "exported_functions": [
+      "TestDocExampleRowIsValid",
+      "TestFieldErrors",
+      "TestDuplicateFallbackKind",
+      "TestMCPHostOnlyRowNeedsNoAdapter"
+    ]
+  },
+  {
+    "path": "server/internal/providers/write.go",
+    "packet": "A06",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Save",
+      "SetDisabled",
+      "PutModels"
+    ]
+  },
+  {
+    "path": "server/internal/schemacheck/check.go",
+    "packet": "A05",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Compile",
+      "Validate"
+    ]
+  },
+  {
+    "path": "server/internal/secretbox/box.go",
+    "packet": "A06",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Open",
+      "FromKey",
+      "Seal",
+      "OpenBytes",
+      "Fp"
+    ]
+  },
+  {
+    "path": "server/internal/secretbox/box_test.go",
+    "packet": "A06",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [
+      "TestSealOpenAndKeyFile"
+    ],
+    "exported_functions": [
+      "TestSealOpenAndKeyFile"
+    ]
+  },
+  {
+    "path": "server/internal/store/admin_config.go",
+    "packet": "A01",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "PutRole",
+      "PutPolicy",
+      "PutWorkflow",
+      "PutProject"
+    ]
+  },
+  {
+    "path": "server/internal/store/admin_misc.go",
+    "packet": "A01",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "PutSetting",
+      "DeleteConfig"
+    ]
+  },
+  {
+    "path": "server/internal/store/admin_people.go",
+    "packet": "A02",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "PutPrincipal",
+      "CreateToken",
+      "RevokeToken"
+    ]
+  },
+  {
+    "path": "server/internal/store/claim.go",
+    "packet": "A01",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Claim",
+      "ClaimNext"
+    ]
+  },
+  {
+    "path": "server/internal/store/conf.go",
+    "packet": "A01",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Int",
+      "Strings",
+      "Can"
+    ]
+  },
+  {
+    "path": "server/internal/store/config_read.go",
+    "packet": "A01",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Roles",
+      "Policies",
+      "Workflows",
+      "Projects",
+      "SettingsList",
+      "SettingsMap"
+    ]
+  },
+  {
+    "path": "server/internal/store/edit.go",
+    "packet": "A01",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "CreateTask",
+      "UpdateTask"
+    ]
+  },
+  {
+    "path": "server/internal/store/errors.go",
+    "packet": "A01",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Error",
+      "AsError"
+    ]
+  },
+  {
+    "path": "server/internal/store/events.go",
+    "packet": "A01",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Event",
+      "Events"
+    ]
+  },
+  {
+    "path": "server/internal/store/export.go",
+    "packet": "A01",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Write",
+      "Exec",
+      "Row",
+      "Query",
+      "Ctx",
+      "Settings",
+      "Can",
+      "CanTask",
+      "Human",
+      "LoadSettings",
+      "Fail",
+      "ErrNotFound",
+      "ErrInvalid",
+      "ErrVersion",
+      "Bool",
+      "String",
+      "Admin"
+    ]
+  },
+  {
+    "path": "server/internal/store/notes.go",
+    "packet": "A01",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "AddNote",
+      "AddDep"
+    ]
+  },
+  {
+    "path": "server/internal/store/ops.go",
+    "packet": "A01",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Heartbeat",
+      "Release",
+      "Complete",
+      "Handoff",
+      "ForceRelease"
+    ]
+  },
+  {
+    "path": "server/internal/store/principals.go",
+    "packet": "A02",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Principals",
+      "HashToken",
+      "NewToken",
+      "PrincipalByToken",
+      "PrincipalByLogin",
+      "Tokens"
+    ]
+  },
+  {
+    "path": "server/internal/store/reaper.go",
+    "packet": "A01",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "ReapOnce",
+      "RunReaper"
+    ]
+  },
+  {
+    "path": "server/internal/store/seed.go",
+    "packet": "A01",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Seed"
+    ]
+  },
+  {
+    "path": "server/internal/store/store.go",
+    "packet": "A03",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "New",
+      "MarshalJSON",
+      "ReplayOf"
+    ]
+  },
+  {
+    "path": "server/internal/store/tasks.go",
+    "packet": "A01",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Task",
+      "Tasks",
+      "Notes",
+      "Deps"
+    ]
+  },
+  {
+    "path": "server/internal/store/verify.go",
+    "packet": "A01",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "VerifyChain"
+    ]
+  },
+  {
+    "path": "server/internal/store/workflow.go",
+    "packet": "A01",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Validate"
+    ]
+  },
+  {
+    "path": "server/internal/stream/broker.go",
+    "packet": "A03",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "New",
+      "NewFor",
+      "Run",
+      "Head",
+      "Subscribe",
+      "Wait"
+    ]
+  },
+  {
+    "path": "server/internal/subs/bindings.go",
+    "packet": "A06",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Bindings",
+      "PutBinding",
+      "Delete"
+    ]
+  },
+  {
+    "path": "server/internal/subs/route.go",
+    "packet": "A06",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Resolve"
+    ]
+  },
+  {
+    "path": "server/internal/subs/secret.go",
+    "packet": "A06",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "PutSecret",
+      "Test"
+    ]
+  },
+  {
+    "path": "server/internal/subs/subs.go",
+    "packet": "A06",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "List",
+      "Put"
+    ]
+  }
+]

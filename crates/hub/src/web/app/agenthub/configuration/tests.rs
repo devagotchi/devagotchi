@@ -129,6 +129,8 @@ async fn settings_forms_save_through_the_board_and_retain_conflicting_or_invalid
     set(&mut fields, "default_priority", "6");
     set(&mut fields, "lease_ttl", "60.001");
     set(&mut fields, "environments", "dev, qa");
+    set(&mut fields, "heartbeat_hint", "5");
+    set(&mut fields, "note_kinds", "note, triage");
     let response = post(&hub, &alice, false, &fields).await;
     assert_eq!(response.status(), 303);
     assert_eq!(
@@ -140,6 +142,11 @@ async fn settings_forms_save_through_the_board_and_retain_conflicting_or_invalid
         .await;
     assert_eq!(got["structuredContent"]["default_priority"], 6);
     assert_eq!(got["structuredContent"]["lease_ttl_ms"], 60_001);
+    assert_eq!(got["structuredContent"]["heartbeat_hint_ms"], 5_000);
+    assert_eq!(
+        got["structuredContent"]["note_kinds"],
+        json!(["note", "triage"])
+    );
     let saved = events(&hub, &mut alice).await;
     let (status, html) = Hosted::text(post(&hub, &alice, false, &fields).await).await;
     assert_eq!(status, 409);

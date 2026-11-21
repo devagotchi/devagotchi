@@ -1,4 +1,11 @@
-# The Devagotchi product design, absorbed from shippinAI/agent-hub
+# The preserved AgentHub design and implementation coverage
+
+**Source absorption is incomplete.** The active work is tracked in
+[the complete preserved-source plan](../../.ai/dev/plans/absorb-preserved-sources.md),
+its [execution instructions](../../.ai/dev/plans/absorption/implementation.md) and exact
+file/commit manifests. Older statements below about design being absorbed into plans do
+not establish implemented behavior. All five preserved sources remain open until their
+code, surfaces and source-specific acceptance are verified and merged.
 
 The public home is `devagotchi/devagotchi`; hosted-service work belongs in the private
 `shippinAI/devagotchi-cloud` repository ([editions](../../.ai/docs/editions.md)). Enterprise
@@ -15,8 +22,10 @@ inside the files still resolve), `docs/spec.md` (keep as `go-hub-spec.md`) and
 `docs/connect.md` (`go-hub-connect.md`). Nothing has been copied yet: this README is the only
 file here.
 
-**The copy itself is one command, run by the operator** (a session may not move one
-repository's files into another on its own):
+The old document-copy recipe below describes an archival import, not implementation or
+source closure. The operator has authorized the complete source absorption; no separate
+permission to copy files is required. Read the immutable source objects and reconcile
+requirements against the current Rust owners before importing historical documentation.
 
 ```bash
 # both clones side by side, ../agent-hub checked out at 97172d9
@@ -27,8 +36,8 @@ cp ../agent-hub/docs/connect.md docs/devagotchi/go-hub-connect.md
 git add docs && git commit -m "docs: import the Devagotchi design from shippinAI/agent-hub@97172d9"
 ```
 
-What that branch and the later `preserve/packaging-2026-10-25` (`adca8b7`) changed is absorbed
-into the plans, capability by capability, on 2026-11-18
+What that branch and the later `preserve/packaging-2026-10-25` (`adca8b7`) changed was assigned
+to planning rows, capability by capability, on 2026-11-18
 ([factory](../../.ai/dev/plans/agenthub-factory.md), "The Go hub's last branches"). The
 packaging branch's two notes (`docs/agenthub-packaging-slice.md`,
 `docs/windows-private-storage-next-packet.md`) are not part of the copy; their content is in
