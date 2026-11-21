@@ -16,7 +16,7 @@ use crate::{
     web::{
         approvals::same_origin,
         pages::{self, Tab, escape},
-        routes::{see_other, unavailable},
+        routes::unavailable,
     },
 };
 
@@ -84,11 +84,12 @@ fn row(key: &ApiKey, now: u64) -> String {
             )
         })
         .unwrap_or_else(|| escape(&c.key_unbound));
+    let request = super::requests::request_field(Some(&super::requests::request_id()));
     let actions = if key.live(now) {
         format!(
             "<div class=\"ticket-actions\"><form method=\"post\" action=\"/app/keys/{id}/rotate\">\
 <button type=\"submit\">Replace</button></form>\
-<form method=\"post\" action=\"/app/keys/{id}/revoke\"><button class=\"deny\" type=\"submit\">Revoke</button></form></div>"
+<form method=\"post\" action=\"/app/keys/{id}/revoke\">{request}<button class=\"deny\" type=\"submit\">Revoke</button></form></div>"
         )
     } else {
         String::new()
@@ -348,6 +349,7 @@ pub async fn revoke(
     State(state): State<AppState>,
     headers: HeaderMap,
     Path(id): Path<String>,
+    axum::Form(fields): axum::Form<std::collections::BTreeMap<String, String>>,
 ) -> Response {
     let subject = match gate(&state, &headers).await {
         Ok(subject) => subject,
@@ -356,9 +358,35 @@ pub async fn revoke(
     let (Some(hub), Some(tenant)) = (&state.passkeys, tenant(&subject)) else {
         return no_keys();
     };
-    match hub.accounts().revoke_key(tenant, &subject.id, &id).await {
-        Ok(()) => see_other("/app/keys", &[]),
+    match hub
+        .accounts()
+        .revoke_key_requested(
+            tenant,
+            &subject.id,
+            &id,
+            fields.get("request_id").map(String::as_str),
+        )
+        .await
+    {
+        Ok(result) => super::requests::redirect("/app/keys", result.replayed),
         Err(error) if error.code == "not_found" => refused(&error.message),
+        Err(error)
+            if matches!(
+                error.code.as_str(),
+                "request_conflict" | "request_retired" | "invalid"
+            ) =>
+        {
+            pages::message(
+                match error.code.as_str() {
+                    "request_conflict" => StatusCode::CONFLICT,
+                    "request_retired" => StatusCode::GONE,
+                    _ => StatusCode::BAD_REQUEST,
+                },
+                "Not done",
+                &error.message,
+                Some(("/app/keys", "API keys")),
+            )
+        }
         Err(error) => {
             eprintln!("devagotchi hub: revoking an api key: {error}");
             unavailable()

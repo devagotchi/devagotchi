@@ -69,6 +69,7 @@ async fn browser_binds_stable_oauth_clients_and_rejects_stale_or_disabled_connec
     let fields = [
         ("account", owner.as_str()),
         ("client", clients[0].id.as_str()),
+        ("request_id", "bind-client"),
         ("version", "0"),
         ("enabled", "true"),
     ];
@@ -111,6 +112,7 @@ async fn browser_binds_stable_oauth_clients_and_rejects_stale_or_disabled_connec
     let disabled = [
         ("account", owner.as_str()),
         ("client", clients[0].id.as_str()),
+        ("request_id", "disable-client"),
         ("version", "1"),
     ];
     assert_eq!(hub.form(path, Some(&cookie), &disabled).await.status(), 303);
@@ -129,7 +131,9 @@ async fn browser_binds_stable_oauth_clients_and_rejects_stale_or_disabled_connec
             .code,
         "invalid_grant"
     );
-    assert_eq!(hub.form(path, Some(&cookie), &disabled).await.status(), 409);
+    assert_eq!(hub.form(path, Some(&cookie), &disabled).await.status(), 303);
+    // Replaying the old enabled binding returns its receipt without re-enabling it.
+    assert_eq!(hub.form(path, Some(&cookie), &fields).await.status(), 303);
     assert!(
         !hub.accounts
             .agent_oauth_bindings(&owner, &owner)

@@ -21,6 +21,7 @@ use crate::{
 
 #[cfg(test)]
 mod corruption_tests;
+mod revocation;
 mod scope;
 mod stored;
 #[cfg(test)]
@@ -349,15 +350,6 @@ impl Accounts {
         }
         tenants::record_in(connection, tenant, account, "api_key.revoked", id, now).await?;
         Ok(())
-    }
-
-    /// End a key at once.
-    pub async fn revoke_key(&self, tenant: &str, account: &str, id: &str) -> BridgeResult<()> {
-        let now = now_secs();
-        transaction!(&self.store, |connection| {
-            self.store.scope(connection, tenant).await?;
-            self.end_key(connection, tenant, account, id, now).await
-        })
     }
 
     /// End a key and make another with the same limits and the same length as it was given.

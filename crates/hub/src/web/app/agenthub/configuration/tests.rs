@@ -7,7 +7,7 @@ use crate::{
 };
 use serde_json::{Value, json};
 
-fn initial() -> ConfigurationState {
+pub(super) fn initial() -> ConfigurationState {
     ConfigurationState {
         settings: Settings::default(),
         settings_version: 1,
@@ -15,7 +15,7 @@ fn initial() -> ConfigurationState {
         workflow_version: 1,
     }
 }
-fn settings_fields(version: i64) -> Vec<(String, String)> {
+pub(super) fn settings_fields(version: i64) -> Vec<(String, String)> {
     let mut draft = SettingsDraft::current(&initial());
     draft.version = version;
     let mut fields: Vec<_> = draft.values.into_iter().collect();
@@ -66,10 +66,10 @@ pub(super) fn workflow_fields(draft: &WorkflowDraft, action: &str) -> Vec<(Strin
     }
     fields
 }
-fn set(fields: &mut [(String, String)], key: &str, value: &str) {
+pub(super) fn set(fields: &mut [(String, String)], key: &str, value: &str) {
     fields.iter_mut().find(|(k, _)| k == key).unwrap().1 = value.into();
 }
-async fn post(
+pub(super) async fn post(
     hub: &Hosted,
     person: &Person,
     workflow: bool,
@@ -89,13 +89,13 @@ async fn post(
     )
     .await
 }
-async fn bind(hub: &Hosted, person: &mut Person) {
+pub(super) async fn bind(hub: &Hosted, person: &mut Person) {
     let r = hub
         .call(person, "board_bind", json!({"project":"alpha"}))
         .await;
     assert!(!refused(&r), "{r}");
 }
-async fn events(hub: &Hosted, person: &mut Person) -> Value {
+pub(super) async fn events(hub: &Hosted, person: &mut Person) -> Value {
     hub.call(person, "board_events", json!({"project":"alpha"}))
         .await["structuredContent"]
         .clone()

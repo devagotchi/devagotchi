@@ -14,6 +14,7 @@ mod key_tests;
 mod keys;
 mod machine;
 pub(super) mod me;
+mod requests;
 
 use std::sync::Arc;
 

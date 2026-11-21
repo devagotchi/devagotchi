@@ -3,6 +3,7 @@ mod audited;
 mod heartbeat_progress;
 mod hosted;
 mod notes;
+mod provider_receipts;
 mod scanned;
 mod searched;
 mod served;

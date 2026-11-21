@@ -153,6 +153,7 @@ pub(super) async fn edit(
     } else {
         field("kind", &c.kind, &input.kind, true) + &field("roles", &c.roles, &input.roles, true)
     };
+    let request = form::request_field(input.request_id.as_deref());
     let fields = field("id", &c.id, &input.id, input.version > 0)
         + &format!("<p class=\"note\">{}</p>", escape(&c.id_help))
         + &field("name", &c.name, &input.name, false)
@@ -173,7 +174,7 @@ pub(super) async fn edit(
         status,
         &c.title,
         &format!(
-            "<div class=\"stack\"><a href=\"/app/agents?account={}\">{}</a><h1>{}</h1>{notice}<p>{}</p><form class=\"card stack\" method=\"post\" action=\"/app/agents\"><input type=\"hidden\" name=\"account\" value=\"{}\"><input type=\"hidden\" name=\"version\" value=\"{}\">{fields}{checkbox}<button type=\"submit\">{}</button></form>{key}{}</div>",
+            "<div class=\"stack\"><a href=\"/app/agents?account={}\">{}</a><h1>{}</h1>{notice}<p>{}</p><form class=\"card stack\" method=\"post\" action=\"/app/agents\"><input type=\"hidden\" name=\"account\" value=\"{}\"><input type=\"hidden\" name=\"version\" value=\"{}\">{request}{fields}{checkbox}<button type=\"submit\">{}</button></form>{key}{}</div>",
             encode(&ctx.account),
             escape(&c.back),
             escape(&c.title),
@@ -292,7 +293,8 @@ pub(super) async fn bindings(ctx: &Context, agent: &Agent) -> BridgeResult<Strin
             .unwrap_or_else(|| escape(&c.binding_unbound));
         let version = bound.map(|binding| binding.version).unwrap_or(0);
         let enabled = bound.is_none_or(|binding| binding.agent_id != agent.id || binding.enabled);
-        forms.push_str(&format!("<form class=\"card stack\" method=\"post\" action=\"/app/agents/{}/oauth\"><h3>{}: {}</h3><p class=\"what\">{}</p><p>{current}</p><input type=\"hidden\" name=\"account\" value=\"{}\"><input type=\"hidden\" name=\"client\" value=\"{}\"><input type=\"hidden\" name=\"version\" value=\"{}\"><label><input type=\"checkbox\" name=\"enabled\" value=\"true\"{}>{}</label><button type=\"submit\">{}</button></form>",encode(&agent.id),escape(&c.client),escape(&name),escape(&id),escape(&ctx.account),escape(&id),version,if enabled {" checked"}else{""},escape(&c.binding_enabled),escape(&c.bind)));
+        let request = form::request_field(Some(&form::request_id()));
+        forms.push_str(&format!("<form class=\"card stack\" method=\"post\" action=\"/app/agents/{}/oauth\">{request}<h3>{}: {}</h3><p class=\"what\">{}</p><p>{current}</p><input type=\"hidden\" name=\"account\" value=\"{}\"><input type=\"hidden\" name=\"client\" value=\"{}\"><input type=\"hidden\" name=\"version\" value=\"{}\"><label><input type=\"checkbox\" name=\"enabled\" value=\"true\"{}>{}</label><button type=\"submit\">{}</button></form>",encode(&agent.id),escape(&c.client),escape(&name),escape(&id),escape(&ctx.account),escape(&id),version,if enabled {" checked"}else{""},escape(&c.binding_enabled),escape(&c.bind)));
     }
     if forms.is_empty() {
         forms = format!("<p>{}</p>", escape(&c.no_clients));

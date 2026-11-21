@@ -1,12 +1,26 @@
+use super::super::receipts::{MutationResult, Receipt};
 use super::*;
 
 impl Accounts {
+    #[cfg(test)]
     pub async fn put_agent(
         &self,
         actor: &str,
         account: &str,
         edit: &AgentEdit,
     ) -> BridgeResult<Agent> {
+        self.put_agent_requested(actor, account, edit, None)
+            .await
+            .map(|result| result.value)
+    }
+
+    pub async fn put_agent_requested(
+        &self,
+        actor: &str,
+        account: &str,
+        edit: &AgentEdit,
+        request_key: Option<&str>,
+    ) -> BridgeResult<MutationResult<Agent>> {
         edit.check()?;
         transaction!(&self.store, |connection| {
             let manager = self.agent_manager_in(connection, actor, account).await?;
@@ -34,6 +48,18 @@ impl Accounts {
                     &devagotchi_agenthub::policy::Resource::default(),
                 )
                 .await?;
+            }
+            let receipt = Receipt::begin(
+                connection,
+                &manager.tenant,
+                actor,
+                request_key,
+                "put_agent",
+                &(account, edit),
+            )
+            .await?;
+            if let Receipt::Replay(saved) = receipt {
+                return Ok(MutationResult::replay(saved));
             }
             catalog::check_profile_in(connection, &manager.tenant, &edit.kind, &edit.roles).await?;
             let current = if edit.version == 0 {
@@ -109,7 +135,7 @@ impl Accounts {
                 now,
             )
             .await?;
-            Ok(saved)
+            receipt.complete(connection, saved).await
         })
     }
 }

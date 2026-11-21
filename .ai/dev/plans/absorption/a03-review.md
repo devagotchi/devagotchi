@@ -58,21 +58,20 @@ transaction and expose the optional request id through all supported adapters:
 
 | Source operation | Owning Rust implementation | Work still required |
 |---|---|---|
-| create_task, update_task | AgentHub hosted/tickets.rs | Current policy then receipt; mutation guards only on fresh writes; include board/id/content/version/fence in identity |
-| claim, claim_next | hosted/leases.rs | Identity across boards; replay original lease clearly marked as replay, never silently renew it |
-| heartbeat, release, complete, handoff, force_release | hosted/leases.rs | Current authority before replay; preserve original outcome and same-transaction events |
-| add_note, add_dep | hosted/notes.rs, graph.rs | Current resource labels, exact note/dependency payload and one event |
-| put_workflow, put_project, put_setting | hosted/settings.rs, shared_workflows/; identity agents configuration | Versioned policy checks and resource scope; shared definition changes retain all-board checks |
-| put_role, put_policy, put_principal, revoke_token | identity/accounts/agents/, api_keys/ | Compose live manager policy, identity references, audit and receipt; no credential issuance replay |
-| delete_ + dynamic configuration kind | source admin_misc.go dispatch, owning catalog | Expand every supported kind; exact version/body identity, refuse active references |
+| create_task, update_task | hosted/tickets.rs, updates.rs; MCP tools; browser creation/actions | CLI and REST adapters, complete source surface mapping |
+| claim, claim_next | hosted/claims.rs; MCP lease tools | CLI/REST retry contracts |
+| heartbeat, release, complete, handoff, force_release | hosted/leases.rs; MCP lease tools | CLI/REST retry contracts |
+| add_note, add_dep | hosted/notes.rs, graph.rs; MCP tools; browser comments | CLI/REST and browser dependency surface mapping |
+| put_workflow, put_project, put_setting | hosted/settings.rs, shared_workflows/; MCP project settings; browser configuration | Arbitrary source setting/catalog equivalence, CLI/REST/admin MCP adapters |
+| put_role, put_policy, put_principal, revoke_token | identity/accounts/agents/, api_keys/revocation.rs; browser agents/keys | Remaining principal semantics and REST/admin MCP mappings; no credential issuance replay |
+| delete_ + dynamic configuration kind | role/rule and shared workflow deletes composed with identity/board receipts | Project deletion and other dynamic source kinds remain open; expand every branch |
 | exported Store.Write callers | source store/export.go and domain call sites | Enumerate machine/catalog/grant/guide mutation calls in A04-A08, retain transaction/outbox boundaries |
-| create_token, seed, reap | credential issuance and internal lifecycle | Source deliberately supplies no key; do not introduce secret replay or client-selected reaper identity |
+| create_token, seed, reap | credential issuance and internal lifecycle | Source deliberately supplies no key; keep secret issuance and internal reaping outside client receipt APIs |
 
-MCP `request_id`, REST Idempotency-Key/body precedence, CLI retry options and browser form
-request ids still need typed adapters, bounded input and replay indication. Source dynamically
-registered tools/routes must be expanded; SSE reconnect/authorization/backpressure remains
-in this packet. All original source rows stay open until operation-specific evidence and
-main delivery exist.
+Ticket/lease MCP and the authored browser mutation forms accept request identities; REST
+Idempotency-Key/body precedence, CLI retry options, dynamic administrative registrations,
+SSE reconnect/authorization/backpressure and the remaining domains are still open. All
+source rows stay open until operation-specific evidence and main delivery exist.
 
 ## Domain and MCP wiring in progress
 
@@ -115,8 +114,8 @@ Local evidence so far:
   extraction initially duplicated operation text in macro attributes; compilation caught
   it and the attributes were corrected before this passing run.
 
-Still open: configuration/identity mutations, REST, CLI and
-browser retry adapters, SSE, archive/retention integration, source event request-id parity,
+Still open: remaining configuration/identity source semantics, REST, CLI and
+unmapped browser mutations, SSE, archive/retention integration, source event request-id parity,
 all remaining source accounting and final main delivery. This is not A03 or S1 completion.
 
 Lease adapters capture typed input before resolving implicit fences. After a completed
@@ -137,8 +136,79 @@ never increased. The real bound CLI heartbeat test passed
 clears it. Remote heartbeat now omits an absent progress field. Formatting, diff whitespace
 and the pinned source inventory pass; the inventory still has all 100 commits/907 rows open.
 
-Next compatibility case to resolve: externally verified provider/dev subjects with no local
-account row currently fail receipt Directory checks. Their ordinary calls still work; retry
-support must preserve their transport-verified identity without treating them as a missing
-local account. Local acct_ and registered @agent: namespaces must continue to fail closed.
-This is not covered by the account-based MCP retry tests above.
+Provider/dev subjects verified on the current transport request now retain retry support
+without a local auth_accounts row. The fallback excludes local acct_ and registered @agent:
+namespaces and profile snapshots. The real HTTP/MCP provider case passes (1 test,
+target/absorption-provider-receipts.log): reconnect replays create and project settings,
+keeps later settings intact, and refuses a request key on a settings read.
+
+Configuration domain receipts cover settings, private workflows, project metadata, shared
+workflow publish/bind/edit/detach/delete. Shared edits reauthorize the union of original and
+current affected boards before replay, including a board detached since the original edit.
+Two PostgreSQL cases pass (target/absorption-configuration-receipts.log). MCP board_settings
+exposes project metadata retry; the browser adapters are still being authored. Account
+profile, OAuth binding, role, policy and principal settings receipt adapters are authored
+locally and their focused checks are in progress. None of these changes closes S1/A03.
+
+
+## Configuration, account and browser continuation
+
+Locally authored account APIs compose live manager checks, policy, mutation, tenant audit
+and receipt in the existing serializable transaction. Roles/rules support versioned put
+and delete; settings, agent profiles and stable OAuth bindings return their original
+nonsecret metadata. Replay skips fresh version/reference checks, but repeats current live
+account and policy checks. Ordinary users still may only rename their own assigned profile;
+a replay of that rename after a later authority edit returns its old result without
+restoring the old kind/roles/enabled state. Revocation receipts contain JSON null, never an
+issued/rotated key secret. Disabled/expired accounts cannot replay revocation.
+
+Browser forms carry one random request id per form, preserve it through validation and
+workflow draft controls, and issue a new id after a successful redirect/reload. This covers
+agent profiles, OAuth bindings, principal configuration, API-key revocation, task creation,
+comments/assign/delegate/close/undo/hand, board settings/private workflows, and shared
+workflow publish/bind/edit/detach/delete. The ordinary authorization/origin checks still
+run. Shared edit replay can reach its saved result after deletion without recreating the
+definition. Close forms retain the original state for the undo redirect; a replay cannot
+replace it with the ticket's later state. Comment/delegation replay does not wake twice.
+Board binding and other not-yet-mapped domain mutations remain open.
+
+Delegation and undo now use same-transaction receipts. Undo retains the original transition
+action and rechecks it with current policy/labels before replay; later closes are not
+reopened by an old retry. All five mutation receipt cases passed in
+target/absorption-delegation-undo-receipts.log.
+
+Validation notes (not final acceptance): the initial identity run had two passes and a test
+fixture collision with the seeded reviewer role; the fixture now uses a unique role name.
+The next agent run had 13 passes and a form selector incorrectly including sign-out; its
+selector now targets configuration forms. A broader browser run had 22 passes, including
+both new board/workflow retry cases, and six setup failures from PostgreSQL's connection
+limit. The affected checks are being rerun with two test threads. Compilation also caught
+a test treating an OAuth Grant as a Subject and task creation trying to serialize the
+non-wire NewTicket type; it now uses the actual Grant.account and typed browser form.
+Logs distinguish these failures from passing evidence. No CI or deployment was run.
+
+
+The bounded rerun passed: 8 account/browser receipt tests
+(target/absorption-configuration-receipts-browser-fixed.log), both key tests
+(target/absorption-key-revocation-receipts.log), 11 board/shared workflow configuration
+regressions (target/absorption-browser-configuration-regressions.log), and 6 registered
+agent browser regressions (target/absorption-browser-agent-regressions.log). The eight
+layout checks passed (target/absorption-configuration-receipt-layout.log). The source
+inventory still verifies all pinned objects and keeps all 100 commits/907 rows open.
+
+Browser redirects now expose Idempotent-Replayed: true only on replay, including account
+configuration, key revocation, task creation/actions and workflow/settings forms. Their
+header regressions and the non-test hub build are being checked. Non-keyed convenience
+methods that are now used only by fixtures compile only under cfg(test); the production
+entry points accept an optional request key. No warning is suppressed to hide unused code.
+
+
+Header checks passed: 8 receipt cases (target/absorption-browser-replay-headers.log) and
+2 key cases (target/absorption-key-replay-headers.log). After removing the unused import,
+cargo check -p devagotchi-hub completed without compiler warnings
+(target/absorption-configuration-receipt-check-clean.log). The existing PostgreSQL key
+lifecycle/isolation regression passed using the just-built test executable
+(target/absorption-key-revocation-regression.log); only that import changed since its build.
+The just-built layout executable also passed all eight checks against the current files
+(target/absorption-configuration-receipt-layout-current.log). Formatting and diff whitespace
+checks passed. These are local checks, not CI or source absorption into main.

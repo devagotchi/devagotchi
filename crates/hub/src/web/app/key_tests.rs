@@ -13,6 +13,94 @@ fn secret(html: &str) -> &str {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn revoke_form_replays_without_secret_storage_and_rechecks_live_account() {
+    use crate::identity::accounts::api_keys::{NewKey, Scope};
+    let hub = or_skip!(hosted());
+    let person = hub.first_connect("revocation test").await;
+    let subject = hub
+        .accounts
+        .verify_access(&person.token)
+        .await
+        .unwrap()
+        .unwrap();
+    let account = subject.account;
+    let input = NewKey {
+        name: "Revocation".into(),
+        scopes: vec![Scope::BoardsRead],
+        hours: 24,
+        ..Default::default()
+    };
+    let (key, secret) = hub
+        .accounts
+        .create_key(&account.tenant, &account.id, &input)
+        .await
+        .unwrap();
+    let (_, html) = page(&hub, "/app/keys", &person).await;
+    let request = html
+        .split_once("name=\"request_id\" value=\"")
+        .unwrap()
+        .1
+        .split_once('"')
+        .unwrap()
+        .0;
+    let path = format!("/app/keys/{}/revoke", key.id);
+    for _ in 0..2 {
+        assert_eq!(
+            hub.form(&path, Some(&person.cookie), &[("request_id", request)])
+                .await
+                .status(),
+            303
+        );
+    }
+    let replay = hub
+        .form(&path, Some(&person.cookie), &[("request_id", request)])
+        .await;
+    assert_eq!(replay.headers()["idempotent-replayed"], "true");
+    assert!(hub.accounts.verify_key(&secret).await.unwrap().is_none());
+    let responses: Vec<String> = sqlx::query_scalar(
+        "SELECT response FROM store_request_receipts WHERE tenant_id=$1 AND operation='revoke_key'",
+    )
+    .bind(&account.tenant)
+    .fetch_all(hub.accounts.store().admin())
+    .await
+    .unwrap();
+    assert_eq!(responses, ["null"]);
+    let (other, other_secret) = hub
+        .accounts
+        .create_key(&account.tenant, &account.id, &input)
+        .await
+        .unwrap();
+    assert_eq!(
+        hub.accounts
+            .revoke_key_requested(&account.tenant, &account.id, &other.id, Some(request))
+            .await
+            .unwrap_err()
+            .code,
+        "request_conflict"
+    );
+    assert!(
+        hub.accounts
+            .verify_key(&other_secret)
+            .await
+            .unwrap()
+            .is_some()
+    );
+    sqlx::query("UPDATE auth_accounts SET disabled_at=1 WHERE id=$1")
+        .bind(&account.id)
+        .execute(hub.accounts.store().admin())
+        .await
+        .unwrap();
+    assert_eq!(
+        hub.accounts
+            .revoke_key_requested(&account.tenant, &account.id, &key.id, Some(request))
+            .await
+            .unwrap_err()
+            .code,
+        "not_found"
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn issued_keys_survive_metadata_failure_but_are_never_replayed() {
     let hub = or_skip!(hosted());
     let person = hub.first_connect("key test").await;

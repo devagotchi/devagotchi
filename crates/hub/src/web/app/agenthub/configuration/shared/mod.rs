@@ -102,7 +102,10 @@ async fn change(
         .await
         .unwrap_or_else(|e| Err(BridgeError::new("runtime", e.to_string())));
     match result {
-        Ok(()) => see_other(&format!("{}?saved=1", render::href(&project)), &[]),
+        Ok(replayed) => crate::web::app::requests::redirect(
+            &format!("{}?saved=1", render::href(&project)),
+            replayed,
+        ),
         Err(error) => {
             let (status, message) = failure(&error);
             render::catalog(&project, &current, &items, Some(&draft), status, &message)
@@ -131,6 +134,7 @@ async fn editor(
     };
     let draft = WorkflowDraft {
         version: item.version,
+        request_id: Some(crate::web::app::requests::request_id()),
         workflow: item.workflow.clone(),
     };
     render::editor(
@@ -174,7 +178,11 @@ async fn save(
             );
         }
     };
-    let Some(item) = items.iter().find(|w| w.workflow.id == id) else {
+    let used_by = items
+        .iter()
+        .find(|w| w.workflow.id == id)
+        .map(|item| item.used_by.as_slice());
+    if action != "save" && used_by.is_none() {
         return render::editor(
             &project,
             &id,
@@ -188,20 +196,13 @@ async fn save(
         let site = words();
         let c = &site.messages.app.configuration;
         return if draft.change_rows(&action, &c.new_state).is_ok() {
-            render::editor(
-                &project,
-                &id,
-                &draft,
-                Some(&item.used_by),
-                StatusCode::OK,
-                &c.draft,
-            )
+            render::editor(&project, &id, &draft, used_by, StatusCode::OK, &c.draft)
         } else {
             render::editor(
                 &project,
                 &id,
                 &draft,
-                Some(&item.used_by),
+                used_by,
                 StatusCode::BAD_REQUEST,
                 &c.invalid_form,
             )
@@ -210,23 +211,38 @@ async fn save(
     let submitted = draft.clone();
     let selected = id.clone();
     let result = tokio::task::spawn_blocking(move || {
-        board.edit_shared_workflow(
-            &Actor::human(&me),
-            &selected,
-            submitted.version,
-            &submitted.workflow,
-        )
+        let requested = submitted
+            .request_id
+            .as_deref()
+            .map(|key| {
+                board.requested(
+                    &me,
+                    key,
+                    "edit_shared_workflow",
+                    &(&selected, submitted.version, &submitted.workflow),
+                )
+            })
+            .transpose()?;
+        let board = requested.as_ref().unwrap_or(&board);
+        board
+            .edit_shared_workflow(
+                &Actor::human(&me),
+                &selected,
+                submitted.version,
+                &submitted.workflow,
+            )
+            .map(|_| board.hosted().replayed())
     })
     .await
     .unwrap_or_else(|e| Err(BridgeError::new("runtime", e.to_string())));
     match result {
-        Ok(_) => see_other(
+        Ok(replayed) => crate::web::app::requests::redirect(
             &format!("{}?saved=1", render::edit_href(&project, &id)),
-            &[],
+            replayed,
         ),
         Err(error) => {
             let (status, message) = failure(&error);
-            render::editor(&project, &id, &draft, Some(&item.used_by), status, &message)
+            render::editor(&project, &id, &draft, used_by, status, &message)
         }
     }
 }

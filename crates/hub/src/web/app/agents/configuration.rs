@@ -34,7 +34,7 @@ pub(super) async fn save(
     }
     let result = apply(&ctx, &fields).await;
     match result {
-        Ok(()) => see_other("/app/agents/configuration", &[]),
+        Ok(replayed) => super::super::requests::redirect("/app/agents/configuration", replayed),
         Err(e)
             if matches!(
                 e.code.as_str(),
@@ -67,26 +67,30 @@ fn lines(value: &str) -> Vec<String> {
         .collect()
 }
 
-async fn apply(ctx: &Context, fields: &Fields) -> BridgeResult<()> {
+async fn apply(ctx: &Context, fields: &Fields) -> BridgeResult<bool> {
     let id = get(fields, "id");
+    let request_key = fields.get("request_id").map(String::as_str);
     let version = number(fields, "version")?;
-    match get(fields, "operation") {
+    let replayed = match get(fields, "operation") {
         "role-save" => {
             ctx.accounts
-                .put_principal_role(
+                .put_principal_role_requested(
                     &ctx.actor.id,
                     &Role {
                         id: id.into(),
                         description: get(fields, "description").into(),
                         version,
                     },
+                    request_key,
                 )
-                .await?;
+                .await?
+                .replayed
         }
         "role-delete" => {
             ctx.accounts
-                .delete_principal_role(&ctx.actor.id, id, version)
+                .delete_principal_role_requested(&ctx.actor.id, id, version, request_key)
                 .await?
+                .replayed
         }
         "rule-save" => {
             let effect = match get(fields, "effect") {
@@ -95,7 +99,7 @@ async fn apply(ctx: &Context, fields: &Fields) -> BridgeResult<()> {
                 _ => return Err(BridgeError::new("invalid", "choose allow or deny")),
             };
             ctx.accounts
-                .put_principal_rule(
+                .put_principal_rule_requested(
                     &ctx.actor.id,
                     &Rule {
                         id: id.into(),
@@ -111,29 +115,34 @@ async fn apply(ctx: &Context, fields: &Fields) -> BridgeResult<()> {
                         enabled: get(fields, "enabled") == "true",
                         version,
                     },
+                    request_key,
                 )
-                .await?;
+                .await?
+                .replayed
         }
         "rule-delete" => {
             ctx.accounts
-                .delete_principal_rule(&ctx.actor.id, id, version)
+                .delete_principal_rule_requested(&ctx.actor.id, id, version, request_key)
                 .await?
+                .replayed
         }
         "settings" => {
             ctx.accounts
-                .put_principal_settings(
+                .put_principal_settings_requested(
                     &ctx.actor.id,
                     &PrincipalSettings {
                         kinds: lines(get(fields, "kinds")),
                         wip_limit_default: number(fields, "wip")?,
                         version,
                     },
+                    request_key,
                 )
-                .await?;
+                .await?
+                .replayed
         }
         _ => return Err(BridgeError::new("invalid", "unknown configuration change")),
-    }
-    Ok(())
+    };
+    Ok(replayed)
 }
 
 fn input(name: &str, label: &str, value: &str, readonly: bool) -> String {
@@ -159,9 +168,10 @@ fn hidden(name: &str, value: &str) -> String {
         escape(value)
     )
 }
-fn begin(operation: &str, version: i64) -> String {
+fn begin(operation: &str, version: i64, request: Option<&str>) -> String {
     format!(
-        "<form class=\"stack card\" method=\"post\" action=\"/app/agents/configuration\">{}{}",
+        "<form class=\"stack card\" method=\"post\" action=\"/app/agents/configuration\">{}{}{}",
+        form::request_field(Some(request.unwrap_or(&form::request_id()))),
         hidden("operation", operation),
         hidden("version", &version.to_string())
     )
@@ -176,6 +186,7 @@ fn save_begin(operation: &str, version: i64, draft: Option<&Fields>) -> String {
         draft
             .and_then(|d| get(d, "version").parse().ok())
             .unwrap_or(version),
+        draft.and_then(|d| d.get("request_id").map(String::as_str)),
     )
 }
 fn draft_for<'a>(
@@ -253,7 +264,14 @@ fn render(
                 })),
         );
         if role.is_some() {
-            body.push_str(&(begin("role-delete", version) + &hidden("id", id) + &end(&c.remove)));
+            body.push_str(
+                &(save_begin(
+                    "role-delete",
+                    version,
+                    draft_for(draft, "role-delete", Some(id)),
+                ) + &hidden("id", id)
+                    + &end(&c.remove)),
+            );
         }
     }
     body.push_str(&format!(
@@ -358,7 +376,12 @@ fn render(
         });
         body += &form;
         if rule.is_some() {
-            body += &(begin("rule-delete", version) + &hidden("id", id) + &end(&c.remove));
+            body += &(save_begin(
+                "rule-delete",
+                version,
+                draft_for(draft, "rule-delete", Some(id)),
+            ) + &hidden("id", id)
+                + &end(&c.remove));
         }
     }
     body += "</div>";

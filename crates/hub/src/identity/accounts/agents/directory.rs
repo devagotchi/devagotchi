@@ -13,6 +13,16 @@ impl devagotchi_agenthub::hosted::PrincipalDirectory for Directory {
         actor: &'a devagotchi_agenthub::Actor<'_>,
     ) -> Pin<Box<dyn Future<Output = Result<(), Failed>> + Send + 'a>> {
         Box::pin(async move {
+            // Provider/dev subjects are verified by the transport on every request.
+            // They have no auth_accounts row. Preserve that existing authority contract,
+            // while never letting a local or registered identity fall through to it.
+            if !principal.starts_with("acct_")
+                && !principal.starts_with('@')
+                && crate::config::valid_subject(principal).is_ok()
+                && actor.policy.is_none()
+            {
+                return Ok(());
+            }
             if !self.enabled(connection, tenant, principal).await? {
                 return Err(BridgeError::new(
                     "not_granted",

@@ -4,10 +4,7 @@ use super::super::{person, words};
 use crate::{
     AppState,
     agenthub::{Actor, Board},
-    web::{
-        pages,
-        routes::{see_other, unavailable},
-    },
+    web::{pages, routes::unavailable},
 };
 use axum::{
     Form, Router,
@@ -21,6 +18,8 @@ use serde::Deserialize;
 use std::sync::Arc;
 
 mod form;
+#[cfg(test)]
+mod receipt_tests;
 mod render;
 mod shared;
 #[cfg(test)]
@@ -160,6 +159,8 @@ fn failure(error: &BridgeError) -> (StatusCode, String) {
     let site = words();
     let c = &site.messages.app.configuration;
     match error.code.as_str() {
+        "request_conflict" => (StatusCode::CONFLICT, error.message.clone()),
+        "request_retired" => (StatusCode::GONE, error.message.clone()),
         "version_conflict" => (StatusCode::CONFLICT, c.conflict.clone()),
         "shared_workflow" | "in_use" | "already_exists" => (
             StatusCode::CONFLICT,
@@ -203,13 +204,24 @@ async fn save_settings(
         }
     };
     let version = draft.version;
+    let request_id = draft.request_id.clone();
     let result = tokio::task::spawn_blocking(move || {
-        board.edit_settings(&Actor::human(&me), version, &edit)
+        let requested = request_id
+            .as_deref()
+            .map(|key| board.requested(&me, key, "edit_settings", &(version, &edit)))
+            .transpose()?;
+        let board = requested.as_ref().unwrap_or(&board);
+        board
+            .edit_settings(&Actor::human(&me), version, &edit)
+            .map(|_| board.hosted().replayed())
     })
     .await
     .unwrap_or_else(|e| Err(BridgeError::new("runtime", e.to_string())));
     match result {
-        Ok(_) => see_other(&format!("{}?saved=1", render::href(&project, false)), &[]),
+        Ok(replayed) => crate::web::app::requests::redirect(
+            &format!("{}?saved=1", render::href(&project, false)),
+            replayed,
+        ),
         Err(error) => {
             let (status, message) = failure(&error);
             render::settings(&project, &draft, status, &message)
@@ -246,12 +258,25 @@ async fn save_workflow(
     }
     let saved = draft.clone();
     let result = tokio::task::spawn_blocking(move || {
-        board.edit_workflow(&Actor::human(&me), saved.version, &saved.workflow)
+        let requested = saved
+            .request_id
+            .as_deref()
+            .map(|key| {
+                board.requested(&me, key, "edit_workflow", &(saved.version, &saved.workflow))
+            })
+            .transpose()?;
+        let board = requested.as_ref().unwrap_or(&board);
+        board
+            .edit_workflow(&Actor::human(&me), saved.version, &saved.workflow)
+            .map(|_| board.hosted().replayed())
     })
     .await
     .unwrap_or_else(|e| Err(BridgeError::new("runtime", e.to_string())));
     match result {
-        Ok(_) => see_other(&format!("{}?saved=1", render::href(&project, true)), &[]),
+        Ok(replayed) => crate::web::app::requests::redirect(
+            &format!("{}?saved=1", render::href(&project, true)),
+            replayed,
+        ),
         Err(error) => {
             let (status, message) = failure(&error);
             render::workflow(&project, &draft, status, &message, catalog)

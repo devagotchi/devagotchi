@@ -1,5 +1,6 @@
 //! A board's settings, and binding a project to an account's own board.
 
+use super::super::mutations::{MutationInput, MutationOut};
 use devagotchi_contracts::BridgeError;
 use rmcp::{
     Json, RoleServer, handler::server::wrapper::Parameters, service::RequestContext, tool,
@@ -28,7 +29,14 @@ impl Hub {
         &self,
         Parameters(input): Parameters<SettingsIn>,
         context: RequestContext<RoleServer>,
-    ) -> Result<Json<crate::agenthub::Settings>, Json<BoardError>> {
+    ) -> Result<Json<MutationOut<crate::agenthub::Settings>>, Json<BoardError>> {
+        let request = MutationInput::of(&input)?;
+        if input.request_id.is_some() && input.repo.is_none() && input.environments.is_none() {
+            return Err(refuse(
+                BridgeError::new("invalid", "request_id requires a settings change"),
+                None,
+            ));
+        }
         let subject = self.board_subject(&context)?;
         // Whose settings these are: the owning account's, and its AI's, on its own board
         // (or its org's); the people the config names on a shared one. Unknown boards are
@@ -41,11 +49,11 @@ impl Hub {
             repo: input.repo,
             environments: input.environments,
         };
-        self.board_call(
-            "board_settings",
+        self.board_mutation(
+            "board_settings", "set_project",
             &input.project,
             None,
-            &context,
+            &context, request,
             move |board, actor| {
                 if !owner {
                     return Err(BridgeError::new(

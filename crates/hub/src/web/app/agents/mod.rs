@@ -16,7 +16,7 @@ use crate::{
     web::{
         encode,
         pages::{self, Tab, escape},
-        routes::{see_other, unavailable},
+        routes::unavailable,
     },
 };
 use axum::{
@@ -33,6 +33,8 @@ use std::sync::Arc;
 mod acceptance_tests;
 mod configuration;
 mod form;
+#[cfg(test)]
+mod receipt_tests;
 mod render;
 #[cfg(test)]
 mod tests;
@@ -118,7 +120,8 @@ async fn context(
 fn error(e: &devagotchi_contracts::BridgeError) -> Response {
     let status = match e.code.as_str() {
         "not_found" | "not_granted" => return crate::web::operator::hidden(),
-        "version_conflict" | "in_use" => StatusCode::CONFLICT,
+        "version_conflict" | "in_use" | "request_conflict" => StatusCode::CONFLICT,
+        "request_retired" => StatusCode::GONE,
         "invalid" | "self_lockout" | "policy_denied" | "agent_disabled" | "limit"
         | "humans_only" => StatusCode::BAD_REQUEST,
         _ => {
@@ -230,16 +233,21 @@ async fn save(
     };
     match ctx
         .accounts
-        .put_agent(&ctx.actor.id, &ctx.account, &edit)
+        .put_agent_requested(
+            &ctx.actor.id,
+            &ctx.account,
+            &edit,
+            input.request_id.as_deref(),
+        )
         .await
     {
-        Ok(agent) => see_other(
+        Ok(agent) => super::requests::redirect(
             &format!(
                 "/app/agents/{}?account={}&saved=1",
-                encode(&agent.id),
+                encode(&agent.value.id),
                 encode(&ctx.account)
             ),
-            &[],
+            agent.replayed,
         ),
         Err(e)
             if matches!(
@@ -257,6 +265,7 @@ async fn save(
 struct BindingForm {
     account: String,
     client: String,
+    request_id: Option<String>,
     version: i64,
     #[serde(default)]
     enabled: bool,
@@ -280,16 +289,21 @@ async fn bind(
     };
     match ctx
         .accounts
-        .bind_agent_oauth(&ctx.actor.id, &ctx.account, &binding)
+        .bind_agent_oauth_requested(
+            &ctx.actor.id,
+            &ctx.account,
+            &binding,
+            input.request_id.as_deref(),
+        )
         .await
     {
-        Ok(_) => see_other(
+        Ok(binding) => super::requests::redirect(
             &format!(
                 "/app/agents/{}?account={}&saved=1",
                 encode(&id),
                 encode(&ctx.account)
             ),
-            &[],
+            binding.replayed,
         ),
         Err(e) => error(&e),
     }

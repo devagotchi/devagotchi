@@ -20,6 +20,8 @@ pub use configuration::PrincipalConfiguration;
 #[cfg(test)]
 mod concurrency_tests;
 #[cfg(test)]
+mod receipt_tests;
+#[cfg(test)]
 mod tests;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

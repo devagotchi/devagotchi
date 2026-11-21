@@ -23,6 +23,7 @@ pub mod oauth;
 pub mod passkey;
 mod passwords;
 pub mod people;
+pub mod receipts;
 pub mod sessions;
 pub mod sign_in_settings;
 pub mod tenants;

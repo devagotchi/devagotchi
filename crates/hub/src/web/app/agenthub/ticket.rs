@@ -200,9 +200,19 @@ pub async fn page(
         _ => String::new(),
     };
     let form = |action: &str, inner: &str| {
+        let request =
+            super::super::requests::request_field(Some(&super::super::requests::request_id()));
+        let from = if action == "close" {
+            format!(
+                "<input type=\"hidden\" name=\"from\" value=\"{}\">",
+                escape(&ticket.state)
+            )
+        } else {
+            String::new()
+        };
         format!(
             "<form method=\"post\" action=\"{here}/{action}\"><input type=\"hidden\" name=\"version\" \
-value=\"{}\">{inner}</form>",
+value=\"{}\">{request}{from}{inner}</form>",
             ticket.version
         )
     };

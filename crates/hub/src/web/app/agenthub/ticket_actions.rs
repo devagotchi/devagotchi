@@ -21,8 +21,10 @@ use crate::{
     web::{approvals::same_origin, encode, pages, routes::see_other},
 };
 
-#[derive(Deserialize)]
+#[derive(Deserialize, serde::Serialize)]
 pub struct Act {
+    #[serde(skip_serializing)]
+    request_id: Option<String>,
     #[serde(default)]
     version: i64,
     #[serde(default)]
@@ -99,7 +101,20 @@ pub async fn act(
         .filter(|to| !to.is_empty());
     let wakes = board.clone();
     let done = tokio::task::spawn_blocking(move || {
-        apply(&board, &Actor::human(&me), &ticket, &action, act)
+        let operation = match action.as_str() {
+            "comment" => "add_note",
+            "delegate" => "delegate",
+            "undo" => "undo_close",
+            _ => "update_task",
+        };
+        let requested = act
+            .request_id
+            .as_deref()
+            .map(|key| board.requested(&me, key, operation, &(&ticket, &action, &act)))
+            .transpose()?;
+        let board = requested.as_ref().unwrap_or(&board);
+        let next = apply(board, &Actor::human(&me), &ticket, &action, act)?;
+        Ok((next, board.hosted().replayed()))
     })
     .await
     .unwrap_or_else(|_| {
@@ -108,7 +123,7 @@ pub async fn act(
             "the board did not answer",
         ))
     });
-    if let (Ok(_), Some(to)) = (&done, &addressed) {
+    if let (Ok((_, false)), Some(to)) = (&done, &addressed) {
         state.hub.wake_recipient(&project, wakes, to);
     }
     let outcome = match &done {
@@ -122,7 +137,9 @@ pub async fn act(
         .record_completion(&subject, tool, &project, &id, &outcome)
         .await;
     match done {
-        Ok(next) => see_other(&format!("{here}?{next}"), &[]),
+        Ok((next, replayed)) => {
+            super::super::requests::redirect(&format!("{here}?{next}"), replayed)
+        }
         Err(error) => see_other(
             &format!("{here}?done=no&why={}", encode(&error.message)),
             &[],
@@ -168,7 +185,17 @@ fn apply(
                 .map(|_| "done=delegate".into())
         }
         "close" => {
-            let current = board.get(id)?.ticket;
+            let from = if act.from.is_empty() {
+                if act.request_id.is_some() {
+                    return Err(crate::agenthub::fail(
+                        "invalid",
+                        "reload the close form before submitting",
+                    ));
+                }
+                board.get(id)?.ticket.state
+            } else {
+                act.from.clone()
+            };
             // Done when the workflow goes there from here, else its first closed state that it does.
             let to = ["done".to_string()]
                 .into_iter()
@@ -179,13 +206,13 @@ fn apply(
                         .filter(|s| s.kind == StateKind::Done)
                         .map(|s| s.key.clone()),
                 )
-                .find(|to| workflow.is_done(to) && workflow.allows(&current.state, to))
+                .find(|to| workflow.is_done(to) && workflow.allows(&from, to))
                 .unwrap_or_else(|| "done".into());
             update(Patch {
                 state: Some(to),
                 ..Patch::default()
             })
-            .map(|_| format!("done=close&from={}", encode(&current.state)))
+            .map(|_| format!("done=close&from={}", encode(&from)))
         }
         // Back where it was, or to the queue when the workflow reopens only there, while the
         // window is open by the database's clock (`HostedBoard::undo_close`).

@@ -1,6 +1,7 @@
+use super::super::receipts::{MutationResult, Receipt};
 use super::*;
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OAuthBinding {
     pub client: String,
     pub agent_id: String,
@@ -28,18 +29,43 @@ impl Accounts {
     }
     /// One account's stable OAuth client id, covering every access/refresh family for it.
     /// A disabled row stays present so revocation cannot fall back to an unbound identity.
+    #[cfg(test)]
     pub async fn bind_agent_oauth(
         &self,
         actor: &str,
         account: &str,
         binding: &OAuthBinding,
     ) -> BridgeResult<OAuthBinding> {
+        self.bind_agent_oauth_requested(actor, account, binding, None)
+            .await
+            .map(|result| result.value)
+    }
+
+    pub async fn bind_agent_oauth_requested(
+        &self,
+        actor: &str,
+        account: &str,
+        binding: &OAuthBinding,
+        request_key: Option<&str>,
+    ) -> BridgeResult<MutationResult<OAuthBinding>> {
         if binding.version < 0 {
             return Err(BridgeError::new("invalid", "invalid binding version"));
         }
         transaction!(&self.store, |connection| {
             let manager = self.agent_manager_in(connection, actor, account).await?;
             catalog::lock_in(connection, &manager.tenant).await?;
+            let receipt = Receipt::begin(
+                connection,
+                &manager.tenant,
+                actor,
+                request_key,
+                "bind_agent_oauth",
+                &(account, binding),
+            )
+            .await?;
+            if let Receipt::Replay(saved) = receipt {
+                return Ok(MutationResult::replay(saved));
+            }
             if binding.enabled {
                 live_in(connection, &manager.tenant, account, &binding.agent_id).await?;
             } else {
@@ -92,7 +118,7 @@ impl Accounts {
                 now,
             )
             .await?;
-            Ok(saved)
+            receipt.complete(connection, saved).await
         })
     }
 

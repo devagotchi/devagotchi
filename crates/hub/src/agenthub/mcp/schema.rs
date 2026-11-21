@@ -346,9 +346,12 @@ pub struct ApprovalRequestIn {
     pub target: Option<String>,
 }
 
-#[derive(Debug, Deserialize, JsonSchema)]
+#[derive(Debug, Deserialize, Serialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct SettingsIn {
+    /// Reuse for an identical settings change after an uncertain result.
+    #[serde(default)]
+    pub request_id: Option<String>,
     /// The project whose board to use, as the hub names it (whoami lists yours).
     pub project: String,
     /// The project's repository, an https URL (https://github.com/you/project). New tickets

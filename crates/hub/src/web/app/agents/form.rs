@@ -3,6 +3,7 @@ use super::*;
 #[derive(Deserialize)]
 pub(super) struct AgentForm {
     pub account: String,
+    pub request_id: Option<String>,
     pub id: String,
     pub name: String,
     pub kind: String,
@@ -53,6 +54,7 @@ impl AgentForm {
                 ));
             }
         };
+        let request_id = fields.remove("request_id");
         let mut take = |name| {
             fields.remove(name).ok_or_else(|| {
                 devagotchi_contracts::BridgeError::new("invalid", "missing agent field")
@@ -60,6 +62,7 @@ impl AgentForm {
         };
         Ok(Self {
             account: take("account")?,
+            request_id,
             id: take("id")?,
             name: take("name")?,
             kind: take("kind")?,
@@ -72,6 +75,7 @@ impl AgentForm {
     pub fn new(account: &str) -> Self {
         Self {
             account: account.into(),
+            request_id: Some(request_id()),
             id: String::new(),
             name: String::new(),
             kind: "service".into(),
@@ -84,6 +88,7 @@ impl AgentForm {
     pub fn from_agent(agent: &Agent) -> Self {
         Self {
             account: agent.account.clone(),
+            request_id: Some(request_id()),
             id: agent.id.clone(),
             name: agent.name.clone(),
             kind: agent.kind.clone(),
@@ -128,3 +133,5 @@ impl AgentForm {
         })
     }
 }
+
+pub(super) use super::super::requests::{request_field, request_id};
