@@ -4818,10 +4818,13 @@
       "status": "partial",
       "target_paths": [
         "crates/hub/src/agenthub/http/events.rs",
-        "crates/hub/src/agenthub/http/tests/events.rs"
+        "crates/hub/src/agenthub/http/tests/events.rs",
+        "crates/hub/src/agenthub/http/stream.rs",
+        "crates/hub/src/agenthub/http/tests/stream.rs"
       ],
       "evidence": [
-        "Pinned source read; authenticated task/lease HTTP adapters and board-scoped event pages/verification authored, with six focused real HTTP checks. Source mapping, migration details and remaining administrative/SSE/protocol work: .ai/dev/plans/absorption/a03-http.md, a03-review.md and docs/agenthub-http.md. No main delivery or source closure."
+        "Pinned source read; authenticated task/lease HTTP adapters and board-scoped event pages/verification authored, with six focused real HTTP checks. Source mapping, migration details and remaining administrative/SSE/protocol work: .ai/dev/plans/absorption/a03-http.md, a03-review.md and docs/agenthub-http.md. No main delivery or source closure.",
+        "2026-11-21: A03 reconnect/protocol unit; a03-review.md records 11 real-PostgreSQL HTTP tests, including 102-event resume/live, key/session/profile revocation and current connector output. Remaining stream acceptance and delivery keep this row open."
       ]
     },
     {
@@ -4864,9 +4867,15 @@
       "mode": "100644",
       "kind": "blob",
       "packet": "A03",
-      "status": "unverified",
-      "target_paths": [],
-      "evidence": []
+      "status": "partial",
+      "target_paths": [
+        "crates/hub/src/agenthub/http/protocol.rs",
+        "crates/connectors/src/lib.rs",
+        "crates/hub/src/agenthub/http/tests/protocol.rs"
+      ],
+      "evidence": [
+        "2026-11-21: A03 reconnect/protocol unit; a03-review.md records 11 real-PostgreSQL HTTP tests, including 102-event resume/live, key/session/profile revocation and current connector output. Remaining stream acceptance and delivery keep this row open."
+      ]
     },
     {
       "path": "server/internal/httpapi/server.go",
@@ -6154,9 +6163,15 @@
       "mode": "100644",
       "kind": "blob",
       "packet": "A03",
-      "status": "unverified",
-      "target_paths": [],
-      "evidence": []
+      "status": "partial",
+      "target_paths": [
+        "crates/agenthub/src/board/mod.rs",
+        "crates/hub/src/agenthub/http/stream.rs",
+        "crates/hub/src/agenthub/http/tests/stream.rs"
+      ],
+      "evidence": [
+        "2026-11-21: A03 reconnect/protocol unit; a03-review.md records 11 real-PostgreSQL HTTP tests, including 102-event resume/live, key/session/profile revocation and current connector output. Remaining stream acceptance and delivery keep this row open."
+      ]
     },
     {
       "path": "server/internal/subs/bindings.go",

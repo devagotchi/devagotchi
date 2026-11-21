@@ -14,8 +14,10 @@ mod access;
 mod events;
 mod input;
 mod leases;
+mod protocol;
 mod reads;
 mod response;
+mod stream;
 mod tickets;
 
 use access::Caller;
@@ -33,6 +35,8 @@ pub(crate) fn routes() -> Router<AppState> {
         .route("/api/v1/claim-next", post(leases::claim_next))
         .route("/api/v1/events", get(events::list))
         .route("/api/v1/events/verify", get(events::verify))
+        .route("/api/v1/stream", get(stream::open))
+        .route("/api/v1/protocol", get(protocol::get))
         .layer(DefaultBodyLimit::max(1024 * 1024))
 }
 

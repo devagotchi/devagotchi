@@ -45,7 +45,9 @@ by ADR0002; audit each SQLite use and document its concrete purpose. No hosted f
 - Historical branches below remain intact and incomplete. Current local root work began
   as `increment-288/registered-api-key-agents`, now renamed locally to
   `increment-288/absorb-october-baseline`; reuse it for S1, with no separate profile-only
-  PR. No host profile implementation had been written when this plan was requested.
+  PR. Local A01-A03 authoring now includes profiles/policy, receipts, CLI retries and task
+  HTTP adapters (root `ed92ea9`, AgentHub `7588df2`); their review ledgers record focused
+  evidence. None of these checkpoints is a delivered source closure.
 
 ## Fixed source queue
 
@@ -69,9 +71,11 @@ claim that every route or generated tool was found automatically.
 
 ## Authoring order and dependencies
 
-These are local work packets, **not 13 separate PR/CI cycles**. Finish each packet's code,
-surface wiring and focused checks before moving to its dependents. Update one ledger.
-Existing equivalents need source-specific verification and a receipt, not a rewrite.
+These are accounting packets, **not separate PR/CI cycles**. The [reconciled code plan](absorption/implementation.md#code-plan-reconciled-on-2026-11-21)
+groups them into complete authoring batches with concrete owners, contracts and acceptance.
+Finish each batch before its check; A05 catalogs precede the A04 grant consumers within
+one batch, and A08 integration follows all event producers. Existing equivalents need
+source-specific verification and a receipt, not a rewrite.
 
 | Order | Packet | Complete work unit | Depends on |
 |---:|---|---|---|
@@ -79,13 +83,13 @@ Existing equivalents need source-specific verification and a receipt, not a rewr
 | 2 | A01 | Close task, workflow, settings, presets and original board edge-case parity | A00 |
 | 3 | A02 | Credential-bound agents, human linkage, roster, kinds, roles and board policy | A01 |
 | 4 | A03 | Mutation replay, REST/protocol/stream and CLI/MCP parity | A02 |
-| 5 | A04 | Enforced machine grants, sandbox scope, change review and policy decisions | A02, A03 |
-| 6 | A05 | Versioned catalogs, schemas and seeded configuration | A03, A04 |
+| 5 | A05 | Versioned catalogs, schemas and seeded configuration | A03 |
+| 6 | A04 | Enforced machine grants, sandbox scope, change review and policy decisions | A02, A03, A05 |
 | 7 | A06 | Provider rows/models, subscriptions, role routing and write-only secrets | A02, A05 |
 | 8 | A07 | Editable/versioned/signed guides, updates and real run steps | A04, A05, A06 |
-| 9 | A08 | Action feed, category retention, archives and verification | A03, A04 |
-| 10 | A09 | Remaining original file/document/process tool behavior | A04 |
-| 11 | A10 | Original GUI sessions/capture/input and their authorization | A04, A09 |
+| 9 | A09 | Remaining original file/document/process tool behavior | A04 |
+| 10 | A10 | Original GUI sessions/capture/input and their authorization | A04, A09 |
+| 11 | A08 | Action feed, category retention, archives and verification | A03-A10 |
 | 12 | A11 | Finish all corresponding user journeys and failure states | A01-A10 |
 | 13 | A12 | Baseline packaging, configuration, docs and release integration | A01-A11 |
 | 14 | B01 | S2's 17-path delta, including later product requirements | S1 authored |
@@ -110,10 +114,11 @@ evidence; it cannot be marked absorbed by an executor's guess.
    local submodule branch; parent changes use its local gitlink. Small local commits are
    allowed. Each commit says source SHA/paths and packet ID. No pushes, PR creation or CI
    dispatch during authoring; no independent PR for a query, index or form component.
-3. At a source boundary, create a local checkpoint branch at its completed tree. Author the
-   next source's **delta** on a local child branch. Keep S1-S5 order and separate coherent
-   commits so they can be reviewed and merged in that order. Do not start the next source's
-   implementation while the preceding source still has unauthored rows.
+3. At a source boundary, record the completed commit and tree for BOTH repositories in
+   the ledger. Continue the next source's **delta** on the same local integration branch;
+   do not create checkpoint/child branches during authoring. Keep S1-S5 order and separate
+   coherent commit ranges so each source can be reviewed and delivered in that order.
+   Do not start the next source while the preceding source still has unauthored rows.
 4. `authored` requires domain implementation, migration, every applicable surface, error
    handling, tests/probes and documentation actually present. TODOs, a route without an
    implementation, unsupported placeholders for supported source behavior, or a future
@@ -128,8 +133,10 @@ evidence; it cannot be marked absorbed by an executor's guess.
    Original historical refs are eligible only after their entire file/behavior/commit ledger
    is closed and their source history has a durable archive/tag or Git bundle. This preserves
    provenance through cross-repository ports without pretending ancestry alone proves parity.
-8. Reconcile the next already-authored child onto new main; inspect every conflict against
-   both source contracts, run affected checks, and merge/delete it by the same procedure.
+8. Apply the next already-authored source commit range onto the verified new main for its
+   delivery; inspect every conflict against both source contracts, run affected checks,
+   and merge/delete its delivery ref by the same procedure. Preserve the complete local
+   authored history and recorded trees before moving any delivery ref.
    Do not use blind `ours`/`theirs`, blanket squash-away conflict resolution, or force pushes
    to main. Keep any original ref carrying unique unverified work.
 9. Finish with a fresh local and remote ref inventory for both canonical repos and every
@@ -213,10 +220,11 @@ heads, tested heads, check URLs/results, merged SHAs, deployed image where relev
 deleted refs. A source is closed only after its receipt has no open runtime or requirement
 row. Raw credentials/logs/screenshots stay private; public receipts contain only safe facts.
 
-Plan: packet instructions and immutable inventory written; source comparisons continue in
-the packet ledgers. Implementation: incomplete, A01 local authoring active. Validation: prerequisite evidence
-only. Push/PR for this consolidated change: not created. Main: not delivered. No additional
-user input is needed for the next action: A00 accounting, then A01/A02 implementation on
-the existing local branch, with CI held until the complete queue is authored.
+Plan: source/target execution batches reconciled on 2026-11-21, including catalog-before-grant
+ordering, exact integration seams and later-delta distinctions. Implementation: A01-A03
+partially authored locally; complete source absorption remains unfinished. Validation:
+focused results are recorded in the packet review ledgers, not final integration evidence.
+Push/PR: no consolidated change published. Main: no consolidated source delivered. Continue
+Batch 1 on the existing integration branch; CI remains held until S1-S5 are authored.
 
 **DELIVERY INCOMPLETE: FULL SOURCE ABSORPTION IS NOT YET IMPLEMENTED OR MERGED.**

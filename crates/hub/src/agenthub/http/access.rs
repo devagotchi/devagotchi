@@ -38,6 +38,80 @@ impl FromRequestParts<AppState> for Caller {
 }
 
 impl Caller {
+    /// A streaming read reuses the same live board/profile/key boundary without writing
+    /// an audit entry for every idle poll. The stream records admission and termination.
+    pub(super) async fn read_scoped<T, F>(&self, project: &str, f: F) -> BridgeResult<T>
+    where
+        T: Send + 'static,
+        F: FnOnce(&Board, &Actor<'_>) -> BridgeResult<T> + Send + 'static,
+    {
+        if let Some(error) = self.hub.waiting_refusal(&self.subject) {
+            return Err(error);
+        }
+        if let Some(why) = self.limits.as_ref().and_then(|limits| {
+            limits.check("board_events", json!({"project": project}).as_object())
+        }) {
+            return Err(BridgeError::new("key_denied", why));
+        }
+        self.hub
+            .run_scoped(
+                &self.subject,
+                self.seat().map_err(|e| e.0)?,
+                "board_events",
+                project,
+                None,
+                f,
+            )
+            .await
+    }
+
+    /// Recheck the original credential; never switch identities within a stream.
+    pub(super) async fn refresh(&mut self, state: &AppState) -> BridgeResult<()> {
+        use axum::http::header::AUTHORIZATION;
+        let (subject, limits) = if let Some(value) = self.headers.get(AUTHORIZATION) {
+            let token = value
+                .to_str()
+                .ok()
+                .and_then(|value| {
+                    value
+                        .strip_prefix("Bearer ")
+                        .or_else(|| value.strip_prefix("bearer "))
+                })
+                .ok_or_else(|| BridgeError::new("unauthenticated", "credential is unavailable"))?;
+            crate::identity::bearer::verify_token(state, token.trim())
+                .await
+                .map_err(|error| match error {
+                    crate::identity::auth::AuthError::Invalid(_) => {
+                        BridgeError::new("unauthenticated", "credential is no longer valid")
+                    }
+                    crate::identity::auth::AuthError::Unavailable(_) => BridgeError::new(
+                        "identity_unavailable",
+                        "identity verification is unavailable",
+                    ),
+                })?
+        } else {
+            let subject = crate::web::session_subject(state, &self.headers)
+                .await
+                .ok_or_else(|| BridgeError::new("unauthenticated", "session is no longer valid"))?;
+            (subject, None)
+        };
+        if subject.id != self.subject.id
+            || subject.via != self.subject.via
+            || subject.tenant != self.subject.tenant
+            || subject.org != self.subject.org
+            || subject.agent != self.subject.agent
+            || subject.client != self.subject.client
+        {
+            return Err(BridgeError::new(
+                "unauthenticated",
+                "stream identity changed",
+            ));
+        }
+        self.subject = subject;
+        self.limits = limits;
+        Ok(())
+    }
+
     pub fn seat(&self) -> Result<Option<String>, Failure> {
         self.headers
             .get(SEAT_HEADER)

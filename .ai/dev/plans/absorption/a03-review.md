@@ -301,3 +301,36 @@ authored wire contract and the still-open source surfaces. No source row is mark
 The current non-test hub build also passed without compiler warnings
 (target/absorption-http-current-check.log). Formatting, whitespace checks and the pinned
 source inventory passed; all 100 commits/907 file-change rows remain open.
+
+## Reconnecting stream and protocol unit (2026-11-21)
+
+The whole absorption code plan was reconciled before this unit: complete batches,
+source/current-owner comparisons, catalog-before-grant dependency, concrete integration
+seams and later-source dispositions. No runtime compilation or CI ran during planning.
+
+Authored `http/stream.rs` and `http/protocol.rs`. Streams require a project, subscribe
+before history reads, catch up in pages of 100, retain bounded per-reader state, and
+resume by committed sequence. Strict cursor checks refuse ambiguity and a cursor ahead
+of the board. Each emission and idle recheck revalidates the original credential, key
+scope/project, registered profile and current board access. Identity changes and failed
+checks close the connection. Credential checking is shared with identity/bearer.rs;
+no independent bearer verifier was introduced. Browser-origin refusals, no-store and
+proxy buffering headers apply. Protocol output uses the existing connectors crate and
+actual board heartbeat settings, not handwritten vendor setup strings or caller secrets.
+
+One focused command after the complete transport unit was authored:
+`cargo test --locked -p devagotchi-hub --lib agenthub::http::tests -- --test-threads=2`
+with required isolated PostgreSQL. All 11 tests passed, zero ignored, in 27.50s after
+an 81s test build; log `target/absorption-stream-transport.log`. This includes the six
+previous HTTP regressions and five new checks: 102-event catch-up plus resume/live/replay,
+invalid/ambiguous cursor and foreign-board refusal, idle API-key/browser-session revocation,
+registered-agent disable, and protocol/catalog output. No CI/push/deployment occurred.
+
+Not yet proved by these checks: shared-board grant revocation during a buffered stream,
+store-outage termination, configured shutdown/drain, and native browser event integration.
+These remain acceptance work; the source stream row is partial, not closed. Administration,
+full roster/membership, and A01/A02 source-edge accounting also remain open in Batch 1.
+
+Post-unit bookkeeping: the existing layout executable checked current source and passed all
+8 checks. The pinned-source inventory checker verified Git objects and all 100 commits /
+907 file-change rows. All remain open; three stream/protocol rows have partial mappings.

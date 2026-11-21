@@ -41,7 +41,7 @@ depends_on and events while using the current ticket types. Reads have bounded l
 Claim-next returns claimed plus its optional lease. Other result shapes use current typed
 domain records; document this pre-release migration instead of claiming wire identity.
 
-## Remaining HTTP surfaces in this packet
+## Administrative work and transport status
 
 - GET /api/v1/config; principals list/create/put/token metadata/issue/revoke. Map to account
   ownership, live manager policy and the authored principal/catalog APIs. Never replay
@@ -49,12 +49,12 @@ domain records; document this pre-release migration instead of claiming wire ide
 - Expanded configuration kinds: roles, policies, workflows, projects and settings, each
   POST and PUT; DELETE for all except settings. Project delete, arbitrary settings and
   cross-owner catalogs need their actual domain authoring before advertising the routes.
-- GET events and verify use board-scoped history. SSE stream resumes after Last-Event-ID,
-  subscribes before catch-up, has bounded batches/backpressure and rechecks live authority.
-  Historical source global-event disclosure and authentication-only-at-connect are not
-  carried forward. Browser credentials retain same-origin rules.
-- Protocol/connect output uses the current CLI/MCP names and caller environment, never a
-  stored secret. Dynamic Devagotchi Extra routes are separately owned by A04-A08.
+- Authored on 2026-11-21: board-scoped SSE resumes after Last-Event-ID, subscribes before
+  catch-up, uses bounded pages/backpressure and rechecks live authority. Five new transport
+  tests and the six existing HTTP tests passed; see a03-review.md for remaining acceptance.
+- Authored protocol/connect output uses current CLI/MCP names, board heartbeat settings
+  and the existing connector catalog, never a stored secret. Dynamic Devagotchi Extra
+  routes are separately owned by A04-A08.
 
 ## Focused evidence required
 

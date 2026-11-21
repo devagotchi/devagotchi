@@ -28,6 +28,241 @@ The named tests below are tests to author or locate and verify, not results. Run
 focused local checks during authoring. Record exact commands, heads and outcomes privately.
 Full validation and publication belong to R01, after every source is authored.
 
+## Code plan reconciled on 2026-11-21
+
+This section fixes the execution order and integration seams for the packets below. It
+is part of this plan, not a second backlog. `existing` means the named source was inspected;
+`new` means the destination must be authored. Neither means source parity is accepted.
+Reconciliation began at root checkpoint `ed92ea9`, with AgentHub `7588df2`. A01-A03 have
+substantial local implementation and focused evidence in their review ledgers; they are
+not complete. A04-A12 and the later deltas have not acquired implementation evidence from
+this planning pass. No runtime build or CI was run during this reconciliation.
+
+### Complete authoring batches
+
+| Order | Batch / accounting packets | Finish together before the batch check |
+|---|---|---|
+| 1 | Coordination completion: remaining A01-A03 | Board/configuration deletion rules, environment roster and role membership, remaining REST/MCP administration, reconnecting event stream, protocol/connect output, shared authority and receipt tests, browser reachability |
+| 2 | Catalogs and enforced machine access: A05 + A04 | Catalog schemas/seeds and consumers first; request/narrow/approve/deny/revoke, broker enforcement and sandboxing, policy evaluation/change evidence/reviews, machine/approval UI and all adapters |
+| 3 | Providers and executable guides: A06 + A07 | Provider/model data, subscriptions and routing, sealed secrets, immutable guide publications, durable runs and actual broker effects, full editors/run UI |
+| 4 | Machine tool parity: A09 + A10 | Every registry operation, PDF/DOCX/XLSX, bounded search/process behavior, Linux GUI sessions/capture/input, generated contracts and both MCP faces |
+| 5 | Audit and product integration: A08 + A11 + A12 | Correlated actions, verified archives before retention, all page/action journeys, source-derived settings/install/docs, self-hosted Docker configuration |
+| 6 | Later source deltas: B01, then C01, then D01, then E01 | Review and author each complete delta in that order, preserving separate source-boundary commits; no CI between tiny changes |
+| 7 | R01 | Final integration validation, oldest-source green delivery, verified branch deletion, actual-main Docker acceptance |
+
+A05 is not dependent on an already finished A04: source `access/check.go` reads capability
+schemas and `access/decide.go` reads grant presets. They form one batch with catalogs first.
+A08 follows all event producers so retention is not built against an incomplete event model.
+Within each batch, author domain, adapters, UI, refusal paths and tests before its batch
+check. A complete transport/domain unit may have one focused regression check after its
+code and tests are authored; do not compile after each helper edit. Compilation is not a
+planning activity. A successful sub-unit test does not finish
+the batch or authorize a push. Native-platform acceptance remains in R01 where unavailable
+locally; its tests and fixtures must nevertheless be authored in the owning batch.
+
+### Batch 1: complete the existing coordination path
+
+| Source obligation / current seam | Code to author or reconcile | Acceptance at the batch boundary |
+|---|---|---|
+| `store` project/config removal; HTTP `admin.go` dynamically registers roles, policies, workflows, projects, settings | Existing AgentHub `hosted/registry.rs`, `hosted/settings.rs`, `hosted/shared_workflows/` and hub `agenthub/registry.rs`, `agenthub/mcp/boards.rs`: locate each actual owner, add missing guarded deletion there. In-use workflows/states/roles refuse; deleting a project cannot orphan tasks/history. Add new `agenthub/http/configuration/` adapters after those domain rules. Settings dispatch by owning domain, never table-name SQL from a request. | Used/deleted/recreated IDs, stale versions, dependent rows, concurrent delete/create, foreign account and replay after deletion; all surfaces see the same result. |
+| `store/principals.go`, `admin_people.go`, human tokens, role membership; existing `identity/accounts/agents/{mod,configuration,bindings,mutations,directory}.rs` | Complete environment roster and members through existing account/profile owners; add new `agenthub/http/principals/` and corresponding MCP administration using live manager checks. Tokens map to existing API keys: issue once, metadata only thereafter, revoke through existing receipt-aware operation. An agent cannot become a person by editing its kind. Source human token login maps explicitly to current password/passkey/provider browser login; do not introduce shared human bearer login. | Disabled account/profile and revoked key/OAuth binding refuse reads and writes; member changes take effect without restart. Test owner, ordinary person, bound agent, foreign account and stale role/policy snapshots. |
+| `httpapi/events.go`, `stream/broker.go`; existing `agenthub/http/events.rs`, `Board::changes`, `Hub::run_scoped` | New `agenthub/http/stream.rs` plus small stream-state/auth modules as needed. GET `/api/v1/stream` requires project. Subscribe before history catch-up, cursor from `Last-Event-ID` or query, reject conflicting/invalid cursors, batch at most 100, emit committed event sequence as SSE id. Reuse identity bearer/session verification on every bounded read/emission, not only handshake. Recheck idle authority; close on revocation, changed identity, inaccessible board or store failure. No unbounded channel or detached per-client task. | Real HTTP stream: backlog and live events in order, resume without gaps, no cross-board events, no synthetic receipt-replay events, key/project/profile/session/grant revocation while open, malformed cursor, slow-reader/drop cleanup. |
+| `httpapi/protocol.go`, client instructions and current connector ownership | New `agenthub/http/protocol.rs` delegates connection configuration to `crates/connectors`, the owner already used by `web/connectors.rs`. `identity/connect` is Nomen bootstrap, not client snippets. Use current operation names, explicit project/fence/version/retry rules; derive origin from configured public origin, never arbitrary Host input. No token interpolation or stored-secret return. | Output references existing commands/tools and valid origin; caller display names never enter shell/config syntax. Test structured connector output against the existing catalog and its parsed-snippet fixtures. |
+| Source operation filters, dependency readiness, defaults/reaper behavior, browser pages | Extend A01's operation mapping and A02's roster/policy mapping with exact target and tests; preserve authored receipt/CLI/HTTP implementations. Reconcile source defaults against current policy/workflow versions; seed only missing definitions. Existing `web/app/home.rs` and AgentHub pages expose the completed operations. | Complete source operation matrix plus real PostgreSQL edge cases; no duplicate effect or lost newer lease. Roster/configuration operations are reachable by an owner in the browser. |
+
+Further source comparison: `store/admin_misc.go::DeleteConfig` refuses a project with
+ANY referenced task, including completed tasks. Rust `hosted/mod.rs::scope` locks the
+project row, and migration `0001_boards.sql` makes history append-only with project foreign
+keys. Removal must use that same lock and retain audit/receipt history; never cascade-delete
+history to make a DELETE route work. Current hub board creation also seeds a welcome task
+(`agenthub/mcp/boards.rs::make_owned`); it counts as a task under this rule. Empty-project
+creation/deletion needs a real source-derived test, not an assumption that a newly bound
+board has zero tasks. Cached handles must fail after removal, and name reuse must not revive
+old grants or make retired request keys reusable. This is still domain work, not implemented
+by the HTTP transport unit.
+
+Batch 1 implementation order: stream and protocol as one complete transport unit; then
+configuration domain gaps and administration as one complete unit; then roster and remaining
+source behavior comparison. These are local coding units, not separate PRs. Keep A03 open
+until all units and the complete batch checks pass. Do not rerun the already passed CLI
+suite unless a shared receipt/identity change invalidates it.
+
+### Batch 2: catalogs, grants, policy and machine enforcement
+
+Existing seams inspected: `Hub::call` in `hub/src/mcp/hub.rs` sets caller and routes/audits;
+`machines/link/calls.rs` has a bounded pending-call queue; `machine-engine/src/broker/access.rs`
+protects operation ownership/writer leases. These do not implement source grant selectors,
+use counts, expiry, narrowing or sandbox levels. `broker.rs` explicitly says executable
+grants are not a sandbox. Preserve those checks and add the missing enforced layer.
+
+1. Add `hub/src/catalog/{mod,kinds,validate,stored,seed,http,mcp}.rs` (new) and its own
+   PostgreSQL migration through the existing store bootstrap. Allocate migration numbers
+   from the actual migration list at authoring time. Every table uses the existing environment
+   scope/RLS; unique IDs include that scope. CAS writes, audit and replay finish in one
+   transaction. Kind dispatch is a closed enum with typed columns, not arbitrary SQL.
+2. Port the eight self-hosted catalog kinds from `catalog/kinds.go`: capabilities, risks,
+   capability-risks, shell-profiles, grant-presets, docker-runtime-presets, router-endpoints,
+   chat-apps. Record the ninth, `tenants`, as replaced by the already accepted one-environment
+   edition boundary, not a customer-management page. Provider rows keep their own validator.
+   Validate the merged row on PATCH: `full_access` requires `requires_policy=unsandboxed`;
+   referenced capabilities, levels, risk IDs and selector schemas must exist. Refuse deletion
+   of referenced definitions. Seed source JSON without overwriting edited values.
+3. New `hub/src/machines/access/{mod,requests,decisions,grants,scope,resume,stored,http,mcp}.rs`:
+   versioned access requests, grants, unsandboxed policies and resume alerts. Persist principal,
+   machine, capability, selector, sandbox level, duration, uses, task lease/fence or guide run,
+   approver, immutable risk snapshot and ending reason. Human approval cannot approve its own
+   request. Narrowing can only reduce paths/hosts/argv/apps, duration, use limit and sandbox
+   privilege. `once` means one admitted operation, not one transport attempt.
+4. New contract family `contracts/src/grants.rs`: typed effective authority attached to a
+   routed call, bound to machine, canonical principal, request identity, grant version and
+   short expiry. Wire extension must be capability-negotiated in existing link hello/session
+   code; keep protocol version 1. A peer without enforcement support cannot receive a call
+   requiring it. Local trusted IPC authority is distinct from hub-supplied authority.
+5. Extend `mcp/hub.rs` dispatch and `machine-engine/src/broker.rs`; new broker `grants/`
+   owns selector validation and active-operation grant membership. Reauthorize before
+   admission and before subsequent read/input/cancel operations as appropriate. Consume uses
+   atomically with a durable admission identity, not again on retries. Existing journal and
+   retry owner still own external-effect deduplication. Disconnect/reconnect must not retain
+   unchecked authority; revocation terminates affected process/GUI grants and is reconciled
+   from durable state, with expiry enforced even if notification is lost.
+6. Port source `bridge/scope`, `policy`, `sandbox`, `netproxy` behavior into existing execution
+   platform owners. Read-only/workspace-write/desktop/unsandboxed must describe actual OS
+   enforcement. Linux implementation and real probes precede enabling a sandbox level.
+   A host with no working sandbox refuses requests requiring it; do not rename executable
+   allowlisting as sandboxing. Preserve network host restrictions and path/link escape refusal.
+7. New `hub/src/machines/change_policy/` with `document`, `evaluate`, `facts`, `tickets`,
+   `reviews`, `external`, `http`, `mcp` modules. Source `policyrules/types.go` fixes the rule
+   vocabulary: classifiers/regions; event/tool/class/region/command/runner matching; deny,
+   require, allow, audit, collect effects; ticket/field/list/number/approval/review/runner
+   checks. Parse/compile bounded expressions when saving, not during every invocation.
+   Store immutable policy versions, decision evidence, ticket content digest and independent
+   reviews. Edits invalidate old approvals. The optional external `/decide` client has a
+   three-second timeout, bounded body and fail-closed malformed/unavailable handling;
+   effective permission requires BOTH internal rules and configured external approval.
+8. Add server-rendered `web/app/access/`, `web/app/catalog/`, `web/app/change_policy/` pages
+   (new), linking existing machine detail and approvals inbox. Preserve source REST families
+   `/access-requests`, `/grants`, `/sandbox-policies`, `/resume-alerts`, `/access-summary`,
+   `/policy/*`, `/change-tickets` under `/api/v1`; expand dynamic catalog routes from the eight
+   kinds. HTTP/MCP/browser call one domain. No approved-looking UI for a declined broker call.
+
+Batch acceptance: concurrent one-use grant, narrower approval, own-request refusal, lease
+change, revocation/expiry during running process, reconnect with stale grant, missing sandbox,
+path/network escape, internal deny/external allow, external timeout, changed-ticket review,
+catalog invalid cross-reference and edited-seed reopen. Real process effects and refusal at
+the broker must be observed, not only HTTP status. Preserve original process outcome if an
+audit write subsequently fails and expose the existing audit-failure alert.
+
+### Batch 3: providers, subscriptions and guides
+
+`connections/stored.rs` currently stores service/name/sealed key/hint; it is not the source
+provider matrix. `workflows/stored/mod.rs` stores onboarding steps and browser participation;
+it is not the editable guide interpreter. Extend these owners without changing onboarding's
+existing meaning or adding another process executor.
+
+| Unit | Concrete implementation | Required integration/failure behavior |
+|---|---|---|
+| Provider data | New `connections/providers/{types,validate,stored,seed,http,mcp}.rs`; source `providers/types.go`, adapters/enums/checks and seeds. Store schema version, vendor/product, auth kinds, runner/editions, primary/fallback adapters, model source/cache, usage basis, session-state source/parser, OS detection rules and nine explicit capability flags. | Reject unsupported schema versions and invalid adapter config; preserve null versus false capabilities. Detect via bounded broker file/version/status operations under grants. Model refresh is explicit/bounded, and stale/error status stays visible. |
+| Subscriptions and routing | New `connections/subscriptions/{stored,secrets,bindings,resolve,call,http,mcp}.rs`; source `subs/*.go`. Versioned owner/provider/kind/worker/machine/budget/enabled rows and ordered primary/fallback role bindings. Reuse `identity/sealed.rs`; return hint/fingerprint only. | `cli_login` requires an enabled agent worker and machine; never stores a consumer token. `api_key` requires compatible enabled provider and live secret. Route checks enabled, budget and actual online evidence; returns skipped reasons. Retry does not double-charge or duplicate provider calls. Uncertain external outcome is recorded as uncertain, not repeated blindly. |
+| Guide definition | New `workflows/guides/{types,validate,lint,render,diff,publish,import,stored}.rs`. Port `guidekit/step.go` shape, flow/refs, OS command refs, published versions and signed bundles. Store draft version/CAS, immutable publication hash, signer/key ID and update decisions. | Validate duplicate/missing step IDs, branches, retry bounds, command refs and links before publication. Unsigned/untrusted/tampered bundle refuses. Seed updates never overwrite an edited guide. Import/export and diff use the actual immutable content. |
+| Guide run | New `workflows/guides/{runs,step,dispatch,reconcile,http,mcp}.rs`; persisted run/version/current step/vars/retries/log/status plus durable step intent and operation ID. Use existing broker process handles and A04 grants. | Operator/confirm/resume requires a live person. Persist intent before external effect, reconcile same operation ID after crash, then CAS advance. Missing machine/hook cannot take the source `runstep.go` default-success path. Concurrent submit, lost reply, pause/retry/cancel/restart never execute a step twice. |
+| Browser and surfaces | New `web/app/providers/`, `subscriptions/`, `guides/` reachable from current connections/machine/AgentHub pages. Source REST provider/schema/model, subscription/secret/test/binding/route, guide/version/publish/retire/diff/import/update/run/step families and MCP use the same domains. | Draft retention on validation/stale-version error; secrets never returned in edit forms; real connection test/run status; human prompt and rejected approval visible; read-only users cannot mutate through direct routes. |
+
+Acceptance: source provider/adapter fixtures; disabled provider, stale version, bad secret,
+offline worker, exhausted budget, fallback selection; signed guide edit/publish/import;
+real granted process step and human step through restart/cancel; audit and receipt identity
+for each surface. A screenshot or fake hook result does not establish execution parity.
+
+### Batch 4: source tool registry and GUI
+
+Expand every entry of `bridge/tools/registry.go` before closing A09. Current operation,
+file, search and system families are existing destinations; source naming may map to a
+documented current equivalent, but its inputs/results/refusals need source-specific checks.
+
+| Source registry group | Destination and remaining contract |
+|---|---|
+| get/set config; usage/recent calls/feedback | Existing broker settings/history and adapter system tools; reconcile editable knobs and redacted history, and explicitly map feedback to its owned persisted destination. Do not silently drop an operation. |
+| read file/multiple; write file/PDF; edit block; info; create/list/move/delete | Existing `machine-engine/src/files/{given,lines,write,manage}.rs`, broker files and contracts files. New `files/formats/{mod,pdf,docx,xlsx,package}.rs` and contract document family. Read PDF page ranges/text and bounded images; write markdown PDF and insert/delete pages into a DIFFERENT output. DOCX markdown creation, outline at offset zero and exact XML replacement including header/footer fallback. XLSX grid/sheet/range read, grid creation, range edit preserving other cells, styles, formulas and unrelated package parts. |
+| start/more/stop/list search | Existing `files/search.rs`, contracts search and both adapters; add owned bounded search sessions if existing stateless cursors cannot express stop/list/source behavior. Bind session to caller/scope/query, cap lifetime/results, preserve ignore rules and cancellation. |
+| start/read/interact/terminate/session/process list/kill; run command/code | Existing broker operation lifecycle, interactive contracts, execution platform and launch modules. Map source timeouts/cursors/buffer limits/kill-tree semantics; retain stdout/stderr separation for structured client protocols. Do not create a second process runner. |
+| GUI session/observe/screenshot/input/tree/window/app | New `contracts/src/gui.rs`, broker `gui/`, hub `machines/gui/`, local adapter GUI tools and `web/app/gui/`; Linux backend under approved `execution/platform/linux/`. X11 capture/input/window/app and panic stop, Wayland capture-only as the source implements, useful unsupported results elsewhere. No unimplemented Windows/macOS GUI claim. |
+
+All binary/document operations use the existing file-mutation serialization, revision/CAS
+and durable retry owner. Read inputs and nested PDF/image paths under the same grant, cap
+compressed AND expanded data/entry count/depth, reject encrypted/invalid input, preserve
+original on any failure, fsync and atomically replace only a fully validated output.
+Do not rebuild a workbook to change one range if that loses unrelated package content.
+GUI authority binds session/display/apps and requires observe authority for input; recheck
+grant and displayed-frame geometry before input, bound action count, and end on panic stop,
+disconnect/expiry/revocation. Screenshots never become default audit payloads.
+
+Dependency choices during planning: use `jsonschema` without default network/file resolution
+for A05 and an offline retriever; compile/cache bounded schemas by hash/version. Official
+[validation options](https://docs.rs/jsonschema/latest/jsonschema/struct.ValidationOptions.html)
+document offline refusal. For document work, `lopdf` is the candidate Rust PDF owner
+([upstream operations](https://github.com/J-F-Liu/lopdf/blob/main/pdfutil/README.md)); package
+editing needs raw-copy preservation ([zip raw-copy implementation](https://docs.rs/zip/latest/src/zip/write.rs.html)).
+These are design choices, not proof of compatibility: pin a repository-compatible version,
+inspect license/MSRV/dependency effects, then run the source round-trip and malformed-file
+fixtures before accepting the dependency. Keep parsing offline; no new MCP HTTP client.
+
+Acceptance: every registry entry has an input/result/error mapping and source-derived test;
+document reopen confirms actual contents and untouched parts, failed edits leave original
+hash unchanged, concurrent edits/retries do not overwrite newer content. Both MCP faces
+and generated schemas agree. Linux real GUI probes prove the supported backend; Windows
+process tests prove Job Object and terminal behavior separately.
+
+### Batch 5: audit, reachable product and packaging
+
+1. Extend existing `ops/audit/{mod,history,read,completion}.rs` with correlated action
+   records (request, task, operation, guide run, grant, category, status), bounded redaction
+   and source action projections. Keep core append-only audit distinct from optional output
+   capture. New `ops/audit/retention/` owns versioned category settings, scheduled/manual
+   flush/prune and manifest verification; a PostgreSQL migration owns checkpoints/segments.
+2. Port source category retain-days/max-rows/max-bytes/archive/capture-output/max-output;
+   zero limits mean unlimited, not delete-all. Archive gzip JSONL in bounded segments with
+   row chain, SHA256, previous manifest hash, optional Ed25519 signature/key ID. Serialize
+   each category's archival claim across hub instances; persist progress, write/flush/
+   verify/atomically publish archive and manifest, then record segment and only then prune
+   eligible rows. A crash between filesystem and DB commit must reconcile the same segment.
+   Missing/corrupt sink or signature never permits pruning. Retain chain anchors and A03
+   retired-key tombstones forever; clearing receipt payloads cannot make a request reusable.
+3. Add `web/app/audit/` pages using the current owner-role machinery, source `/actions`,
+   `/actions/a2ui`, `/audit/retention`, category edit, flush/prune/download/verify operations.
+   Historical output is private by default; redaction precedes capture and archive writing.
+4. Finish A11 by enumerating `web/src/App.tsx` and every page/component's action. Record
+   source page -> Rust route -> visible navigation -> domain mutation/read -> acceptance.
+   Existing `web/app/mod.rs`, `home.rs`, AgentHub board/task/config/profile pages remain the
+   shell. Add grants, change review, catalogs, providers, subscriptions, guides, GUI, actions
+   and retention links with plain-language labels and empty/error/conflict states. No dead
+   placeholder cards. AgentHub boards/tasks/agents must be discoverable on the main screen.
+5. A12 maps source installers/service/config to existing Rust join/install/deploy owners;
+   no parallel Go daemon. Review every source setting against its runtime consumer and UI.
+   Public defaults contain no private hostnames/tokens/development passwords. Keep private
+   development bootstrap intact. Audit all SQLite callsites and justify only broker-local
+   durable/offline storage; hosted state remains PostgreSQL. Preserve notices and source
+   provenance, and update support claims only from implemented paths.
+
+Acceptance: concurrent archive writers, sink failure, tampering, restart and prune boundary;
+chain verification after retention; owner/ordinary-user browser journeys at 390/1280,
+keyboard and JS-off critical forms; source machine/document actions through actual broker;
+fresh and existing-data Docker runs, restart persistence and credential revocation. A11
+cannot be closed by merely finding HTML route handlers.
+
+### Batch 6: exact later deltas, oldest first
+
+| Source | Grounded change and code owners | Closure evidence |
+|---|---|---|
+| S2 / B01, 17 paths | Two commits: Chatmaton design documents, then ignore/packaging changes. No new runtime room implementation in this delta. Map docs 39d-g to accepted application ownership in `docs/product-and-platform-plan.md`; preserve requirements and status. Existing hub workflows/approvals, `notify/push/`, `site/pwa.rs`, link update and connector owners supply hub interfaces; do not manufacture a Go chat sidecar from a proposal. Inspect deleted Go release/Docker files against current Rust equivalents, and each secret-ignore entry against its fixture. | Each path gets exact disposition; accepted missing hub behavior remains open and is authored before S2 checkpoint. Private Gold/APNs/FCM/signing-host proposals are not silently represented as shipped self-hosted code. |
+| S3 / C01, 79 paths / five commits | `bridge/config/enrollment*`, transport/grant changes -> `link/src/{state,run,session}`, machine enrollment and A04 grants. Browser auth/OIDC/TLS changes -> existing hub identity, sign-in/session, provider and serve owners. New TLS configuration stays with transport, private state ACLs with existing platform owner. Source tests define one-use enrollment, atomic/private storage, dedicated CA+hostname checks, redirect refusal, cookie/session/stream boundaries. | Translate each changed test, including Windows interrupted state writes and cached-grant revocation. New public agent guide is origin-configurable; private Gold deployment files remain outside public runtime. Source line-ending changes map to actual Unix artifacts. |
+| S4 / D01, 32 paths | Source `health/ready.go` checks dependency in 1s with coarse `{ok}`/no-store; existing `ops/health.rs` is a detailed diagnostic, not that endpoint. Add `ops/readiness.rs` and `/readyz` using real DB query with a 1s total bound, keep `/healthz` diagnostics. `serve/mod.rs` graceful shutdown needs source 5s drain and explicit stream/link lifecycle before closing dependencies. Current deploy image gets nonroot/read-only code and writable private-state checks. | Real unreachable/slow PostgreSQL readiness, SIGTERM during request and persistent stream, embed/static-resource and browser auth regression. Historical screenshots/logs are source evidence only. |
+| S5 / E01, 42 paths | Current owners already include machine-engine broker tests for capabilities/retry/file_mutations, approved Windows execution, AgentHub `provenance.rs`, MCP capability helper and link session. Compare every hunk from `62820713747ba3b2c572e5642a8bbe8e779d769f` to preserved `c936f7f`; map old core/board paths to these real owners. Regenerate generated contracts rather than copy source output. | Reproduce the source concurrency/retry/provenance/live-capability/Windows-startup triggers. A renamed module or prior PR title is not equivalence. Record tested head before closing each row. |
+
+No row is closed merely by this plan. A00 still requires every preserved commit/file,
+including removed behavior and newly discovered refs, to acquire its own disposition.
+Planning has selected destinations and complete batches; runtime-specific API/dependency
+details still get checked against source as each batch is authored, without reopening the
+overall product architecture or turning each helper into a new CI cycle.
+
 ## A00 — immutable source and behavior accounting
 
 Inputs: all five manifests and their exact Git objects; the original dirty checkouts

@@ -69,6 +69,32 @@ captured before reading tasks so a reconnect cannot skip a concurrent committed 
 clients may see that change again when catching up. Event lists return `events` and a
 board-scoped `head_seq`. No endpoint aggregates another account's history.
 
-The source service's global stream, configuration and principal-management REST routes
-are still being restored separately. This document describes the authored task/history
-routes, not completed source absorption or a published release.
+Configuration and principal-management REST routes remain in the absorption plan.
+This document describes authored task/history/stream/protocol routes, not completed
+source absorption or a published release.
+
+## Reconnecting events and protocol discovery
+
+`GET /api/v1/stream?project=PROJECT` streams the same committed board events as the
+events endpoint. Each frame has `event: hub`, its sequence as `id`, and the JSON event
+as `data`. The initial retry hint is 3000 ms; idle connections receive a keepalive.
+Use `Last-Event-ID` or `after_seq` to resume after the last received event. If both are
+supplied they must agree. `from=now` starts at the current board head and cannot be
+combined with a replay cursor. Negative, malformed, duplicate-header or future cursors
+are refused before the stream opens. A project is always required.
+
+The stream subscribes before its first history read, catches up in pages of at most
+100 events, and periodically reads history even when no notification arrived. Its
+credential, API-key limits, registered agent and board access are checked before
+delivery, including delivery from a buffered page. Idle authority is checked every
+five seconds. Revocation, lost board access, changed identity or a failed store/auth
+check ends the stream; reconnect with current authority and the last received cursor.
+Already delivered bytes cannot be withdrawn. Dropping a client drops its reader; there
+is no detached producer or unbounded event queue. Responses are `no-store`, with proxy
+buffering disabled. A mutation replay produces no new event.
+
+`GET /api/v1/protocol?project=PROJECT` returns `agents_md`, the board's effective default
+`heartbeat_hint_ms`, and `connect` with the existing connector catalog rendered for the
+configured hub address. Actual claim responses determine the lease's heartbeat/expiry.
+The catalog format is shared with `/api/v1/connectors`; this prerelease does not reproduce
+the Go source's handwritten per-client snippets. No caller credential is returned.

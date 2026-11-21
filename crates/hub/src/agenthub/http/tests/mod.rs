@@ -1,5 +1,7 @@
 //! Real HTTP and MCP share PostgreSQL state and live authority, not separate stores.
 mod events;
+mod protocol;
+mod stream;
 mod workflow;
 use crate::agenthub::tests::serving::{hub_with, tool};
 use reqwest::{Method, StatusCode};
