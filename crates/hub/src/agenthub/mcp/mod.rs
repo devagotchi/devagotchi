@@ -140,7 +140,7 @@ pub use create_input::CreateIn;
 mod calls;
 mod lease_input;
 mod mutations;
-use lease_input::*;
+pub(crate) use lease_input::*;
 mod notices;
 mod refusals;
 mod schema;

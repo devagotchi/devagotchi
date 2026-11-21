@@ -2,7 +2,7 @@
 use super::serving::{hub, run, signed_in};
 use crate::agenthub::cli::{EXIT_CONFLICT, EXIT_OK};
 
-async fn local_accounts_hub()
+pub(crate) async fn local_accounts_hub()
 -> Option<(String, std::sync::Arc<crate::identity::accounts::Accounts>)> {
     use crate::{
         config::HubConfig,

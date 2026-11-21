@@ -140,7 +140,7 @@ impl Hub {
         result.map(Json).map_err(|error| refuse(error, ticket))
     }
 
-    async fn run_scoped<T, F>(
+    pub(crate) async fn run_scoped<T, F>(
         &self,
         subject: &Subject,
         seat: Option<String>,

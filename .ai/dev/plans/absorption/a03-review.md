@@ -261,3 +261,43 @@ compiler warnings (target/absorption-cli-retry-check.log). The schema/layout che
 the current built executables, with the layout executable reading current source files.
 Formatting, both repositories' diff-whitespace checks and pinned-object inventory passed.
 The 100 commits/907 source rows remain open; four CLI rows now carry partial source mappings.
+
+## REST task and history continuation
+
+Read S1 httpapi/{server,tasks,admin,events,protocol,export}.go, expanded the dynamic
+configuration kinds, and compared store/edit.go's actual NewTask/TaskPatch fields.
+[HTTP mapping](a03-http.md) defines the adapters and remaining administrative/SSE work.
+The task/lease routes plus event pages and verification are authored in
+crates/hub/src/agenthub/http/. They use typed MCP inputs, the existing scoped board
+authorization/profile resolver, live bearer/session middleware and the same PostgreSQL
+receipts. Idempotency header/body disagreement refuses. If-Match is validated and becomes
+part of typed input; fresh stale conditions return 412. Old completed requests can replay
+their original version. Required projects and string task IDs are explicit migrations
+from the source global/int-ID API. No new SQL or alternate board store was introduced.
+
+Body limits, JSON error envelopes, no-store responses, replay headers and current key
+scope/project restrictions are enforced. Browser writes retain exact-origin checks.
+Dependencies, notes and lease operations use domain methods, and note replay skips another
+recipient wake. Event reads remain inside the selected board. List cursors are captured
+before task reads so concurrent commits cannot be skipped during catch-up.
+
+The first HTTP run passed lease history and malformed/precondition tests, but the search
+test's generic word also matched its seeded welcome task. A unique search term fixed that
+fixture assertion. Four real HTTP tests then passed
+(target/absorption-http-tasks-authority.log), including concurrent duplicates, cross-MCP
+replay, foreign-account refusals, key scope/project limits, actual revocation and browser
+origin/session revocation. Five tests passed after event pagination/verification was added
+(target/absorption-http-tasks-events.log). A sixth exercise of all remaining task verbs is
+being checked. These are local authoring checks, not CI or delivery.
+
+
+All six focused HTTP tests passed (target/absorption-http-workflow.log). The added workflow
+case exercises dependency add/remove and replay, an empty claim-next replay after readiness
+changes, current claim-next, held notes and later note replay, handoff, force release,
+completion and repeat completion, then verifies the actual board chain. All eight current
+layout checks passed (target/absorption-http-layout.log). docs/agenthub-http.md records the
+authored wire contract and the still-open source surfaces. No source row is marked complete.
+
+The current non-test hub build also passed without compiler warnings
+(target/absorption-http-current-check.log). Formatting, whitespace checks and the pinned
+source inventory passed; all 100 commits/907 file-change rows remain open.

@@ -408,6 +408,13 @@ pub(crate) fn app(state: AppState) -> Router {
                     bearer::require_bearer,
                 )),
         )
+        // Task and history JSON adapters share the existing bearer/session boundary.
+        .merge(
+            agenthub::http::routes().layer(middleware::from_fn_with_state(
+                state.clone(),
+                tenancy::orgs::api::bearer_or_session,
+            )),
+        )
         // Board statistics from ClickHouse (`warehouse`), for anyone who reads the board.
         .merge(
             ops::warehouse::routes().layer(middleware::from_fn_with_state(
