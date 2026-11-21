@@ -138,6 +138,7 @@ async fn weak_keys_are_refused_even_with_a_valid_code() {
         enroll_code: Some(code),
         build: None,
         kind: None,
+        remote_access: None,
     });
     assert_eq!(links.admit(frame, "n").await.unwrap_err().code, "bad_key");
     assert!(links.devices.get("gus").await.unwrap().is_none());

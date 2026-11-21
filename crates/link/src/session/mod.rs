@@ -21,6 +21,8 @@ use crate::{
     update::Updater,
 };
 
+mod remote;
+
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(15);
 const HANDSHAKE_TIMEOUT: Duration = Duration::from_secs(15);
 /// Calls handled at once. Beyond this the link answers `link_busy` instead of queueing,
@@ -124,6 +126,7 @@ async fn connect_with(
             HubFrame::Welcome { .. }
             | HubFrame::Refused { .. }
             | HubFrame::Call { .. }
+            | HubFrame::RemoteCall { .. }
             | HubFrame::Update { .. },
         ) => return Ended::Retry("hub did not open with a challenge".into()),
         Err(why) => return Ended::Retry(why),
@@ -142,6 +145,10 @@ async fn connect_with(
             Mode::Serve { updater, .. } => Some(updater.build().to_string()),
             Mode::Enroll { .. } => None,
         },
+        remote_access: match &mode {
+            Mode::Serve { .. } => Some(devagotchi_contracts::REMOTE_ACCESS_VERSION),
+            Mode::Enroll { .. } => None,
+        },
         kind: match &mode {
             Mode::Serve { updater, .. } => updater.kind().map(str::to_string),
             Mode::Enroll { .. } => None,
@@ -150,14 +157,26 @@ async fn connect_with(
     if let Err(why) = send(&mut sink, &hello, liveness.send).await {
         return Ended::Retry(why);
     }
-    match next_frame(&mut stream).await {
-        Ok(HubFrame::Welcome { .. }) => {}
+    let generation = match next_frame(&mut stream).await {
+        Ok(HubFrame::Welcome { device, generation }) if device == config.device => generation,
+        Ok(HubFrame::Welcome { .. }) => {
+            return Ended::Refused(BridgeError::new(
+                "machine_mismatch",
+                "hub welcomed another machine",
+            ));
+        }
         Ok(HubFrame::Refused { code, message }) => return refusal(code, message),
-        Ok(HubFrame::Challenge { .. } | HubFrame::Call { .. } | HubFrame::Update { .. }) => {
+        Ok(
+            HubFrame::Challenge { .. }
+            | HubFrame::Call { .. }
+            | HubFrame::RemoteCall { .. }
+            | HubFrame::Update { .. },
+        ) => {
             return Ended::Retry("hub answered the hello with an unexpected frame".into());
         }
         Err(why) => return Ended::Retry(why),
-    }
+    };
+    let grant_origin = remote::origin(config, generation);
     let (updater, state_dir) = match mode {
         Mode::Enroll { .. } => {
             let _ = sink.close().await;
@@ -213,6 +232,21 @@ async fn connect_with(
                             tokio::spawn(async move {
                                 let response = handle(&broker, request).await;
                                 let _ = answers.send(LinkFrame::Result { id, response }).await;
+                                drop(slot);
+                            });
+                        }
+                        Ok(HubFrame::RemoteCall {id,request})=> {
+                            let held=matches!(&request.remote,devagotchi_contracts::RemoteRequest::Execute {request,..} if !request.held_for().is_zero());
+                            let pool=if held {&waits} else {&slots};
+                            let Ok(slot)=pool.clone().try_acquire_owned() else {
+                                let response=devagotchi_contracts::RemoteWireResponse::Error(BridgeError::new("link_busy","machine call capacity is full"));
+                                let _=answers_tx.try_send(LinkFrame::RemoteResult {id,response});
+                                continue;
+                            };
+                            let broker=broker.clone();let origin=grant_origin.clone();let answers=answers_tx.clone();
+                            tokio::spawn(async move {
+                                let response=remote::handle(&broker,origin.as_ref(),request).await;
+                                let _=answers.send(LinkFrame::RemoteResult {id,response}).await;
                                 drop(slot);
                             });
                         }

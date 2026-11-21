@@ -41,6 +41,7 @@ pub(super) fn recover(
             record.view.operation_id.clone(),
             Operation {
                 record,
+                authority: None,
                 retained_bytes,
                 active: false,
                 control: None,

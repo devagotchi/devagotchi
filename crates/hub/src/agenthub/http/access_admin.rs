@@ -30,7 +30,7 @@ fn changed<T: Serialize>(result: Changed<T>) -> Reply {
     let replayed = result.replayed;
     Ok(answer(json!(result), replayed))
 }
-fn prepared(
+pub(super) fn prepared(
     mut value: Value,
     caller: &Caller,
     id: Option<&str>,

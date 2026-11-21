@@ -14,6 +14,21 @@ pub(crate) struct PolicyPage {
     pub next: Option<String>,
 }
 impl Access {
+    /// Resolve only immutable request context after proving the current environment owner.
+    pub(crate) async fn decision_target(
+        &self,
+        person: &str,
+        id: &str,
+    ) -> BridgeResult<(String, Option<String>)> {
+        if id.is_empty() || id.len() > 128 {
+            return Err(invalid("invalid access request identity"));
+        }
+        transaction!(&self.accounts.store, |c| {
+            let owner = self.accounts.catalog_actor_in(c, person, true).await?;
+            let pending = super::records::Pending::load(c, &owner.tenant, id).await?;
+            Ok((pending.account, pending.task.map(|task| task.project)))
+        })
+    }
     /// A submitted generation is an optimistic precondition, never a credential.
     pub(crate) async fn machine_administration(
         &self,

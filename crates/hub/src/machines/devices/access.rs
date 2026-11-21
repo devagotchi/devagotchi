@@ -11,6 +11,23 @@ pub(crate) struct MachineBinding {
     pub owner: Option<String>,
 }
 impl Devices {
+    /// A signed link's current enrollment. Rechecked before any granted frame is sent.
+    pub(crate) async fn link_binding(
+        &self,
+        device: &str,
+        key: &str,
+    ) -> BridgeResult<MachineBinding> {
+        transaction!(&self.store, |c| {
+            let row=sqlx::query("SELECT name,generation,owner FROM machine_devices WHERE name=$1 AND public_key=$2 AND revoked_at IS NULL")
+                .bind(device).bind(key).fetch_optional(c).await?
+                .ok_or_else(||BridgeError::new("device_revoked","machine enrollment is no longer available"))?;
+            Ok(MachineBinding {
+                name: row.try_get("name")?,
+                generation: row.try_get("generation")?,
+                owner: row.try_get("owner")?,
+            })
+        })
+    }
     /// Resolve metadata for an already authenticated environment administrator.
     /// The caller must prove this account's environment, then bind_access_in rechecks
     /// ownership/enrollment under the machine lock before using it.

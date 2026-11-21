@@ -21,6 +21,7 @@ pub mod email;
 pub mod identities;
 mod links;
 mod machine_access;
+mod maintenance;
 pub mod oauth;
 pub mod passkey;
 mod passwords;

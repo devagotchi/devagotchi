@@ -26,9 +26,11 @@ impl IntoResponse for Failure {
                 StatusCode::BAD_REQUEST
             }
             "unauthenticated" => StatusCode::UNAUTHORIZED,
-            "confirm_required" | "risks_not_acknowledged" => StatusCode::UNPROCESSABLE_ENTITY,
+            "confirm_required" | "risks_not_acknowledged" | "scope_wider_than_request" => {
+                StatusCode::UNPROCESSABLE_ENTITY
+            }
             "not_granted" | "read_only" | "policy_denied" | "humans_only" | "not_owner"
-            | "key_denied" | "early_access" | "people_only" | "agent_disabled" => {
+            | "key_denied" | "early_access" | "people_only" | "agent_disabled" | "own_request" => {
                 StatusCode::FORBIDDEN
             }
             "not_found" | "unknown_board" | "not_offered" => StatusCode::NOT_FOUND,

@@ -4,6 +4,8 @@
 use std::{ffi::OsString, path::PathBuf, process::ExitCode};
 
 pub mod background;
+#[cfg(any(target_os = "linux", windows))]
+mod wire;
 
 pub const USAGE: &str = "Usage: devagotchi broker run --state-dir ABS_PATH --config ABS_JSON\n\nStarts a private per-user local broker. The state parent directory must exist.\nExecutable grants authorize process execution as your OS user, not a sandbox.\nThe ready line names the endpoint clients pass to `devagotchi mcp --socket`: a Unix socket path\non Linux, or a \\\\.\\pipe\\ named-pipe path on Windows; the same endpoint is written to\n<state>/endpoint for `devagotchi mcp` to find on its own. The macOS provider is pending.";
 
@@ -122,7 +124,7 @@ impl Termination {
 pub async fn serve(state: PathBuf, config_path: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
     use crate::broker::{Broker, BrokerConfig};
     use devagotchi_contracts::*;
-    use devagotchi_ipc::{self as ipc, StateGuard};
+    use devagotchi_ipc::StateGuard;
     use std::{io::Read, sync::Arc};
 
     let metadata = std::fs::metadata(&config_path)?;
@@ -163,24 +165,8 @@ pub async fn serve(state: PathBuf, config_path: PathBuf) -> Result<(), Box<dyn s
                 let broker = Arc::clone(&broker);
                 connections.spawn(async move {
                     let _permit = permit;
-                    let result: BridgeResult<ResponseBody> = async {
-                        ipc::verify_peer(&stream)?;
-                        let bytes = ipc::read_frame(&mut stream, MAX_FRAME_BYTES).await?;
-                        let request: WireRequest = serde_json::from_slice(&bytes)
-                            .map_err(|e| BridgeError::new("invalid_request", e.to_string()))?;
-                        if request.api_version != API_VERSION {
-                            return Err(BridgeError::new("api_version", "Supported local broker API version is 1"));
-                        }
-                        broker.handle(request.request).await
-                    }.await;
-                    let response = match result { Ok(value) => WireResponse::Ok(value), Err(error) => WireResponse::Error(error) };
-                    match serde_json::to_vec(&response) {
-                        Ok(bytes) => {
-                            if let Err(error) = ipc::write_frame(&mut stream, &bytes, ipc::MAX_RESPONSE_BYTES).await {
-                                eprintln!("IPC response could not be delivered: {error}");
-                            }
-                        }
-                        Err(error) => eprintln!("IPC response serialization failed: {error}"),
+                    if let Err(error) = wire::exchange(&broker, &mut stream).await {
+                        eprintln!("IPC response could not be delivered: {error}");
                     }
                 });
             }

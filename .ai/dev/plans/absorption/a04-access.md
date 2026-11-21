@@ -394,3 +394,80 @@ The source Windows sandbox is a plain-process TODO that can advertise confinemen
 an environment flag; preserve its intended refusal requirement, never that false claim.
 The source Darwin profile and Linux namespace/proxy paths still need their actual native
 acceptance and per-operation integration before their levels are advertised.
+
+Broker integration contract (grounded before edits): define a closed remote IPC envelope
+separate from the trusted local request, with explicit prepare/execute/refresh/end verbs.
+The link supplies origin; tool payloads cannot select it. Preparation derives canonical
+input and call projection at the broker. Execution repeats normalization and compares the
+digest before any admission. Authority binds origin, enrollment, account/principal,
+admission, grant/version, durable retry key, effective item and original task lease.
+Its database-clock validity is capped at 30 seconds; the broker converts the remaining
+time to a monotonic deadline so clock rollback cannot extend an admitted process.
+Refresh cannot change immutable binding or revive an expired/interrupted admission.
+Interruption notifications establish a minimum allowed grant version: a delayed pause
+notice for version N interrupts older versions, without killing new work approved at N
+after resume. Persist that floor and admission identity in the existing private broker
+journal, atomically with operation admission. This machine-local SQLite use is specifically
+the existing crash-safe execution/retry journal, never a hosted coordination store.
+Broker operation ownership must include the principal even across MCP session changes.
+Unsupported confinement levels refuse before admission; an executable allowlist is not
+reported as a sandbox. Native sandbox support remains part of this batch, not substituted
+by a successful authority-envelope test. No new remote capability is advertised until its
+actual broker and transport handlers are implemented and checked.
+
+Broker integration authored on 2026-11-21: `contracts/grants/{authority,remote,action}.rs`
+defines the closed authority envelope. `ipc`, `link/session/remote.rs` and
+`hub/machines/link/remote.rs` preserve it across authenticated peers, enrollment checks
+and bounded shared capacity. Only the actually implemented native unsandboxed process
+path is advertised. `machine-engine/broker/{normalize,start,remote/}` repeats canonical
+input/selector checks, binds retries to principal/enrollment/admission and clears remote
+inherited environment. Monotonic expiry and interruption serialize with native process
+creation. The existing private journal persists admission identities and revocation floors;
+recovery never restarts an old process or signals a recovered numeric PID. Native sandbox
+levels and other machine operation families remain open.
+
+`machines/access/broker.rs` composes prepare, current PostgreSQL admission and execution;
+task authority hashes the immutable original lease identity, not heartbeat expiry or
+mutable labels. `delivery.rs` acknowledges only broker-confirmed interruption delivery.
+`runtime.rs` and `identity/accounts/maintenance.rs` page environments, requests and grants,
+resolve original task boards, reap ended authority and deliver durable outbox records.
+The runtime continues other environments after an error and reports the failure. This
+does not yet wire ordinary machine tool dispatch, refresh running admission leases, or
+provide post-expiry execution history; those remain explicit work in this batch.
+
+`agenthub/http/access_decisions.rs` adds human approve/deny through existing narrowing,
+CAS and receipt owners. Approval resolves the request's original account/project; tool
+arguments cannot redirect it. Credentials are refreshed before the domain transaction.
+Agents, seats, foreign origins, unknown fields, self-decisions, widening and stale versions
+refuse. Source request creation, MCP access tools and approval browser UI remain open.
+
+Local evidence (required isolated PostgreSQL where applicable, zero ignored): the broker
+and contracts regression passed 126 + 28 tests (`target/absorption-broker-regression.log`);
+transport passed 4 hub + 2 link + 2 authority tests; bridge/outbox passed 8 hub + 2 link +
+2 authority tests. The latest complete contracts and link binaries passed 28 and 21 tests.
+Existing hub link behavior passed all 22 tests (`target/absorption-links-regression.log`).
+The combined access check passed 74 tests with one test-helper failure: cross-origin
+middleware responses precede the API's cache header. Its fixture now checks the actual
+403 response directly, as existing cross-origin tests do; rerun result follows below.
+The runtime fixture also now respects the database expiry constraint. No production
+constraint, denial assertion or failed test was disabled to obtain these results.
+
+New hub accepts legacy links, but new link Hello carries the remote-access field; source
+protocol 1 alone is not evidence that an older strict hub accepts that shape. Keep the
+hub/link installation pair consistent in prerelease packaging and test the actual pair.
+No push, CI, merge, branch deletion or main deployment is established by this checkpoint.
+
+Decision rerun: all three real HTTP decision tests passed, zero failed/ignored
+(`target/absorption-access-decisions-tests.log`). The self-decision fixture explicitly
+adds a human `access.request` policy first: the default permits agent requests only.
+That custom policy still cannot authorize self-approval or self-denial. Layout passed
+all eight checks; broker.rs shrank from 1,153 to 878 lines and its ratchet was tightened.
+
+Next adapter unit: request creation resolves only the caller's enrolled machine and
+original task board, obtains facts from that authenticated broker, and rechecks current
+credential/profile before recording the request. Expose the broker's actual available
+sandbox levels separately from catalog levels. Never accept OS/display/owner/generation
+facts from tool or HTTP arguments. Offline or unnegotiated peers return an explicit
+unavailable refusal; a pending request is never a permit. Preserve request-key replay,
+source risk snapshots, principal policy and exact task lease checks. Author discovery,
+creation, refusal and credential/enrollment race tests before the unit check.

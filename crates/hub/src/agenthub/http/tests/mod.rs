@@ -1,5 +1,6 @@
 //! Real HTTP and MCP share PostgreSQL state and live authority, not separate stores.
 mod access_admin;
+mod access_decisions;
 mod access_reads;
 mod aggregate;
 mod catalog;

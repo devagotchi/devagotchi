@@ -16,7 +16,10 @@ use tokio::sync::{OwnedSemaphorePermit, mpsc};
 
 use crate::{machines::now_secs, ops::audit::AuditEntry};
 
-use super::{Admitted, CALL_QUEUE, Links, Pending, Session, fingerprint, random};
+use super::{
+    Admitted, CALL_QUEUE, Links, Pending, RemotePending, RemoteSession, Session, fingerprint,
+    random,
+};
 
 pub(super) const HELLO_TIMEOUT: Duration = Duration::from_secs(10);
 
@@ -126,6 +129,7 @@ impl Links {
             joined_for,
             build,
             container,
+            remote_access,
         } = match self.admit(hello, &nonce).await {
             Ok(admitted) => admitted,
             Err(error) => {
@@ -135,11 +139,27 @@ impl Links {
                 return;
             }
         };
+        let binding = match self.devices.link_binding(&device, &key).await {
+            Ok(binding) => binding,
+            Err(error) => {
+                let _ = send(&mut sink, &wire_refusal(&error)).await;
+                return;
+            }
+        };
         drop(permit);
 
         let (calls_tx, mut calls_rx) = mpsc::channel::<(u64, WireRequest)>(CALL_QUEUE);
         let (control_tx, mut control_rx) = mpsc::channel::<HubFrame>(4);
         let pending: Pending = Arc::default();
+        let remote_pending: RemotePending = Arc::default();
+        let (remote_tx, mut remote_rx) = mpsc::channel(CALL_QUEUE);
+        let remote_session = RemoteSession {
+            version: remote_access,
+            binding: binding.clone(),
+            key: key.clone(),
+            calls: remote_tx,
+            pending: remote_pending.clone(),
+        };
         let session_id = self.next.fetch_add(1, Ordering::Relaxed);
         let previous = self.sessions.lock().expect("links").insert(
             device.clone(),
@@ -150,6 +170,8 @@ impl Links {
                 build: build.clone(),
                 container,
                 control: control_tx,
+                remote: remote_session,
+                capacity: Arc::new(tokio::sync::Semaphore::new(CALL_QUEUE)),
             },
         );
         drop(previous); // A reconnect replaces the old session; its sender drops and it ends.
@@ -186,11 +208,14 @@ impl Links {
             &mut sink,
             &HubFrame::Welcome {
                 device: device.clone(),
+                generation: (remote_access == Some(devagotchi_contracts::REMOTE_ACCESS_VERSION))
+                    .then(|| binding.generation.clone()),
             },
         )
         .await
         .is_err()
         {
+            remote_pending.lock().expect("remote pending").clear();
             let _ = self.forget(&device, session_id, &pending);
             return;
         }
@@ -202,6 +227,17 @@ impl Links {
         let mut idle = Box::pin(tokio::time::sleep(IDLE_TIMEOUT));
         let reason = loop {
             tokio::select! {
+                outgoing=remote_rx.recv()=>match outgoing {
+                    Some((id,request))=> {
+                        match self.devices.link_binding(&device,&key).await {
+                            Ok(current) if current==binding=> {
+                                if send(&mut sink,&HubFrame::RemoteCall {id,request}).await.is_err() {break "send_failed";}
+                            }
+                            _=> {let _=send(&mut sink,&revoked_frame(&device)).await;break "revoked";}
+                        }
+                    }
+                    None=>break "replaced",
+                },
                 outgoing = calls_rx.recv() => match outgoing {
                     Some((id, request)) => {
                         // Re-check at the moment of forwarding: a call queued just before a
@@ -234,6 +270,10 @@ impl Links {
                     Some(Ok(Message::Text(text))) => {
                         idle.as_mut().reset(tokio::time::Instant::now() + IDLE_TIMEOUT);
                         match serde_json::from_str::<LinkFrame>(&text) {
+                            Ok(LinkFrame::RemoteResult {id,response})=> {
+                                if remote_access!=Some(devagotchi_contracts::REMOTE_ACCESS_VERSION) {break "protocol_error";}
+                                if let Some(waiter)=remote_pending.lock().expect("remote pending").remove(&id) {let _=waiter.send(response);}
+                            }
                             Ok(LinkFrame::Result { id, response }) => {
                                 if let Some(waiter) = pending.lock().expect("pending").remove(&id) {
                                     let _ = waiter.send(response);
@@ -262,6 +302,7 @@ impl Links {
                 }
             }
         };
+        remote_pending.lock().expect("remote pending").clear();
         if let Some(episode) = self.forget(&device, session_id, &pending) {
             self.clone().watch_offline(device.clone(), episode);
         }

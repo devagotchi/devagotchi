@@ -3,7 +3,7 @@
 // Native OS calls live here and nowhere else in this crate's dependents.
 #![allow(unsafe_code)]
 
-use super::{IO_TIMEOUT, exchange, io_error};
+use super::{IO_TIMEOUT, exchange, io_error, remote_exchange};
 use devagotchi_contracts::*;
 use std::{
     path::{Path, PathBuf},
@@ -38,7 +38,7 @@ pub fn verify_peer(stream: &Connection) -> BridgeResult<()> {
     Ok(())
 }
 
-pub async fn request(socket: &Path, body: RequestBody) -> BridgeResult<ResponseBody> {
+async fn connect(socket: &Path) -> BridgeResult<Connection> {
     use std::os::unix::fs::{FileTypeExt, MetadataExt};
     if !socket.is_absolute() {
         return Err(BridgeError::new(
@@ -59,7 +59,7 @@ pub async fn request(socket: &Path, body: RequestBody) -> BridgeResult<ResponseB
             "Broker socket must be an owner-only Unix socket",
         ));
     }
-    let mut stream = tokio::time::timeout(IO_TIMEOUT, tokio::net::UnixStream::connect(socket))
+    let stream = tokio::time::timeout(IO_TIMEOUT, tokio::net::UnixStream::connect(socket))
         .await
         .map_err(|_| BridgeError::new("ipc_timeout", "Timed out connecting to broker"))?
         .map_err(io_error)?;
@@ -69,7 +69,15 @@ pub async fn request(socket: &Path, body: RequestBody) -> BridgeResult<ResponseB
             "Broker peer UID does not match the local operator",
         ));
     }
-    exchange(&mut stream, body).await
+    Ok(stream)
+}
+
+pub async fn request(socket: &Path, body: RequestBody) -> BridgeResult<ResponseBody> {
+    exchange(&mut connect(socket).await?, body).await
+}
+
+pub async fn remote_request(socket: &Path, wire: RemoteWireRequest) -> BridgeResult<RemoteReply> {
+    remote_exchange(&mut connect(socket).await?, wire).await
 }
 
 pub fn validate_private_directory(path: &Path) -> BridgeResult<()> {

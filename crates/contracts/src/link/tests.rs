@@ -10,6 +10,7 @@ fn hello_carries_its_build_and_an_old_hello_without_one_still_parses() {
         enroll_code: None,
         build: Some("main-abc1234".into()),
         kind: None,
+        remote_access: None,
     };
     let text = serde_json::to_string(&hello).unwrap();
     assert!(text.contains(r#""build":"main-abc1234""#), "{text}");
@@ -29,6 +30,7 @@ fn hello_carries_its_build_and_an_old_hello_without_one_still_parses() {
             build: None,
             enroll_code: None,
             kind: None,
+            remote_access: None,
             ..
         }
     ));
@@ -91,6 +93,10 @@ const SEEN: &[&str] = &[
     r#"{"type":"heartbeat"}"#,
     r#"{"type":"update_status","state":"downloading","detail":null}"#,
     r#"{"type":"update_status","state":"failed","detail":"busy"}"#,
+    r#"{"type":"remote_call","id":2,"request":{"api_version":1,"remote":{"action":"capabilities"}}}"#,
+    r#"{"type":"remote_result","id":2,"response":{"status":"error","value":{"code":"authority_expired","message":"expired"}}}"#,
+    r#"{"type":"welcome","device":"d","generation":"g-1"}"#,
+    r#"{"type":"hello","version":1,"device":"d","public_key":"ab","signature":"cd","remote_access":1}"#,
 ];
 
 // No wildcard arms: a new variant does not compile until it is named here, and the golden
@@ -102,6 +108,7 @@ fn hub_name(frame: &HubFrame) -> &'static str {
         HubFrame::Refused { .. } => "refused",
         HubFrame::Call { .. } => "call",
         HubFrame::Update { .. } => "update",
+        HubFrame::RemoteCall { .. } => "remote_call",
     }
 }
 
@@ -110,17 +117,20 @@ fn link_name(frame: &LinkFrame) -> &'static str {
         LinkFrame::Hello { .. } => "hello",
         LinkFrame::Result { .. } => "result",
         LinkFrame::Heartbeat => "heartbeat",
+        LinkFrame::RemoteResult { .. } => "remote_result",
         LinkFrame::UpdateStatus { .. } => "update_status",
     }
 }
 
-const ALL: [&str; 9] = [
+const ALL: [&str; 11] = [
     "call",
     "challenge",
     "heartbeat",
     "hello",
     "refused",
     "result",
+    "remote_call",
+    "remote_result",
     "update",
     "update_status",
     "welcome",
@@ -165,6 +175,7 @@ fn fields_added_after_v1_stay_off_the_wire_when_none() {
         enroll_code: Some("dvg-x".into()),
         build: None,
         kind: None,
+        remote_access: None,
     };
     let text = serde_json::to_string(&hello).unwrap();
     assert!(

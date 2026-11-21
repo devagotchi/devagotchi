@@ -10,6 +10,7 @@ use std::fs::OpenOptions;
 use std::os::unix::fs::{MetadataExt, OpenOptionsExt, PermissionsExt};
 use std::path::Path;
 use std::time::Duration;
+mod grants;
 
 #[derive(Debug, Clone)]
 pub(crate) struct JournalFrame {
@@ -26,6 +27,7 @@ pub(crate) struct JournalOperation {
     pub config_identity: String,
     /// Who started it, as the transport said; absent for an operation started without one.
     pub owner: Option<Caller>,
+    pub grant: Option<devagotchi_contracts::GrantBinding>,
     pub view: OperationView,
     pub latest_sequence: u64,
     pub frames: VecDeque<JournalFrame>,
@@ -178,7 +180,7 @@ impl Journal {
                     .collect()
             })
             .map_err(persistence)?;
-        for column in ["owner_json", "interactive_json"] {
+        for column in ["owner_json", "interactive_json", "grant_json"] {
             if !columns.iter().any(|name| name == column) {
                 connection
                     .execute_batch(&format!("ALTER TABLE operations ADD COLUMN {column} TEXT"))
@@ -191,7 +193,9 @@ impl Journal {
         if synchronous != 2 {
             return Err(persistence("synchronous=FULL could not be established"));
         }
-        Ok(Self { connection })
+        let journal = Self { connection };
+        journal.initialize_grants()?;
+        Ok(journal)
     }
 
     pub(crate) fn load(&self) -> BridgeResult<Vec<JournalOperation>> {
@@ -205,7 +209,7 @@ impl Journal {
             ));
         }
         let mut statement = self.connection.prepare(
-            "SELECT operation_id, idempotency_key, request_digest, config_identity, view_json, latest_sequence, owner_json, interactive_json FROM operations ORDER BY rowid"
+            "SELECT operation_id, idempotency_key, request_digest, config_identity, view_json, latest_sequence, owner_json, interactive_json, grant_json FROM operations ORDER BY rowid"
         ).map_err(persistence)?;
         let rows = statement
             .query_map([], |row| {
@@ -220,6 +224,7 @@ impl Journal {
                     row.get::<_, u64>(5)?,
                     row.get::<_, Option<String>>(6)?,
                     row.get::<_, Option<String>>(7)?,
+                    row.get::<_, Option<String>>(8)?,
                 ))
             })
             .map_err(persistence)?;
@@ -231,6 +236,7 @@ impl Journal {
                 latest_sequence,
                 owner,
                 interactive,
+                grant,
             ) = row.map_err(persistence)?;
             let mut view: OperationView = serde_json::from_str(&view_json).map_err(persistence)?;
             let owner: Option<Caller> = owner
@@ -281,11 +287,13 @@ impl Journal {
                 }
                 frames.push_back(frame);
             }
+            let grant = self.load_grant(grant.as_deref(), &key, &request_digest)?;
             operations.push(JournalOperation {
                 key,
                 request_digest,
                 config_identity,
                 owner,
+                grant,
                 view,
                 latest_sequence,
                 frames,
@@ -302,10 +310,20 @@ impl Journal {
             .map(serde_json::to_string)
             .transpose()
             .map_err(persistence)?;
+        let grant = operation
+            .grant
+            .as_ref()
+            .map(serde_json::to_string)
+            .transpose()
+            .map_err(persistence)?;
         let transaction = self.connection.transaction().map_err(persistence)?;
+        if let Some(binding) = &operation.grant {
+            transaction.execute("INSERT INTO grant_admissions(hub,machine,generation,admission_id,operation_key,binding_hash) VALUES(?1,?2,?3,?4,?5,?6)",
+                params![binding.origin.hub,binding.origin.machine,binding.origin.generation,binding.admission_id,binding.operation_key,grants::binding_hash(binding)?]).map_err(persistence)?;
+        }
         transaction.execute(
-            "INSERT INTO operations(operation_id,idempotency_key,request_digest,config_identity,view_json,latest_sequence,owner_json,interactive_json) VALUES(?1,?2,?3,?4,?5,0,?6,?7)",
-            params![operation.view.operation_id, operation.key, operation.request_digest, operation.config_identity, view, owner, interactive]
+            "INSERT INTO operations(operation_id,idempotency_key,request_digest,config_identity,view_json,latest_sequence,owner_json,interactive_json,grant_json) VALUES(?1,?2,?3,?4,?5,0,?6,?7,?8)",
+            params![operation.view.operation_id, operation.key, operation.request_digest, operation.config_identity, view, owner, interactive,grant]
         ).map_err(persistence)?;
         transaction.commit().map_err(persistence)
     }

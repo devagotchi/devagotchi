@@ -56,6 +56,8 @@ pub(crate) enum StopReason {
     Shutdown,
     PersistenceFailure,
     ObservationFailure,
+    GrantExpired,
+    GrantInterrupted,
 }
 
 pub(crate) async fn run_job(
@@ -67,8 +69,9 @@ pub(crate) async fn run_job(
     input: Option<mpsc::Receiver<InputRequest>>,
 ) {
     let early_stop = *control.borrow();
-    if early_stop.is_some() || Instant::now() >= deadline {
-        let state = if early_stop.is_none() {
+    let grant_expired = shared.grant_expired(&id);
+    if early_stop.is_some() || Instant::now() >= deadline || grant_expired {
+        let state = if early_stop.is_none() && !grant_expired {
             OperationState::TimedOut
         } else {
             OperationState::Cancelled
@@ -159,7 +162,25 @@ pub(crate) async fn run_job(
             platform::Scope::Group
         }
     };
-    let spawned = platform::spawn(&mut command, terminal.as_ref(), spec.account_environment);
+    let spawned = shared.while_launch_authorized(&id, deadline, || {
+        platform::spawn(&mut command, terminal.as_ref(), spec.account_environment)
+    });
+    let Some(spawned) = spawned else {
+        shared.mark_stop(&id);
+        let state = if control.borrow().is_none() && !shared.grant_expired(&id) {
+            OperationState::TimedOut
+        } else {
+            OperationState::Cancelled
+        };
+        shared.finish(
+            &id,
+            state,
+            None,
+            true,
+            "Operation authority ended before process creation; no process was launched.".into(),
+        );
+        return;
+    };
     // The broker's copies of a terminal's program side close here, so its master reads end
     // of file once no program holds that side any more.
     drop(command);
@@ -363,7 +384,12 @@ pub(crate) async fn run_job(
             Some(StopReason::PersistenceFailure | StopReason::ObservationFailure) => {
                 OperationState::Unknown
             }
-            Some(StopReason::Cancelled | StopReason::Shutdown) => OperationState::Cancelled,
+            Some(
+                StopReason::Cancelled
+                | StopReason::Shutdown
+                | StopReason::GrantExpired
+                | StopReason::GrantInterrupted,
+            ) => OperationState::Cancelled,
             None if status.as_ref().is_some_and(ExitStatus::success) => OperationState::Succeeded,
             None => OperationState::Failed,
         }
@@ -374,6 +400,10 @@ pub(crate) async fn run_job(
         }
         Some(StopReason::Cancelled) => "Cancellation was recorded. ".to_owned(),
         Some(StopReason::Shutdown) => "Broker shutdown requested cancellation. ".to_owned(),
+        Some(StopReason::GrantExpired) => "Granted execution authority expired. ".to_owned(),
+        Some(StopReason::GrantInterrupted) => {
+            "Granted execution authority was interrupted. ".to_owned()
+        }
         Some(StopReason::PersistenceFailure) => {
             "Critical persistence failure requested cancellation. ".to_owned()
         }

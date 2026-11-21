@@ -357,6 +357,7 @@ async fn recovery_never_replays_unsettled_admissions() {
             request_digest: digest,
             config_identity: broker.shared.config_identity.clone(),
             owner: None,
+            grant: None,
             view: OperationView {
                 operation_id: id.clone(),
                 executable: path_string(&spec.executable).unwrap(),

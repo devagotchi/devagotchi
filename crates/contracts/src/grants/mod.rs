@@ -2,7 +2,18 @@
 //! The hub and broker must additionally verify live identity, lease and platform authority.
 use crate::{BridgeError, BridgeResult};
 use serde::{Deserialize, Serialize};
+mod action;
+mod authority;
 mod item;
+mod remote;
+pub use action::GrantAction;
+pub use authority::{
+    GRANT_AUTHORITY_MAX_TTL_MS, GrantActor, GrantAuthority, GrantBinding, GrantInterruption,
+    GrantOrigin, REMOTE_ACCESS_VERSION,
+};
+pub use remote::{RemoteReply, RemoteRequest, RemoteWireRequest, RemoteWireResponse};
+#[cfg(test)]
+mod authority_tests;
 mod matching;
 mod narrow;
 mod risk;
