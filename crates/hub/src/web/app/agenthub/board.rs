@@ -135,10 +135,10 @@ pub async fn page(
             open_only: true,
             ..Filter::default()
         })?;
-        devagotchi_contracts::BridgeResult::Ok((all, open(&filter)?))
+        devagotchi_contracts::BridgeResult::Ok((all, open(&filter)?, board.workflow()?))
     })
     .await;
-    let (all, shown) = match read {
+    let (all, shown, workflow) = match read {
         Ok(Ok(value)) => value,
         other => {
             eprintln!("devagotchi hub: read board page: {other:?}");
@@ -163,6 +163,10 @@ pub async fn page(
                 let on = current.as_deref() == Some(value.as_str());
                 let label = if key == "assignee" {
                     who(value)
+                } else if key == "state" {
+                    workflow
+                        .state(value)
+                        .map_or_else(|| value.clone(), |s| s.label.clone())
                 } else {
                     value.clone()
                 };
@@ -199,7 +203,11 @@ pub async fn page(
                 encode(&project),
                 encode(&ticket.id),
                 escape(&ticket.title),
-                escape(&ticket.state),
+                escape(
+                    workflow
+                        .state(&ticket.state)
+                        .map_or(ticket.state.as_str(), |s| s.label.as_str())
+                ),
                 ticket.priority,
                 i = escape(&ticket.id),
             )

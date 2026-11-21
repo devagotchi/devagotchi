@@ -134,10 +134,10 @@ pub async fn page(
                     .filter(|e| e.ticket.as_deref() == Some(wanted.as_str())),
             );
         }
-        BridgeResult::Ok((view, events, source, wakes))
+        BridgeResult::Ok((view, events, source, wakes, board.workflow()?))
     })
     .await;
-    let (view, events, source, wakes) = match read {
+    let (view, events, source, wakes, workflow) = match read {
         Ok(Ok(value)) => value,
         Ok(Err(error)) if error.code == "not_found" => return unknown(),
         other => {
@@ -421,7 +421,11 @@ spellcheck=\"false\" placeholder=\"{}\"></label></div>\
         escape(&ticket.id),
         escape(&ticket.title),
         escape(&copy.ticket_state),
-        escape(&ticket.state),
+        escape(
+            workflow
+                .state(&ticket.state)
+                .map_or(ticket.state.as_str(), |s| s.label.as_str())
+        ),
         escape(&copy.ticket_priority),
         ticket.priority,
         escape(&copy.ticket_labels),

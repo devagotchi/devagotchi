@@ -71,10 +71,18 @@ fn store_codes() -> BTreeSet<String> {
     .iter()
     .map(|f| src.join(f))
     .collect();
-    for dir in ["hosted", "board"] {
-        for entry in std::fs::read_dir(src.join(dir)).unwrap() {
-            files.push(entry.unwrap().path());
+    fn collect(dir: &Path, files: &mut Vec<std::path::PathBuf>) {
+        for entry in std::fs::read_dir(dir).unwrap() {
+            let path = entry.unwrap().path();
+            if path.is_dir() {
+                collect(&path, files);
+            } else if path.extension().is_some_and(|ext| ext == "rs") {
+                files.push(path);
+            }
         }
+    }
+    for dir in ["hosted", "board"] {
+        collect(&src.join(dir), &mut files);
     }
     // `invalid()` builds `invalid`; `read_only` is the hub's own refusal (`mcp/calls.rs`).
     let mut codes = BTreeSet::from(["invalid".to_string(), "read_only".to_string()]);
