@@ -170,7 +170,8 @@ broker_tools = ["approval_request", "approval_wait", "connection_call", "connect
                 "workflow_cancel", "workflow_list", "workflow_start", "workflow_status", "workflow_wait",
                 "write_file"]
 board_tools = [t for t in tools if t.startswith("board_")]
-check("tools", [t for t in tools if not t.startswith("board_")] == broker_tools and len(board_tools) == 24,
+access_tools = ["capabilities_list", "machines_list", "my_grants", "request_access", "wait_for_access"]
+check("tools", [t for t in tools if not t.startswith("board_")] == sorted(broker_tools + access_tools) and len(board_tools) == 24,
       ", ".join(tools))
 
 is_error, me = call("whoami", {})

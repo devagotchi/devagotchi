@@ -98,7 +98,7 @@ pub struct Site {
     pub dir: Option<PathBuf>,
     pub info: SiteFile,
     pub landing: Landing,
-    pub messages: Messages,
+    pub messages: Box<Messages>,
     /// The workflows an AI can start for its person (`content/workflows.json`).
     pub workflows: WorkflowsFile,
     pub pages: BTreeMap<String, Page>,

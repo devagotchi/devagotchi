@@ -57,6 +57,9 @@ server; [/llms-full.txt](/llms-full.txt) is that with every page inlined.
 |---|---|
 | `machines` | The machines you can use and whether each one's link is connected. Start here. |
 | `machine_inspect` | Asks a machine's broker itself, within 3 seconds, whether it answers and what it serves. No paths or secrets, and it starts nothing. |
+| `machines_list`, `capabilities_list` | Lists enrolled machines and available access-request choices, including the restrictions supported by a connected broker. |
+| `request_access`, `wait_for_access` | Requests a specific machine scope and duration with a reason, then follows the owner's decision on [Machine access](/app/access). A pending request grants no access. |
+| `my_grants` | Shows the authenticated person's or agent's grants, their limits, and whether they have ended. |
 | `workflow_list`, `workflow_start`, `workflow_status`, `workflow_wait`, `workflow_cancel` | The setups the AI can hand you as one link (a machine, your phone, another AI app), and how it follows each to the end. |
 | `machine_add` | A one-time code and the one line that joins a machine to your account. |
 | `run` | Runs a command on a machine and returns its output in one call. |

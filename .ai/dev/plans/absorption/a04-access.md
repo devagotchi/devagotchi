@@ -547,3 +547,27 @@ module below its cap; layout passed eight checks without raising any limits. The
 local validation results, not a merge or full native/browser/Docker acceptance claim.
 Source UI coverage remains partial until the remaining machine controls, policy/resume
 surfaces and actual execution integration are completed.
+
+Branch validation found and corrected a Windows executable stack overflow when loading
+the expanded site catalog: `Site.messages` and `Messages.app` now own boxed values.
+The actual-binary startup regression loads both the default and neutral sites on the
+native main-thread stack. That regression passed, as did Windows process E2E including
+the linked broker, sign-in and the assertion that hosted hub state contains no SQLite.
+The E2E catalog expectation now includes the five mounted access tools without changing
+the expected 24 board tools. Raw MCP protocol checks passed against the built executable.
+
+AgentHub migration replay exposed a non-repeatable policy seed table/policy and a stale
+expected migration list. AgentHub commit `db1fb9d` fixes both; all 162 library tests
+passed with PostgreSQL required. The dependency audit passed after admitting MIT-0 for
+the specific `borrow-or-share` transitive dependency, following inspection of its license.
+
+The subsequent complete `cargo test --locked --no-fail-fast` run used isolated PostgreSQL
+and ClickHouse with PostgreSQL required and four test threads: 1,148 passed, two failed,
+none ignored. The failures were the CLI settings test comparing mutation receipt fields
+with a plain settings read, and the landing page omitting the five newly mounted access
+tools. The test now explicitly validates the receipt before comparing every setting;
+the public tool list and documentation now describe those access tools. The affected
+regression rerun passed all 31 settings, landing-page and site tests, none ignored.
+Logs remain private under `target/absorption-branch-tests.log`
+and `target/absorption-final-regressions.log`; no source closure, CI, push, merge or branch
+deletion is established by these local checks.

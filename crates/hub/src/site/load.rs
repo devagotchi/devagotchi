@@ -153,7 +153,9 @@ impl Site {
         let text = |path: &str| files.text.get(path).map(String::as_str).unwrap_or_default();
         let info: SiteFile = parse_json("site.json", text("site.json"))?;
         let landing: Landing = parse_json("content/landing.json", text("content/landing.json"))?;
-        let messages: Messages =
+        // Keep the growing localized catalog off the caller's native stack. This path
+        // also runs on the Windows executable's main thread, not only Tokio test threads.
+        let messages: Box<Messages> =
             parse_json("content/messages.json", text("content/messages.json"))?;
         let workflows: WorkflowsFile =
             parse_json("content/workflows.json", text("content/workflows.json"))?;
