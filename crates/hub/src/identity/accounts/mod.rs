@@ -20,6 +20,7 @@ pub mod clients;
 pub mod email;
 pub mod identities;
 mod links;
+mod machine_access;
 pub mod oauth;
 pub mod passkey;
 mod passwords;

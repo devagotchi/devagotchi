@@ -48,7 +48,7 @@ pub(super) async fn initialize(c: &mut AnyConnection, tenant: &str) -> DbResult<
             if stored::get(c, tenant, kind, &id).await?.is_some() {
                 continue;
             }
-            let value = validate::record(c, tenant, kind, Value::Object(data)).await?;
+            let value = validate::record(c, tenant, kind, &id, Value::Object(data)).await?;
             let default = if kind == Kind::GrantPresets && id == "task-scoped" {
                 !sqlx::query_scalar::<_,bool>("SELECT EXISTS(SELECT 1 FROM catalog_grant_presets WHERE tenant_id=$1 AND is_default)")
                     .bind(tenant).fetch_one(&mut *c).await?

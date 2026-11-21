@@ -1,11 +1,21 @@
 //! Editable environment catalog data. Owns catalog_*; grants own actual execution authority.
 //! Reads and writes share live identity, PostgreSQL, policy, receipts and the hub audit owner.
+//!
+//! # Owns
+//! PostgreSQL catalog_* tables and per-file seed marks (migration 0039).
+//! # Serves
+//! Eight /api/v1 catalog collections and owner editors under /app/catalog.
+//! # Settings
+//! Catalog fields and the default preset are edited in those owner pages.
+//! # Depends on
+//! Identity, AgentHub policy, shared request receipts and the hub's audit owner.
 use crate::identity::accounts::Accounts;
 use devagotchi_contracts::{BridgeError, BridgeResult};
 use devagotchi_store::{Failed, transaction};
 use serde_json::{Value, json};
 use sqlx::AnyConnection;
 use std::sync::Arc;
+pub(crate) mod access;
 mod kinds;
 mod mutations;
 mod references;

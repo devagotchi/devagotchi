@@ -222,9 +222,11 @@ row. Raw credentials/logs/screenshots stay private; public receipts contain only
 
 Plan: source/target execution batches reconciled on 2026-11-21, including catalog-before-grant
 ordering, exact integration seams and later-delta distinctions. Implementation: A01-A03
-partially authored locally; complete source absorption remains unfinished. Validation:
+partially authored locally; A05 catalog administration and A04 access foundations are
+also authored with focused evidence. Complete source absorption remains unfinished. Validation:
 focused results are recorded in the packet review ledgers, not final integration evidence.
 Push/PR: no consolidated change published. Main: no consolidated source delivered. Continue
-Batch 1 on the existing integration branch; CI remains held until S1-S5 are authored.
+Batch 2 on the existing integration branch, retaining remaining Batch 1 acceptance;
+CI remains held until S1-S5 are authored.
 
 **DELIVERY INCOMPLETE: FULL SOURCE ABSORPTION IS NOT YET IMPLEMENTED OR MERGED.**

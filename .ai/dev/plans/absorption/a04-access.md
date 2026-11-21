@@ -7,7 +7,7 @@ an execution refinement of the full S1-S5 plan, not a new backlog or completion 
 
 Read at S1 `46419c697964016eb547c60416a8f2f5e854a95f`:
 `server/internal/access/{service,request,check,authorize,decide,sandbox,resume,resume_ack,revoke,reaper,util,defaults,read,policygate}.go`
-and `bridge/scope/{scope,narrow,match,scope_test}.go`. Remaining routes/MCP, migrations, hub tests, platform sandbox/proxy and policy files
+and `bridge/scope/{scope,narrow,match,scope_test}.go`. Also read `devapi/{mcp_access,access_routes}.go`, migration `004_devagotchi_access.sql`, and `hubtest/access_test.go`. Remaining platform sandbox/proxy, unsandboxed tests and change-policy files
 must be read before their code is authored. Current seams read: contracts link frames,
 machine broker access checks and hub machine link calls. Broker ownership and keyboard
 leases are real existing checks; they do not enforce the source selectors/sandbox.
@@ -40,6 +40,31 @@ leases are real existing checks; they do not enforce the source selectors/sandbo
   broker's bounded authority expiry.
 
 ## Concrete implementation sequence
+
+Composition decisions grounded in the existing owners:
+
+- `HostedBoard::scope` locks the physical board generation before principal-policy
+  initialization. Every task-bound access transaction must use that same order:
+  board, principal policy, catalog, access/admissions. Never lock access rows then call
+  the board owner. Continuations first read the immutable task binding, acquire the
+  board lock, then reread/check the access record. Reapers use the same ordering.
+- Add `hosted/access.rs` to return and recheck a typed lease binding inside the caller's
+  transaction: tenant, physical board ID, ticket ID, canonical principal, fence,
+  lease ID and database-clock expiry. Require a live principal directory even for a
+  read; ordinary receipt replay is not authority. Heartbeats preserve the lease binding,
+  release/reclaim and project recreation invalidate it. The hub never queries board
+  tables to make this decision.
+- The broker currently uses account plus MCP session as its caller identity, and its
+  IPC service unwraps `WireRequest` before handling it. Grant admission must additionally
+  bind the canonical agent and durable operation identity and carry authority through
+  link and IPC; a check at the hub alone does not enforce a grant at the broker.
+- Catalog request material includes the selected preset version, capability schema,
+  shell profile and matching risk text/predicates in one catalog-locked transaction.
+  A later catalog edit cannot rewrite that snapshot. OS profile mismatch, a stale
+  preset, unsupported executable capability or invalid schema fails the whole request.
+- Risk path predicates check overlapping scopes: a grant for `/` includes `/mnt/`.
+  Missing unrestricted paths may include the risky path; explicit empty paths do not.
+  Source's one-direction prefix check otherwise omits a relevant warning.
 
 1. `contracts/src/grants/{mod,selector,narrow,matching,risk,tests}.rs`, re-exported from
    `lib.rs`: closed capability/level vocabulary, parsed duration, typed selector values,
@@ -92,5 +117,39 @@ unsupported peer refusal, path/link escape, denied environment/network/argv, exp
 revocation of active processes/GUI, continued read/input under admitted authority only.
 Real UI/API/MCP checks cover owner/user/agent, exact origin and preserved refused drafts.
 
-Status: source comparison and implementation instructions; A04 is still open. No claim
-of enforced selectors/sandboxing, source closure, remote publication or main delivery.
+## Authored foundation and local evidence
+
+Shared contracts now implement typed selectors, item/level/duration narrowing, call
+matching and risk predicates. Catalog writes validate that vocabulary as well as their
+capability schema. Request preparation snapshots all selected preset/capability/profile
+versions and matching risk text/predicates in one transaction, refuses stale presets and
+duration widening, and preserves the original source's 77 seed rows unchanged.
+
+AgentHub's `TaskLeaseBinding` composes current principal and physical board generation,
+holder/fence/lease identity/expiry checks into the access transaction. Tests cover
+heartbeat, release/reclaim, changed identity, wrong generation, expiry and a concurrent
+release blocked until the transaction finishes. Identity's `machine_actor_in` refuses
+seat aliases, spoofed people, stale roles, foreign accounts and disabled accounts/profiles.
+Machine registry migration 0040 gives every enrollment a distinct generation; current
+machine bindings cannot revive after revoke/re-enroll with the same name and key.
+
+Focused evidence: 26 contracts tests passed; three AgentHub access-binding PostgreSQL
+tests passed; 28 hub catalog/access-identity/machine-binding/store tests passed, zero
+ignored. Logs are `target/absorption-grant-scopes.log`, `target/absorption-task-access.log`
+and `target/absorption-access-boundaries.log`. Eight layout checks passed. These verify
+the foundation, not executable grants. Durable requests/decisions/admissions, live policy,
+native enforcement, adapters and UI remain open and are the next implementation work.
+
+Additional source comparison: read `hubtest/unsandboxed_test.go`,
+`bridge/sandbox/{spec,linux,windows,darwin}.go`, `bridge/netproxy/{proxy,forward}.go`.
+The source Windows sandbox is explicitly a TODO that starts an ordinary process while
+an environment variable can make its probe advertise confinement. Do not copy that
+claim: implement native confinement and prove it before advertising it. Source Linux
+silently skips absent bind paths and source path expansion falls back after symlink
+resolution failure; executable authority must refuse unresolved/escaping targets.
+Source proxy cancellation closes its listener but not established tunnels. New proxy
+ownership must close active connections on revocation/expiry and bound connections,
+header parsing and timeouts. These findings refine the existing native-enforcement task.
+
+Status: A04 remains partial and open. No enforced sandbox, source closure, CI, remote
+publication, branch deletion or main delivery is claimed by these local checks.

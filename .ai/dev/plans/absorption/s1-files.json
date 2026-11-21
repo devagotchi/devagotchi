@@ -1948,9 +1948,14 @@
       "mode": "100644",
       "kind": "blob",
       "packet": "A04",
-      "status": "unverified",
-      "target_paths": [],
-      "evidence": []
+      "status": "partial",
+      "target_paths": [
+        "crates/contracts/src/grants/matching.rs",
+        "crates/contracts/src/grants/risk.rs"
+      ],
+      "evidence": [
+        "Partial access foundation: typed scope/narrowing/risk checks and catalog snapshots; current identity, task lease and machine generation seams. 26 contracts, 3 AgentHub PostgreSQL binding and 28 hub focused tests passed. See .ai/dev/plans/absorption/a04-access.md. Durable request/grant/admission storage, all adapters and native enforcement remain open; no source closure or main delivery."
+      ]
     },
     {
       "path": "bridge/scope/narrow.go",
@@ -1959,9 +1964,14 @@
       "mode": "100644",
       "kind": "blob",
       "packet": "A04",
-      "status": "unverified",
-      "target_paths": [],
-      "evidence": []
+      "status": "partial",
+      "target_paths": [
+        "crates/contracts/src/grants/narrow.rs",
+        "crates/contracts/src/grants/item.rs"
+      ],
+      "evidence": [
+        "Partial access foundation: typed scope/narrowing/risk checks and catalog snapshots; current identity, task lease and machine generation seams. 26 contracts, 3 AgentHub PostgreSQL binding and 28 hub focused tests passed. See .ai/dev/plans/absorption/a04-access.md. Durable request/grant/admission storage, all adapters and native enforcement remain open; no source closure or main delivery."
+      ]
     },
     {
       "path": "bridge/scope/scope.go",
@@ -1970,9 +1980,14 @@
       "mode": "100644",
       "kind": "blob",
       "packet": "A04",
-      "status": "unverified",
-      "target_paths": [],
-      "evidence": []
+      "status": "partial",
+      "target_paths": [
+        "crates/contracts/src/grants/selector.rs",
+        "crates/contracts/src/grants/mod.rs"
+      ],
+      "evidence": [
+        "Partial access foundation: typed scope/narrowing/risk checks and catalog snapshots; current identity, task lease and machine generation seams. 26 contracts, 3 AgentHub PostgreSQL binding and 28 hub focused tests passed. See .ai/dev/plans/absorption/a04-access.md. Durable request/grant/admission storage, all adapters and native enforcement remain open; no source closure or main delivery."
+      ]
     },
     {
       "path": "bridge/scope/scope_test.go",
@@ -1981,9 +1996,13 @@
       "mode": "100644",
       "kind": "blob",
       "packet": "A04",
-      "status": "unverified",
-      "target_paths": [],
-      "evidence": []
+      "status": "partial",
+      "target_paths": [
+        "crates/contracts/src/grants/tests.rs"
+      ],
+      "evidence": [
+        "Partial access foundation: typed scope/narrowing/risk checks and catalog snapshots; current identity, task lease and machine generation seams. 26 contracts, 3 AgentHub PostgreSQL binding and 28 hub focused tests passed. See .ai/dev/plans/absorption/a04-access.md. Durable request/grant/admission storage, all adapters and native enforcement remain open; no source closure or main delivery."
+      ]
     },
     {
       "path": "bridge/search/ignore.go",
@@ -3737,9 +3756,16 @@
       "mode": "100644",
       "kind": "blob",
       "packet": "A04",
-      "status": "unverified",
-      "target_paths": [],
-      "evidence": []
+      "status": "partial",
+      "target_paths": [
+        "crates/agenthub/src/hosted/access.rs",
+        "crates/agenthub/src/tests/access_binding.rs",
+        "crates/hub/src/machines/devices/access.rs",
+        "crates/hub/src/identity/accounts/machine_access.rs"
+      ],
+      "evidence": [
+        "Partial access foundation: typed scope/narrowing/risk checks and catalog snapshots; current identity, task lease and machine generation seams. 26 contracts, 3 AgentHub PostgreSQL binding and 28 hub focused tests passed. See .ai/dev/plans/absorption/a04-access.md. Durable request/grant/admission storage, all adapters and native enforcement remain open; no source closure or main delivery."
+      ]
     },
     {
       "path": "server/internal/access/check.go",
@@ -3748,9 +3774,15 @@
       "mode": "100644",
       "kind": "blob",
       "packet": "A04",
-      "status": "unverified",
-      "target_paths": [],
-      "evidence": []
+      "status": "partial",
+      "target_paths": [
+        "crates/hub/src/catalog/access/mod.rs",
+        "crates/hub/src/catalog/access/tests.rs",
+        "crates/hub/src/catalog/validate.rs"
+      ],
+      "evidence": [
+        "Partial access foundation: typed scope/narrowing/risk checks and catalog snapshots; current identity, task lease and machine generation seams. 26 contracts, 3 AgentHub PostgreSQL binding and 28 hub focused tests passed. See .ai/dev/plans/absorption/a04-access.md. Durable request/grant/admission storage, all adapters and native enforcement remain open; no source closure or main delivery."
+      ]
     },
     {
       "path": "server/internal/access/decide.go",
@@ -3814,9 +3846,14 @@
       "mode": "100644",
       "kind": "blob",
       "packet": "A04",
-      "status": "unverified",
-      "target_paths": [],
-      "evidence": []
+      "status": "partial",
+      "target_paths": [
+        "crates/hub/src/catalog/access/mod.rs",
+        "crates/hub/src/catalog/access/tests.rs"
+      ],
+      "evidence": [
+        "Partial access foundation: typed scope/narrowing/risk checks and catalog snapshots; current identity, task lease and machine generation seams. 26 contracts, 3 AgentHub PostgreSQL binding and 28 hub focused tests passed. See .ai/dev/plans/absorption/a04-access.md. Durable request/grant/admission storage, all adapters and native enforcement remain open; no source closure or main delivery."
+      ]
     },
     {
       "path": "server/internal/access/resume.go",

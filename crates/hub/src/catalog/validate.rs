@@ -1,5 +1,14 @@
 use super::*;
+use devagotchi_contracts::{
+    GrantCapability, GrantDuration, GrantLevel, GrantRiskCondition, GrantSelector,
+};
 use types::*;
+
+fn duration(value: &str) -> BridgeResult<()> {
+    GrantDuration::try_from(value.to_owned())
+        .map(|_| ())
+        .map_err(invalid)
+}
 
 fn text(value: &str, required: bool) -> BridgeResult<()> {
     if (required && value.trim().is_empty()) || value.len() > 16_384 || value.contains('\0') {
@@ -39,6 +48,7 @@ pub(super) async fn record(
     c: &mut AnyConnection,
     tenant: &str,
     kind: Kind,
+    id: &str,
     value: Value,
 ) -> DbResult<Value> {
     schema::bounded(&value)?;
@@ -49,6 +59,7 @@ pub(super) async fn record(
             text(&row.label, true)?;
             text(&row.description, false)?;
             text(&row.default_duration, true)?;
+            duration(&row.default_duration)?;
             strings(&row.sandbox_levels)?;
             if row.sandbox_levels.is_empty()
                 || row.sandbox_levels.iter().any(|v| {
@@ -61,6 +72,16 @@ pub(super) async fn record(
                 return Err(invalid("capability needs supported sandbox levels").into());
             }
             schema::compile(&row.selector_schema)?;
+            if let Ok(capability) = serde_json::from_value::<GrantCapability>(json!(id)) {
+                for level in &row.sandbox_levels {
+                    let level: GrantLevel = decoded(&json!(level))?;
+                    if !capability.supports(level) {
+                        return Err(
+                            invalid("sandbox level is not supported by this capability").into()
+                        );
+                    }
+                }
+            }
         }
         Kind::Risks => {
             let row: Risk = decoded(&value)?;
@@ -81,6 +102,8 @@ pub(super) async fn record(
             if !row.when_selector.is_object() {
                 return Err(invalid("risk condition must be an object").into());
             }
+            let condition: GrantRiskCondition = decoded(&row.when_selector)?;
+            condition.validate().map_err(|e| invalid(e.message))?;
         }
         Kind::ShellProfiles => {
             let row: ShellProfile = decoded(&value)?;
@@ -95,6 +118,7 @@ pub(super) async fn record(
             text(&row.label, true)?;
             text(&row.description, false)?;
             text(&row.duration, true)?;
+            duration(&row.duration)?;
             if row.full_access && row.requires_policy.as_deref() != Some("unsandboxed") {
                 return Err(invalid("full access requires the unsandboxed policy").into());
             }
@@ -192,5 +216,14 @@ pub(super) fn item_matches(item: &PresetItem, cap: &Value) -> BridgeResult<()> {
     if !cap.sandbox_levels.contains(&item.sandbox_level) {
         return Err(invalid("capability does not offer that sandbox level"));
     }
-    schema::instance(&cap.selector_schema, &item.selector)
+    schema::instance(&cap.selector_schema, &item.selector)?;
+    if let Ok(capability) = serde_json::from_value::<GrantCapability>(json!(item.capability)) {
+        let level: GrantLevel = decoded(&json!(item.sandbox_level))?;
+        if !capability.supports(level) {
+            return Err(invalid("sandbox level is not supported by this capability"));
+        }
+        let selector: GrantSelector = decoded(&item.selector)?;
+        selector.validate().map_err(|e| invalid(e.message))?;
+    }
+    Ok(())
 }

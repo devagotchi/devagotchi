@@ -17,6 +17,7 @@ use sha2::{Digest, Sha256};
 use sqlx::Row;
 
 use crate::store::{Store, secs, transaction, unsecs};
+mod access;
 
 /// How long an enrollment code stays valid.
 pub const CODE_TTL_SECS: u64 = 15 * 60;
@@ -225,6 +226,10 @@ impl Devices {
         configured: bool,
     ) -> BridgeResult<Device> {
         let refused = |message: &str| BridgeError::new("enroll_refused", message);
+        let mut random = [0u8; 16];
+        getrandom::fill(&mut random)
+            .map_err(|error| BridgeError::new("random", error.to_string()))?;
+        let generation = format!("g-{}", hex::encode(random));
         let now = now_secs();
         let owner = transaction!(&self.store, |connection| {
             let row = sqlx::query(
@@ -258,15 +263,17 @@ impl Devices {
             // Spend this code and any other unused one for the device: a binding ends them all.
             cancel_codes(connection, device, now).await?;
             sqlx::query(
-                "INSERT INTO machine_devices (name, public_key, enrolled_at, revoked_at, owner)
-                 VALUES ($1, $2, $3, NULL, $4)
+                "INSERT INTO machine_devices (name, public_key, enrolled_at, revoked_at, owner, generation)
+                 VALUES ($1, $2, $3, NULL, $4, $5)
                  ON CONFLICT (name) DO UPDATE SET public_key = excluded.public_key,
-                   enrolled_at = excluded.enrolled_at, revoked_at = NULL, owner = excluded.owner",
+                   enrolled_at = excluded.enrolled_at, revoked_at = NULL, owner = excluded.owner,
+                   generation = excluded.generation",
             )
             .bind(device)
             .bind(public_key)
             .bind(secs(now))
             .bind(owner.clone())
+            .bind(&generation)
             .execute(&mut *connection)
             .await?;
             Ok(owner)

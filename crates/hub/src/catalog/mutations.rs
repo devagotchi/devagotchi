@@ -114,7 +114,7 @@ impl Catalog {
                 .map(|row| row.data.clone())
                 .unwrap_or_default();
             merged.extend(patch.as_object().unwrap().clone());
-            let value = validate::record(c, &tenant, kind, Value::Object(merged)).await?;
+            let value = validate::record(c, &tenant, kind, id, Value::Object(merged)).await?;
             if current
                 .as_ref()
                 .is_some_and(|row| row.is_default == Some(true))

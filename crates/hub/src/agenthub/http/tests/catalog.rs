@@ -199,6 +199,8 @@ async fn catalog_merged_validation_and_reference_guards_preserve_existing_rows()
         json!({"is_default":true}),
         json!({"tenant_id":"other"}),
         json!({"label":3}),
+        json!({"default_duration":"0h"}),
+        json!({"sandbox_levels":["desktop"]}),
     ] {
         assert_eq!(
             patch(&admin, "capabilities", "fs.read", 1, invalid).await.0,
