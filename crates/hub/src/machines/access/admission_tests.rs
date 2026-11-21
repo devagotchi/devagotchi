@@ -18,7 +18,7 @@ pub(super) fn call() -> GrantCall {
     call
 }
 impl Fixture {
-    async fn once(&self) -> String {
+    pub(super) async fn once(&self) -> String {
         let mut request = input();
         request.duration = Some(GrantDuration::Once);
         let id = self
@@ -41,7 +41,12 @@ impl Fixture {
         .grant_id
         .unwrap()
     }
-    async fn admit(&self, grant: &str, key: &str, call: &GrantCall) -> BridgeResult<Admitted> {
+    pub(super) async fn admit(
+        &self,
+        grant: &str,
+        key: &str,
+        call: &GrantCall,
+    ) -> BridgeResult<Admitted> {
         self.access
             .admit(
                 &self.owner.id,

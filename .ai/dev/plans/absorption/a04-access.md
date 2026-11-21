@@ -295,9 +295,21 @@ pass. AgentHub's resource-binding checkpoint is `045e837`. Unused operation-acti
 remain visible compiler warnings until their planned adapters are authored; no lint was
 suppressed and no full workspace/CI gate has been claimed.
 
+The next local reaper unit is now authored in `reaper.rs` and `reaper_tests.rs`.
+It pages live grants and pending expiry, composes the current identity and machine owners,
+and takes task lease locks before policy/machine/access locks. AgentHub's separate
+`check_access_lease_in` supplies lease evidence for a trusted reaper without pretending to
+authenticate a caller. Expected disabled/missing/expired identity or lease states end the
+grant; unexpected storage/domain failures propagate. Each ending uses the same durable
+outbox. A once grant stays live while its admission is ongoing and ends after the broker
+records completion. Task release/reclaim ends its admission's grant even when a process
+was still admitted. Focused access regression: six AgentHub and 45 hub tests passed,
+zero ignored (`target/absorption-access-reaping.log`). Runtime scheduling and notification
+transport are not wired by these domain tests; guide-bound reaping remains for A07.
+
 Remaining A04 obligations are explicit: configured/shared-machine resolution; live existing
 GUI observation companionship; source-default selection with typed confirmation; machine
-pause/resume alerts and task/guide/policy-aware reaping; full policy evaluation/change/review
+pause/resume alerts and reaper runtime/guide integration; full policy evaluation/change/review
 domain; request/grant read models and all REST/MCP/browser actions; authenticated wire and
 IPC authority propagation; actual broker refresh/ending delivery; native Linux/Windows/macOS
 confinement and network enforcement; source-complete regression/real-OS acceptance. In

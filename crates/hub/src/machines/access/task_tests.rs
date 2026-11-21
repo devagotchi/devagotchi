@@ -109,6 +109,13 @@ async fn access_task_approval_requires_the_original_lease_after_release_and_recl
         .unwrap();
     let next = board.claim(&f.actor(), &ticket.id, None).await.unwrap();
     assert!(next.fence > lease.fence);
+    let ended = f
+        .access
+        .reap_grant(&f.owner.tenant, input.grant_id, Some(&board))
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(ended.reason, "task_ended");
     assert!(
         f.access
             .admit(&f.owner.id, &f.actor(), Some(&board), &machine, &input)

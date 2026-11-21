@@ -23,6 +23,7 @@ mod grant_record;
 mod grants;
 mod notifications;
 mod policies;
+mod reaper;
 mod records;
 mod references;
 mod requests;
@@ -41,6 +42,8 @@ mod grant_tests;
 mod notification_tests;
 #[cfg(test)]
 mod policy_tests;
+#[cfg(test)]
+mod reaper_tests;
 #[cfg(test)]
 mod request_tests;
 #[cfg(test)]
