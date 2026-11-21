@@ -221,7 +221,8 @@ async fn a_store_a_newer_hub_migrated_still_opens() {
 }
 
 /// Each domain's table prefixes (`.ai/patterns/layout.md`, "Tables carry their domain").
-const DOMAIN_PREFIXES: [(&str, &[&str]); 10] = [
+const DOMAIN_PREFIXES: [(&str, &[&str]); 11] = [
+    ("catalog", &["catalog_"]),
     ("store receipts", &["store_"]),
     ("identity", &["auth_", "oauth_"]),
     ("tenancy", &["tenancy_", "org_", "project_"]),

@@ -38,6 +38,23 @@ impl FromRequestParts<AppState> for Caller {
 }
 
 impl Caller {
+    pub(super) fn require_scope(
+        &self,
+        scope: crate::identity::accounts::api_keys::Scope,
+    ) -> Result<(), Failure> {
+        if self
+            .limits
+            .as_ref()
+            .is_some_and(|limits| !limits.scopes.contains(&scope))
+        {
+            return Err(BridgeError::new(
+                "key_denied",
+                format!("this key needs {}", scope.as_str()),
+            )
+            .into());
+        }
+        Ok(())
+    }
     /// A streaming read reuses the same live board/profile/key boundary without writing
     /// an audit entry for every idle poll. The stream records admission and termination.
     pub(super) async fn read_scoped<T, F>(&self, project: &str, f: F) -> BridgeResult<T>

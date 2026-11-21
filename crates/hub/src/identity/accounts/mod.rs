@@ -13,6 +13,7 @@
 mod account;
 pub mod agents;
 pub mod api_keys;
+mod catalog;
 mod challenges;
 pub mod claim;
 pub mod clients;

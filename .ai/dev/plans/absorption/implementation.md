@@ -168,6 +168,10 @@ Task selection comparison (read S1 `store/{tasks,claim,sort}.go`):
 
 ### Batch 2: catalogs, grants, policy and machine enforcement
 
+Catalog authoring and evidence: [a05-catalog.md](a05-catalog.md). Access source comparison
+and concrete next steps: [a04-access.md](a04-access.md). Both packets remain open until
+their actual consumers/enforcement and source closure are verified.
+
 Existing seams inspected: `Hub::call` in `hub/src/mcp/hub.rs` sets caller and routes/audits;
 `machines/link/calls.rs` has a bounded pending-call queue; `machine-engine/src/broker/access.rs`
 protects operation ownership/writer leases. These do not implement source grant selectors,

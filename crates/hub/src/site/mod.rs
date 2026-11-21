@@ -33,6 +33,7 @@ mod assets;
 mod assets_tests;
 #[cfg(test)]
 mod brand_tests;
+pub(crate) mod catalog_copy;
 mod check;
 pub(crate) mod configuration_copy;
 pub mod discovery;

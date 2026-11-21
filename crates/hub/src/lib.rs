@@ -9,6 +9,7 @@
 #[macro_use]
 extern crate devagotchi_store;
 pub mod agenthub;
+mod catalog;
 mod cli;
 mod config;
 mod connections;

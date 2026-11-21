@@ -11,6 +11,7 @@ use axum::{
 };
 
 mod access;
+mod catalog;
 mod configuration;
 mod events;
 mod input;
@@ -29,6 +30,7 @@ use response::{Failure, Reply, invalid};
 
 pub(crate) fn routes() -> Router<AppState> {
     Router::new()
+        .merge(catalog::routes())
         .merge(principals::routes())
         .merge(configuration::routes())
         .merge(projects::routes())

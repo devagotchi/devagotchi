@@ -7,6 +7,7 @@
 
 mod agenthub;
 mod agents;
+mod catalog;
 mod connections;
 mod home;
 #[cfg(test)]
@@ -34,6 +35,7 @@ use crate::{AppState, agenthub::Board, identity::Subject, site::Site};
 pub fn routes() -> Router<AppState> {
     Router::new()
         .merge(agents::routes())
+        .merge(catalog::routes())
         .merge(agenthub::create::routes())
         .merge(agenthub::projects::routes())
         .merge(agenthub::audit::routes())

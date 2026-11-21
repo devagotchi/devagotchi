@@ -4112,8 +4112,15 @@
       "kind": "blob",
       "packet": "A05",
       "status": "unverified",
-      "target_paths": [],
-      "evidence": []
+      "target_paths": [
+        "crates/hub/src/catalog/mutations.rs",
+        "crates/hub/src/catalog/references.rs",
+        "crates/hub/src/catalog/stored.rs",
+        "crates/hub/src/catalog/tests.rs"
+      ],
+      "evidence": [
+        "Partial A05 catalog storage/API/browser mapping; see .ai/dev/plans/absorption/a05-catalog.md. Consumer references, unsandboxed-default policy/confirmation, provider integration and main delivery remain open."
+      ]
     },
     {
       "path": "server/internal/catalog/kinds.go",
@@ -4123,8 +4130,14 @@
       "kind": "blob",
       "packet": "A05",
       "status": "unverified",
-      "target_paths": [],
-      "evidence": []
+      "target_paths": [
+        "crates/hub/src/catalog/kinds.rs",
+        "crates/hub/src/catalog/types/mod.rs",
+        "crates/hub/migrations/0039_catalogs.sql"
+      ],
+      "evidence": [
+        "Partial A05 catalog storage/API/browser mapping; see .ai/dev/plans/absorption/a05-catalog.md. Consumer references, unsandboxed-default policy/confirmation, provider integration and main delivery remain open."
+      ]
     },
     {
       "path": "server/internal/catalog/seed.go",
@@ -4134,8 +4147,13 @@
       "kind": "blob",
       "packet": "A05",
       "status": "unverified",
-      "target_paths": [],
-      "evidence": []
+      "target_paths": [
+        "crates/hub/src/catalog/seed.rs",
+        "crates/hub/src/catalog/tests.rs"
+      ],
+      "evidence": [
+        "Partial A05 catalog storage/API/browser mapping; see .ai/dev/plans/absorption/a05-catalog.md. Consumer references, unsandboxed-default policy/confirmation, provider integration and main delivery remain open."
+      ]
     },
     {
       "path": "server/internal/catalog/values.go",
@@ -4145,8 +4163,15 @@
       "kind": "blob",
       "packet": "A05",
       "status": "unverified",
-      "target_paths": [],
-      "evidence": []
+      "target_paths": [
+        "crates/hub/src/catalog/validate.rs",
+        "crates/hub/src/catalog/types/capabilities.rs",
+        "crates/hub/src/catalog/types/presets.rs",
+        "crates/hub/src/catalog/types/connections.rs"
+      ],
+      "evidence": [
+        "Partial A05 catalog storage/API/browser mapping; see .ai/dev/plans/absorption/a05-catalog.md. Consumer references, unsandboxed-default policy/confirmation, provider integration and main delivery remain open."
+      ]
     },
     {
       "path": "server/internal/changepolicy/decide.go",
@@ -4299,8 +4324,13 @@
       "kind": "blob",
       "packet": "A00",
       "status": "unverified",
-      "target_paths": [],
-      "evidence": []
+      "target_paths": [
+        "crates/hub/migrations/0039_catalogs.sql",
+        "crates/hub/src/catalog/tests.rs"
+      ],
+      "evidence": [
+        "Partial A05 catalog storage/API/browser mapping; see .ai/dev/plans/absorption/a05-catalog.md. Consumer references, unsandboxed-default policy/confirmation, provider integration and main delivery remain open."
+      ]
     },
     {
       "path": "server/internal/db/migrations/004_devagotchi_access.sql",
@@ -4431,8 +4461,14 @@
       "kind": "blob",
       "packet": "A05",
       "status": "unverified",
-      "target_paths": [],
-      "evidence": []
+      "target_paths": [
+        "crates/hub/src/agenthub/http/catalog.rs",
+        "crates/hub/src/agenthub/http/tests/catalog.rs",
+        "crates/hub/src/agenthub/http/tests/catalog_access.rs"
+      ],
+      "evidence": [
+        "Partial A05 catalog storage/API/browser mapping; see .ai/dev/plans/absorption/a05-catalog.md. Consumer references, unsandboxed-default policy/confirmation, provider integration and main delivery remain open."
+      ]
     },
     {
       "path": "server/internal/devapi/feed_observe.go",
@@ -5330,8 +5366,12 @@
       "kind": "blob",
       "packet": "A04",
       "status": "unverified",
-      "target_paths": [],
-      "evidence": []
+      "target_paths": [
+        "crates/hub/src/catalog/presets/capabilities.json"
+      ],
+      "evidence": [
+        "Pinned S1 file copied byte-for-byte; all rows loaded through PostgreSQL catalog validation. Per-file marks preserve ordinary reopen edits/deletions; downstream consumers still open. See a05-catalog.md."
+      ]
     },
     {
       "path": "server/internal/presets/devagotchi/capability-risks.json",
@@ -5341,8 +5381,12 @@
       "kind": "blob",
       "packet": "A04",
       "status": "unverified",
-      "target_paths": [],
-      "evidence": []
+      "target_paths": [
+        "crates/hub/src/catalog/presets/capability-risks.json"
+      ],
+      "evidence": [
+        "Pinned S1 file copied byte-for-byte; all rows loaded through PostgreSQL catalog validation. Per-file marks preserve ordinary reopen edits/deletions; downstream consumers still open. See a05-catalog.md."
+      ]
     },
     {
       "path": "server/internal/presets/devagotchi/chat-apps.json",
@@ -5352,8 +5396,12 @@
       "kind": "blob",
       "packet": "A06",
       "status": "unverified",
-      "target_paths": [],
-      "evidence": []
+      "target_paths": [
+        "crates/hub/src/catalog/presets/chat-apps.json"
+      ],
+      "evidence": [
+        "Pinned S1 file copied byte-for-byte; all rows loaded through PostgreSQL catalog validation. Per-file marks preserve ordinary reopen edits/deletions; downstream consumers still open. See a05-catalog.md."
+      ]
     },
     {
       "path": "server/internal/presets/devagotchi/grant-presets.json",
@@ -5363,8 +5411,12 @@
       "kind": "blob",
       "packet": "A04",
       "status": "unverified",
-      "target_paths": [],
-      "evidence": []
+      "target_paths": [
+        "crates/hub/src/catalog/presets/grant-presets.json"
+      ],
+      "evidence": [
+        "Pinned S1 file copied byte-for-byte; all rows loaded through PostgreSQL catalog validation. Per-file marks preserve ordinary reopen edits/deletions; downstream consumers still open. See a05-catalog.md."
+      ]
     },
     {
       "path": "server/internal/presets/devagotchi/policies.json",
@@ -5407,8 +5459,12 @@
       "kind": "blob",
       "packet": "A04",
       "status": "unverified",
-      "target_paths": [],
-      "evidence": []
+      "target_paths": [
+        "crates/hub/src/catalog/presets/risks.json"
+      ],
+      "evidence": [
+        "Pinned S1 file copied byte-for-byte; all rows loaded through PostgreSQL catalog validation. Per-file marks preserve ordinary reopen edits/deletions; downstream consumers still open. See a05-catalog.md."
+      ]
     },
     {
       "path": "server/internal/presets/devagotchi/routers.json",
@@ -5418,8 +5474,12 @@
       "kind": "blob",
       "packet": "A06",
       "status": "unverified",
-      "target_paths": [],
-      "evidence": []
+      "target_paths": [
+        "crates/hub/src/catalog/presets/routers.json"
+      ],
+      "evidence": [
+        "Pinned S1 file copied byte-for-byte; all rows loaded through PostgreSQL catalog validation. Per-file marks preserve ordinary reopen edits/deletions; downstream consumers still open. See a05-catalog.md."
+      ]
     },
     {
       "path": "server/internal/presets/devagotchi/runtimes.json",
@@ -5429,8 +5489,12 @@
       "kind": "blob",
       "packet": "A05",
       "status": "unverified",
-      "target_paths": [],
-      "evidence": []
+      "target_paths": [
+        "crates/hub/src/catalog/presets/runtimes.json"
+      ],
+      "evidence": [
+        "Pinned S1 file copied byte-for-byte; all rows loaded through PostgreSQL catalog validation. Per-file marks preserve ordinary reopen edits/deletions; downstream consumers still open. See a05-catalog.md."
+      ]
     },
     {
       "path": "server/internal/presets/devagotchi/settings.json",
@@ -5451,8 +5515,12 @@
       "kind": "blob",
       "packet": "A05",
       "status": "unverified",
-      "target_paths": [],
-      "evidence": []
+      "target_paths": [
+        "crates/hub/src/catalog/presets/shell-profiles.json"
+      ],
+      "evidence": [
+        "Pinned S1 file copied byte-for-byte; all rows loaded through PostgreSQL catalog validation. Per-file marks preserve ordinary reopen edits/deletions; downstream consumers still open. See a05-catalog.md."
+      ]
     },
     {
       "path": "server/internal/presets/devagotchi/step-schema.json",
@@ -5792,8 +5860,13 @@
       "kind": "blob",
       "packet": "A05",
       "status": "unverified",
-      "target_paths": [],
-      "evidence": []
+      "target_paths": [
+        "crates/hub/src/catalog/schema.rs",
+        "crates/hub/src/agenthub/http/tests/catalog.rs"
+      ],
+      "evidence": [
+        "Partial A05 catalog storage/API/browser mapping; see .ai/dev/plans/absorption/a05-catalog.md. Consumer references, unsandboxed-default policy/confirmation, provider integration and main delivery remain open."
+      ]
     },
     {
       "path": "server/internal/secretbox/box.go",
@@ -8228,8 +8301,13 @@
       "kind": "blob",
       "packet": "A05",
       "status": "unverified",
-      "target_paths": [],
-      "evidence": []
+      "target_paths": [
+        "crates/hub/src/web/app/catalog/mod.rs",
+        "crates/hub/src/web/app/catalog/render.rs"
+      ],
+      "evidence": [
+        "Partial A05 catalog storage/API/browser mapping; see .ai/dev/plans/absorption/a05-catalog.md. Consumer references, unsandboxed-default policy/confirmation, provider integration and main delivery remain open."
+      ]
     },
     {
       "path": "web/src/pages/dev/CatalogKind.tsx",
@@ -8239,8 +8317,14 @@
       "kind": "blob",
       "packet": "A05",
       "status": "unverified",
-      "target_paths": [],
-      "evidence": []
+      "target_paths": [
+        "crates/hub/src/web/app/catalog/form.rs",
+        "crates/hub/src/web/app/catalog/render.rs",
+        "crates/hub/src/agenthub/http/tests/catalog_access.rs"
+      ],
+      "evidence": [
+        "Partial A05 catalog storage/API/browser mapping; see .ai/dev/plans/absorption/a05-catalog.md. Consumer references, unsandboxed-default policy/confirmation, provider integration and main delivery remain open."
+      ]
     },
     {
       "path": "web/src/pages/dev/Grants.tsx",
@@ -8459,8 +8543,14 @@
       "kind": "blob",
       "packet": "A05",
       "status": "unverified",
-      "target_paths": [],
-      "evidence": []
+      "target_paths": [
+        "crates/hub/src/catalog/kinds.rs",
+        "crates/hub/src/site/catalog_copy.rs",
+        "crates/hub/site/default/content/messages.json"
+      ],
+      "evidence": [
+        "Partial A05 catalog storage/API/browser mapping; see .ai/dev/plans/absorption/a05-catalog.md. Consumer references, unsandboxed-default policy/confirmation, provider integration and main delivery remain open."
+      ]
     },
     {
       "path": "web/src/pages/dev/providers/FormAdapter.tsx",

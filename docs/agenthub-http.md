@@ -192,6 +192,40 @@ history and receipts but cannot be used for ordinary reads or writes. Reusing an
 creates a different `board_id`; old handles and mutation keys cannot act on that new
 generation. Archived records are addressed by their original `board_id`.
 
+## Environment catalogs
+
+The owner edits capability and setup catalogs at `/app/catalog`, linked from the Me
+page. The eight API kinds are `capabilities`, `risks`, `capability-risks`, `shell-profiles`,
+`grant-presets`, `docker-runtime-presets`, `router-endpoints`, and `chat-apps`.
+There is no customer-tenant catalog in the self-hosted app.
+
+`GET /api/v1/{kind}` returns `{rows, next}` with at most 100 records; pass `next` as
+`after`. `GET /api/v1/{kind}/{id}` returns a record. Authenticated users read their
+environment's catalog; API keys need `catalog.read`. Mutations require the current
+environment owner as a person. Agent credentials, seats and organization scopes cannot
+write catalogs. Session writes reject foreign origins.
+
+`POST /api/v1/{kind}` creates a typed record with `id`, `version: 0` and its fields.
+`PUT` or `PATCH /api/v1/{kind}/{id}` merges supplied editable fields with the existing
+record and requires its positive version. The complete merged record is validated.
+`DELETE` requires the version in `If-Match` and refuses referenced records. Writes
+return `{result, replayed}` and accept the standard request identity. Stale versions
+return a conflict; retries return the original committed result. IDs allow letters,
+digits, dots, colons, hyphens and underscores, at most 64 bytes.
+
+`POST /api/v1/grant-presets/{id}/default` with `{version}` atomically switches the
+default and advances affected versions. Default records cannot be deleted. Full-access
+defaults are refused until the access owner can verify a live acknowledged unsandboxed
+policy and explicit confirmation; generic catalog editing cannot establish that policy.
+The A04 access integration remains open. Likewise provider reference enforcement belongs
+to the A06 provider integration. Catalog definitions by themselves confer no execution
+permission.
+
+Preset files seed once per environment; ordinary reads do not recreate deleted rows
+or overwrite edits. Selector schemas are validated offline with bounded size and depth;
+external network/file references are refused. JSON fields and lists round-trip as JSON
+in the owner editor, preserving commas inside values and retaining refused drafts.
+
 ## Reconnecting events and protocol discovery
 
 `GET /api/v1/stream?project=PROJECT` streams the same committed board events as the

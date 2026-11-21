@@ -223,9 +223,12 @@ pub async fn page(
         format!("<p class=\"note\">{}</p>", escape(&copy.not_kept))
     };
     let admin = if crate::web::hub_settings::is_owner(&state, &subject) {
-        "<p><a href=\"/admin\" id=\"admin-link\">Hub settings</a></p>"
+        format!(
+            "<p><a href=\"/admin\" id=\"admin-link\">Hub settings</a></p><p><a href=\"/app/catalog\" id=\"catalog-link\">{}</a></p>",
+            escape(&site.messages.app.catalog.title)
+        )
     } else {
-        ""
+        String::new()
     };
     let leave = format!(
         "<section class=\"card leave\" id=\"leave\"><p><a href=\"/app/agents\" id=\"agents-link\">{}</a></p><p><a href=\"/app/keys\" id=\"keys-link\">API keys</a></p><p><a href=\"/app/connections\" id=\"connections-link\">Connections</a></p>{admin}<p><a href=\"/account\">{}</a></p>\

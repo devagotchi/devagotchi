@@ -1,0 +1,7 @@
+{"kind": "shell-profiles", "rows": [
+  {"id": "direct", "os": "any", "label": "No shell (argv runs as given)", "argv_prefix": [], "env_allow": [], "cwd_default": "", "pty": false},
+  {"id": "bash", "os": "linux", "label": "bash (login)", "argv_prefix": ["/bin/bash", "-lc"], "env_allow": ["PATH", "HOME", "LANG"], "cwd_default": "", "pty": false},
+  {"id": "zsh", "os": "macos", "label": "zsh (login)", "argv_prefix": ["/bin/zsh", "-lc"], "env_allow": ["PATH", "HOME", "LANG"], "cwd_default": "", "pty": false},
+  {"id": "pwsh", "os": "windows", "label": "PowerShell 7", "argv_prefix": ["pwsh", "-NoProfile", "-Command"], "env_allow": ["PATH", "USERPROFILE"], "cwd_default": "", "pty": true},
+  {"id": "cmd", "os": "windows", "label": "cmd.exe", "argv_prefix": ["cmd.exe", "/d", "/s", "/c"], "env_allow": ["PATH", "USERPROFILE"], "cwd_default": "", "pty": false}
+]}

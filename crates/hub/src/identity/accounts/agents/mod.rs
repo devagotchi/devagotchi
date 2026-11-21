@@ -139,6 +139,13 @@ async fn database_now(connection: &mut AnyConnection) -> Result<u64, Failed> {
 }
 
 impl Accounts {
+    pub(super) async fn agents_catalog_actor_in(
+        &self,
+        connection: &mut AnyConnection,
+        actor: &str,
+    ) -> Result<Account, Failed> {
+        self.agent_manager_in(connection, actor, actor).await
+    }
     /// Called only for authenticated people by browser administration. A live owner may
     /// manage accounts in this environment; another person manages only their own account.
     pub(super) async fn agent_manager_in(

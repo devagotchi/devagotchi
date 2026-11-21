@@ -6,6 +6,8 @@ use serde::{Deserialize, Serialize};
 /// What a key may do. Each tool needs exactly one of these (`scope_for`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum Scope {
+    #[serde(rename = "catalog.read")]
+    CatalogRead,
     #[serde(rename = "machines.read")]
     MachinesRead,
     #[serde(rename = "machines.run")]
@@ -31,7 +33,8 @@ pub enum Scope {
 }
 
 impl Scope {
-    pub const ALL: [Scope; 11] = [
+    pub const ALL: [Scope; 12] = [
+        Scope::CatalogRead,
         Scope::MachinesRead,
         Scope::MachinesRun,
         Scope::MachinesManage,
@@ -47,6 +50,7 @@ impl Scope {
 
     pub fn as_str(self) -> &'static str {
         match self {
+            Scope::CatalogRead => "catalog.read",
             Scope::MachinesRead => "machines.read",
             Scope::MachinesRun => "machines.run",
             Scope::MachinesManage => "machines.manage",
@@ -64,6 +68,7 @@ impl Scope {
     /// What it allows, as a person reads it.
     pub fn title(self) -> &'static str {
         match self {
+            Scope::CatalogRead => "Read capability and setup catalogs",
             Scope::MachinesRead => "See machines and running jobs",
             Scope::MachinesRun => "Run commands on machines",
             Scope::MachinesManage => "Add and update machines, start setup links",
@@ -86,6 +91,7 @@ impl Scope {
 /// The scope a tool needs. `None` means no key may call it.
 pub fn scope_for(tool: &str) -> Option<Scope> {
     Some(match tool {
+        "capabilities_list" => Scope::CatalogRead,
         "machines" | "operation_get" | "operation_read" => Scope::MachinesRead,
         "operation_wait" | "operation_list" => Scope::MachinesRead,
         "get_config" | "list_processes" | "machine_inspect" => Scope::MachinesRead,

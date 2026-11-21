@@ -119,6 +119,7 @@ pub struct AppCopy {
     pub agents: super::agents_copy::AgentsCopy,
     pub configuration: super::configuration_copy::ConfigurationCopy,
     pub projects: super::projects_copy::ProjectsCopy,
+    pub catalog: super::catalog_copy::CatalogCopy,
 }
 
 #[derive(Debug, Clone, Deserialize)]
