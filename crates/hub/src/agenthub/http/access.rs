@@ -38,6 +38,27 @@ impl FromRequestParts<AppState> for Caller {
 }
 
 impl Caller {
+    /// Environment access history cannot infer a project from a machine filter.
+    pub(super) fn access_history_scope(&self, machine: Option<&str>) -> Result<(), Failure> {
+        if let Some(limits) = &self.limits {
+            if !limits.projects.is_empty() {
+                return Err(BridgeError::new(
+                    "key_denied",
+                    "project-limited keys cannot read environment access history",
+                )
+                .into());
+            }
+            if !limits.machines.is_empty()
+                && !machine
+                    .is_some_and(|machine| limits.machines.iter().any(|allowed| allowed == machine))
+            {
+                return Err(
+                    BridgeError::new("key_denied", "select a machine allowed by this key").into(),
+                );
+            }
+        }
+        Ok(())
+    }
     pub(super) fn require_scope(
         &self,
         scope: crate::identity::accounts::api_keys::Scope,

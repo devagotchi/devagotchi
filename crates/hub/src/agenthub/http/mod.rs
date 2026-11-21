@@ -11,6 +11,8 @@ use axum::{
 };
 
 mod access;
+mod access_admin;
+mod access_reads;
 mod catalog;
 mod configuration;
 mod events;
@@ -33,6 +35,8 @@ pub(crate) fn routes() -> Router<AppState> {
     Router::new()
         .merge(catalog::routes())
         .merge(machine_access::routes())
+        .merge(access_reads::routes())
+        .merge(access_admin::routes())
         .merge(principals::routes())
         .merge(configuration::routes())
         .merge(projects::routes())

@@ -192,6 +192,45 @@ history and receipts but cannot be used for ordinary reads or writes. Reusing an
 creates a different `board_id`; old handles and mutation keys cannot act on that new
 generation. Archived records are addressed by their original `board_id`.
 
+## Machine access history
+
+Access history uses `GET /api/v1/access-requests`, `GET /api/v1/grants`, and
+`GET /api/v1/access-requests/{request-or-group-id}`. Lists return `{rows,next}` and
+accept `machine`, `principal`, `after`, and `limit` (1–100). Request lists additionally
+accept `status`; grant lists accept `live=true`. Pass `next` back unchanged as `after`.
+Lookup returns `{status,items}` with the actual approved terms, decision note and grant
+ending state. Optional `timeout_s` (0–25) waits for a pending decision, rechecking the
+original credential and principal on every iteration without retaining a transaction.
+
+The owner can review the environment. Other people see their account's records; registered
+agents see only their own principal. Keys require `machines.read` and a registered agent
+binding. Machine-limited keys must select an allowed machine for lists; lookup checks each
+result's machine. Project-limited keys cannot read environment access history. Seat headers
+cannot substitute an identity. Expired pending requests appear expired before the reaper
+runs. `live` describes a grant's lifetime/use state, not executable authority: machine
+pause, current policy, enrollment and task lease are checked again at admission.
+
+Human administration routes use the current person, same-origin checks and domain policy.
+Writes require `request_id` or `Idempotency-Key`; versioned actions also require `version`
+(or matching `If-Match`). Registered agents cannot use these routes even with manage scopes.
+
+| Route | Input and effect |
+|---|---|
+| GET `/api/v1/sandbox-policies` | Bounded `after`/`limit` page with acknowledged risk snapshots and current policy state |
+| PUT `/api/v1/sandbox-policies` | `version`, `allowed`, `acknowledged:[{id,version}]`, `expires_at`; optional `machine:{name,generation}`, otherwise environment-wide |
+| POST `/api/v1/grants/{id}/revoke` | Expected grant `version`; ends it and commits the broker notification intent |
+| GET `/api/v1/machines/{id}/access-control` | Current enrollment binding and independently versioned pause/GUI-stop control |
+| POST `/api/v1/machines/{id}/access-control` | `generation`, control `version`, and `action`: `pause`, `resume`, or `stop_gui` |
+| POST `/api/v1/resume-alerts/check` | Noncredential `ui_session_id`, `reason` (`sign_in`, `load`, `reload`, `idle_return`), optional `after`/`limit`; records risky-grant alerts |
+| GET `/api/v1/resume-alerts` | Current person's open alerts, optional `after`/`limit` |
+| POST `/api/v1/resume-alerts/{id}/{action}` | Alert `version`; `continue`, `revoke`, or `pause` commits the effect together with acknowledgment |
+
+Policy and machine administration require the environment owner. An enrolled machine's
+generation must match, including on retries after reenrollment. Resume does not restart
+retired operations; Continue acknowledges a warning and does not create a grant. These
+routes coordinate durable state. Broker delivery, native enforcement and browser resume
+callbacks are separate integration work; a queued interruption is not proof of delivery.
+
 ## Environment catalogs
 
 The owner edits capability and setup catalogs at `/app/catalog`, linked from the Me

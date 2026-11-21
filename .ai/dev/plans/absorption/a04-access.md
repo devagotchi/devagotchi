@@ -309,7 +309,7 @@ transport are not wired by these domain tests; guide-bound reaping remains for A
 
 Remaining A04 obligations are explicit: configured/shared-machine resolution; machine
 pause/resume adapter integration and reaper runtime/guide integration; full policy evaluation/change/review
-domain; request/grant read models and all REST/MCP/browser actions; authenticated wire and
+domain; request/grant display enrichment, request/decision REST and MCP/browser actions; authenticated wire and
 IPC authority propagation; actual broker refresh/ending delivery; native Linux/Windows/macOS
 confinement and network enforcement; source-complete regression/real-OS acceptance. In
 particular, an already-exhausted once grant must not be reaped while its admitted operation
@@ -347,3 +347,50 @@ fresh browser render and preserves escaped input on refusal. Required-PostgreSQL
 three `access_default_` policy-boundary tests using the same compiled hub test binary.
 All passed with zero ignored. Machine-only policy, expired-policy replay, confirmation
 receipt conflicts, selected-default edits and unlabeled unsafe items are covered.
+
+Read-surface implementation contract: port `access/read.go` into the access owner before
+adapters. Every page and long-poll iteration revalidates the canonical actor. The owner
+can review the environment; other people see their account and agents see only their own
+principal. Explicit projections exclude tenant internals and broker retry material.
+Requests/grants use bounded stable timestamp/ID cursors, validated filters and current
+expiry; request/group lookup returns the actual granted terms and historical decision.
+An approval or listing is never an execution permit. Lists and lookup remain usable for
+ended/revoked history; admission still proves current task/policy/machine authority.
+HTTP reads delegate this owner with existing scope/session boundaries. Tests cover group
+lookup, narrowed decisions, expiry without reaper, pagination, foreign/disabled principal,
+owner versus agent visibility and no state changes from reads. Resume/control/policy
+write adapters then compose the previously authored transaction owners.
+
+Read domain and HTTP adapters are authored in `machines/access/reads.rs` and
+`agenthub/http/access_reads.rs`; `identity/accounts/machine_access.rs` resolves only
+middleware-authenticated people or credential-bound registered agents. Machine-limited
+keys must select an allowed machine; project-limited keys cannot read environment history.
+The required-PostgreSQL `access_read_` slice passed all five tests with zero ignored
+(`target/absorption-access-reads.log`), including revocation during HTTP long polling.
+Source display-name/task-title enrichment and MCP/browser reachability remain open.
+
+Human policy/revoke/resume/control HTTP adapters are authored in `access_admin.rs` with
+strict bodies, original retry keys, expected versions and enrollment-generation checks.
+Registry lookup is composed by `administration.rs` after current environment-owner proof;
+configured/shared machine resolution is still explicitly unavailable. Read helpers use
+shared machine locks, avoiding an unnecessary lock upgrade during inspection. Policy lists
+report obsolete machine-generation policies as non-live. The final required-PostgreSQL
+`access_` slice passed 66 tests with zero failed/ignored
+(`target/absorption-access-surfaces.log`). This includes all new read/administration HTTP
+tests and existing access/control/admission/identity regressions. During authoring, the
+static-SQL API rejected dynamic lock-clause formatting; the registry helper now selects
+one of two fixed statements. The cross-origin fixture now supplies exactly one Origin
+and checks the middleware response directly. No refusal or authorization assertion was
+weakened. These results do not establish native broker confinement or delivery.
+
+Next complete unit remains authenticated broker integration, before request/decision
+adapters can use broker facts or claim enforcement. Inspected actual current handoff:
+`machines/link/calls.rs` creates `WireRequest`; `link/session/mod.rs::handle` forwards only
+its body through IPC; `ipc/lib.rs::exchange` reconstructs a body-only envelope;
+`machine-engine/service/mod.rs` again passes only the body to `Broker::handle`.
+Thus authority must survive every one of these seams. Capability negotiation stays on
+link protocol 1, and must gate new frames. No unsupported peer may receive a new shape.
+The source Windows sandbox is a plain-process TODO that can advertise confinement via
+an environment flag; preserve its intended refusal requirement, never that false claim.
+The source Darwin profile and Linux namespace/proxy paths still need their actual native
+acceptance and per-operation integration before their levels are advertised.

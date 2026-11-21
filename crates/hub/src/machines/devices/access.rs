@@ -11,6 +11,30 @@ pub(crate) struct MachineBinding {
     pub owner: Option<String>,
 }
 impl Devices {
+    /// Resolve metadata for an already authenticated environment administrator.
+    /// The caller must prove this account's environment, then bind_access_in rechecks
+    /// ownership/enrollment under the machine lock before using it.
+    pub(crate) async fn owned_account_in(
+        &self,
+        c: &mut sqlx::AnyConnection,
+        device: &str,
+    ) -> Result<String, Failed> {
+        let owner: Option<Option<String>> = sqlx::query_scalar(
+            "SELECT owner FROM machine_devices WHERE name=$1 AND revoked_at IS NULL",
+        )
+        .bind(device)
+        .fetch_optional(c)
+        .await?;
+        owner
+            .ok_or_else(|| BridgeError::new("not_found", "machine unavailable"))?
+            .ok_or_else(|| {
+                BridgeError::new(
+                    "not_granted",
+                    "configured machines need their configured authority resolver",
+                )
+                .into()
+            })
+    }
     /// `owner` is resolved by the authenticated host, not tool input. Some(account) only
     /// reaches that account's machines; None only reaches a configured machine after
     /// the host has checked its configured subject-to-machine access. This is composed

@@ -10,7 +10,7 @@ use serde_json::json;
 pub(super) fn routes() -> Router<AppState> {
     Router::new().route("/api/v1/access-settings", get(settings).put(put_settings))
 }
-fn owner(state: &AppState, caller: &Caller, change: bool) -> Result<Access, Failure> {
+pub(super) fn owner(state: &AppState, caller: &Caller, change: bool) -> Result<Access, Failure> {
     if caller.subject.org.is_some() {
         return Err(devagotchi_contracts::BridgeError::new(
             "not_granted",

@@ -26,7 +26,7 @@ impl IntoResponse for Failure {
                 StatusCode::BAD_REQUEST
             }
             "unauthenticated" => StatusCode::UNAUTHORIZED,
-            "confirm_required" => StatusCode::UNPROCESSABLE_ENTITY,
+            "confirm_required" | "risks_not_acknowledged" => StatusCode::UNPROCESSABLE_ENTITY,
             "not_granted" | "read_only" | "policy_denied" | "humans_only" | "not_owner"
             | "key_denied" | "early_access" | "people_only" | "agent_disabled" => {
                 StatusCode::FORBIDDEN
@@ -37,6 +37,8 @@ impl IntoResponse for Failure {
             "too_large" => StatusCode::PAYLOAD_TOO_LARGE,
             "stale_fence"
             | "version_conflict"
+            | "machine_reenrolled"
+            | "not_pending"
             | "held_by_other"
             | "lease_expired"
             | "not_holder"

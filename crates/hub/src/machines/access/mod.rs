@@ -15,22 +15,29 @@ use devagotchi_store::{Failed, transaction};
 use serde::{Deserialize, Serialize};
 use sqlx::AnyConnection;
 use std::sync::Arc;
+mod administration;
 mod admission_action;
 mod admission_completion;
 mod admissions;
 mod control;
+pub(crate) use control::ControlChange;
 mod decisions;
 mod grant_record;
 mod grants;
 mod notifications;
 mod observation;
 mod policies;
+pub(crate) use policies::PolicyEdit;
+mod reads;
 mod reaper;
+pub(crate) use reads::AccessPageQuery;
 mod records;
 mod references;
 mod requests;
 mod resume;
+pub(crate) use resume::ResumeReason;
 mod resume_ack;
+pub(crate) use resume_ack::ResumeAction;
 mod resume_agent;
 mod terms;
 pub(crate) use requests::{RequestInput, Requested};
@@ -53,6 +60,8 @@ mod notification_tests;
 mod observation_tests;
 #[cfg(test)]
 mod policy_tests;
+#[cfg(test)]
+mod read_tests;
 #[cfg(test)]
 mod reaper_tests;
 #[cfg(test)]

@@ -3,9 +3,52 @@ use super::*;
 use devagotchi_agenthub::{Actor, policy::catalog};
 
 impl Accounts {
+    /// Resolve only a middleware-authenticated subject. Never accept a tool's actor,
+    /// seat, kind or roles as the registered machine principal.
+    pub(crate) async fn machine_identity(
+        &self,
+        subject: &crate::identity::Subject,
+    ) -> BridgeResult<Option<devagotchi_agenthub::policy::Identity>> {
+        if subject.org.is_some() || subject.agent.is_none() && matches!(subject.via, "hub" | "key")
+        {
+            return Err(BridgeError::new(
+                "not_granted",
+                "machine access needs a person or credential-bound registered agent",
+            ));
+        }
+        transaction!(&self.store, |c| {
+            let id = subject.agent.as_deref().unwrap_or(&subject.id);
+            let profile = self.machine_profile_in(c, &subject.id, id).await?;
+            if subject.agent.is_some() != profile.is_some() {
+                return Err(BridgeError::new(
+                    "not_granted",
+                    "machine principal does not match its credential",
+                )
+                .into());
+            }
+            let actor = Actor {
+                id,
+                human: profile.is_none(),
+                wip_limit: None,
+                policy: profile.clone(),
+            };
+            let account = self.machine_actor_in(c, &subject.id, &actor).await?;
+            if subject
+                .tenant
+                .as_ref()
+                .is_some_and(|tenant| tenant != &account.tenant)
+            {
+                return Err(
+                    BridgeError::new("not_granted", "machine account changed environment").into(),
+                );
+            }
+            Ok(profile)
+        })
+    }
     /// Reconstruct a stored request's principal from the current identity directory.
     /// This is not authentication for a caller-supplied principal. The access owner
-    /// must load account/principal from its scoped immutable request or grant record.
+    /// loads account/principal from its scoped immutable request or grant record;
+    /// machine_identity uses the principal bound by credential verification.
     /// No policy lock here: task-bound decisions take their board lock next, then use
     /// machine_actor_in to validate this snapshot under the principal-policy lock.
     pub(crate) async fn machine_profile_in(

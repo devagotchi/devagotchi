@@ -15,10 +15,34 @@ impl Devices {
         c: &mut sqlx::AnyConnection,
         binding: &MachineBinding,
     ) -> Result<MachineControl, Failed> {
-        let row=sqlx::query("SELECT generation,access_version,access_paused,gui_paused FROM machine_devices
-            WHERE name=$1 AND owner IS NOT DISTINCT FROM $2::text AND revoked_at IS NULL FOR UPDATE")
-            .bind(&binding.name).bind(binding.owner.as_deref()).fetch_optional(c).await?
-            .ok_or_else(||BridgeError::new("not_found","machine unavailable to this account"))?;
+        self.control_in(c, binding, true).await
+    }
+    pub(crate) async fn read_control_in(
+        &self,
+        c: &mut sqlx::AnyConnection,
+        binding: &MachineBinding,
+    ) -> Result<MachineControl, Failed> {
+        self.control_in(c, binding, false).await
+    }
+    async fn control_in(
+        &self,
+        c: &mut sqlx::AnyConnection,
+        binding: &MachineBinding,
+        exclusive: bool,
+    ) -> Result<MachineControl, Failed> {
+        let statement = if exclusive {
+            "SELECT generation,access_version,access_paused,gui_paused FROM machine_devices
+             WHERE name=$1 AND owner IS NOT DISTINCT FROM $2::text AND revoked_at IS NULL FOR UPDATE"
+        } else {
+            "SELECT generation,access_version,access_paused,gui_paused FROM machine_devices
+             WHERE name=$1 AND owner IS NOT DISTINCT FROM $2::text AND revoked_at IS NULL FOR SHARE"
+        };
+        let row = sqlx::query(statement)
+            .bind(&binding.name)
+            .bind(binding.owner.as_deref())
+            .fetch_optional(c)
+            .await?
+            .ok_or_else(|| BridgeError::new("not_found", "machine unavailable to this account"))?;
         if row.try_get::<String, _>("generation")? != binding.generation {
             return Err(
                 BridgeError::new("machine_reenrolled", "machine enrollment changed").into(),
