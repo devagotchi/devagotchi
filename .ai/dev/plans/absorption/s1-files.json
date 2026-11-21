@@ -4817,12 +4817,16 @@
         "crates/hub/src/agenthub/http/projects.rs",
         "crates/hub/src/agenthub/mcp/projects.rs",
         "crates/hub/src/agenthub/http/tests/projects.rs",
-        "crates/hub/src/web/app/agenthub/projects/mod.rs"
+        "crates/hub/src/web/app/agenthub/projects/mod.rs",
+        "crates/hub/src/agenthub/http/configuration/aggregate.rs",
+        "crates/hub/src/agenthub/http/tests/aggregate.rs",
+        "crates/hub/src/agenthub/http/tests/project_races.rs"
       ],
       "evidence": [
         "Additional local principal/credential/roster and policy HTTP authoring: .ai/dev/plans/absorption/a03-principals.md. Remaining behaviors and main delivery stay open.",
         "Independent workflow creation and configuration HTTP authoring: .ai/dev/plans/absorption/a03-configuration.md. Project CRUD, aggregate configuration and main delivery remain open.",
-        "Project lifecycle authoring and 30 focused PostgreSQL checks: .ai/dev/plans/absorption/a03-projects.md. Aggregate/source edge review and main delivery remain open."
+        "Project lifecycle authoring and 30 focused PostgreSQL checks: .ai/dev/plans/absorption/a03-projects.md. Aggregate/source edge review and main delivery remain open.",
+        "Additional source-backed authoring and local PostgreSQL evidence: .ai/dev/plans/absorption/a03-aggregate.md. Full source review and main delivery remain open."
       ]
     },
     {
@@ -5904,9 +5908,23 @@
       "mode": "100644",
       "kind": "blob",
       "packet": "A01",
-      "status": "unverified",
-      "target_paths": [],
-      "evidence": []
+      "status": "partial",
+      "target_paths": [
+        "crates/agenthub/src/hosted/claims.rs",
+        "crates/agenthub/src/hosted/reads.rs",
+        "crates/agenthub/src/lease.rs",
+        "crates/agenthub/src/tests/selection.rs",
+        "crates/agenthub/src/cli/commands/leases.rs",
+        "crates/agenthub/src/cli/remote.rs",
+        "crates/agenthub/src/cli/tests/selection.rs",
+        "crates/hub/src/agenthub/mcp/lease_input.rs",
+        "crates/hub/src/agenthub/mcp/tools/leases.rs",
+        "crates/hub/src/agenthub/http/leases.rs",
+        "crates/hub/src/agenthub/http/tests/selection.rs"
+      ],
+      "evidence": [
+        "Additional source-backed authoring and local PostgreSQL evidence: .ai/dev/plans/absorption/a01-selection.md. Full source review and main delivery remain open."
+      ]
     },
     {
       "path": "server/internal/store/conf.go",
@@ -6084,9 +6102,18 @@
       "mode": "100644",
       "kind": "blob",
       "packet": "A01",
-      "status": "unverified",
-      "target_paths": [],
-      "evidence": []
+      "status": "partial",
+      "target_paths": [
+        "crates/agenthub/src/hosted/leases.rs",
+        "crates/agenthub/src/hosted/lease_expiry.rs",
+        "crates/hub/src/agenthub/registry.rs",
+        "crates/hub/src/agenthub/mcp/boards.rs",
+        "crates/hub/src/agenthub/tests/hosted.rs",
+        "crates/hub/src/agenthub/mcp/tests/mod.rs"
+      ],
+      "evidence": [
+        "Additional source-backed authoring and local PostgreSQL evidence: .ai/dev/plans/absorption/a01-selection.md. Full source review and main delivery remain open."
+      ]
     },
     {
       "path": "server/internal/store/seed.go",
@@ -6136,9 +6163,15 @@
       "mode": "100644",
       "kind": "blob",
       "packet": "A01",
-      "status": "unverified",
-      "target_paths": [],
-      "evidence": []
+      "status": "partial",
+      "target_paths": [
+        "crates/agenthub/src/hosted/reads.rs",
+        "crates/agenthub/src/tests/selection.rs",
+        "crates/agenthub/src/tests/search.rs"
+      ],
+      "evidence": [
+        "Additional source-backed authoring and local PostgreSQL evidence: .ai/dev/plans/absorption/a01-selection.md. Full source review and main delivery remain open."
+      ]
     },
     {
       "path": "server/internal/store/transition.go",

@@ -5,7 +5,7 @@ use crate::identity::accounts::api_keys::{NewKey, Scope};
 fn draft(id: &str) -> Value {
     json!({"id":id,"name":"<Delivery>","version":0})
 }
-async fn create(admin: &Admin, id: &str) -> Value {
+pub(super) async fn create(admin: &Admin, id: &str) -> Value {
     let (status, value, _) = response(
         admin
             .request(Method::POST, "/api/v1/projects")
@@ -15,7 +15,12 @@ async fn create(admin: &Admin, id: &str) -> Value {
     assert_eq!(status, StatusCode::OK, "{value}");
     value["result"].clone()
 }
-async fn remove(admin: &Admin, id: &str, version: i64, key: &str) -> (StatusCode, Value, bool) {
+pub(super) async fn remove(
+    admin: &Admin,
+    id: &str,
+    version: i64,
+    key: &str,
+) -> (StatusCode, Value, bool) {
     response(
         admin
             .request(Method::DELETE, &format!("/api/v1/projects/{id}"))

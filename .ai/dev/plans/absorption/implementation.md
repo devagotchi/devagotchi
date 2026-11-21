@@ -78,8 +78,8 @@ history to make a DELETE route work. Current hub board creation also seeds a wel
 (`agenthub/mcp/boards.rs::make_owned`); it counts as a task under this rule. Empty-project
 creation/deletion needs a real source-derived test, not an assumption that a newly bound
 board has zero tasks. Cached handles must fail after removal, and name reuse must not revive
-old grants or make retired request keys reusable. This is still domain work, not implemented
-by the HTTP transport unit.
+old grants or make retired request keys reusable. The subsequent domain and browser/HTTP
+implementation is recorded in [a03-projects.md](a03-projects.md).
 
 Batch 1 implementation order: stream and protocol as one complete transport unit; then
 configuration domain gaps and administration as one complete unit; then roster and remaining
@@ -93,7 +93,7 @@ The concrete authored routes, roster and existing-domain mapping are recorded in
 [a03-principals.md](a03-principals.md). Do not add speculative MCP administration for
 that source; inspect the actual Devagotchi Extra registries for their separate packets.
 
-Project lifecycle implementation detail (planned, not implemented):
+Project lifecycle implementation detail (authored; focused evidence in [a03-projects.md](a03-projects.md), full batch acceptance remains open):
 
 1. Extend `board_projects` with a retired timestamp, display name and positive version.
    Retain the row and every history/receipt record. Make the owner/name uniqueness rule
@@ -132,6 +132,39 @@ Project lifecycle implementation detail (planned, not implemented):
    handle/write, request replay, version mismatch, active-key/catalog/task in-use guards,
    completed-task guard, concurrent create/delete, unchanged history and distinct new
    identity, foreign account and policy refusal. Then one focused lifecycle check.
+
+Aggregate configuration implementation detail:
+
+1. Add `/api/v1/config?project=NAME` in the existing HTTP configuration module, composing
+   the current account-owned board configuration/catalog, owned project listing and
+   environment-owner principal configuration/roster. Require a live person and reject
+   seats, agent keys, foreign boards and org/shared namespaces. Do not introduce another
+   config store or reproduce the source's ignored read errors.
+2. Keep source section names workflows/projects/roles/principals/settings/policies and
+   state_kinds, using current typed records. Distinguish board versus principal settings
+   and their versions. Page potentially large project/principal lists at 100 with explicit
+   independent continuation cursors; bounded roles/rules/catalog use their existing limits.
+   Reads are independently versioned snapshots, not one claimed atomic cross-owner state.
+3. Test real authenticated HTTP against individual owner routes, missing project and bad
+   cursor refusal, no partial success on a failed read, person/agent/seat scope and ordinary
+   user refusal for environment administration. Record the prerelease API differences.
+
+Task selection comparison (read S1 `store/{tasks,claim,sort}.go`):
+
+1. Ordinary task lists sort by priority/creation/id. Assignment preference belongs to
+   actor-specific ready/claim selection; change `hosted/reads.rs` to select that order
+   only for those calls, preserving existing assignment tests.
+2. `ClaimNext` source SQL filters requested states and all normalized labels before its
+   25-candidate limit. Current Rust state filtering occurs after the limit and supports
+   one label only. Pass the complete typed selector into `list_in`; constrain state and
+   label intersection before limiting, then retain post-expiry state/policy checks.
+3. Add `labels` to NextFilter and typed claim input, preserving singular `label`. Thread
+   through HTTP, MCP, local and remote CLI; repeated CLI `--label` means intersection.
+   Omit an empty added field from canonical receipt serialization so old single-label
+   retry identities remain stable. No handwritten generated schemas.
+4. Test >25 earlier nonmatching states/labels, ordinary versus assignment ordering,
+   all-label normalization, HTTP/MCP and CLI selection/replay. Preserve deliberate Rust
+   literal-wildcard search and expired-lease lazy recovery; document source differences.
 
 ### Batch 2: catalogs, grants, policy and machine enforcement
 

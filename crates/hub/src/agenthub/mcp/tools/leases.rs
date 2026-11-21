@@ -51,6 +51,7 @@ impl Hub {
                         actor,
                         &NextFilter {
                             label: input.label,
+                            labels: input.labels,
                             states: input.states,
                             parent: input.parent,
                             ttl_ms: input.ttl_ms,

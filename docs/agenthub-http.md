@@ -16,7 +16,7 @@ IDs are the existing string IDs returned by the board, not the old Go service's 
 | POST `/api/v1/tasks` | Create a task; `project` and `title` required |
 | GET `/api/v1/tasks/{id}?project=demo` | Task, notes, dependencies, children and latest 200 events |
 | PATCH `/api/v1/tasks/{id}?project=demo` | Update metadata at the supplied `version` |
-| POST `/api/v1/claim-next` | Claim a ready task; `project`, optional `label`, `states`, `parent`, `ttl_ms` |
+| POST `/api/v1/claim-next` | Claim a ready task; `project`, optional `label`, `labels`, `states`, `parent`, `ttl_ms` |
 | POST `/api/v1/tasks/{id}/claim?project=demo` | Claim this task; optional `ttl_ms` |
 | POST `/api/v1/tasks/{id}/heartbeat?project=demo` | Renew the supplied `fence`; optional `progress` |
 | POST `/api/v1/tasks/{id}/release?project=demo` | Release the supplied `fence`; optional `reason` |
@@ -34,6 +34,12 @@ Updates use `clear_assignee: true` to remove an assignment. `progress` omitted k
 current value; `progress: null` clears it. REST never substitutes a remembered MCP fence
 or connection session. Claim routes also accept the old `ttl_seconds` field, converted
 with overflow checking; it must agree with `ttl_ms` if both are sent.
+
+Claim-next requires all entries in `labels`, plus `label` if supplied. Labels are trimmed,
+lowercased and deduplicated. State and label selection happens before the 25-candidate
+claim limit. Ordinary lists sort by priority, creation time and ID; actor-specific ready
+and claim selection prefer work assigned to that actor. The CLI accepts repeated `--label`
+for the same intersection. Adding an empty `labels` array does not change retry identity.
 
 `If-Match: "VERSION"` can supply an update's version. A body version must agree with it.
 A fresh stale `If-Match` returns 412. A stale body-only version returns 409. Weak tags and
@@ -139,6 +145,22 @@ change commits. All writes support request keys and current-authority replay.
 Editable settings are lease TTL/min/max, maximum lease expiries, default WIP/priority,
 heartbeat hint, note kinds, priority labels, repo and environments. Standing approvals
 have their own operations and cannot be inserted into the settings editor.
+
+## Combined owner configuration
+
+`GET /api/v1/config?project=demo` returns the selected account board's `workflows`,
+the person's `projects`, environment `roles`, `policies`, and registered `principals`,
+plus `state_kinds`. `settings.principals` contains principal settings;
+`settings.board` contains the board configuration and shared binding. These are the same
+typed records as the individual routes. They are independently versioned reads; writes
+must send the version belonging to the setting or definition being changed.
+
+This combined administration route requires the environment owner and their own account
+board. An ordinary user can still use the individual routes allowed to them. Agent keys,
+seats, org/shared-board grants and foreign projects do not grant aggregate authority.
+Any failed section fails the request; the endpoint never returns missing sections as a
+successful partial configuration. Projects and principals have separate 100-row pages:
+send `next.projects` as `projects_after` and `next.principals` as `principals_after`.
 
 ## Account project lifecycle
 

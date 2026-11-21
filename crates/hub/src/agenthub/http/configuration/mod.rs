@@ -14,11 +14,13 @@ use devagotchi_contracts::BridgeError;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
+mod aggregate;
 mod local;
 mod workflows;
 
 pub(super) fn routes() -> Router<AppState> {
     Router::new()
+        .route("/api/v1/config", get(aggregate::read))
         .route(
             "/api/v1/workflows",
             get(workflows::list).post(workflows::create),

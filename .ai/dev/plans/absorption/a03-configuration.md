@@ -29,7 +29,8 @@ and displays the projects using it. The current web editor already belongs to
 Routes and payloads are recorded in `docs/agenthub-http.md`. These are authored local
 routes. Project lifecycle was subsequently authored and checked in
 [a03-projects.md](a03-projects.md), including the retained catalog audit-anchor guard.
-Source aggregate `/config` remains open. Independent catalog creation makes the audit
+Source aggregate `/config` was subsequently authored and checked in
+[a03-aggregate.md](a03-aggregate.md). Independent catalog creation makes the audit
 reference explicit; deleting its anchor cannot break later catalog edit/delete events.
 
 ## Validation

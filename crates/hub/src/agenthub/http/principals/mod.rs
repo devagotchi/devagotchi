@@ -37,7 +37,11 @@ pub(super) fn routes() -> Router<AppState> {
         .merge(configuration::routes())
 }
 
-fn person(state: &AppState, caller: &Caller, change: bool) -> Result<Arc<Accounts>, Failure> {
+pub(super) fn person(
+    state: &AppState,
+    caller: &Caller,
+    change: bool,
+) -> Result<Arc<Accounts>, Failure> {
     if let Some(error) = caller.hub.waiting_refusal(&caller.subject) {
         return Err(error.into());
     }

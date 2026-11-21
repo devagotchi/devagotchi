@@ -19,6 +19,9 @@ pub struct ClaimIn {
     /// Without an id: only tickets carrying this label.
     #[serde(default)]
     pub label: Option<String>,
+    /// Without an id: require every label, combined with the singular label if supplied.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub labels: Vec<String>,
     /// Without an id: only tickets in these queue states.
     #[serde(default)]
     pub states: Vec<String>,

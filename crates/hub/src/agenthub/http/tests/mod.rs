@@ -1,9 +1,12 @@
 //! Real HTTP and MCP share PostgreSQL state and live authority, not separate stores.
+mod aggregate;
 mod configuration;
 mod events;
 mod principals;
+mod project_races;
 mod projects;
 mod protocol;
+mod selection;
 mod stream;
 mod workflow;
 use crate::agenthub::tests::serving::{hub_with, tool};
