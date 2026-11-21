@@ -37,6 +37,7 @@ fn next_for(code: &str, id: Option<&str>) -> String {
         "not_claimable" => format!("board_get {id}: only a lane queue is claimable; board_update moves it along the workflow"),
         "use_lease_ops" => "use board_claim / board_complete / board_handoff / board_release; held tickets do not move by board_update".into(),
         "transition_not_allowed" => "board_prime names the states; the workflow allows only its transitions".into(),
+        "policy_denied" => "ask the environment owner to review this agent's roles and the matching policy rule; changing credentials or seat names does not change its authority".into(),
         "humans_only" => "ask the person who owns this board".into(),
         "not_owner" => "only the account that owns this board, a person granted on it, or that account's AI changes its settings; ask them".into(),
         "not_found" => "board_list with open_only to see the ids on this board".into(),

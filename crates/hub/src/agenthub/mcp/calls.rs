@@ -52,6 +52,9 @@ impl Hub {
         kind: Kind,
         role: Role,
     ) -> (String, bool) {
+        if let Some(principal) = &subject.agent {
+            return (principal.clone(), false);
+        }
         // An AI the hub connected itself (`via: hub`) is never the person: without a seat
         // of its own it works as the account's "ai" seat.
         let seat = match (seat, subject.via) {
@@ -67,6 +70,11 @@ impl Hub {
 
     /// The names this caller's AI client answers to (`inbox::client_aliases`).
     pub(super) fn client_names(&self, context: &RequestContext<RoleServer>) -> Vec<String> {
+        if let Ok(subject) = self.subject(context)
+            && let Some(principal) = subject.agent
+        {
+            return vec![principal];
+        }
         self.subject(context)
             .ok()
             .and_then(|subject| subject.client)
@@ -161,11 +169,41 @@ impl Hub {
             )),
             (board, kind, role) => {
                 let (id, human) = self.actor_for(subject, seat.as_deref(), kind, role);
+                let (policy, wip_limit) = if let Some(principal) = &subject.agent {
+                    let accounts = self
+                        .workflows
+                        .as_ref()
+                        .ok_or_else(|| {
+                            BridgeError::new(
+                                "not_granted",
+                                "registered agent accounts are unavailable",
+                            )
+                        })?
+                        .accounts();
+                    let tenant = subject.tenant.as_deref().ok_or_else(|| {
+                        BridgeError::new(
+                            "not_granted",
+                            "registered agent environment is unavailable",
+                        )
+                    })?;
+                    let (agent, limit) =
+                        accounts.live_agent(tenant, &subject.id, principal).await?;
+                    (
+                        Some(devagotchi_agenthub::policy::Identity {
+                            kind: agent.kind,
+                            roles: agent.roles,
+                        }),
+                        Some(limit),
+                    )
+                } else {
+                    (None, None)
+                };
                 tokio::task::spawn_blocking(move || {
                     let actor = Actor {
                         id: &id,
                         human,
-                        wip_limit: None,
+                        policy,
+                        wip_limit,
                     };
                     f(&board, &actor)
                 })
@@ -196,6 +234,9 @@ impl Hub {
         context: &RequestContext<RoleServer>,
     ) -> Result<String, Json<BoardError>> {
         let subject = self.board_subject(context)?;
+        if let Some(principal) = subject.agent {
+            return Ok(principal);
+        }
         Ok(match self.seat(context).ok().flatten() {
             Some(seat) => format!("{}#{seat}", subject.id),
             None => subject.id,

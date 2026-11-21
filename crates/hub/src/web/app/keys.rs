@@ -3,7 +3,7 @@
 //! answer that made it. Only a signed-in person gets here: a key cannot make keys.
 
 use axum::{
-    extract::{Path, RawForm, State},
+    extract::{Path, Query, RawForm, State},
     http::{HeaderMap, HeaderValue, StatusCode, header},
     response::Response,
 };
@@ -70,6 +70,20 @@ fn row(key: &ApiKey, now: u64) -> String {
             escape(&names.join(", "))
         }
     };
+    let site = pages::site();
+    let c = &site.messages.app.agents;
+    let binding = key
+        .agent_id
+        .as_ref()
+        .map(|agent| {
+            format!(
+                "{}: <a href=\"/app/agents/{}\">{}</a>",
+                escape(&c.key_agent),
+                crate::web::encode(agent),
+                escape(agent)
+            )
+        })
+        .unwrap_or_else(|| escape(&c.key_unbound));
     let actions = if key.live(now) {
         format!(
             "<div class=\"ticket-actions\"><form method=\"post\" action=\"/app/keys/{id}/rotate\">\
@@ -81,7 +95,7 @@ fn row(key: &ApiKey, now: u64) -> String {
     };
     format!(
         "<li id=\"{id}\"><strong>{name}</strong> <span class=\"meta\">…{hint}</span>\
-<p class=\"ask-tags\">{scopes}</p>\
+<p>{binding}</p><p class=\"ask-tags\">{scopes}</p>\
 <p class=\"meta\">{state} · last used {used}</p>\
 <p class=\"meta\">Projects: {projects} · Machines: {machines}</p>{actions}</li>",
         name = escape(&key.name),
@@ -103,23 +117,76 @@ fn checks(field: &str, values: &[String]) -> String {
         .collect()
 }
 
-async fn draw(state: &AppState, subject: &Subject, once: Option<(ApiKey, String)>) -> Response {
+async fn agent_choice(
+    accounts: &crate::identity::accounts::Accounts,
+    subject: &Subject,
+    selected: Option<&str>,
+) -> devagotchi_contracts::BridgeResult<String> {
+    let site = pages::site();
+    let c = &site.messages.app.agents;
+    let mut options = format!("<option value=\"\">{}</option>", escape(&c.key_unbound));
+    let mut after = None;
+    let mut found = selected.is_none();
+    loop {
+        let agents = accounts
+            .agents(&subject.id, &subject.id, after.as_deref())
+            .await?;
+        for agent in agents.iter().take(100).filter(|agent| agent.enabled) {
+            let is_selected = selected == Some(agent.id.as_str());
+            found |= is_selected;
+            options.push_str(&format!(
+                "<option value=\"{}\"{}>{}</option>",
+                escape(&agent.id),
+                if is_selected { " selected" } else { "" },
+                escape(&agent.name)
+            ));
+        }
+        if agents.len() <= 100 {
+            break;
+        }
+        after = Some(agents[99].id.clone());
+    }
+    if !found {
+        return Err(devagotchi_contracts::BridgeError::new(
+            "not_found",
+            "selected agent is unavailable",
+        ));
+    }
+    Ok(format!(
+        "<label>{}<select name=\"agent_id\">{options}</select></label><p class=\"note\">{}</p>",
+        escape(&c.key_agent),
+        escape(&c.key_help)
+    ))
+}
+
+async fn draw(
+    state: &AppState,
+    subject: &Subject,
+    once: Option<(ApiKey, String)>,
+    selected: Option<&str>,
+) -> Response {
     let (Some(hub), Some(tenant)) = (&state.passkeys, tenant(subject)) else {
         return no_keys();
     };
-    let keys = match hub.accounts().keys(tenant, &subject.id).await {
-        Ok(keys) => keys,
+    let now = (crate::agenthub::system_clock()() / 1000).max(0) as u64;
+    let list = match hub.accounts().keys(tenant, &subject.id).await {
+        Ok(keys) => {
+            let rows: String = keys.iter().map(|key| row(key, now)).collect();
+            if rows.is_empty() {
+                "<p class=\"empty\">No keys yet.</p>".to_string()
+            } else {
+                format!("<ul class=\"rows\" id=\"keys\">{rows}</ul>")
+            }
+        }
         Err(error) => {
             eprintln!("devagotchi hub: api keys: {error}");
-            return unavailable();
+            if once.is_none() {
+                return unavailable();
+            }
+            "<p role=\"alert\">Your key was issued, but the key list could not be loaded. \
+Copy your new key above now. Reload this page later to see your keys.</p>"
+                .to_string()
         }
-    };
-    let now = (crate::agenthub::system_clock()() / 1000).max(0) as u64;
-    let rows: String = keys.iter().map(|key| row(key, now)).collect();
-    let list = if rows.is_empty() {
-        "<p class=\"empty\">No keys yet.</p>".to_string()
-    } else {
-        format!("<ul class=\"rows\" id=\"keys\">{rows}</ul>")
     };
     let scopes: String = Scope::ALL
         .iter()
@@ -159,17 +226,27 @@ async fn draw(state: &AppState, subject: &Subject, once: Option<(ApiKey, String)
     let shown = once
         .map(|(key, secret)| shown_key(&key, &secret, &state.hub.config.public_url))
         .unwrap_or_default();
-    let body = format!(
-        "<h1>API keys</h1><p class=\"meta\">For agents and tools that cannot sign in themselves. \
-A key can never approve anything.</p>{shown}\
-<section class=\"card\"><h2>Your keys</h2>{list}</section>\
-<form class=\"card prefs\" id=\"new-key-form\" method=\"post\" action=\"/app/keys\"><h2>Make a key</h2>\
+    let form = match agent_choice(hub.accounts(), subject, selected).await {
+        Ok(agents) => format!(
+            "<form class=\"card prefs\" id=\"new-key-form\" method=\"post\" action=\"/app/keys\"><h2>Make a key</h2>\
 <label>Name<input type=\"text\" name=\"name\" required maxlength=\"60\" placeholder=\"hermes\"></label>\
+{agents}\
 <label>Lasts<select name=\"hours\">{durations}</select></label>\
 <h3>What it may do</h3>{scopes}{projects}{machines}\
 <p class=\"actions\"><button class=\"approve\" type=\"submit\">Make key</button></p></form>",
-        projects = limit("Only these projects", "project", &projects),
-        machines = limit("Only these machines", "machine", &machines),
+            projects = limit("Only these projects", "project", &projects),
+            machines = limit("Only these machines", "machine", &machines),
+        ),
+        Err(e) => {
+            eprintln!("devagotchi hub: key agent choices: {e}");
+            format!(
+                "<p role=\"alert\">{}</p>",
+                escape(&pages::site().messages.app.agents.choices_unavailable)
+            )
+        }
+    };
+    let body = format!(
+        "<h1>API keys</h1><p class=\"meta\">For agents and tools that cannot sign in themselves. A key can never approve anything.</p>{shown}<section class=\"card\"><h2>Your keys</h2>{list}</section>{form}"
     );
     let mut response = pages::app_page(StatusCode::OK, "API keys", &body, Tab::Me);
     let headers = response.headers_mut();
@@ -180,9 +257,18 @@ A key can never approve anything.</p>{shown}\
     response
 }
 
-pub async fn page(State(state): State<AppState>, headers: HeaderMap) -> Response {
+#[derive(serde::Deserialize)]
+pub struct Shown {
+    agent: Option<String>,
+}
+
+pub async fn page(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Query(shown): Query<Shown>,
+) -> Response {
     match person(&state, &headers, "/app/keys").await {
-        Ok(subject) => draw(&state, &subject, None).await,
+        Ok(subject) => draw(&state, &subject, None, shown.agent.as_deref()).await,
         Err(response) => response,
     }
 }
@@ -225,6 +311,7 @@ fn parse(raw: &[u8]) -> Result<NewKey, String> {
                 .push(Scope::parse(&value).ok_or_else(|| format!("{value:?} is not a scope"))?),
             "project" => new.projects.push(value),
             "machine" => new.machines.push(value),
+            "agent_id" => new.agent_id = (!value.is_empty()).then_some(value),
             _ => {}
         }
     }
@@ -248,7 +335,7 @@ pub async fn create(
         Err(why) => return refused(&why),
     };
     match hub.accounts().create_key(tenant, &subject.id, &new).await {
-        Ok(made) => draw(&state, &subject, Some(made)).await,
+        Ok(made) => draw(&state, &subject, Some(made), None).await,
         Err(error) if error.code == "invalid" => refused(&error.message),
         Err(error) => {
             eprintln!("devagotchi hub: making an api key: {error}");
@@ -292,7 +379,7 @@ pub async fn rotate(
         return no_keys();
     };
     match hub.accounts().rotate_key(tenant, &subject.id, &id).await {
-        Ok(made) => draw(&state, &subject, Some(made)).await,
+        Ok(made) => draw(&state, &subject, Some(made), None).await,
         Err(error) if error.code == "not_found" => refused(&error.message),
         Err(error) => {
             eprintln!("devagotchi hub: replacing an api key: {error}");

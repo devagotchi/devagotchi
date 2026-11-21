@@ -273,6 +273,7 @@ pub(crate) async fn shared_state_write_route(
         let actor = crate::agenthub::Actor {
             id: &found.actor,
             human: found.human,
+            policy: None,
             wip_limit: None,
         };
         // An async route awaits the store's method itself (rule 13).

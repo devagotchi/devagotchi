@@ -9,6 +9,7 @@ use std::sync::Arc;
 
 pub(crate) struct Registry {
     store: Store,
+    live: crate::config::Live,
     runtime: tokio::runtime::Handle,
 }
 
@@ -16,9 +17,15 @@ impl Registry {
     pub(crate) fn new(store: Store) -> BridgeResult<Self> {
         Ok(Self {
             store,
+            live: Default::default(),
             runtime: tokio::runtime::Handle::try_current()
                 .map_err(|error| fail("runtime", error.to_string()))?,
         })
+    }
+
+    pub(crate) fn with_live(mut self, live: crate::config::Live) -> Self {
+        self.live = live;
+        self
     }
 
     pub(crate) fn blocking<T>(
@@ -120,7 +127,10 @@ impl Registry {
         limit: Option<usize>,
     ) -> BridgeResult<Option<(Arc<Board>, bool)>> {
         let tenant = self.tenant(owner).await?;
-        let board = HostedBoard::for_owner(self.store.clone(), &tenant, owner, project)?;
+        let board = HostedBoard::for_owner(self.store.clone(), &tenant, owner, project)?
+            .with_principals(Arc::new(crate::identity::accounts::agents::Directory(
+                self.live.clone(),
+            )));
         let created = if create {
             board.initialize_limited(limit).await?
         } else {

@@ -109,6 +109,34 @@ pub async fn page(
             return crate::web::routes::unavailable();
         }
     };
+    let mut registered = Vec::new();
+    if let Some(hub) = &state.passkeys {
+        let mut after = None;
+        loop {
+            let mut page = match hub
+                .accounts()
+                .agents(&subject.id, &subject.id, after.as_deref())
+                .await
+            {
+                Ok(page) => page,
+                Err(error) => {
+                    eprintln!("devagotchi hub: ticket recipients: {error}");
+                    return crate::web::routes::unavailable();
+                }
+            };
+            let more = page.len() > 100;
+            page.truncate(100);
+            after = page.last().map(|agent| agent.id.clone());
+            registered.extend(
+                page.into_iter()
+                    .filter(|agent| agent.enabled)
+                    .map(|agent| (agent.principal(), agent.name)),
+            );
+            if !more {
+                break;
+            }
+        }
+    }
     let wanted = id.clone();
     let families = match (&state.passkeys, &subject.tenant) {
         (Some(hub), Some(tenant)) => hub
@@ -307,7 +335,7 @@ value=\"{}\">{inner}</form>",
         "delegate",
         &format!(
             "<label>{}<input type=\"text\" name=\"to\" id=\"delegate-to\" list=\"agents\" required \
-pattern=\"[a-z0-9][a-z0-9-]{{0,62}}\" maxlength=\"63\" autocapitalize=\"none\" autocorrect=\"off\" \
+maxlength=\"256\" autocapitalize=\"none\" autocorrect=\"off\" \
 spellcheck=\"false\" placeholder=\"{}\"></label><datalist id=\"agents\">{}</datalist>\
 <p class=\"actions\"><button type=\"submit\" id=\"delegate\">{}</button></p>",
             escape(&copy.delegate.label),
@@ -315,6 +343,11 @@ spellcheck=\"false\" placeholder=\"{}\"></label><datalist id=\"agents\">{}</data
             agents
                 .iter()
                 .map(|name| format!("<option value=\"{}\">", escape(name)))
+                .chain(registered.iter().map(|(id, name)| format!(
+                    "<option value=\"{}\" label=\"{}\">",
+                    escape(id),
+                    escape(name)
+                )))
                 .collect::<String>(),
             escape(&copy.delegate.button),
         ),

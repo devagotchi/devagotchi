@@ -140,6 +140,7 @@ pub async fn grant(
             &Actor {
                 id: &id,
                 human: true,
+                policy: None,
                 wip_limit: None,
             },
             &form.kind,
@@ -189,6 +190,7 @@ pub async fn revoke(
             &Actor {
                 id: &id,
                 human: true,
+                policy: None,
                 wip_limit: None,
             },
             &form.id,

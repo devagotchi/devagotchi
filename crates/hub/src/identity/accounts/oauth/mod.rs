@@ -15,6 +15,7 @@
 use super::*;
 use crate::store::Lookup;
 
+mod access;
 mod device;
 pub use device::{DevicePoll, normalize_user_code};
 
@@ -42,6 +43,7 @@ pub struct Grant {
     pub client: String,
     /// The name the client registered with, when it is still registered.
     pub client_name: Option<String>,
+    pub agent: Option<String>,
 }
 
 fn invalid_grant() -> BridgeError {
@@ -315,7 +317,10 @@ impl Accounts {
             {
                 return Ok(Err(invalid_grant()));
             }
-            if let Err(refused) = self.live_account(connection, &issued.account, now).await? {
+            if let Err(refused) = self
+                .live_account(connection, &issued.account, client, now)
+                .await?
+            {
                 return Ok(Err(refused));
             }
             let tokens = self
@@ -403,7 +408,10 @@ impl Accounts {
             {
                 return Ok(Err(invalid_grant()));
             }
-            if let Err(refused) = self.live_account(connection, &stored.account, now).await? {
+            if let Err(refused) = self
+                .live_account(connection, &stored.account, client, now)
+                .await?
+            {
                 return Ok(Err(refused));
             }
             let spent = sqlx::query(
@@ -437,63 +445,6 @@ impl Accounts {
                 .await?;
             Ok(Ok(tokens))
         })?
-    }
-
-    /// Who an access token speaks for, when it is live and its account is not disabled.
-    pub async fn verify_access(&self, token: &str) -> BridgeResult<Option<Grant>> {
-        self.verify_access_at(token, now_secs()).await
-    }
-
-    pub(crate) async fn verify_access_at(
-        &self,
-        token: &str,
-        now: u64,
-    ) -> BridgeResult<Option<Grant>> {
-        if !token.starts_with("dgh_") || token.len() > 128 {
-            return Ok(None);
-        }
-        let key = hash(token);
-        let verified = transaction!(&self.store, |connection| {
-            if self.enter(connection, Lookup::Token(&key)).await?.is_none() {
-                return Ok(None);
-            }
-            let found = sqlx::query(concat!(
-                "SELECT ",
-                account_columns_a!(),
-                ", t.client, c.name FROM oauth_tokens t
-                 JOIN auth_accounts a ON a.id = t.account
-                 LEFT JOIN oauth_clients c ON c.id = t.client
-                 WHERE t.hash = $1 AND t.kind = 'access' AND t.expires_at > $2
-                   AND a.disabled_at IS NULL"
-            ))
-            .bind(&key)
-            .bind(secs(now))
-            .fetch_optional(&mut *connection)
-            .await?
-            .map(|row| -> Result<Grant, sqlx::Error> {
-                Ok(Grant {
-                    account: account_row(&row)?,
-                    client: row.try_get(7)?,
-                    client_name: row.try_get(8)?,
-                })
-            })
-            .transpose()?;
-            let Some(mut grant) = found else {
-                return Ok(None);
-            };
-            // An account nobody secured that went unused too long has ended, with its tokens.
-            if self.lapsed(&grant.account, now) {
-                return Ok(None);
-            }
-            tenants::touch(connection, &mut grant.account, now).await?;
-            // Its tenant's access, settled now: let in, if sign-up opened while it waited.
-            let admitted = self.settle_in(connection, &mut grant.account, now).await?;
-            Ok(Some((grant, admitted)))
-        })?;
-        Ok(verified.map(|(grant, admitted)| {
-            self.announce(admitted);
-            grant
-        }))
     }
 
     /// Revoke a token (RFC 7009): its whole family ends. Unknown tokens are fine.
@@ -580,27 +531,6 @@ impl Accounts {
 }
 
 impl Accounts {
-    /// Whether `account` may get tokens: it exists, is not disabled, and (made on first
-    /// connect and not secured) has not lapsed unused. The refusal is a value, so the caller
-    /// can commit what it already did (a spent code stays spent). Using it counts as use.
-    async fn live_account(
-        &self,
-        connection: &mut AnyConnection,
-        account: &str,
-        now: u64,
-    ) -> Result<Result<(), BridgeError>, Failed> {
-        Ok(match account_in(connection, account).await? {
-            Some(found) if found.disabled_at.is_none() && !self.lapsed(&found, now) => {
-                let mut found = found;
-                tenants::touch(connection, &mut found, now).await?;
-                Ok(())
-            }
-            Some(found) if found.disabled_at.is_some() => Err(account_disabled(account)),
-            Some(_) => Err(invalid_grant()),
-            None => Err(invalid_grant()),
-        })
-    }
-
     /// Refuse a new AI connection for an account nobody secured once it has
     /// `tenancy.unsecured.clients` live ones (each refresh family is one), and for a tenant
     /// on a hosted hub once it has as many as its plan's `clients` (`access.rs`).

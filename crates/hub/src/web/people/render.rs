@@ -113,6 +113,11 @@ pub(super) fn detail(user: &LocalUser, min: u32, saved: Option<&str>) -> Respons
         ("", String::new())
     };
     let identity = escape(user.email.as_deref().unwrap_or(&c.external));
+    let agents = format!(
+        "<p><a href=\"/app/agents?account={}\">{}</a></p>",
+        encode(&user.account.id),
+        escape(&site.messages.app.agents.title)
+    );
     let password = if user.email.is_some() {
         format!(
             "<form class=\"stack card\" method=\"post\" action=\"{path}/password\"><h2>{}</h2><input type=\"hidden\" name=\"version\" value=\"{}\"><label>{}<input type=\"password\" name=\"password\" required minlength=\"{min}\" autocomplete=\"new-password\"></label><p class=\"note\">{}</p><p>{}</p><button type=\"submit\">{}</button></form>",
@@ -132,7 +137,7 @@ pub(super) fn detail(user: &LocalUser, min: u32, saved: Option<&str>) -> Respons
         StatusCode::OK,
         &c.edit,
         &format!(
-            "<div class=\"stack\"><a href=\"/admin/users\">{}</a><h1>{}</h1>{notice}<p class=\"what\">{identity}</p><form class=\"stack card\" method=\"post\" action=\"{path}\"><input type=\"hidden\" name=\"version\" value=\"{}\"><label>{}<input type=\"text\" name=\"name\" required maxlength=\"64\" value=\"{}\" autocomplete=\"off\"></label><label><input type=\"checkbox\" name=\"enabled\" value=\"true\"{checked}{disabled}>{}</label>{owner}<p class=\"note\">{}</p><button type=\"submit\">{}</button></form>{password}</div>",
+            "<div class=\"stack\"><a href=\"/admin/users\">{}</a><h1>{}</h1>{notice}<p class=\"what\">{identity}</p>{agents}<form class=\"stack card\" method=\"post\" action=\"{path}\"><input type=\"hidden\" name=\"version\" value=\"{}\"><label>{}<input type=\"text\" name=\"name\" required maxlength=\"64\" value=\"{}\" autocomplete=\"off\"></label><label><input type=\"checkbox\" name=\"enabled\" value=\"true\"{checked}{disabled}>{}</label>{owner}<p class=\"note\">{}</p><button type=\"submit\">{}</button></form>{password}</div>",
             escape(&c.back),
             escape(&c.edit),
             user.version,

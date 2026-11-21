@@ -116,6 +116,7 @@ pub struct AppCopy {
     pub audit: AuditCopy,
     pub hub_audit: HubAuditCopy,
     pub people: PeopleCopy,
+    pub agents: super::agents_copy::AgentsCopy,
     pub configuration: super::configuration_copy::ConfigurationCopy,
 }
 

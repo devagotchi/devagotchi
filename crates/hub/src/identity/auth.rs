@@ -38,7 +38,7 @@ pub struct Subject {
     /// Set when the account was opened by an agent and has not been claimed yet.
     /// Unix seconds. `None` once a person has claimed it, or when this token is not provisional.
     pub provisional_until: Option<u64>,
-    /// The agent seat that presented this token (`claude`, `cli`, …). Revocable on the account.
+    /// Credential-bound agent identity, verified by its provider; never a caller seat header.
     pub agent: Option<String>,
     /// Claim code the agent can show the person, while the account is still provisional.
     pub claim_code: Option<String>,
@@ -229,10 +229,7 @@ impl Verifier {
             } => {
                 if bearer.starts_with("dgh_") {
                     return match accounts.verify_access(bearer).await {
-                        Ok(Some(grant)) => Ok(crate::identity::auth::Subject {
-                            client: grant.client_name,
-                            ..accounts.subject(&grant.account, "hub")
-                        }),
+                        Ok(Some(grant)) => Ok(grant.subject(accounts)),
                         Ok(None) => {
                             Err(AuthError::Invalid("unknown, expired or revoked hub token"))
                         }

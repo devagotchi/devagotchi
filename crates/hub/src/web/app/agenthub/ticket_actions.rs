@@ -159,7 +159,7 @@ fn apply(
         "delegate" => {
             let copy = &words().messages.app.delegate;
             let to = act.to.trim();
-            if !crate::agenthub::valid_name(to) {
+            if !crate::agenthub::valid_name(to) && !(to.starts_with("@agent:") && to.len() <= 256) {
                 return Err(crate::agenthub::fail("invalid", copy.invalid.clone()));
             }
             // The assignee and the note saying so, in one transaction.

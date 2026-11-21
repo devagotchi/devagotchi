@@ -23,7 +23,8 @@ impl Boards {
             unlimited: a.unlimited.iter().cloned().collect(),
         });
         Ok(Self {
-            hosted: crate::agenthub::registry::Registry::new(store.clone())?,
+            hosted: crate::agenthub::registry::Registry::new(store.clone())?
+                .with_live(config.live_handle()),
             orgs: Some(orgs::Orgs::new(store.clone())),
             preferences: Some(crate::identity::PreferenceStore::new(store)),
             warehouse: std::sync::RwLock::new(None),

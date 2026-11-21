@@ -281,11 +281,7 @@ pub async fn decide(
     let id = subject.id.clone();
     let (project, ticket) = (form.project.clone(), form.id.clone());
     let result = tokio::task::spawn_blocking(move || {
-        let actor = Actor {
-            id: &id,
-            human: true,
-            wip_limit: None,
-        };
+        let actor = Actor::human(&id);
         // "Approve and allow": this one, and this exact step ahead of time from now on, in
         // one transaction, unless the person set its kind to always ask them. Whether it has
         // a kind is the store's to read; the preference is the person's.

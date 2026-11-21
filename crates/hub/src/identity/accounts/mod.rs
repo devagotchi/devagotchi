@@ -11,6 +11,7 @@
 //! the one-time link.
 
 mod account;
+pub mod agents;
 pub mod api_keys;
 mod challenges;
 pub mod claim;

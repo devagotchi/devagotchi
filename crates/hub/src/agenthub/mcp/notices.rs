@@ -46,12 +46,14 @@ impl Hub {
         subject: &Subject,
         seat: Option<&str>,
     ) -> Option<String> {
-        let key = format!(
-            "{}\0{}\0{}",
-            subject.id,
-            seat.unwrap_or(""),
-            subject.client.as_deref().unwrap_or("")
-        );
+        let key = subject.agent.clone().unwrap_or_else(|| {
+            format!(
+                "{}\0{}\0{}",
+                subject.id,
+                seat.unwrap_or(""),
+                subject.client.as_deref().unwrap_or("")
+            )
+        });
         {
             let mut checks = self.boards.inbox_checks.lock().expect("inbox checks");
             let now = std::time::Instant::now();
@@ -64,11 +66,15 @@ impl Hub {
             checks.insert(key, now);
         }
         let projects = self.board_names(subject).ok()?;
-        let aliases = subject
-            .client
-            .as_deref()
-            .map(crate::agenthub::inbox::client_aliases)
-            .unwrap_or_default();
+        let aliases = if let Some(principal) = &subject.agent {
+            vec![principal.clone()]
+        } else {
+            subject
+                .client
+                .as_deref()
+                .map(crate::agenthub::inbox::client_aliases)
+                .unwrap_or_default()
+        };
         let mut boards = Vec::new();
         for project in projects.into_iter().take(INBOX_BOARDS) {
             if let Ok((board, kind, role)) = self.board_access(subject, &project) {
@@ -84,6 +90,7 @@ impl Hub {
                 let actor = Actor {
                     id: &id,
                     human: false,
+                    policy: None,
                     wip_limit: None,
                 };
                 match board.inbox_deliver(&actor, &who, &id, true) {

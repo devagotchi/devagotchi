@@ -6,8 +6,11 @@
 //! the stylesheet so the app opens offline on `/app/offline`.
 
 mod agenthub;
+mod agents;
 mod connections;
 mod home;
+#[cfg(test)]
+mod key_tests;
 mod keys;
 mod machine;
 pub(super) mod me;
@@ -29,6 +32,7 @@ use crate::{AppState, agenthub::Board, identity::Subject, site::Site};
 
 pub fn routes() -> Router<AppState> {
     Router::new()
+        .merge(agents::routes())
         .merge(agenthub::create::routes())
         .merge(agenthub::audit::routes())
         .merge(agenthub::configuration::routes())

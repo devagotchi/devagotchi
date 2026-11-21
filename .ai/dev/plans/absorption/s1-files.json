@@ -3554,9 +3554,15 @@
       "mode": "100644",
       "kind": "blob",
       "packet": "A02",
-      "status": "unverified",
-      "target_paths": [],
-      "evidence": []
+      "status": "partial",
+      "target_paths": [
+        "crates/agenthub/src/tests/policy_enforcement.rs",
+        "crates/agenthub/src/tests/configuration_policy.rs",
+        "crates/hub/src/identity/accounts/agents/tests.rs"
+      ],
+      "evidence": [
+        "Pinned source read and partial implementation/tests: .ai/dev/plans/absorption/a02-review.md. Outstanding source-specific behavior and final acceptance are listed there; no main delivery or source closure."
+      ]
     },
     {
       "path": "server/hubtest/policydoc_test.go",
@@ -5050,9 +5056,14 @@
       "mode": "100644",
       "kind": "blob",
       "packet": "A02",
-      "status": "unverified",
-      "target_paths": [],
-      "evidence": []
+      "status": "authored",
+      "target_paths": [
+        "crates/agenthub/src/policy/mod.rs",
+        "crates/agenthub/src/policy/tests.rs"
+      ],
+      "evidence": [
+        "Complete pure evaluator port and local policy tests: .ai/dev/plans/absorption/a02-review.md. Stable rule-id explanations replace editable-name explanations; selectors, wildcard actions, default deny and tied deny are tested. Not merged; broader source-operation integration remains open."
+      ]
     },
     {
       "path": "server/internal/policy/policy_test.go",
@@ -5061,9 +5072,14 @@
       "mode": "100644",
       "kind": "blob",
       "packet": "A02",
-      "status": "unverified",
-      "target_paths": [],
-      "evidence": []
+      "status": "authored",
+      "target_paths": [
+        "crates/agenthub/src/policy/tests.rs",
+        "crates/agenthub/src/tests/policy_enforcement.rs"
+      ],
+      "evidence": [
+        "Complete pure evaluator port and local policy tests: .ai/dev/plans/absorption/a02-review.md. Stable rule-id explanations replace editable-name explanations; selectors, wildcard actions, default deny and tied deny are tested. Not merged; broader source-operation integration remains open."
+      ]
     },
     {
       "path": "server/internal/policygate/client.go",
@@ -5726,9 +5742,15 @@
       "mode": "100644",
       "kind": "blob",
       "packet": "A01",
-      "status": "unverified",
-      "target_paths": [],
-      "evidence": []
+      "status": "partial",
+      "target_paths": [
+        "crates/agenthub/src/policy/catalog/mod.rs",
+        "crates/agenthub/src/policy/catalog/mutations.rs",
+        "crates/hub/src/identity/accounts/agents/configuration.rs"
+      ],
+      "evidence": [
+        "Source comparison and partial authoring: .ai/dev/plans/absorption/a02-review.md. Whole-file replay, human administration, surface and concurrency requirements remain open; no main delivery."
+      ]
     },
     {
       "path": "server/internal/store/admin_misc.go",
@@ -5754,9 +5776,17 @@
       "mode": "100644",
       "kind": "blob",
       "packet": "A02",
-      "status": "unverified",
-      "target_paths": [],
-      "evidence": []
+      "status": "partial",
+      "target_paths": [
+        "crates/hub/src/identity/accounts/agents/mod.rs",
+        "crates/hub/src/identity/accounts/agents/mutations.rs",
+        "crates/hub/src/identity/accounts/agents/bindings.rs",
+        "crates/hub/src/identity/accounts/api_keys/mod.rs",
+        "crates/hub/src/identity/accounts/oauth/access.rs"
+      ],
+      "evidence": [
+        "Source comparison and partial authoring: .ai/dev/plans/absorption/a02-review.md. Whole-file replay, human administration, surface and concurrency requirements remain open; no main delivery."
+      ]
     },
     {
       "path": "server/internal/store/claim.go",
@@ -5776,9 +5806,14 @@
       "mode": "100644",
       "kind": "blob",
       "packet": "A01",
-      "status": "unverified",
-      "target_paths": [],
-      "evidence": []
+      "status": "partial",
+      "target_paths": [
+        "crates/agenthub/src/policy/catalog/mod.rs",
+        "crates/agenthub/src/hosted/policy.rs"
+      ],
+      "evidence": [
+        "Source comparison and partial authoring: .ai/dev/plans/absorption/a02-review.md. Whole-file replay, human administration, surface and concurrency requirements remain open; no main delivery."
+      ]
     },
     {
       "path": "server/internal/store/config_read.go",
@@ -5913,9 +5948,15 @@
       "mode": "100644",
       "kind": "blob",
       "packet": "A02",
-      "status": "unverified",
-      "target_paths": [],
-      "evidence": []
+      "status": "partial",
+      "target_paths": [
+        "crates/hub/src/identity/accounts/agents/mod.rs",
+        "crates/hub/src/identity/accounts/api_keys/mod.rs",
+        "crates/hub/src/web/app/agents/render.rs"
+      ],
+      "evidence": [
+        "Pinned source read and partial implementation/tests: .ai/dev/plans/absorption/a02-review.md. Outstanding source-specific behavior and final acceptance are listed there; no main delivery or source closure."
+      ]
     },
     {
       "path": "server/internal/store/reaper.go",
@@ -7700,9 +7741,14 @@
       "mode": "100644",
       "kind": "blob",
       "packet": "A02",
-      "status": "unverified",
-      "target_paths": [],
-      "evidence": []
+      "status": "partial",
+      "target_paths": [
+        "crates/hub/src/web/app/agents/form.rs",
+        "crates/hub/src/web/app/agents/render.rs"
+      ],
+      "evidence": [
+        "Pinned source read and partial implementation/tests: .ai/dev/plans/absorption/a02-review.md. Outstanding source-specific behavior and final acceptance are listed there; no main delivery or source closure."
+      ]
     },
     {
       "path": "web/src/pages/Agents.tsx",
@@ -7711,9 +7757,14 @@
       "mode": "100644",
       "kind": "blob",
       "packet": "A02",
-      "status": "unverified",
-      "target_paths": [],
-      "evidence": []
+      "status": "partial",
+      "target_paths": [
+        "crates/hub/src/web/app/agents/render.rs",
+        "crates/hub/src/web/app/agents/acceptance_tests.rs"
+      ],
+      "evidence": [
+        "Pinned source read and partial implementation/tests: .ai/dev/plans/absorption/a02-review.md. Outstanding source-specific behavior and final acceptance are listed there; no main delivery or source closure."
+      ]
     },
     {
       "path": "web/src/pages/Audit.tsx",
@@ -7832,9 +7883,13 @@
       "mode": "100644",
       "kind": "blob",
       "packet": "A02",
-      "status": "unverified",
-      "target_paths": [],
-      "evidence": []
+      "status": "partial",
+      "target_paths": [
+        "crates/hub/src/web/app/agents/configuration.rs"
+      ],
+      "evidence": [
+        "Pinned source read and partial implementation/tests: .ai/dev/plans/absorption/a02-review.md. Outstanding source-specific behavior and final acceptance are listed there; no main delivery or source closure."
+      ]
     },
     {
       "path": "web/src/pages/PolicyEditor.tsx",
@@ -7876,9 +7931,13 @@
       "mode": "100644",
       "kind": "blob",
       "packet": "A02",
-      "status": "unverified",
-      "target_paths": [],
-      "evidence": []
+      "status": "partial",
+      "target_paths": [
+        "crates/hub/src/web/app/agents/configuration.rs"
+      ],
+      "evidence": [
+        "Pinned source read and partial implementation/tests: .ai/dev/plans/absorption/a02-review.md. Outstanding source-specific behavior and final acceptance are listed there; no main delivery or source closure."
+      ]
     },
     {
       "path": "web/src/pages/Settings.tsx",
@@ -7942,9 +8001,14 @@
       "mode": "100644",
       "kind": "blob",
       "packet": "A02",
-      "status": "unverified",
-      "target_paths": [],
-      "evidence": []
+      "status": "partial",
+      "target_paths": [
+        "crates/hub/src/web/app/keys.rs",
+        "crates/hub/src/web/app/key_tests.rs"
+      ],
+      "evidence": [
+        "Pinned source read and partial implementation/tests: .ai/dev/plans/absorption/a02-review.md. Outstanding source-specific behavior and final acceptance are listed there; no main delivery or source closure."
+      ]
     },
     {
       "path": "web/src/pages/WorkflowParts.tsx",
