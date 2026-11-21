@@ -87,6 +87,12 @@ source behavior comparison. These are local coding units, not separate PRs. Keep
 until all units and the complete batch checks pass. Do not rerun the already passed CLI
 suite unless a shared receipt/identity change invalidates it.
 
+Principal administration source dispatch was expanded during authoring: S1 has HTTP
+principal/token/role/policy administration, not corresponding MCP admin registrations.
+The concrete authored routes, roster and existing-domain mapping are recorded in
+[a03-principals.md](a03-principals.md). Do not add speculative MCP administration for
+that source; inspect the actual Devagotchi Extra registries for their separate packets.
+
 ### Batch 2: catalogs, grants, policy and machine enforcement
 
 Existing seams inspected: `Hub::call` in `hub/src/mcp/hub.rs` sets caller and routes/audits;

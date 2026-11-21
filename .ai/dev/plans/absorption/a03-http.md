@@ -43,6 +43,10 @@ domain records; document this pre-release migration instead of claiming wire ide
 
 ## Administrative work and transport status
 
+Principal/role/policy/settings HTTP adapters and the environment agent roster are authored
+locally; exact source mapping and validation are in [a03-principals.md](a03-principals.md).
+The remaining aggregate/project/workflow administration below is still open.
+
 - GET /api/v1/config; principals list/create/put/token metadata/issue/revoke. Map to account
   ownership, live manager policy and the authored principal/catalog APIs. Never replay
   token issuance or expose global identity lists to ordinary agents.

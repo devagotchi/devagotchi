@@ -14,6 +14,7 @@ mod configuration;
 mod directory;
 pub(crate) use directory::Directory;
 mod mutations;
+mod roster;
 pub use bindings::OAuthBinding;
 pub(super) use bindings::oauth_agent_in;
 pub use configuration::PrincipalConfiguration;
@@ -44,6 +45,7 @@ impl Agent {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct AgentEdit {
     pub id: String,
     pub name: String,
@@ -139,7 +141,7 @@ async fn database_now(connection: &mut AnyConnection) -> Result<u64, Failed> {
 impl Accounts {
     /// Called only for authenticated people by browser administration. A live owner may
     /// manage accounts in this environment; another person manages only their own account.
-    async fn agent_manager_in(
+    pub(super) async fn agent_manager_in(
         &self,
         connection: &mut AnyConnection,
         actor: &str,

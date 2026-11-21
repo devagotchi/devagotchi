@@ -14,6 +14,7 @@ mod access;
 mod events;
 mod input;
 mod leases;
+mod principals;
 mod protocol;
 mod reads;
 mod response;
@@ -26,6 +27,7 @@ use response::{Failure, Reply, invalid};
 
 pub(crate) fn routes() -> Router<AppState> {
     Router::new()
+        .merge(principals::routes())
         .route("/api/v1/tasks", get(reads::list).post(tickets::create))
         .route(
             "/api/v1/tasks/{id}",

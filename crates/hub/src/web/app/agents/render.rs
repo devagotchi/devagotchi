@@ -3,15 +3,33 @@ use devagotchi_agenthub::hosted::registry::{self, ClaimCursor};
 use devagotchi_contracts::{BridgeError, BridgeResult};
 use std::collections::BTreeMap;
 
-pub(super) fn list(ctx: &Context, agents: &[Agent]) -> Response {
+pub(super) fn list(ctx: &Context, agents: &[Agent], shown: &Shown) -> Response {
     let site = pages::site();
     let c = &site.messages.app.agents;
     let mut rows = String::new();
     for agent in agents.iter().take(100) {
-        rows.push_str(&format!("<li><a href=\"/app/agents/{}?account={}\">{}</a><p>{} · {}</p><p>{}: {}</p><p>{}: {}</p></li>",
-            encode(&agent.id),encode(&ctx.account),escape(&agent.name),escape(&agent.kind),escape(if agent.enabled {&c.active}else{&c.disabled}),
+        rows.push_str(&format!("<li><a href=\"/app/agents/{}?account={}\">{}</a><p>{} · {}</p><p>{}: {}</p><p>{}: {}</p>",
+            encode(&agent.id),encode(&agent.account),escape(&agent.name),escape(&agent.kind),escape(if agent.enabled {&c.active}else{&c.disabled}),
             escape(&c.wip),escape(&agent.wip_limit.map(|n|n.to_string()).unwrap_or(c.default_limit.clone())),
             escape(&c.last_seen),agent.last_seen.map(pages::ago).unwrap_or_else(||escape(&c.never))));
+        let roles = agent
+            .roles
+            .iter()
+            .map(|role| {
+                format!(
+                    "<a href=\"/app/agents?role={}\">{}</a>",
+                    encode(role),
+                    escape(role)
+                )
+            })
+            .collect::<Vec<_>>()
+            .join(", ");
+        rows.push_str(&format!(
+            "<p>{}: {} · {}: {roles}</p></li>",
+            escape(&c.account),
+            escape(&agent.account),
+            escape(&c.roles)
+        ));
     }
     let list = if rows.is_empty() {
         format!("<p>{}</p>", escape(&c.empty))
@@ -30,9 +48,18 @@ pub(super) fn list(ctx: &Context, agents: &[Agent]) -> Response {
     };
     let more = if agents.len() > 100 {
         format!(
-            "<a href=\"/app/agents?account={}&after={}\">{}</a>",
-            encode(&ctx.account),
-            encode(&agents[99].id),
+            "<a href=\"/app/agents?after={}{}{}\">{}</a>",
+            encode(&format!("{}/{}", agents[99].account, agents[99].id)),
+            shown
+                .account
+                .as_ref()
+                .map(|value| format!("&amp;account={}", encode(value)))
+                .unwrap_or_default(),
+            shown
+                .role
+                .as_ref()
+                .map(|value| format!("&amp;role={}", encode(value)))
+                .unwrap_or_default(),
             escape(&c.more)
         )
     } else {
@@ -46,7 +73,11 @@ pub(super) fn list(ctx: &Context, agents: &[Agent]) -> Response {
             escape(&c.title),
             escape(&c.description),
             escape(&c.account),
-            escape(&ctx.account_name)
+            escape(if ctx.owner && shown.account.is_none() {
+                &c.title
+            } else {
+                &ctx.account_name
+            })
         ),
         Tab::Me,
     )

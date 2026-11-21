@@ -21,6 +21,7 @@ use crate::{
 
 #[cfg(test)]
 mod corruption_tests;
+mod managed;
 mod revocation;
 mod scope;
 mod stored;
@@ -96,7 +97,7 @@ impl KeyLimits {
 }
 
 /// A key as its owner sees it.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
 pub struct ApiKey {
     pub id: String,
     pub name: String,

@@ -4804,9 +4804,16 @@
       "mode": "100644",
       "kind": "blob",
       "packet": "A03",
-      "status": "unverified",
-      "target_paths": [],
-      "evidence": []
+      "status": "partial",
+      "target_paths": [
+        "crates/hub/src/agenthub/http/principals/mod.rs",
+        "crates/hub/src/agenthub/http/principals/configuration.rs",
+        "crates/hub/src/agenthub/http/principals/tokens.rs",
+        "crates/hub/src/agenthub/http/tests/principals.rs"
+      ],
+      "evidence": [
+        "Additional local principal/credential/roster and policy HTTP authoring: .ai/dev/plans/absorption/a03-principals.md. Remaining behaviors and main delivery stay open."
+      ]
     },
     {
       "path": "server/internal/httpapi/events.go",
@@ -5810,11 +5817,13 @@
         "crates/hub/src/identity/accounts/agents/configuration.rs",
         "crates/hub/src/identity/accounts/receipts.rs",
         "crates/agenthub/src/hosted/shared_workflows/mutations.rs",
-        "crates/hub/src/web/app/agenthub/configuration/mod.rs"
+        "crates/hub/src/web/app/agenthub/configuration/mod.rs",
+        "crates/hub/src/agenthub/http/principals/configuration.rs"
       ],
       "evidence": [
         "Source comparison and partial authoring: .ai/dev/plans/absorption/a02-review.md. Whole-file replay, human administration, surface and concurrency requirements remain open; no main delivery.",
-        "Additional local configuration/account receipt and browser authoring: .ai/dev/plans/absorption/a03-review.md. Remaining source semantics, surface mapping and main delivery stay open."
+        "Additional local configuration/account receipt and browser authoring: .ai/dev/plans/absorption/a03-review.md. Remaining source semantics, surface mapping and main delivery stay open.",
+        "Additional local principal/credential/roster and policy HTTP authoring: .ai/dev/plans/absorption/a03-principals.md. Remaining behaviors and main delivery stay open."
       ]
     },
     {
@@ -5830,11 +5839,13 @@
         "crates/agenthub/src/hosted/settings.rs",
         "crates/hub/src/web/app/agenthub/configuration/form.rs",
         "crates/hub/src/identity/accounts/agents/configuration.rs",
-        "crates/agenthub/src/hosted/shared_workflows/mutations.rs"
+        "crates/agenthub/src/hosted/shared_workflows/mutations.rs",
+        "crates/hub/src/agenthub/http/principals/configuration.rs"
       ],
       "evidence": [
         "Local comparison and source-backed changes: .ai/dev/plans/absorption/a01-review.md. Not source closure; policy, replay, identity and other file behaviors remain open.",
-        "Additional local configuration/account receipt and browser authoring: .ai/dev/plans/absorption/a03-review.md. Remaining source semantics, surface mapping and main delivery stay open."
+        "Additional local configuration/account receipt and browser authoring: .ai/dev/plans/absorption/a03-review.md. Remaining source semantics, surface mapping and main delivery stay open.",
+        "Additional local principal/credential/roster and policy HTTP authoring: .ai/dev/plans/absorption/a03-principals.md. Remaining behaviors and main delivery stay open."
       ]
     },
     {
@@ -5850,10 +5861,13 @@
         "crates/hub/src/identity/accounts/agents/mutations.rs",
         "crates/hub/src/identity/accounts/agents/bindings.rs",
         "crates/hub/src/identity/accounts/api_keys/mod.rs",
-        "crates/hub/src/identity/accounts/oauth/access.rs"
+        "crates/hub/src/identity/accounts/oauth/access.rs",
+        "crates/hub/src/identity/accounts/api_keys/managed.rs",
+        "crates/hub/src/agenthub/http/principals/mod.rs"
       ],
       "evidence": [
-        "Source comparison and partial authoring: .ai/dev/plans/absorption/a02-review.md. Whole-file replay, human administration, surface and concurrency requirements remain open; no main delivery."
+        "Source comparison and partial authoring: .ai/dev/plans/absorption/a02-review.md. Whole-file replay, human administration, surface and concurrency requirements remain open; no main delivery.",
+        "Additional local principal/credential/roster and policy HTTP authoring: .ai/dev/plans/absorption/a03-principals.md. Remaining behaviors and main delivery stay open."
       ]
     },
     {
@@ -6026,11 +6040,14 @@
         "crates/hub/src/identity/accounts/api_keys/mod.rs",
         "crates/hub/src/web/app/agents/render.rs",
         "crates/hub/src/identity/accounts/api_keys/revocation.rs",
-        "crates/hub/src/identity/accounts/agents/mutations.rs"
+        "crates/hub/src/identity/accounts/agents/mutations.rs",
+        "crates/hub/src/identity/accounts/agents/roster.rs",
+        "crates/hub/src/identity/accounts/api_keys/managed.rs"
       ],
       "evidence": [
         "Pinned source read and partial implementation/tests: .ai/dev/plans/absorption/a02-review.md. Outstanding source-specific behavior and final acceptance are listed there; no main delivery or source closure.",
-        "Additional local configuration/account receipt and browser authoring: .ai/dev/plans/absorption/a03-review.md. Remaining source semantics, surface mapping and main delivery stay open."
+        "Additional local configuration/account receipt and browser authoring: .ai/dev/plans/absorption/a03-review.md. Remaining source semantics, surface mapping and main delivery stay open.",
+        "Additional local principal/credential/roster and policy HTTP authoring: .ai/dev/plans/absorption/a03-principals.md. Remaining behaviors and main delivery stay open."
       ]
     },
     {

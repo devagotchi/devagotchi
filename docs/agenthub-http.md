@@ -69,9 +69,48 @@ captured before reading tasks so a reconnect cannot skip a concurrent committed 
 clients may see that change again when catching up. Event lists return `events` and a
 board-scoped `head_seq`. No endpoint aggregates another account's history.
 
-Configuration and principal-management REST routes remain in the absorption plan.
-This document describes authored task/history/stream/protocol routes, not completed
-source absorption or a published release.
+Project/workflow administration and aggregate configuration remain in the absorption
+plan. The routes below are local prerelease authoring, not a published release.
+
+## Principals and policy
+
+These administration routes require a live person. API keys, hub-issued agent OAuth
+tokens, bound agents and caller-selected seats cannot administer people or credentials.
+Human accounts keep their existing `/admin/users` and password/passkey/provider login;
+the principal routes manage registered nonhuman profiles. Setting an agent's `kind` to
+`human` never changes its credential into a human identity.
+
+| Method and route | Behavior |
+| --- | --- |
+| GET `/api/v1/principals` | Owner's environment roster; ordinary people see their own agents |
+| POST `/api/v1/principals` | Create a profile with version 0 |
+| GET/PUT `/api/v1/principals/{id}` | Read/edit a profile; PUT requires its positive version |
+| GET `/api/v1/principals/{id}/tokens` | Metadata only, including revoked keys |
+| POST `/api/v1/principals/{id}/tokens` | Issue a key bound to this registered agent; secret returned once |
+| DELETE `/api/v1/tokens/{id}` | Revoke a key; supports a replay key |
+| GET `/api/v1/principals/configuration` | Owner reads principal kinds/WIP, roles and policy rules |
+| POST `/api/v1/roles` or `/api/v1/policies` | Owner creates a version-0 role or rule |
+| PUT `/api/v1/roles/{id}` or `/api/v1/policies/{id}` | Owner updates the current positive version |
+| DELETE `/api/v1/roles/{id}` or `/api/v1/policies/{id}` | Owner deletes with `If-Match`; assigned roles refuse |
+| PUT `/api/v1/settings/principals` | Owner updates versioned principal kinds and default WIP |
+
+Profile/key routes accept `account` in the query, defaulting to the caller for individual
+operations. Only the environment owner may name another account. Roster reads accept
+`role` and the returned `next` cursor as `after`; token pages accept their own returned
+cursor. Both return at most 100 rows. Roster cursors qualify the profile ID with its account.
+The browser's `/app/agents` uses this same roster and links roles to their members.
+
+Profile fields are `id`, `name`, `kind`, `roles`, `enabled`, `wip_limit` and `version`.
+Role fields are `id`, `description`, `version`. Rules and principal settings use the
+records returned by the configuration route. Mutations return `result` and `replayed`;
+replays also set `Idempotent-Replayed: true`. Current authority is checked before replay.
+Path/body IDs and header/body versions must agree; stale domain versions return 409.
+
+Token issuance takes `name`, `scopes`, `hours`, optional `projects` and `machines`, using
+the existing API-key scope vocabulary and permitted durations. It rejects request keys
+because the secret cannot be cached for replay. The response contains `info` and `token`;
+later reads contain only metadata. An uncertain issuance is resolved by inspecting and
+revoking the resulting key before explicitly issuing another. Responses are `no-store`.
 
 ## Reconnecting events and protocol discovery
 

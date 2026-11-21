@@ -43,6 +43,7 @@ mod tests;
 struct Shown {
     account: Option<String>,
     after: Option<String>,
+    role: Option<String>,
     saved: Option<String>,
     board: Option<String>,
     ticket: Option<String>,
@@ -156,10 +157,15 @@ async fn list(
     };
     match ctx
         .accounts
-        .agents(&ctx.actor.id, &ctx.account, shown.after.as_deref())
+        .principal_roster(
+            &ctx.actor.id,
+            shown.account.as_deref(),
+            shown.after.as_deref(),
+            shown.role.as_deref(),
+        )
         .await
     {
-        Ok(agents) => render::list(&ctx, &agents),
+        Ok(agents) => render::list(&ctx, &agents, &shown),
         Err(e) => error(&e),
     }
 }
