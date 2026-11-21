@@ -103,12 +103,50 @@ async fn access_task_approval_requires_the_original_lease_after_release_and_recl
         .unwrap();
     assert_eq!(admitted.task.as_ref().unwrap().lease_id, lease.lease_id);
     assert!(admitted.expires_at <= admitted.task.as_ref().unwrap().expires_at);
+    f.access
+        .bind_operation(
+            &f.owner.id,
+            &f.actor(),
+            &f.machine,
+            &admitted.admission_id,
+            "task-operation",
+        )
+        .await
+        .unwrap();
+    let renewed = f
+        .access
+        .renew_admission(
+            &f.owner.id,
+            &f.actor(),
+            Some(&board),
+            &machine,
+            &admitted.admission_id,
+        )
+        .await
+        .unwrap();
+    assert_eq!(
+        renewed.admitted.task.as_ref().unwrap().lease_id,
+        lease.lease_id
+    );
+    assert!(renewed.admitted.expires_at <= renewed.admitted.task.as_ref().unwrap().expires_at);
     board
         .release(&f.actor(), &ticket.id, lease.fence, "pause")
         .await
         .unwrap();
     let next = board.claim(&f.actor(), &ticket.id, None).await.unwrap();
     assert!(next.fence > lease.fence);
+    assert!(
+        f.access
+            .renew_admission(
+                &f.owner.id,
+                &f.actor(),
+                Some(&board),
+                &machine,
+                &admitted.admission_id
+            )
+            .await
+            .is_err()
+    );
     let ended = f
         .access
         .reap_grant(&f.owner.tenant, input.grant_id, Some(&board))

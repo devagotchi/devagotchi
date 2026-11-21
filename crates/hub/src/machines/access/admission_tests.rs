@@ -66,7 +66,7 @@ impl Fixture {
             )
             .await
     }
-    async fn admission_counts(&self, grant: &str) -> (i64, i64, i64) {
+    pub(super) async fn admission_counts(&self, grant: &str) -> (i64, i64, i64) {
         transaction!(&self.access.accounts.store, |c| {
             self.access
                 .accounts
@@ -343,8 +343,29 @@ async fn access_admission_exact_operation_policy_is_rechecked_before_continuatio
         binding: &f.machine,
         sandbox_levels: &[GrantLevel::ReadOnly],
     };
-    f.access
+    let admitted = f
+        .access
         .admit(&f.owner.id, &f.actor(), None, &machine, &input)
+        .await
+        .unwrap();
+    f.access
+        .bind_operation(
+            &f.owner.id,
+            &f.actor(),
+            &f.machine,
+            &admitted.admission_id,
+            "process-123",
+        )
+        .await
+        .unwrap();
+    f.access
+        .renew_admission(
+            &f.owner.id,
+            &f.actor(),
+            None,
+            &machine,
+            &admitted.admission_id,
+        )
         .await
         .unwrap();
     transaction!(&f.access.accounts.store, |c| {
@@ -379,6 +400,21 @@ async fn access_admission_exact_operation_policy_is_rechecked_before_continuatio
             .admit(&f.owner.id, &f.actor(), None, &machine, &input)
             .await
             .unwrap_err()
+            .code,
+        "policy_denied"
+    );
+    assert_eq!(
+        f.access
+            .renew_admission(
+                &f.owner.id,
+                &f.actor(),
+                None,
+                &machine,
+                &admitted.admission_id
+            )
+            .await
+            .err()
+            .unwrap()
             .code,
         "policy_denied"
     );

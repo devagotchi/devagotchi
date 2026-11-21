@@ -207,7 +207,17 @@ impl Access {
             )
             .await?
         {
-            RemoteReply::Executed(ResponseBody::Start(output)) => Ok((admitted, output)),
+            RemoteReply::Executed(ResponseBody::Start(output)) => {
+                self.bind_operation(
+                    execution.account,
+                    execution.actor,
+                    &target.machine,
+                    &admitted.admission_id,
+                    &output.operation.operation_id,
+                )
+                .await?;
+                Ok((admitted, output))
+            }
             _ => Err(BridgeError::new(
                 "invalid_response",
                 "broker did not return an operation start",

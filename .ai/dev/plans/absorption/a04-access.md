@@ -571,3 +571,21 @@ regression rerun passed all 31 settings, landing-page and site tests, none ignor
 Logs remain private under `target/absorption-branch-tests.log`
 and `target/absorption-final-regressions.log`; no source closure, CI, push, merge or branch
 deletion is established by these local checks.
+
+Execution continuation now shares admission's current identity, original task lease,
+exact action policy, machine controls, unsandboxed policy and grant checks in `current.rs`.
+`admissions.rs` stores the verified action with the existing canonical call hash, never
+the raw command. `continuation.rs` binds the authenticated broker's operation ID once
+and renews only that admission: no second use, no expiry revival, no replacement enrollment,
+and no renewal after completion. `broker.rs` records the actual start response;
+`renewal.rs` obtains current broker confinement capabilities, rechecks authority after
+that wait, sends the original admission binding and requires the same operation ID back.
+
+All 59 machine-access domain tests passed with required isolated PostgreSQL, four threads,
+zero failed/ignored (`target/absorption-access-continuation.log`). New coverage includes
+one-use renewal, mismatched broker receipts, revocation during broker waits, disabled
+principals, enrollment replacement, unavailable confinement, expiry, completion, and no
+raw command in admission material. Existing task and exact-operation-policy tests now
+exercise renewal too, including lease release/reclaim and a newly denied `proc.start`.
+Automatic renewal/completion maintenance and ordinary MCP execution adapters remain
+unwired; this domain/transport result does not establish their acceptance or source closure.

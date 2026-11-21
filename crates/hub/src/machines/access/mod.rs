@@ -22,7 +22,11 @@ mod admissions;
 mod broker;
 #[cfg(test)]
 mod broker_tests;
+mod continuation;
+#[cfg(test)]
+mod continuation_tests;
 mod control;
+mod current;
 mod delivery;
 mod discovery;
 mod review;
@@ -45,6 +49,7 @@ mod reaper;
 pub(crate) use reads::AccessPageQuery;
 mod records;
 mod references;
+mod renewal;
 mod requests;
 mod resume;
 pub(crate) use resume::ResumeReason;

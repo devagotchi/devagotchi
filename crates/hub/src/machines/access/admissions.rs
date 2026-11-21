@@ -1,15 +1,13 @@
 //! One durable admission per broker retry identity; continuation never consumes twice.
 //! This domain API does not itself prove native confinement or forward a broker call.
 use super::admission_action::AdmissionAction;
-use super::grant_record::GrantRecord;
 use super::*;
-use crate::machines::devices::{Devices, MachineBinding};
+use crate::machines::devices::MachineBinding;
 use devagotchi_agenthub::{
     Actor,
     hosted::{HostedBoard, TaskLeaseBinding},
-    policy::{Resource, Subject, catalog as policy},
 };
-use devagotchi_contracts::{GrantCall, GrantDuration, GrantItem, GrantLevel};
+use devagotchi_contracts::{GrantCall, GrantItem, GrantLevel};
 use serde_json::json;
 use sha2::{Digest, Sha256};
 use sqlx::Row;
@@ -28,9 +26,13 @@ pub(crate) struct AdmissionMachine<'a> {
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-struct Material {
-    item: GrantItem,
-    call_sha256: String,
+pub(super) struct Material {
+    pub item: GrantItem,
+    pub call_sha256: String,
+    // Earlier local admissions can be retried with their original projection to
+    // acquire this field; no action is guessed for autonomous continuation.
+    #[serde(default)]
+    pub action: Option<AdmissionAction>,
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub(crate) struct Admitted {
@@ -88,102 +90,26 @@ impl Access {
         getrandom::fill(&mut bytes).map_err(|e| BridgeError::new("random", e.to_string()))?;
         let fresh_id = hex::encode(bytes);
         transaction!(&self.accounts.store, |c| {
-            let found = self.accounts.catalog_actor_in(c, account, false).await?;
-            let grant = GrantRecord::load(c, &found.tenant, input.grant_id).await?;
-            if grant.account != account
-                || grant.principal != actor.id
-                || grant.machine != *machine.binding
-            {
-                return Err(refused(
-                    "not_granted",
-                    "grant belongs to another account, principal or machine enrollment",
-                ));
-            }
-            let task = match (&grant.task, board) {
-                (None, None) => None,
-                (Some(binding), Some(board)) if board.tenant() == found.tenant => Some(
-                    board
-                        .check_access_task_in(c, actor.id, actor, binding)
-                        .await?,
-                ),
-                _ => {
-                    return Err(refused(
-                        "not_granted",
-                        "grant needs its original task and live lease",
-                    ));
-                }
-            };
-            let found = self.accounts.machine_actor_in(c, account, actor).await?;
-            policy::initialize_in(c, &found.tenant).await?;
-            let roles = if actor.human && found.owner {
-                vec!["admin".into()]
-            } else {
-                vec![]
-            };
-            let subject = Subject {
-                id: actor.id,
-                human: actor.human,
-                kind: actor.policy.as_ref().map_or("human", |p| p.kind.as_str()),
-                roles: actor
-                    .policy
-                    .as_ref()
-                    .map_or(roles.as_slice(), |p| p.roles.as_slice()),
-            };
-            let resource = Resource {
-                project: task.as_ref().map_or("", |t| t.project.as_str()),
-                labels: task.as_ref().map_or(&[], |t| t.labels.as_slice()),
-            };
-            let action = input.action.policy();
-            policy::authorize_in(c, &found.tenant, &subject, action, &resource).await?;
-            if grant.terms.duration == GrantDuration::UntilRevoked {
-                policy::authorize_in(c, &found.tenant, &subject, "grant.indefinite", &resource)
-                    .await?;
-            }
-            self.catalog.access_scope_in(c, account).await?;
-            let gui = matches!(
-                input.call.capability,
-                devagotchi_contracts::GrantCapability::Observe
-                    | devagotchi_contracts::GrantCapability::Input
-                    | devagotchi_contracts::GrantCapability::Window
-                    | devagotchi_contracts::GrantCapability::App
-            );
-            Devices::new(self.accounts.store.clone())
-                .check_execution_in(c, account, machine.binding, gui)
-                .await?;
-            Self::lock_in(c, &found.tenant).await?;
-            // State can change while acquiring the board/policy/machine/access locks.
-            let grant = GrantRecord::load(c, &found.tenant, input.grant_id).await?;
-            let now = Self::now_in(c).await?;
-            grant.require_live(now)?;
-            if input.call.capability == devagotchi_contracts::GrantCapability::Input {
-                let indefinite =
-                    Self::indefinite_allowed_in(c, &found.tenant, &subject, &resource).await?;
-                if !Self::observation_in(
+            let current = self
+                .current_in(
                     c,
-                    &found.tenant,
                     account,
-                    actor.id,
+                    actor,
+                    board,
                     machine.binding,
-                    task.as_ref(),
-                    now,
-                    indefinite,
+                    &super::current::CurrentInput {
+                        grant_id: input.grant_id,
+                        action: input.action,
+                    },
                 )
-                .await?
-                {
-                    return Err(refused(
-                        "observe_required",
-                        "GUI input needs current observation authority",
-                    ));
-                }
-            }
-            if grant.policy_required
-                && !Self::policy_live_in(c, &found.tenant, machine.binding, now).await?
-            {
-                return Err(refused(
-                    "policy_denied",
-                    "grant's unsandboxed policy is no longer live",
-                ));
-            }
+                .await?;
+            let super::current::Current {
+                tenant,
+                grant,
+                task,
+                now,
+                expires_at,
+            } = current;
             grant.terms.item.selector.permits(
                 grant.terms.item.capability,
                 grant.terms.item.sandbox_level,
@@ -197,19 +123,9 @@ impl Access {
             }
             let mut effective = grant.terms.item.clone();
             effective.sandbox_level = input.call.level;
-            let settings = Self::settings_in(c, &found.tenant).await?;
-            let mut expires_at = now
-                .checked_add(i64::from(settings.authority_ttl_ms))
-                .ok_or_else(|| invalid("authority clock overflow"))?;
-            if let Some(at) = grant.expires_at {
-                expires_at = expires_at.min(at);
-            }
-            if let Some(task) = &task {
-                expires_at = expires_at.min(task.expires_at);
-            }
             let existing=sqlx::query("SELECT id,account,principal,input_sha256,grant_id,grant_version,effective::text,state
                 FROM machine_admissions WHERE tenant_id=$1 AND machine=$2 AND generation=$3 AND operation_key=$4")
-                .bind(&found.tenant).bind(&machine.binding.name).bind(&machine.binding.generation).bind(input.operation_key).fetch_optional(&mut *c).await?;
+                .bind(&tenant).bind(&machine.binding.name).bind(&machine.binding.generation).bind(input.operation_key).fetch_optional(&mut *c).await?;
             let (admission_id, replayed) = if let Some(row) = existing {
                 let stored: Material =
                     serde_json::from_str(&row.try_get::<String, _>("effective")?)
@@ -221,6 +137,7 @@ impl Access {
                     || row.try_get::<i64, _>("grant_version")? != grant.version
                     || stored.item != effective
                     || stored.call_sha256 != call_sha256
+                    || stored.action.is_some_and(|action| action != input.action)
                 {
                     return Err(refused(
                         "request_conflict",
@@ -244,8 +161,9 @@ impl Access {
                     _ => return Err(refused("access_damaged", "invalid admission state")),
                 }
                 let id: String = row.try_get("id")?;
-                sqlx::query("UPDATE machine_admissions SET authority_expires_at=$3 WHERE tenant_id=$1 AND id=$2")
-                    .bind(&found.tenant).bind(&id).bind(expires_at).execute(&mut *c).await?;
+                sqlx::query("UPDATE machine_admissions SET authority_expires_at=$3,effective=$4::jsonb WHERE tenant_id=$1 AND id=$2")
+                    .bind(&tenant).bind(&id).bind(expires_at)
+                    .bind(encoded(&Material { item: effective.clone(), call_sha256: call_sha256.clone(), action: Some(input.action) })?).execute(&mut *c).await?;
                 (id, true)
             } else {
                 if grant
@@ -259,22 +177,22 @@ impl Access {
                     ));
                 }
                 sqlx::query("UPDATE machine_grants SET uses=uses+1 WHERE tenant_id=$1 AND id=$2")
-                    .bind(&found.tenant)
+                    .bind(&tenant)
                     .bind(input.grant_id)
                     .execute(&mut *c)
                     .await?;
                 sqlx::query("INSERT INTO machine_admissions(tenant_id,id,account,principal,machine,generation,operation_key,input_sha256,
                     grant_id,grant_version,effective,state,admitted_at,authority_expires_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11::jsonb,'admitted',$12,$13)")
-                    .bind(&found.tenant).bind(&fresh_id).bind(account).bind(actor.id).bind(&machine.binding.name).bind(&machine.binding.generation)
+                    .bind(&tenant).bind(&fresh_id).bind(account).bind(actor.id).bind(&machine.binding.name).bind(&machine.binding.generation)
                     .bind(input.operation_key).bind(input.input_sha256).bind(input.grant_id).bind(grant.version)
-                    .bind(encoded(&Material {item:effective.clone(),call_sha256:call_sha256.clone()})?).bind(now).bind(expires_at).execute(&mut *c).await?;
+                    .bind(encoded(&Material {item:effective.clone(),call_sha256:call_sha256.clone(),action:Some(input.action)})?).bind(now).bind(expires_at).execute(&mut *c).await?;
                 Self::audit_in(
                     c,
-                    &found.tenant,
+                    &tenant,
                     actor.id,
                     "grant.admitted",
                     &json!({"grant":input.grant_id,"admission":fresh_id,
-                    "machine":machine.binding.name,"capability":action}),
+                    "machine":machine.binding.name,"capability":input.action.policy()}),
                     now,
                 )
                 .await?;
