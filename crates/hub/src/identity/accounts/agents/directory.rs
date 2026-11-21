@@ -5,6 +5,30 @@ use std::{future::Future, pin::Pin};
 pub(crate) struct Directory(pub(crate) crate::config::Live);
 
 impl devagotchi_agenthub::hosted::PrincipalDirectory for Directory {
+    fn project_retirement<'a>(
+        &'a self,
+        connection: &'a mut AnyConnection,
+        tenant: &'a str,
+        account: &'a str,
+        project: &'a str,
+    ) -> Pin<Box<dyn Future<Output = Result<(), Failed>> + Send + 'a>> {
+        Box::pin(async move {
+            let now = database_now(connection).await?;
+            let used: i64=sqlx::query_scalar(
+                "SELECT count(*) FROM auth_api_keys WHERE tenant_id=$1 AND account=$2
+                 AND revoked_at IS NULL AND expires_at>$3 AND projects::jsonb @> jsonb_build_array($4::text)",
+            ).bind(tenant).bind(account).bind(secs(now)).bind(project).fetch_one(connection).await?;
+            if used > 0 {
+                return Err(BridgeError::new(
+                    "in_use",
+                    "revoke the active keys explicitly naming this project before removing it",
+                )
+                .into());
+            }
+            Ok(())
+        })
+    }
+
     fn authorize_request<'a>(
         &'a self,
         connection: &'a mut AnyConnection,

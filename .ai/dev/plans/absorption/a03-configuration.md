@@ -27,10 +27,10 @@ and displays the projects using it. The current web editor already belongs to
   an old deletion receipt cannot accidentally apply to a different definition.
 
 Routes and payloads are recorded in `docs/agenthub-http.md`. These are authored local
-routes; source `/config` and project CRUD remain open. A future project deletion must
-also account for definitions whose retained audit anchor is that project. The new
-independent catalog creation makes this reference explicit; deleting its anchor cannot
-break later catalog edit/delete events.
+routes. Project lifecycle was subsequently authored and checked in
+[a03-projects.md](a03-projects.md), including the retained catalog audit-anchor guard.
+Source aggregate `/config` remains open. Independent catalog creation makes the audit
+reference explicit; deleting its anchor cannot break later catalog edit/delete events.
 
 ## Validation
 

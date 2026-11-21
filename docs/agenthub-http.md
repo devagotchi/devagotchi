@@ -140,6 +140,36 @@ Editable settings are lease TTL/min/max, maximum lease expiries, default WIP/pri
 heartbeat hint, note kinds, priority labels, repo and environments. Standing approvals
 have their own operations and cannot be inserted into the settings editor.
 
+## Account project lifecycle
+
+People manage their own projects through `/app/projects` or these API routes. Agent
+credentials and seats cannot administer projects. One user's ownership does not grant
+access to another user's project or archived history, including on a self-hosted hub.
+
+| Method and route | Behavior |
+| --- | --- |
+| GET `/api/v1/projects` | Active projects; `retired=true` selects removed projects; `after` takes the returned cursor |
+| POST `/api/v1/projects` | Create an empty project with `{id, name, version: 0}` |
+| GET `/api/v1/projects/{project}` | Current project record and metadata version |
+| PUT `/api/v1/projects/{project}` | Save `{id, name, version}`; the immutable address must agree with the path |
+| DELETE `/api/v1/projects/{project}` | Remove the empty project with its positive version in `If-Match` |
+| GET `/api/v1/projects/archive/{generation}/events` | Owner-only retained events, paged by `after_seq` |
+
+Creation and editing accept paired `workflow_id` and `workflow_version` to select a
+shared definition. Omit both to use a private workflow; detaching retains the effective
+definition. Creation, selection, defaults, metadata, audit and retry receipt commit
+together. Workflow changes also advance project metadata versions so a stale project
+editor cannot undo a newer binding. Mutations return `{result, replayed}` and support
+the same request identity across browser and HTTP.
+
+Removal refuses any tasks (including completed ones), live project-scoped API keys,
+or shared definitions whose audit history originates in that project. Revoke those keys
+and remove unused definitions before removing the empty project. Account-wide keys
+continue to cover future projects by their existing contract. Removed boards retain
+history and receipts but cannot be used for ordinary reads or writes. Reusing an address
+creates a different `board_id`; old handles and mutation keys cannot act on that new
+generation. Archived records are addressed by their original `board_id`.
+
 ## Reconnecting events and protocol discovery
 
 `GET /api/v1/stream?project=PROJECT` streams the same committed board events as the

@@ -2,6 +2,7 @@
 mod configuration;
 mod events;
 mod principals;
+mod projects;
 mod protocol;
 mod stream;
 mod workflow;

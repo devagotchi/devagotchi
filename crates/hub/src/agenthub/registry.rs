@@ -127,18 +127,74 @@ impl Registry {
         limit: Option<usize>,
     ) -> BridgeResult<Option<(Arc<Board>, bool)>> {
         let tenant = self.tenant(owner).await?;
-        let board = HostedBoard::for_owner(self.store.clone(), &tenant, owner, project)?
-            .with_principals(Arc::new(crate::identity::accounts::agents::Directory(
-                self.live.clone(),
-            )));
-        let created = if create {
-            board.initialize_limited(limit).await?
-        } else {
-            if !registry::has_board(&self.store, &tenant, owner, project).await? {
-                return Ok(None);
-            }
-            false
+        let Some((board, created)) =
+            HostedBoard::resolve_owner(self.store.clone(), &tenant, owner, project, create, limit)
+                .await?
+        else {
+            return Ok(None);
         };
+        let board = board.with_principals(Arc::new(crate::identity::accounts::agents::Directory(
+            self.live.clone(),
+        )));
         Ok(Some((Arc::new(Board::from_hosted(board).await?), created)))
+    }
+
+    pub(crate) async fn project_candidate(
+        &self,
+        owner: &str,
+        project: &str,
+    ) -> BridgeResult<HostedBoard> {
+        let tenant = self.tenant(owner).await?;
+        Ok(
+            HostedBoard::for_owner(self.store.clone(), &tenant, owner, project)?.with_principals(
+                Arc::new(crate::identity::accounts::agents::Directory(
+                    self.live.clone(),
+                )),
+            ),
+        )
+    }
+
+    pub(crate) async fn retirement_target(
+        &self,
+        owner: &str,
+        project: &str,
+    ) -> BridgeResult<Option<HostedBoard>> {
+        let tenant = self.tenant(owner).await?;
+        Ok(
+            HostedBoard::retirement_target(self.store.clone(), &tenant, owner, project)
+                .await?
+                .map(|board| {
+                    board.with_principals(Arc::new(crate::identity::accounts::agents::Directory(
+                        self.live.clone(),
+                    )))
+                }),
+        )
+    }
+
+    pub(crate) async fn archived_project(
+        &self,
+        owner: &str,
+        id: &str,
+    ) -> BridgeResult<Option<HostedBoard>> {
+        let tenant = self.tenant(owner).await?;
+        Ok(
+            HostedBoard::archived_generation(self.store.clone(), &tenant, owner, id)
+                .await?
+                .map(|board| {
+                    board.with_principals(Arc::new(crate::identity::accounts::agents::Directory(
+                        self.live.clone(),
+                    )))
+                }),
+        )
+    }
+
+    pub(crate) async fn projects(
+        &self,
+        owner: &str,
+        retired: bool,
+        after: Option<&str>,
+    ) -> BridgeResult<Vec<ProjectRecord>> {
+        let tenant = self.tenant(owner).await?;
+        HostedBoard::owned_projects(&self.store, &tenant, owner, retired, after).await
     }
 }

@@ -48,6 +48,8 @@ impl IntoResponse for Failure {
             | "parent_closed"
             | "request_conflict"
             | "already_exists"
+            | "name_taken"
+            | "plan_limit"
             | "in_use"
             | "shared_workflow"
             | "not_claimable"

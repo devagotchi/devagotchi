@@ -209,8 +209,21 @@ impl Boards {
             return Ok(None);
         }
         let key = format!("{subject}/{project}");
-        if let Some(board) = self.open.lock().expect("boards lock").get(&key) {
-            return Ok(Some(board.clone()));
+        let cached = self.open.lock().expect("boards lock").get(&key).cloned();
+        if let Some(board) = cached {
+            match board.hosted().blocking(board.hosted().database_now()) {
+                Ok(_) => return Ok(Some(board)),
+                Err(error) if error.code == "not_found" => {
+                    let mut open = self.open.lock().expect("boards lock");
+                    if open
+                        .get(&key)
+                        .is_some_and(|current| Arc::ptr_eq(current, &board))
+                    {
+                        open.remove(&key);
+                    }
+                }
+                Err(error) => return Err(error),
+            }
         }
         let board = self
             .hosted
@@ -329,8 +342,7 @@ impl Boards {
         self.open
             .lock()
             .expect("boards lock")
-            .entry(format!("{owner}/{project}"))
-            .or_insert(board);
+            .insert(format!("{owner}/{project}"), board);
         Ok(fresh)
     }
     /// Make (or find) an organisation's board for `project`: no free limit, since an

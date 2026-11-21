@@ -16,6 +16,7 @@ mod events;
 mod input;
 mod leases;
 mod principals;
+mod projects;
 mod protocol;
 mod reads;
 mod response;
@@ -30,6 +31,7 @@ pub(crate) fn routes() -> Router<AppState> {
     Router::new()
         .merge(principals::routes())
         .merge(configuration::routes())
+        .merge(projects::routes())
         .route("/api/v1/tasks", get(reads::list).post(tickets::create))
         .route(
             "/api/v1/tasks/{id}",

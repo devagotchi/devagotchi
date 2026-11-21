@@ -41,6 +41,7 @@ mod markdown;
 pub(crate) mod model;
 pub mod offers;
 mod plans;
+pub(crate) mod projects_copy;
 mod pwa;
 mod style;
 #[cfg(test)]

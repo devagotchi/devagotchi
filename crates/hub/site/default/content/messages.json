@@ -435,6 +435,28 @@
       "edit": "Edit user",
       "access_help": "Turning off access signs the user out and revokes their API keys. Turning it on requires fresh sign-in and new keys."
     },
+    "projects": {
+      "title": "Manage projects",
+      "description": "Create a project, change its name or workflow, or remove an empty project. Removed projects keep their history.",
+      "active": "Active projects",
+      "retired": "Removed projects",
+      "new": "New empty project",
+      "name": "Project name",
+      "id": "Project address",
+      "id_help": "Use lowercase letters, numbers and hyphens. This address stays the same when you rename the project.",
+      "save": "Save project",
+      "remove": "Remove empty project",
+      "remove_help": "Projects containing tasks cannot be removed, including completed tasks. Revoke keys restricted to this project first. A shared workflow must be deleted before its original project can be removed. Project history remains available after removal.",
+      "empty": "No projects here yet.",
+      "back": "Back to projects",
+      "more": "Show more",
+      "history": "Project history",
+      "workflow": "Workflow",
+      "local_workflow": "This project's own workflow",
+      "refused": "The project was not changed.",
+      "retired_notice": "This project was removed. Its history is read-only.",
+      "open": "Open board"
+    },
     "configuration": {
       "title": "Board settings",
       "description": "Choose how this board assigns work, handles time limits, and moves tasks through each stage.",

@@ -151,6 +151,14 @@ pub async fn boards(State(state): State<AppState>, headers: HeaderMap) -> Respon
     };
     let site = words();
     let title = &site.messages.app.boards_title;
+    let management = if state.hub.boards.hosts_accounts() && subject.org.is_none() {
+        format!(
+            "<p><a href=\"/app/projects\">{}</a></p>",
+            escape(&site.messages.app.projects.title)
+        )
+    } else {
+        String::new()
+    };
     // The organisations a person's boards come from, and where they make one (`web/orgs.rs`);
     // a one-user hub has none to link to (`web/one_user`).
     let orgs = if state.hub.config.multi_tenant() && state.hub.boards.orgs().is_some() {
@@ -165,7 +173,7 @@ pub async fn boards(State(state): State<AppState>, headers: HeaderMap) -> Respon
         StatusCode::OK,
         title,
         &format!(
-            "<p><a class=\"button primary\" href=\"/app/new-board\">{}</a></p>{}{orgs}",
+            "<p><a class=\"button primary\" href=\"/app/new-board\">{}</a></p>{management}{}{orgs}",
             escape(&site.messages.app.creation.board),
             boards_card(&boards)
         ),

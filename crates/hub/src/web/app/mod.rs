@@ -35,6 +35,7 @@ pub fn routes() -> Router<AppState> {
     Router::new()
         .merge(agents::routes())
         .merge(agenthub::create::routes())
+        .merge(agenthub::projects::routes())
         .merge(agenthub::audit::routes())
         .merge(agenthub::configuration::routes())
         .route("/app", get(home::home))
