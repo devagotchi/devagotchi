@@ -57,6 +57,14 @@ fn encode<T: Serialize>(value: &T) -> DbResult<Value> {
 }
 
 impl Catalog {
+    /// Acquire/seed the catalog without resolving a mutable preset before receipt replay.
+    pub(crate) async fn access_scope_in(
+        &self,
+        c: &mut AnyConnection,
+        account: &str,
+    ) -> DbResult<String> {
+        self.enter(c, account, Kind::Capabilities, None).await
+    }
     /// Snapshot acknowledged risks for the access owner while holding the catalog lock.
     pub(crate) async fn access_risks_in(
         &self,

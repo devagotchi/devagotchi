@@ -3761,10 +3761,16 @@
         "crates/agenthub/src/hosted/access.rs",
         "crates/agenthub/src/tests/access_binding.rs",
         "crates/hub/src/machines/devices/access.rs",
-        "crates/hub/src/identity/accounts/machine_access.rs"
+        "crates/hub/src/identity/accounts/machine_access.rs",
+        "crates/hub/src/machines/access/admissions.rs",
+        "crates/hub/src/machines/access/admission_action.rs",
+        "crates/hub/src/machines/access/grant_record.rs",
+        "crates/hub/src/machines/access/admission_completion.rs",
+        "crates/hub/src/machines/access/admission_tests.rs"
       ],
       "evidence": [
-        "Partial access foundation: typed scope/narrowing/risk checks and catalog snapshots; current identity, task lease and machine generation seams. 26 contracts, 3 AgentHub PostgreSQL binding and 28 hub focused tests passed. See .ai/dev/plans/absorption/a04-access.md. Durable request/grant/admission storage, all adapters and native enforcement remain open; no source closure or main delivery."
+        "Partial access foundation: typed scope/narrowing/risk checks and catalog snapshots; current identity, task lease and machine generation seams. 26 contracts, 3 AgentHub PostgreSQL binding and 28 hub focused tests passed. See .ai/dev/plans/absorption/a04-access.md. Durable request/grant/admission storage, all adapters and native enforcement remain open; no source closure or main delivery.",
+        "Partial durable access unit: transactional request snapshots, human decisions, versioned policies/revocation, durable ending outbox, and admission identity/once continuation. Required-PostgreSQL local slices passed 22 lifecycle/notification and 26 expanded admission tests; exact commands/logs and remaining source obligations are in .ai/dev/plans/absorption/a04-access.md. Broker/native enforcement, remaining lifecycle, surface adapters and UI are still open; no source closure or main delivery."
       ]
     },
     {
@@ -3778,10 +3784,14 @@
       "target_paths": [
         "crates/hub/src/catalog/access/mod.rs",
         "crates/hub/src/catalog/access/tests.rs",
-        "crates/hub/src/catalog/validate.rs"
+        "crates/hub/src/catalog/validate.rs",
+        "crates/hub/src/machines/access/requests.rs",
+        "crates/hub/src/machines/access/terms.rs",
+        "crates/hub/src/machines/access/terms_tests.rs"
       ],
       "evidence": [
-        "Partial access foundation: typed scope/narrowing/risk checks and catalog snapshots; current identity, task lease and machine generation seams. 26 contracts, 3 AgentHub PostgreSQL binding and 28 hub focused tests passed. See .ai/dev/plans/absorption/a04-access.md. Durable request/grant/admission storage, all adapters and native enforcement remain open; no source closure or main delivery."
+        "Partial access foundation: typed scope/narrowing/risk checks and catalog snapshots; current identity, task lease and machine generation seams. 26 contracts, 3 AgentHub PostgreSQL binding and 28 hub focused tests passed. See .ai/dev/plans/absorption/a04-access.md. Durable request/grant/admission storage, all adapters and native enforcement remain open; no source closure or main delivery.",
+        "Partial durable access unit: transactional request snapshots, human decisions, versioned policies/revocation, durable ending outbox, and admission identity/once continuation. Required-PostgreSQL local slices passed 22 lifecycle/notification and 26 expanded admission tests; exact commands/logs and remaining source obligations are in .ai/dev/plans/absorption/a04-access.md. Broker/native enforcement, remaining lifecycle, surface adapters and UI are still open; no source closure or main delivery."
       ]
     },
     {
@@ -3791,9 +3801,16 @@
       "mode": "100644",
       "kind": "blob",
       "packet": "A04",
-      "status": "unverified",
-      "target_paths": [],
-      "evidence": []
+      "status": "partial",
+      "target_paths": [
+        "crates/hub/src/machines/access/decisions.rs",
+        "crates/hub/src/machines/access/records.rs",
+        "crates/hub/src/machines/access/terms.rs",
+        "crates/hub/src/machines/access/decision_tests.rs"
+      ],
+      "evidence": [
+        "Partial durable access unit: transactional request snapshots, human decisions, versioned policies/revocation, durable ending outbox, and admission identity/once continuation. Required-PostgreSQL local slices passed 22 lifecycle/notification and 26 expanded admission tests; exact commands/logs and remaining source obligations are in .ai/dev/plans/absorption/a04-access.md. Broker/native enforcement, remaining lifecycle, surface adapters and UI are still open; no source closure or main delivery."
+      ]
     },
     {
       "path": "server/internal/access/defaults.go",
@@ -3849,10 +3866,14 @@
       "status": "partial",
       "target_paths": [
         "crates/hub/src/catalog/access/mod.rs",
-        "crates/hub/src/catalog/access/tests.rs"
+        "crates/hub/src/catalog/access/tests.rs",
+        "crates/hub/src/machines/access/requests.rs",
+        "crates/hub/src/machines/access/request_tests.rs",
+        "crates/hub/src/machines/access/task_tests.rs"
       ],
       "evidence": [
-        "Partial access foundation: typed scope/narrowing/risk checks and catalog snapshots; current identity, task lease and machine generation seams. 26 contracts, 3 AgentHub PostgreSQL binding and 28 hub focused tests passed. See .ai/dev/plans/absorption/a04-access.md. Durable request/grant/admission storage, all adapters and native enforcement remain open; no source closure or main delivery."
+        "Partial access foundation: typed scope/narrowing/risk checks and catalog snapshots; current identity, task lease and machine generation seams. 26 contracts, 3 AgentHub PostgreSQL binding and 28 hub focused tests passed. See .ai/dev/plans/absorption/a04-access.md. Durable request/grant/admission storage, all adapters and native enforcement remain open; no source closure or main delivery.",
+        "Partial durable access unit: transactional request snapshots, human decisions, versioned policies/revocation, durable ending outbox, and admission identity/once continuation. Required-PostgreSQL local slices passed 22 lifecycle/notification and 26 expanded admission tests; exact commands/logs and remaining source obligations are in .ai/dev/plans/absorption/a04-access.md. Broker/native enforcement, remaining lifecycle, surface adapters and UI are still open; no source closure or main delivery."
       ]
     },
     {
@@ -3884,9 +3905,16 @@
       "mode": "100644",
       "kind": "blob",
       "packet": "A04",
-      "status": "unverified",
-      "target_paths": [],
-      "evidence": []
+      "status": "partial",
+      "target_paths": [
+        "crates/hub/src/machines/access/grants.rs",
+        "crates/hub/src/machines/access/grant_tests.rs",
+        "crates/hub/src/machines/access/notifications.rs",
+        "crates/hub/src/machines/access/notification_tests.rs"
+      ],
+      "evidence": [
+        "Partial durable access unit: transactional request snapshots, human decisions, versioned policies/revocation, durable ending outbox, and admission identity/once continuation. Required-PostgreSQL local slices passed 22 lifecycle/notification and 26 expanded admission tests; exact commands/logs and remaining source obligations are in .ai/dev/plans/absorption/a04-access.md. Broker/native enforcement, remaining lifecycle, surface adapters and UI are still open; no source closure or main delivery."
+      ]
     },
     {
       "path": "server/internal/access/sandbox.go",
@@ -3895,9 +3923,14 @@
       "mode": "100644",
       "kind": "blob",
       "packet": "A04",
-      "status": "unverified",
-      "target_paths": [],
-      "evidence": []
+      "status": "partial",
+      "target_paths": [
+        "crates/hub/src/machines/access/policies.rs",
+        "crates/hub/src/machines/access/policy_tests.rs"
+      ],
+      "evidence": [
+        "Partial durable access unit: transactional request snapshots, human decisions, versioned policies/revocation, durable ending outbox, and admission identity/once continuation. Required-PostgreSQL local slices passed 22 lifecycle/notification and 26 expanded admission tests; exact commands/logs and remaining source obligations are in .ai/dev/plans/absorption/a04-access.md. Broker/native enforcement, remaining lifecycle, surface adapters and UI are still open; no source closure or main delivery."
+      ]
     },
     {
       "path": "server/internal/access/service.go",

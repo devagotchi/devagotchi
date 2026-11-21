@@ -15,13 +15,42 @@ use devagotchi_store::{Failed, transaction};
 use serde::{Deserialize, Serialize};
 use sqlx::AnyConnection;
 use std::sync::Arc;
+mod admission_action;
+mod admission_completion;
+mod admissions;
+mod decisions;
+mod grant_record;
+mod grants;
+mod notifications;
+mod policies;
+mod records;
 mod references;
+mod requests;
+mod terms;
+pub(crate) use requests::{RequestInput, Requested};
+pub(crate) use terms::{GrantTerms, Narrow};
 mod settings;
 pub(crate) use settings::AccessSettings;
+#[cfg(test)]
+mod admission_tests;
+#[cfg(test)]
+mod decision_tests;
+#[cfg(test)]
+mod grant_tests;
+#[cfg(test)]
+mod notification_tests;
+#[cfg(test)]
+mod policy_tests;
+#[cfg(test)]
+mod request_tests;
 #[cfg(test)]
 mod schema_tests;
 #[cfg(test)]
 mod settings_tests;
+#[cfg(test)]
+mod task_tests;
+#[cfg(test)]
+mod terms_tests;
 
 type DbResult<T> = Result<T, Failed>;
 fn invalid(message: impl Into<String>) -> BridgeError {
@@ -51,9 +80,24 @@ impl Access {
         }
     }
     async fn owner_in(&self, c: &mut AnyConnection, actor: &str, action: &str) -> DbResult<String> {
+        self.owner_resource_in(
+            c,
+            actor,
+            action,
+            &devagotchi_agenthub::policy::Resource::default(),
+        )
+        .await
+    }
+    async fn owner_resource_in(
+        &self,
+        c: &mut AnyConnection,
+        actor: &str,
+        action: &str,
+        resource: &devagotchi_agenthub::policy::Resource<'_>,
+    ) -> DbResult<String> {
         use devagotchi_agenthub::{
             Actor,
-            policy::{Resource, Subject, catalog},
+            policy::{Subject, catalog},
         };
         let account = self
             .accounts
@@ -62,7 +106,7 @@ impl Access {
         if !account.owner {
             return Err(refused(
                 "not_granted",
-                "only the environment owner changes access settings",
+                "only the environment owner administers machine access",
             ));
         }
         catalog::initialize_in(c, &account.tenant).await?;
@@ -76,7 +120,7 @@ impl Access {
                 roles: &["admin".into()],
             },
             action,
-            &Resource::default(),
+            resource,
         )
         .await?;
         Ok(account.tenant)

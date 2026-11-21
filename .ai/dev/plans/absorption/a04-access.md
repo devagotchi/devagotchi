@@ -164,9 +164,9 @@ an editable source setting.
   reaping acquires each board first and never reverses the lock order. Resume alerts are
   per person/grant/session, deduplicated while open; pause also ends ongoing authority.
 
-These are acceptance obligations for the unfinished domain. Migration 0041 now defines
-the lifecycle tables, and access settings have an owner API; the request/decision/
-admission operations, dispatcher and broker integration are not implemented by that schema.
+These are acceptance obligations for the domain. Migration 0041 defines the lifecycle
+tables; the implementation receipts below distinguish the subsequently authored domain
+operations from the still-unfinished dispatcher integration, broker enforcement and UI.
 
 Port the source scope fixtures plus the corrected widening cases. Real PostgreSQL:
 duplicate/retried once admission, concurrent last-use starts, task renewal/reclaim/end,
@@ -246,3 +246,60 @@ settings API has no browser editor yet; author it with the full access interface
 Remote read-only check during this work: root `main` is still `4b01ac9`, remote integration
 is `ed92ea9`; AgentHub remote `main` is `8a6db52`; both repositories have no open PR.
 No remote push, CI run, merge, branch deletion or Docker development-image update occurred.
+
+## Request, decision and admission authoring
+
+The next code unit is authored under `crates/hub/src/machines/access/`, with current
+identity reconstruction in `identity/accounts/machine_access.rs` and current task project/
+labels in AgentHub's `hosted/access.rs`. No HTTP/MCP/browser adapter exposes these new
+operations yet. They do not claim native confinement or successful broker execution.
+
+- `requests.rs`: original-input permanent receipts, atomic groups, bounded reasons and
+  use limits, immutable capability/preset/profile/risk snapshots, pending expiry and denial
+  cooldown. Identity, task, policy and machine generation are checked before receipt replay.
+- `terms.rs`, `records.rs`, `decisions.rs`: independent owner/person approval and denial,
+  CAS, narrower-only effective scope/duration/use count, fresh requester profile, original
+  task generation/fence/lease, live policy and enrollment checks, and one transaction for
+  the grant, request decision, receipt and audit. A disabled requester can still be denied.
+- `policies.rs`: environment or enrollment-bound unsandboxed policy, CAS and versioned
+  risk acknowledgments. Changed risk text must be reviewed again. Disabling one policy
+  preserves grants covered by another live policy; uncovered broad GUI, unsandboxed and
+  policy-dependent preset grants end atomically. Re-enabling cannot revive ended grants.
+- `grants.rs`, `notifications.rs`: versioned individual and enrollment-scoped revocation,
+  durable ending notifications, bounded claims, retry backoff, crashed-claim recovery and
+  exact enrollment/version/attempt acknowledgments. External broker I/O is still to be
+  attached; an outbox row alone is not delivery. Notification failure codes cannot contain
+  transport URLs or arbitrary error text.
+- `grant_record.rs`, `admissions.rs`, `admission_action.rs`, `admission_completion.rs`:
+  admission identity binds account/principal, enrollment, grant version, broker input
+  digest and actual call projection. Current exact operation policy and scope are checked;
+  an unavailable proved sandbox refuses before use consumption. Duplicate starts and
+  continuation consume once; different concurrent starts compete for the last use.
+  Authority expiry is bounded by settings, grant time and current task lease. Completion
+  and permanent retirement preserve the retry identity. These are trusted adapter APIs;
+  actual request-to-call projection, platform proof and broker enforcement remain required.
+
+Focused local evidence, required PostgreSQL and two test threads: the 22-test lifecycle/
+notification slice passed (`target/absorption-access-notifications.log`), then the expanded
+26-test admission slice passed (`target/absorption-access-admissions.log`). The injected
+outbox-failure fixture initially attempted DDL using the restricted hub role and correctly
+failed with permission denied. Fixture installation now uses the test database's migration
+connection; revocation itself still runs under the restricted role and proves full rollback.
+The earlier narrowing fixture's argv shape was corrected; both narrowing tests pass.
+
+The expanded exact-operation-policy and task-bound admission slice also passes: 27 tests,
+zero ignored (`target/absorption-access-authority.log`). It proves a newly installed
+`proc.start` deny blocks continuation and that release/reclaim invalidates the original
+admission lease. Eight layout ratchet tests and the absorption inventory/object check
+pass. AgentHub's resource-binding checkpoint is `045e837`. Unused operation-action variants
+remain visible compiler warnings until their planned adapters are authored; no lint was
+suppressed and no full workspace/CI gate has been claimed.
+
+Remaining A04 obligations are explicit: configured/shared-machine resolution; live existing
+GUI observation companionship; source-default selection with typed confirmation; machine
+pause/resume alerts and task/guide/policy-aware reaping; full policy evaluation/change/review
+domain; request/grant read models and all REST/MCP/browser actions; authenticated wire and
+IPC authority propagation; actual broker refresh/ending delivery; native Linux/Windows/macOS
+confinement and network enforcement; source-complete regression/real-OS acceptance. In
+particular, an already-exhausted once grant must not be reaped while its admitted operation
+is continuing. No source row or commit is closed by the above local unit tests.

@@ -2,7 +2,7 @@ use super::*;
 use selector::{host_within, path_within, valid_host};
 
 /// The broker derives this from the actual operation, never from a client's assertion.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct GrantCall {
     pub capability: GrantCapability,
     pub level: GrantLevel,

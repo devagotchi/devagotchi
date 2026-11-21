@@ -18,6 +18,7 @@ use sqlx::Row;
 
 use crate::store::{Store, secs, transaction, unsecs};
 mod access;
+pub(crate) use access::MachineBinding;
 
 /// How long an enrollment code stays valid.
 pub const CODE_TTL_SECS: u64 = 15 * 60;

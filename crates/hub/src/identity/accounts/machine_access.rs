@@ -3,6 +3,38 @@ use super::*;
 use devagotchi_agenthub::{Actor, policy::catalog};
 
 impl Accounts {
+    /// Reconstruct a stored request's principal from the current identity directory.
+    /// This is not authentication for a caller-supplied principal. The access owner
+    /// must load account/principal from its scoped immutable request or grant record.
+    /// No policy lock here: task-bound decisions take their board lock next, then use
+    /// machine_actor_in to validate this snapshot under the principal-policy lock.
+    pub(crate) async fn machine_profile_in(
+        &self,
+        c: &mut AnyConnection,
+        account: &str,
+        principal: &str,
+    ) -> Result<Option<devagotchi_agenthub::policy::Identity>, Failed> {
+        let current = self.catalog_actor_in(c, account, false).await?;
+        if principal == account && !current.provisional {
+            return Ok(None);
+        }
+        let id = principal
+            .strip_prefix(&format!("@agent:{account}:"))
+            .filter(|id| devagotchi_agenthub::valid_name(id))
+            .ok_or_else(|| {
+                BridgeError::new("not_granted", "stored access principal is unavailable")
+            })?;
+        let agent = agents::agent_in(c, &current.tenant, account, id).await?;
+        if !agent.enabled {
+            return Err(
+                BridgeError::new("not_granted", "stored access principal is disabled").into(),
+            );
+        }
+        Ok(Some(devagotchi_agenthub::policy::Identity {
+            kind: agent.kind,
+            roles: agent.roles,
+        }))
+    }
     /// The authenticated adapter supplies the account and actor. A tool-selected seat,
     /// human flag or role list must never reach this method as identity. For task-bound
     /// calls the board lock is taken before any principal-policy/catalog lock.
