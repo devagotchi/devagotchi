@@ -47,6 +47,10 @@ Principal/role/policy/settings HTTP adapters and the environment agent roster ar
 locally; exact source mapping and validation are in [a03-principals.md](a03-principals.md).
 The remaining aggregate/project/workflow administration below is still open.
 
+Workflow catalog and versioned board configuration routes are now authored as described
+in [a03-configuration.md](a03-configuration.md); validation status is recorded there.
+Project CRUD and aggregate `/config` remain open.
+
 - GET /api/v1/config; principals list/create/put/token metadata/issue/revoke. Map to account
   ownership, live manager policy and the authored principal/catalog APIs. Never replay
   token issuance or expose global identity lists to ordinary agents.

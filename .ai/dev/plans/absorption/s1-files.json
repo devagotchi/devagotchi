@@ -4809,10 +4809,15 @@
         "crates/hub/src/agenthub/http/principals/mod.rs",
         "crates/hub/src/agenthub/http/principals/configuration.rs",
         "crates/hub/src/agenthub/http/principals/tokens.rs",
-        "crates/hub/src/agenthub/http/tests/principals.rs"
+        "crates/hub/src/agenthub/http/tests/principals.rs",
+        "crates/hub/src/agenthub/http/configuration/mod.rs",
+        "crates/hub/src/agenthub/http/configuration/workflows.rs",
+        "crates/hub/src/agenthub/http/configuration/local.rs",
+        "crates/hub/src/agenthub/http/tests/configuration.rs"
       ],
       "evidence": [
-        "Additional local principal/credential/roster and policy HTTP authoring: .ai/dev/plans/absorption/a03-principals.md. Remaining behaviors and main delivery stay open."
+        "Additional local principal/credential/roster and policy HTTP authoring: .ai/dev/plans/absorption/a03-principals.md. Remaining behaviors and main delivery stay open.",
+        "Independent workflow creation and configuration HTTP authoring: .ai/dev/plans/absorption/a03-configuration.md. Project CRUD, aggregate configuration and main delivery remain open."
       ]
     },
     {
@@ -5818,12 +5823,15 @@
         "crates/hub/src/identity/accounts/receipts.rs",
         "crates/agenthub/src/hosted/shared_workflows/mutations.rs",
         "crates/hub/src/web/app/agenthub/configuration/mod.rs",
-        "crates/hub/src/agenthub/http/principals/configuration.rs"
+        "crates/hub/src/agenthub/http/principals/configuration.rs",
+        "crates/agenthub/src/board/shared_workflows.rs",
+        "crates/hub/src/agenthub/http/configuration/workflows.rs"
       ],
       "evidence": [
         "Source comparison and partial authoring: .ai/dev/plans/absorption/a02-review.md. Whole-file replay, human administration, surface and concurrency requirements remain open; no main delivery.",
         "Additional local configuration/account receipt and browser authoring: .ai/dev/plans/absorption/a03-review.md. Remaining source semantics, surface mapping and main delivery stay open.",
-        "Additional local principal/credential/roster and policy HTTP authoring: .ai/dev/plans/absorption/a03-principals.md. Remaining behaviors and main delivery stay open."
+        "Additional local principal/credential/roster and policy HTTP authoring: .ai/dev/plans/absorption/a03-principals.md. Remaining behaviors and main delivery stay open.",
+        "Independent workflow creation and configuration HTTP authoring: .ai/dev/plans/absorption/a03-configuration.md. Project CRUD, aggregate configuration and main delivery remain open."
       ]
     },
     {
@@ -5840,12 +5848,15 @@
         "crates/hub/src/web/app/agenthub/configuration/form.rs",
         "crates/hub/src/identity/accounts/agents/configuration.rs",
         "crates/agenthub/src/hosted/shared_workflows/mutations.rs",
-        "crates/hub/src/agenthub/http/principals/configuration.rs"
+        "crates/hub/src/agenthub/http/principals/configuration.rs",
+        "crates/hub/src/agenthub/http/configuration/workflows.rs",
+        "crates/hub/src/agenthub/http/configuration/local.rs"
       ],
       "evidence": [
         "Local comparison and source-backed changes: .ai/dev/plans/absorption/a01-review.md. Not source closure; policy, replay, identity and other file behaviors remain open.",
         "Additional local configuration/account receipt and browser authoring: .ai/dev/plans/absorption/a03-review.md. Remaining source semantics, surface mapping and main delivery stay open.",
-        "Additional local principal/credential/roster and policy HTTP authoring: .ai/dev/plans/absorption/a03-principals.md. Remaining behaviors and main delivery stay open."
+        "Additional local principal/credential/roster and policy HTTP authoring: .ai/dev/plans/absorption/a03-principals.md. Remaining behaviors and main delivery stay open.",
+        "Independent workflow creation and configuration HTTP authoring: .ai/dev/plans/absorption/a03-configuration.md. Project CRUD, aggregate configuration and main delivery remain open."
       ]
     },
     {

@@ -11,6 +11,7 @@ use axum::{
 };
 
 mod access;
+mod configuration;
 mod events;
 mod input;
 mod leases;
@@ -28,6 +29,7 @@ use response::{Failure, Reply, invalid};
 pub(crate) fn routes() -> Router<AppState> {
     Router::new()
         .merge(principals::routes())
+        .merge(configuration::routes())
         .route("/api/v1/tasks", get(reads::list).post(tickets::create))
         .route(
             "/api/v1/tasks/{id}",

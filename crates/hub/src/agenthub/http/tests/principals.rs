@@ -1,13 +1,13 @@
 use super::*;
 use crate::tenancy::tests::tenants::{Hosted, hosted_with};
 
-struct Admin {
-    hub: Hosted,
-    owner: String,
-    cookie: String,
+pub(super) struct Admin {
+    pub(super) hub: Hosted,
+    pub(super) owner: String,
+    pub(super) cookie: String,
 }
 impl Admin {
-    async fn new() -> Option<Self> {
+    pub(super) async fn new() -> Option<Self> {
         let hub = hosted_with(None, |_, _| json!({"tenancy":{"mode":"single"}})).await?;
         let owner = hub
             .accounts
@@ -22,7 +22,7 @@ impl Admin {
             cookie: format!("dg_session={session}"),
         })
     }
-    fn request(&self, method: Method, path: &str) -> reqwest::RequestBuilder {
+    pub(super) fn request(&self, method: Method, path: &str) -> reqwest::RequestBuilder {
         self.hub
             .http
             .request(method, format!("{}{path}", self.hub.url))

@@ -93,6 +93,46 @@ The concrete authored routes, roster and existing-domain mapping are recorded in
 [a03-principals.md](a03-principals.md). Do not add speculative MCP administration for
 that source; inspect the actual Devagotchi Extra registries for their separate packets.
 
+Project lifecycle implementation detail (planned, not implemented):
+
+1. Extend `board_projects` with a retired timestamp, display name and positive version.
+   Retain the row and every history/receipt record. Make the owner/name uniqueness rule
+   apply only to active projects. A later project using that name gets a different physical
+   board ID; never revive the retired row or reset its fence counter.
+2. Factor the existing initialization transaction into reusable in-transaction helpers.
+   Creation must commit defaults, optional shared-workflow binding, project metadata,
+   receipt and event together. Do not initialize a board first and save its metadata in
+   another transaction. Explicit project creation creates an empty project; the existing
+   onboarding bind path retains its welcome task. Both use the same registry and limits.
+3. Resolve active owner/name to the physical board ID in `agenthub/registry.rs` through
+   an AgentHub-owned query. Lock the namespace before catalog and project rows, matching
+   existing shared workflow locking. Namespace races must select one created board rather
+   than return a duplicate error for an idempotent bind. Existing directly constructed
+   physical handles must never be repointed at a new generation.
+4. `HostedBoard::scope` refuses retired projects, including reads through cached handles.
+   `Boards::open_account` validates cached generations before returning them and evicts
+   only the stale entry it checked. Active registry lists and plan limits exclude retired
+   projects. Audit export retains retired rows and their stable identities.
+5. Retirement is a human account-owner operation. In the same transaction, check current
+   identity/policy, version and all tasks (completed tasks count). Refuse when the project
+   is the retained audit anchor of a live shared definition. Remove its own workflow
+   binding only after these checks. Record the retirement event and receipt before setting
+   the tombstone; no cascading history deletion.
+6. Account-owned project removal must also refuse active explicitly project-scoped API
+   keys naming it, through the host identity directory on the same transaction. This
+   prevents reusing a name from reviving a narrower old credential grant. Account-wide
+   credentials already intentionally cover future projects. Shared/configured/org boards
+   retain their existing lifecycle; an account route cannot retire those namespaces.
+7. A deletion retry may resolve the last retired generation when no active one exists;
+   current authority must precede receipt replay. With a newly created generation, an old
+   key must conflict rather than retire the new project. Creation/deletion keys are never
+   reusable after retirement. Explicit owner-only history access must keep the retired
+   generation identifiable without reopening it for writes.
+8. Author domain plus HTTP/browser tests together: empty create/delete/recreate, stale
+   handle/write, request replay, version mismatch, active-key/catalog/task in-use guards,
+   completed-task guard, concurrent create/delete, unchanged history and distinct new
+   identity, foreign account and policy refusal. Then one focused lifecycle check.
+
 ### Batch 2: catalogs, grants, policy and machine enforcement
 
 Existing seams inspected: `Hub::call` in `hub/src/mcp/hub.rs` sets caller and routes/audits;

@@ -49,6 +49,7 @@ impl IntoResponse for Failure {
             | "request_conflict"
             | "already_exists"
             | "in_use"
+            | "shared_workflow"
             | "not_claimable"
             | "not_completable"
             | "use_lease_ops"

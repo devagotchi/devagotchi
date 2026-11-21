@@ -1,4 +1,5 @@
 //! Real HTTP and MCP share PostgreSQL state and live authority, not separate stores.
+mod configuration;
 mod events;
 mod principals;
 mod protocol;

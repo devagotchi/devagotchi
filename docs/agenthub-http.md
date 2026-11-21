@@ -69,7 +69,7 @@ captured before reading tasks so a reconnect cannot skip a concurrent committed 
 clients may see that change again when catching up. Event lists return `events` and a
 board-scoped `head_seq`. No endpoint aggregates another account's history.
 
-Project/workflow administration and aggregate configuration remain in the absorption
+Project creation/deletion and aggregate configuration remain in the absorption
 plan. The routes below are local prerelease authoring, not a published release.
 
 ## Principals and policy
@@ -111,6 +111,34 @@ the existing API-key scope vocabulary and permitted durations. It rejects reques
 because the secret cannot be cached for replay. The response contains `info` and `token`;
 later reads contain only metadata. An uncertain issuance is resolved by inspecting and
 revoking the resulting key before explicitly issuing another. Responses are `no-store`.
+
+## Workflow definitions and board configuration
+
+These routes require a person who owns the selected account board and its complete
+workflow catalog. Configured shared boards and organization namespaces retain their
+existing configuration pages; a grant on one board does not disclose a whole catalog.
+
+| Method and route | Behavior |
+| --- | --- |
+| GET `/api/v1/workflows?project=demo` | Shared workflow definitions in this account's catalog |
+| POST `/api/v1/workflows?project=demo` | Create `{version: 0, workflow: {...}}` without binding the board |
+| PUT `/api/v1/workflows/{id}?project=demo` | Edit `{version, workflow}` and atomically update every bound board |
+| DELETE `/api/v1/workflows/{id}?project=demo` | Delete an unused definition with `If-Match` |
+| GET `/api/v1/projects/{project}/configuration` | Settings, workflow, their independent versions, and current shared binding |
+| PUT `/api/v1/projects/{project}/settings` | Save `{version, settings}` using the editable settings fields |
+| PUT `/api/v1/projects/{project}/workflow` | Save `{version, workflow}` for an unbound board |
+| POST `/api/v1/projects/{project}/workflow/bind` | Select `{version, workflow_id, workflow_version}` |
+| POST `/api/v1/projects/{project}/workflow/detach` | Save `{version}` to retain an independent copy of the current workflow |
+
+`version` on board routes is the matching `settings_version` or `workflow_version` from
+the configuration response. On catalog routes it is the definition's `version`. Binding
+checks both board and catalog versions. A shared definition cannot be removed while a
+board uses it. Editing a definition validates its effect on all using boards before any
+change commits. All writes support request keys and current-authority replay.
+
+Editable settings are lease TTL/min/max, maximum lease expiries, default WIP/priority,
+heartbeat hint, note kinds, priority labels, repo and environments. Standing approvals
+have their own operations and cannot be inserted into the settings editor.
 
 ## Reconnecting events and protocol discovery
 
