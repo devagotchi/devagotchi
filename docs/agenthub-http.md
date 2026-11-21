@@ -214,9 +214,13 @@ return a conflict; retries return the original committed result. IDs allow lette
 digits, dots, colons, hyphens and underscores, at most 64 bytes.
 
 `POST /api/v1/grant-presets/{id}/default` with `{version}` atomically switches the
-default and advances affected versions. Default records cannot be deleted. Full-access
-defaults are refused until the access owner can verify a live acknowledged unsandboxed
-policy and explicit confirmation; generic catalog editing cannot establish that policy.
+default and advances affected versions. Default records cannot be deleted. Selecting or
+editing a default with full access, unsandboxed items or unrestricted desktop input also
+requires `confirm_default` equal to its exact ID and a live, acknowledged environment-wide
+unsandboxed policy. A machine-specific policy is insufficient. Confirmation is separate
+from the preset's editable fields and participates in retry identity. Policy is rechecked
+on replay. The browser editor exposes the same confirmation without prefilling it.
+Selecting a default configures future requests; it does not approve or execute them.
 The A04 access integration remains open. Likewise provider reference enforcement belongs
 to the A06 provider integration. Catalog definitions by themselves confer no execution
 permission.
@@ -245,6 +249,7 @@ Fields and bounds:
 - `unsandboxed_risk_ids`: 1–64 distinct existing risk IDs; required risks cannot be
   deleted while these settings refer to them.
 - `authority_ttl_ms`: 1000–30000, default 10000, for the pending broker-authority integration.
+- `resume_alert_idle_minutes`: 1–60, default 15, for the pending browser resume integration.
 
 These settings do not create grants or enable unsandboxed execution. The request,
 approval, admission and native-enforcement integration remains under active development.

@@ -72,7 +72,10 @@ async fn access_settings_changes_are_versioned_replayable_and_preserve_risk_refe
             "access-test-risk",
             0,
             &json!({"title":"A risk","plain_text":"Review this risk","severity":"high"}),
-            None,
+            crate::catalog::WriteOptions {
+                request_id: None,
+                confirm_default: None,
+            },
         )
         .await
         .unwrap();

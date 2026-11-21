@@ -153,10 +153,25 @@ impl Access {
                     .iter()
                     .any(|i| i.item.capability == GrantCapability::Observe)
             {
-                return Err(refused(
-                    "observe_required",
-                    "request GUI observation alongside GUI input",
-                ));
+                let indefinite =
+                    Self::indefinite_allowed_in(c, &found.tenant, &subject, &resource).await?;
+                if !Self::observation_in(
+                    c,
+                    &found.tenant,
+                    account,
+                    actor.id,
+                    machine,
+                    task.as_ref(),
+                    now,
+                    indefinite,
+                )
+                .await?
+                {
+                    return Err(refused(
+                        "observe_required",
+                        "request GUI observation alongside input or use a live observation grant",
+                    ));
+                }
             }
             let requested = insert_in(
                 c,

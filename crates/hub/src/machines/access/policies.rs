@@ -31,6 +31,23 @@ pub(crate) struct SandboxPolicy {
     pub ended_grants: u64,
 }
 impl Access {
+    /// Catalog must already hold its environment lock before composing this check.
+    pub(crate) async fn require_environment_policy_in(
+        c: &mut AnyConnection,
+        tenant: &str,
+    ) -> DbResult<()> {
+        Self::lock_in(c, tenant).await?;
+        let now = Self::now_in(c).await?;
+        let live: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM machine_sandbox_policies WHERE tenant_id=$1 AND scope='environment' AND allowed AND (expires_at IS NULL OR expires_at>$2))")
+            .bind(tenant).bind(now).fetch_one(c).await?;
+        if !live {
+            return Err(refused(
+                "policy_denied",
+                "enable the environment-wide unsandboxed policy first",
+            ));
+        }
+        Ok(())
+    }
     pub(super) async fn policy_live_in(
         c: &mut AnyConnection,
         tenant: &str,

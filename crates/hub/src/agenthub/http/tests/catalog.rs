@@ -157,7 +157,7 @@ async fn catalog_merged_validation_and_reference_guards_preserve_existing_rows()
         response(
             admin
                 .request(Method::POST, &format!("{path}/default"))
-                .json(&json!({"version":1}))
+                .json(&json!({"version":1,"confirm_default":"experimental-full-access"}))
         )
         .await
         .0,
@@ -169,7 +169,7 @@ async fn catalog_merged_validation_and_reference_guards_preserve_existing_rows()
             "grant-presets",
             "task-scoped",
             1,
-            json!({"full_access":true,"requires_policy":"unsandboxed"})
+            json!({"full_access":true,"requires_policy":"unsandboxed","confirm_default":"task-scoped"})
         )
         .await
         .0,

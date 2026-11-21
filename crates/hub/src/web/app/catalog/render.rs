@@ -130,6 +130,9 @@ pub(super) fn editor(
             )),
         }
     }
+    if kind == Kind::GrantPresets {
+        body.push_str(&format!("<label>{}<input name=\"confirm_default\" value=\"{}\" maxlength=\"64\" autocomplete=\"off\"></label><p class=\"note\">{}</p>", escape(&c.confirm_default), escape(&draft.confirm_default), escape(&c.confirm_default_help)));
+    }
     body.push_str(&format!(
         "<button name=\"action\" value=\"save\">{}</button>",
         escape(&c.save)

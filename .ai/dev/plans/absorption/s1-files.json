@@ -3787,11 +3787,14 @@
         "crates/hub/src/catalog/validate.rs",
         "crates/hub/src/machines/access/requests.rs",
         "crates/hub/src/machines/access/terms.rs",
-        "crates/hub/src/machines/access/terms_tests.rs"
+        "crates/hub/src/machines/access/terms_tests.rs",
+        "crates/hub/src/machines/access/observation.rs",
+        "crates/hub/src/machines/access/observation_tests.rs"
       ],
       "evidence": [
         "Partial access foundation: typed scope/narrowing/risk checks and catalog snapshots; current identity, task lease and machine generation seams. 26 contracts, 3 AgentHub PostgreSQL binding and 28 hub focused tests passed. See .ai/dev/plans/absorption/a04-access.md. Durable request/grant/admission storage, all adapters and native enforcement remain open; no source closure or main delivery.",
-        "Partial durable access unit: transactional request snapshots, human decisions, versioned policies/revocation, durable ending outbox, and admission identity/once continuation. Required-PostgreSQL local slices passed 22 lifecycle/notification and 26 expanded admission tests; exact commands/logs and remaining source obligations are in .ai/dev/plans/absorption/a04-access.md. Broker/native enforcement, remaining lifecycle, surface adapters and UI are still open; no source closure or main delivery."
+        "Partial durable access unit: transactional request snapshots, human decisions, versioned policies/revocation, durable ending outbox, and admission identity/once continuation. Required-PostgreSQL local slices passed 22 lifecycle/notification and 26 expanded admission tests; exact commands/logs and remaining source obligations are in .ai/dev/plans/absorption/a04-access.md. Broker/native enforcement, remaining lifecycle, surface adapters and UI are still open; no source closure or main delivery.",
+        "Partial control/resume/observation domain: pause and GUI stop atomically interrupt admission identities; live risky-grant alerts and continue/revoke/pause acknowledgments; current observation companionship at request and admission. Required-PostgreSQL local slices passed 83 machine and 56 expanded access tests. See .ai/dev/plans/absorption/a04-access.md for logs and remaining browser/runtime/broker/native integration. No source closure or main delivery."
       ]
     },
     {
@@ -3819,9 +3822,20 @@
       "mode": "100644",
       "kind": "blob",
       "packet": "A04",
-      "status": "unverified",
-      "target_paths": [],
-      "evidence": []
+      "status": "partial",
+      "target_paths": [
+        "crates/hub/src/catalog/mutations.rs",
+        "crates/hub/src/catalog/references.rs",
+        "crates/hub/src/machines/access/policies.rs",
+        "crates/hub/src/machines/access/default_tests.rs",
+        "crates/hub/src/agenthub/http/catalog.rs",
+        "crates/hub/src/agenthub/http/tests/catalog_defaults.rs",
+        "crates/hub/src/web/app/catalog/form.rs",
+        "crates/hub/src/web/app/catalog/render.rs"
+      ],
+      "evidence": [
+        "Source default selection is authored through the catalog owner with exact typed confirmation, live environment-wide policy and source preset.default authorization. Selected-default edits and receipt replay also check policy; actual unsafe items cannot bypass metadata. Required-PostgreSQL 12 catalog/API/browser and three access_default_ tests passed. See a04-access.md. Remaining catalog consumers, full integration and main delivery are open; no source closure."
+      ]
     },
     {
       "path": "server/internal/access/policygate.go",
@@ -3890,9 +3904,16 @@
       "mode": "100644",
       "kind": "blob",
       "packet": "A04",
-      "status": "unverified",
-      "target_paths": [],
-      "evidence": []
+      "status": "partial",
+      "target_paths": [
+        "crates/hub/src/machines/access/resume.rs",
+        "crates/hub/src/machines/access/resume_agent.rs",
+        "crates/hub/src/machines/access/resume_tests.rs",
+        "crates/hub/migrations/0043_access_resume_interval.sql"
+      ],
+      "evidence": [
+        "Partial control/resume/observation domain: pause and GUI stop atomically interrupt admission identities; live risky-grant alerts and continue/revoke/pause acknowledgments; current observation companionship at request and admission. Required-PostgreSQL local slices passed 83 machine and 56 expanded access tests. See .ai/dev/plans/absorption/a04-access.md for logs and remaining browser/runtime/broker/native integration. No source closure or main delivery."
+      ]
     },
     {
       "path": "server/internal/access/resume_ack.go",
@@ -3901,9 +3922,14 @@
       "mode": "100644",
       "kind": "blob",
       "packet": "A04",
-      "status": "unverified",
-      "target_paths": [],
-      "evidence": []
+      "status": "partial",
+      "target_paths": [
+        "crates/hub/src/machines/access/resume_ack.rs",
+        "crates/hub/src/machines/access/resume_tests.rs"
+      ],
+      "evidence": [
+        "Partial control/resume/observation domain: pause and GUI stop atomically interrupt admission identities; live risky-grant alerts and continue/revoke/pause acknowledgments; current observation companionship at request and admission. Required-PostgreSQL local slices passed 83 machine and 56 expanded access tests. See .ai/dev/plans/absorption/a04-access.md for logs and remaining browser/runtime/broker/native integration. No source closure or main delivery."
+      ]
     },
     {
       "path": "server/internal/access/revoke.go",
@@ -5137,9 +5163,16 @@
       "mode": "100644",
       "kind": "blob",
       "packet": "A04",
-      "status": "unverified",
-      "target_paths": [],
-      "evidence": []
+      "status": "partial",
+      "target_paths": [
+        "crates/hub/src/machines/access/control.rs",
+        "crates/hub/src/machines/access/control_tests.rs",
+        "crates/hub/src/machines/devices/control.rs",
+        "crates/hub/migrations/0042_machine_control.sql"
+      ],
+      "evidence": [
+        "Partial control/resume/observation domain: pause and GUI stop atomically interrupt admission identities; live risky-grant alerts and continue/revoke/pause acknowledgments; current observation companionship at request and admission. Required-PostgreSQL local slices passed 83 machine and 56 expanded access tests. See .ai/dev/plans/absorption/a04-access.md for logs and remaining browser/runtime/broker/native integration. No source closure or main delivery."
+      ]
     },
     {
       "path": "server/internal/machines/enroll.go",

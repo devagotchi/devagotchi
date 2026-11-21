@@ -1,14 +1,27 @@
 //! Referential checks compose with mutations under the environment catalog lock.
 use super::*;
-/// Data editing alone cannot establish the explicitly acknowledged access policy.
-/// A04's access owner must compose that live policy/confirmation check here before
-/// unsandboxed defaults are available. Until then, selection fails closed.
-pub(super) fn default_selection(value: &Value) -> BridgeResult<()> {
-    if value["full_access"] == true || value["requires_policy"] == "unsandboxed" {
-        return Err(BridgeError::new(
-            "policy_denied",
-            "this default requires an enabled unsandboxed policy and explicit confirmation",
-        ));
+/// Called under the catalog lock, including for receipt replay and default edits.
+pub(super) async fn default_selection(
+    c: &mut AnyConnection,
+    tenant: &str,
+    id: &str,
+    value: &Value,
+    confirmation: Option<&str>,
+) -> DbResult<()> {
+    let items: Vec<devagotchi_contracts::GrantItem> =
+        serde_json::from_value(value["items"].clone())
+            .map_err(|_| refused("catalog_damaged", "invalid stored grant preset items"))?;
+    if value["full_access"] == true
+        || value["requires_policy"] == "unsandboxed"
+        || items.iter().any(|item| item.needs_unsandboxed_policy())
+    {
+        if confirmation != Some(id) {
+            return Err(refused(
+                "confirm_required",
+                "type the exact preset ID to confirm this default",
+            ));
+        }
+        crate::machines::access::Access::require_environment_policy_in(c, tenant).await?;
     }
     Ok(())
 }

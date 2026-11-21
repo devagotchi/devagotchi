@@ -120,7 +120,10 @@ async fn catalog_access_risk_snapshot_survives_edits_and_deduplicates_explanatio
             &old.id,
             old.version,
             &json!({"plain_text":"Updated explanation for future requests"}),
-            None,
+            crate::catalog::WriteOptions {
+                request_id: None,
+                confirm_default: None,
+            },
         )
         .await
         .unwrap();
@@ -131,7 +134,10 @@ async fn catalog_access_risk_snapshot_survives_edits_and_deduplicates_explanatio
             "exec:duplicate",
             0,
             &json!({"capability_id":"exec","risk_id":"exec-runs-code","when_selector":{}}),
-            None,
+            crate::catalog::WriteOptions {
+                request_id: None,
+                confirm_default: None,
+            },
         )
         .await
         .unwrap();
@@ -203,7 +209,10 @@ async fn catalog_access_validates_schema_shell_os_durations_and_live_account() {
             "test.windows",
             0,
             &json!({"os":"windows","label":"Windows test","argv_prefix":["cmd.exe"]}),
-            None,
+            crate::catalog::WriteOptions {
+                request_id: None,
+                confirm_default: None,
+            },
         )
         .await
         .unwrap();
@@ -229,7 +238,10 @@ async fn catalog_access_validates_schema_shell_os_durations_and_live_account() {
             "exec",
             exec.version,
             &json!({"default_duration":"1h"}),
-            None,
+            crate::catalog::WriteOptions {
+                request_id: None,
+                confirm_default: None,
+            },
         )
         .await
         .unwrap();

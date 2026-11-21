@@ -93,9 +93,9 @@ families preserve source grouping (capability risks use catalog.risks, grant pre
 use preset) under the existing admin.* namespace. Default selection uses admin.preset.default.
 
 Remaining A05/A04 work: compose actual access request/grant references and policy checks,
-replace default_selection's fail-closed refusal with live acknowledged unsandboxed policy
-plus explicit confirmation, and expose the actual capabilities_list MCP in the access
-packet. Also check escalation of an already selected default. Provider references remain
+expose the actual capabilities_list MCP in the access packet and finish request/grant
+consumers. The default-selection policy/confirmation integration, including escalation
+of an already selected default, is authored in A04 with validation recorded there. Provider references remain
 A06. No generic catalog administration MCP existed in source. The tenant catalog remains
 replaced by the accepted one-environment/users boundary. No visual browser acceptance,
 full suite, CI, push, merge, source closure or branch deletion is claimed here.

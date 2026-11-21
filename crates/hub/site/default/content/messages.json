@@ -272,6 +272,8 @@
       "more": "More records",
       "default": "Default access preset",
       "choose_default": "Use as default",
+      "confirm_default": "Confirm preset ID",
+      "confirm_default_help": "To select or edit a default that allows full access, unsandboxed operations or unrestricted desktop input, type its exact ID here. The environment-wide unsandboxed policy must also be enabled. Choosing a default does not approve access requests.",
       "id": "Record ID",
       "id_help": "Use a unique ID with letters, numbers, dots, colons, hyphens, or underscores. It stays fixed after creation.",
       "structured_help": "Enter JSON. Lists use square brackets, for example [\"first\", \"second\"].",

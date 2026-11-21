@@ -9,6 +9,7 @@ pub(super) struct Draft {
     pub action: String,
     pub fields: BTreeMap<String, String>,
     pub is_default: bool,
+    pub confirm_default: String,
 }
 impl Draft {
     pub fn new(kind: Kind) -> Self {
@@ -36,6 +37,7 @@ impl Draft {
             action: "save".into(),
             fields,
             is_default: false,
+            confirm_default: String::new(),
         }
     }
     pub fn from_record(kind: Kind, row: Row) -> Self {
@@ -78,6 +80,9 @@ impl Draft {
                 "version" => draft.version = value,
                 "request_id" => draft.request_id = value,
                 "action" => draft.action = value,
+                "confirm_default" if kind == Kind::GrantPresets && value.len() <= 64 => {
+                    draft.confirm_default = value
+                }
                 name if kind.fields().iter().any(|f| f.name == name) => {
                     draft.fields.insert(key, value);
                 }

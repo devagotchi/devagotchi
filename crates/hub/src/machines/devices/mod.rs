@@ -18,7 +18,9 @@ use sqlx::Row;
 
 use crate::store::{Store, secs, transaction, unsecs};
 mod access;
+mod control;
 pub(crate) use access::MachineBinding;
+pub(crate) use control::MachineControl;
 
 /// How long an enrollment code stays valid.
 pub const CODE_TTL_SECS: u64 = 15 * 60;
@@ -268,7 +270,7 @@ impl Devices {
                  VALUES ($1, $2, $3, NULL, $4, $5)
                  ON CONFLICT (name) DO UPDATE SET public_key = excluded.public_key,
                    enrolled_at = excluded.enrolled_at, revoked_at = NULL, owner = excluded.owner,
-                   generation = excluded.generation",
+                   generation = excluded.generation, access_paused=false, gui_paused=false, access_version=1",
             )
             .bind(device)
             .bind(public_key)

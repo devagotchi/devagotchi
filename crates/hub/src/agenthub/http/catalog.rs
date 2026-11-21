@@ -2,7 +2,7 @@
 use super::{Body, Caller, Failure, Reply, input, invalid, response::answer};
 use crate::{
     AppState,
-    catalog::{Catalog, Changed, Kind},
+    catalog::{Catalog, Changed, Kind, WriteOptions},
     identity::accounts::api_keys::Scope,
 };
 use axum::{
@@ -93,6 +93,20 @@ fn changed<T: serde::Serialize>(result: Changed<T>) -> Reply {
         replayed,
     ))
 }
+fn confirmation(fields: &mut Value) -> Result<Option<String>, Failure> {
+    fields
+        .as_object_mut()
+        .unwrap()
+        .remove("confirm_default")
+        .map(|value| {
+            value
+                .as_str()
+                .map(str::to_owned)
+                .filter(|value| value.len() <= 64)
+                .ok_or_else(|| invalid("confirm_default must be a preset ID string"))
+        })
+        .transpose()
+}
 async fn list(
     State(state): State<AppState>,
     caller: Caller,
@@ -149,7 +163,11 @@ async fn save(
     value: Value,
 ) -> Reply {
     let catalog = catalog(&state, &caller, true)?;
-    let (id, version, fields, key) = prepared(value, &caller, path.as_deref())?;
+    let (id, version, mut fields, key) = prepared(value, &caller, path.as_deref())?;
+    let confirm = confirmation(&mut fields)?;
+    if confirm.is_some() && kind != Kind::GrantPresets {
+        return Err(invalid("confirm_default is only valid for grant presets"));
+    }
     if path.is_none() && version != 0 || path.is_some() && version <= 0 {
         return Err(invalid(
             "POST creates at version 0; PUT/PATCH require a positive version",
@@ -163,7 +181,10 @@ async fn save(
                 &id,
                 version,
                 &fields,
-                key.as_deref(),
+                WriteOptions {
+                    request_id: key.as_deref(),
+                    confirm_default: confirm.as_deref(),
+                },
             )
             .await?,
     )
@@ -192,13 +213,24 @@ async fn default(
     Body(value): Body,
 ) -> Reply {
     let catalog = catalog(&state, &caller, true)?;
-    let (id, version, fields, key) = prepared(value, &caller, Some(&id))?;
+    let (id, version, mut fields, key) = prepared(value, &caller, Some(&id))?;
+    let confirm = confirmation(&mut fields)?;
     if !fields.as_object().unwrap().is_empty() {
-        return Err(invalid("default selection accepts only id and version"));
+        return Err(invalid(
+            "default selection accepts only id, version and confirm_default",
+        ));
     }
     changed(
         catalog
-            .choose_default(&caller.subject.id, &id, version, key.as_deref())
+            .choose_default(
+                &caller.subject.id,
+                &id,
+                version,
+                WriteOptions {
+                    request_id: key.as_deref(),
+                    confirm_default: confirm.as_deref(),
+                },
+            )
             .await?,
     )
 }

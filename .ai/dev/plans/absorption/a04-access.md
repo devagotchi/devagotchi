@@ -307,11 +307,43 @@ was still admitted. Focused access regression: six AgentHub and 45 hub tests pas
 zero ignored (`target/absorption-access-reaping.log`). Runtime scheduling and notification
 transport are not wired by these domain tests; guide-bound reaping remains for A07.
 
-Remaining A04 obligations are explicit: configured/shared-machine resolution; live existing
-GUI observation companionship; source-default selection with typed confirmation; machine
-pause/resume alerts and reaper runtime/guide integration; full policy evaluation/change/review
+Remaining A04 obligations are explicit: configured/shared-machine resolution; machine
+pause/resume adapter integration and reaper runtime/guide integration; full policy evaluation/change/review
 domain; request/grant read models and all REST/MCP/browser actions; authenticated wire and
 IPC authority propagation; actual broker refresh/ending delivery; native Linux/Windows/macOS
 confinement and network enforcement; source-complete regression/real-OS acceptance. In
 particular, an already-exhausted once grant must not be reaped while its admitted operation
 is continuing. No source row or commit is closed by the above local unit tests.
+
+Resume/control implementation detail for the next unit: registry-owned control versions
+are separate from enrollment generation. Pausing a machine (or stopping GUI only) blocks
+new admissions, retires affected active admission identities, bumps affected grant versions
+and queues interruption notices atomically. Resuming clears the control flags; it never
+restarts retired operations. Approval remains required for new grants. Resume alerts use
+the immutable grant/risk snapshots, one open alert per person/grant, bounded pages and
+current person/policy checks. Continue only acknowledges an alert; revoke and pause compose
+the existing access/registry owners in the same transaction as the acknowledgment. Browser
+session labels are noncredential identifiers, not authentication. Agent resume alerts target
+the approving person and cannot confer human authority. The source idle interval is bounded
+to 1–60 minutes. Runtime callbacks and the actual resume UI remain part of the adapter unit.
+
+The control/resume/observation domain unit is now authored. Migration 0042 stores machine
+pause and GUI-stop state separately from enrollment; migration 0043 preserves existing
+settings and adds the idle interval. Resume actions compose revocation or machine control
+atomically with acknowledgment. Existing GUI observation grants must match live principal,
+machine enrollment and the original task lease, and are checked again at input admission.
+The completed machine slice passed 83 tests; the expanded access slice passed 56 tests,
+zero ignored, using required PostgreSQL (`target/absorption-machine-control.log` and
+`target/absorption-access-resume-observation.log`). These are domain proofs, not evidence
+of wired browser callbacks, native GUI target matching or broker notification delivery.
+
+Default-selection integration is authored in catalog mutations/references, access policies,
+HTTP and browser catalog adapters. Both selection and editing an existing default require
+the exact typed preset ID and live environment policy when metadata or typed items require
+it. Machine-only policy is insufficient. Receipts bind confirmation and recheck live policy.
+Selection checks the source `preset.default` action. The confirmation remains empty on a
+fresh browser render and preserves escaped input on refusal. Required-PostgreSQL validation:
+12 catalog/API/browser tests passed (`target/absorption-catalog-defaults.log`), followed by
+three `access_default_` policy-boundary tests using the same compiled hub test binary.
+All passed with zero ignored. Machine-only policy, expired-policy replay, confirmation
+receipt conflicts, selected-default edits and unlabeled unsafe items are covered.

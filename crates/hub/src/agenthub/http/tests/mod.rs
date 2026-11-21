@@ -2,6 +2,7 @@
 mod aggregate;
 mod catalog;
 mod catalog_access;
+mod catalog_defaults;
 mod configuration;
 mod events;
 mod machine_access;

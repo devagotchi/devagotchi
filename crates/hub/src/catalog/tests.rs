@@ -113,7 +113,10 @@ async fn catalog_audit_receipt_and_seed_changes_commit_together_and_owner_is_liv
             "fs.read",
             1,
             &fields,
-            Some("seed-edit"),
+            crate::catalog::WriteOptions {
+                request_id: Some("seed-edit"),
+                confirm_default: None,
+            },
         )
         .await
         .unwrap();
@@ -135,7 +138,10 @@ async fn catalog_audit_receipt_and_seed_changes_commit_together_and_owner_is_liv
                 "fs.read",
                 1,
                 &fields,
-                Some("seed-edit")
+                crate::catalog::WriteOptions {
+                    request_id: Some("seed-edit"),
+                    confirm_default: None
+                }
             )
             .await
             .unwrap()
@@ -150,7 +156,10 @@ async fn catalog_audit_receipt_and_seed_changes_commit_together_and_owner_is_liv
                 "fs.read",
                 2,
                 &json!({"label":3}),
-                Some("correctable")
+                crate::catalog::WriteOptions {
+                    request_id: Some("correctable"),
+                    confirm_default: None
+                }
             )
             .await
             .is_err()
@@ -164,7 +173,10 @@ async fn catalog_audit_receipt_and_seed_changes_commit_together_and_owner_is_liv
                 "fs.read",
                 2,
                 &json!({"label":"Corrected"}),
-                Some("correctable")
+                crate::catalog::WriteOptions {
+                    request_id: Some("correctable"),
+                    confirm_default: None
+                }
             )
             .await
             .unwrap()
@@ -174,7 +186,15 @@ async fn catalog_audit_receipt_and_seed_changes_commit_together_and_owner_is_liv
     );
     // Re-run only the grant seed after an operator-selected default: preserve it.
     catalog
-        .choose_default(&owner.id, "read-only-look", 1, None)
+        .choose_default(
+            &owner.id,
+            "read-only-look",
+            1,
+            crate::catalog::WriteOptions {
+                request_id: None,
+                confirm_default: None,
+            },
+        )
         .await
         .unwrap();
     catalog
@@ -224,7 +244,10 @@ async fn catalog_audit_receipt_and_seed_changes_commit_together_and_owner_is_liv
                 "fs.read",
                 1,
                 &fields,
-                Some("seed-edit")
+                crate::catalog::WriteOptions {
+                    request_id: Some("seed-edit"),
+                    confirm_default: None
+                }
             )
             .await
             .unwrap_err()

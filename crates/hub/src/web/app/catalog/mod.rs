@@ -199,7 +199,10 @@ async fn change(
                         &draft.id,
                         version,
                         &draft.value(kind)?,
-                        key,
+                        crate::catalog::WriteOptions {
+                            request_id: key,
+                            confirm_default: Some(&draft.confirm_default),
+                        },
                     )
                     .await?;
                 Ok(requests::redirect(
@@ -218,7 +221,15 @@ async fn change(
             }
             "default" if id.is_some() && kind == Kind::GrantPresets => {
                 let changed = catalog
-                    .choose_default(&subject.id, &draft.id, version, key)
+                    .choose_default(
+                        &subject.id,
+                        &draft.id,
+                        version,
+                        crate::catalog::WriteOptions {
+                            request_id: key,
+                            confirm_default: Some(&draft.confirm_default),
+                        },
+                    )
                     .await?;
                 Ok(requests::redirect(
                     &render::record_url(kind, &draft.id),

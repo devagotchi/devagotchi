@@ -140,14 +140,42 @@ impl Access {
                     .await?;
             }
             self.catalog.access_scope_in(c, account).await?;
+            let gui = matches!(
+                input.call.capability,
+                devagotchi_contracts::GrantCapability::Observe
+                    | devagotchi_contracts::GrantCapability::Input
+                    | devagotchi_contracts::GrantCapability::Window
+                    | devagotchi_contracts::GrantCapability::App
+            );
             Devices::new(self.accounts.store.clone())
-                .check_access_in(c, Some(account), machine.binding)
+                .check_execution_in(c, account, machine.binding, gui)
                 .await?;
             Self::lock_in(c, &found.tenant).await?;
             // State can change while acquiring the board/policy/machine/access locks.
             let grant = GrantRecord::load(c, &found.tenant, input.grant_id).await?;
             let now = Self::now_in(c).await?;
             grant.require_live(now)?;
+            if input.call.capability == devagotchi_contracts::GrantCapability::Input {
+                let indefinite =
+                    Self::indefinite_allowed_in(c, &found.tenant, &subject, &resource).await?;
+                if !Self::observation_in(
+                    c,
+                    &found.tenant,
+                    account,
+                    actor.id,
+                    machine.binding,
+                    task.as_ref(),
+                    now,
+                    indefinite,
+                )
+                .await?
+                {
+                    return Err(refused(
+                        "observe_required",
+                        "GUI input needs current observation authority",
+                    ));
+                }
+            }
             if grant.policy_required
                 && !Self::policy_live_in(c, &found.tenant, machine.binding, now).await?
             {

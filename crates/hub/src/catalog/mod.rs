@@ -27,6 +27,7 @@ mod tests;
 mod types;
 mod validate;
 pub(crate) use kinds::{FieldType, Kind};
+pub(crate) use mutations::WriteOptions;
 pub(crate) use types::Row;
 type DbResult<T> = Result<T, Failed>;
 fn invalid(message: impl Into<String>) -> BridgeError {
@@ -85,7 +86,11 @@ impl Catalog {
                     human: true,
                     roles: &["admin".into()],
                 },
-                &format!("{}.{}", kind.policy_prefix(), action),
+                &if kind == Kind::GrantPresets && action == "default" {
+                    "preset.default".into()
+                } else {
+                    format!("{}.{}", kind.policy_prefix(), action)
+                },
                 &Resource::default(),
             )
             .await?;

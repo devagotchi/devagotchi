@@ -26,6 +26,7 @@ impl IntoResponse for Failure {
                 StatusCode::BAD_REQUEST
             }
             "unauthenticated" => StatusCode::UNAUTHORIZED,
+            "confirm_required" => StatusCode::UNPROCESSABLE_ENTITY,
             "not_granted" | "read_only" | "policy_denied" | "humans_only" | "not_owner"
             | "key_denied" | "early_access" | "people_only" | "agent_disabled" => {
                 StatusCode::FORBIDDEN

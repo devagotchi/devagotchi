@@ -114,7 +114,10 @@ async fn access_policy_requires_current_complete_acknowledgments_and_cas() {
             &old.id,
             old.version,
             &json!({"plain_text":"Updated risk explanation"}),
-            None,
+            crate::catalog::WriteOptions {
+                request_id: None,
+                confirm_default: None,
+            },
         )
         .await
         .unwrap();

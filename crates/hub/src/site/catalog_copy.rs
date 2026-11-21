@@ -12,6 +12,8 @@ pub struct CatalogCopy {
     pub more: String,
     pub default: String,
     pub choose_default: String,
+    pub confirm_default: String,
+    pub confirm_default_help: String,
     pub id: String,
     pub id_help: String,
     pub structured_help: String,

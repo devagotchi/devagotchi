@@ -12,6 +12,7 @@ pub(crate) struct AccessSettings {
     pub grant_duration_options: Vec<GrantDuration>,
     pub unsandboxed_risk_ids: Vec<String>,
     pub authority_ttl_ms: u32,
+    pub resume_alert_idle_minutes: u32,
 }
 impl Default for AccessSettings {
     fn default() -> Self {
@@ -34,6 +35,7 @@ impl Default for AccessSettings {
             .map(str::to_owned)
             .into(),
             authority_ttl_ms: 10_000,
+            resume_alert_idle_minutes: 15,
         }
     }
 }
@@ -43,6 +45,7 @@ impl AccessSettings {
             || !(1..=1440).contains(&self.request_expiry_minutes)
             || self.deny_cooldown_minutes > 1440
             || !(1000..=30_000).contains(&self.authority_ttl_ms)
+            || !(1..=60).contains(&self.resume_alert_idle_minutes)
             || self.grant_duration_options.is_empty()
             || self.grant_duration_options.len() > 32
             || self.unsandboxed_risk_ids.is_empty()

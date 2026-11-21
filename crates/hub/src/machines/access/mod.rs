@@ -18,15 +18,20 @@ use std::sync::Arc;
 mod admission_action;
 mod admission_completion;
 mod admissions;
+mod control;
 mod decisions;
 mod grant_record;
 mod grants;
 mod notifications;
+mod observation;
 mod policies;
 mod reaper;
 mod records;
 mod references;
 mod requests;
+mod resume;
+mod resume_ack;
+mod resume_agent;
 mod terms;
 pub(crate) use requests::{RequestInput, Requested};
 pub(crate) use terms::{GrantTerms, Narrow};
@@ -35,17 +40,25 @@ pub(crate) use settings::AccessSettings;
 #[cfg(test)]
 mod admission_tests;
 #[cfg(test)]
+mod control_tests;
+#[cfg(test)]
 mod decision_tests;
+#[cfg(test)]
+mod default_tests;
 #[cfg(test)]
 mod grant_tests;
 #[cfg(test)]
 mod notification_tests;
+#[cfg(test)]
+mod observation_tests;
 #[cfg(test)]
 mod policy_tests;
 #[cfg(test)]
 mod reaper_tests;
 #[cfg(test)]
 mod request_tests;
+#[cfg(test)]
+mod resume_tests;
 #[cfg(test)]
 mod schema_tests;
 #[cfg(test)]

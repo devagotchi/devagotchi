@@ -2,6 +2,12 @@ use super::*;
 use devagotchi_store::receipts::{self, Outcome, Request, Reservation};
 use serde::{Serialize, de::DeserializeOwned};
 
+#[derive(Default)]
+pub(crate) struct WriteOptions<'a> {
+    pub request_id: Option<&'a str>,
+    pub confirm_default: Option<&'a str>,
+}
+
 enum Receipt<T> {
     Fresh(Option<Reservation>),
     Replay(T),
@@ -67,7 +73,7 @@ impl Catalog {
         id: &str,
         version: i64,
         patch: &Value,
-        key: Option<&str>,
+        options: WriteOptions<'_>,
     ) -> BridgeResult<Changed<Row>> {
         if !valid_id(id) || version < 0 || !patch.is_object() {
             return Err(invalid("invalid catalog id, version or fields"));
@@ -82,11 +88,24 @@ impl Catalog {
         {
             return Err(invalid("supply known editable catalog fields"));
         }
-        let input = json!({"kind":kind.name(),"id":id,"version":version,"fields":patch});
+        let input = json!({"kind":kind.name(),"id":id,"version":version,"fields":patch,"confirm_default":options.confirm_default});
         transaction!(&self.accounts.store, |c| {
             let tenant = self.enter(c, actor, kind, Some("put")).await?;
-            let receipt = Receipt::begin(c, &tenant, actor, key, "catalog_put", &input).await?;
+            let receipt =
+                Receipt::begin(c, &tenant, actor, options.request_id, "catalog_put", &input)
+                    .await?;
             if let Receipt::Replay(result) = receipt {
+                let result: Row = result;
+                if result.is_default == Some(true) {
+                    references::default_selection(
+                        c,
+                        &tenant,
+                        id,
+                        &Value::Object(result.data.clone()),
+                        options.confirm_default,
+                    )
+                    .await?;
+                }
                 return Ok(Changed {
                     result,
                     replayed: true,
@@ -119,7 +138,8 @@ impl Catalog {
                 .as_ref()
                 .is_some_and(|row| row.is_default == Some(true))
             {
-                references::default_selection(&value)?;
+                references::default_selection(c, &tenant, id, &value, options.confirm_default)
+                    .await?;
             }
             if kind == Kind::Capabilities && current.is_some() {
                 references::capability_change(c, &tenant, id, &value).await?;
@@ -182,7 +202,7 @@ impl Catalog {
         actor: &str,
         id: &str,
         version: i64,
-        key: Option<&str>,
+        options: WriteOptions<'_>,
     ) -> BridgeResult<Changed<Row>> {
         if !valid_id(id) || version <= 0 {
             return Err(invalid(
@@ -190,11 +210,28 @@ impl Catalog {
             ));
         }
         let kind = Kind::GrantPresets;
-        let input = json!({"id":id,"version":version});
+        let input = json!({"id":id,"version":version,"confirm_default":options.confirm_default});
         transaction!(&self.accounts.store, |c| {
             let tenant = self.enter(c, actor, kind, Some("default")).await?;
-            let receipt = Receipt::begin(c, &tenant, actor, key, "catalog_default", &input).await?;
+            let receipt = Receipt::begin(
+                c,
+                &tenant,
+                actor,
+                options.request_id,
+                "catalog_default",
+                &input,
+            )
+            .await?;
             if let Receipt::Replay(result) = receipt {
+                let result: Row = result;
+                references::default_selection(
+                    c,
+                    &tenant,
+                    id,
+                    &Value::Object(result.data.clone()),
+                    options.confirm_default,
+                )
+                .await?;
                 return Ok(Changed {
                     result,
                     replayed: true,
@@ -209,8 +246,15 @@ impl Catalog {
                     "grant preset changed; reload before choosing",
                 ));
             }
+            references::default_selection(
+                c,
+                &tenant,
+                id,
+                &Value::Object(row.data.clone()),
+                options.confirm_default,
+            )
+            .await?;
             if row.is_default != Some(true) {
-                references::default_selection(&Value::Object(row.data.clone()))?;
                 sqlx::query("UPDATE catalog_grant_presets SET is_default=false,version=version+1 WHERE tenant_id=$1 AND is_default").bind(&tenant).execute(&mut *c).await?;
                 row.is_default = Some(true);
                 row.version = version
