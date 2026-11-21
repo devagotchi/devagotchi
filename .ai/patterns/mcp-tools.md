@@ -135,6 +135,9 @@ hints. Its input is the contracts type itself, since the adapter has no `machine
   - `get_recent_tool_calls`, `get_usage_stats`, `dictionary_get`;
   - `whoami`, `machines`, `connections`, `offers`, `offers_accept`, which the site
     instructions, plugins and API-key scopes name.
+  - Preserved Devagotchi access names `request_access`, `wait_for_access`, `my_grants`,
+    `capabilities_list` and `machines_list`, retained during source absorption. Their
+    request selection and original task binding remain typed nested objects.
 
   Renaming those is a separate decision, not part of this pattern.
 - **N3.** One argument name per concept, on every tool: `machine` (by its name from

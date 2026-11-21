@@ -370,6 +370,25 @@ fn risk_snapshots_use_the_same_scope_meanings_as_admission() {
 }
 
 #[test]
+fn unknown_display_retains_warnings_until_the_broker_proves_a_display() {
+    let scope = selector(json!({}));
+    let condition: GrantRiskCondition =
+        serde_json::from_value(json!({"display_server":"x11"})).unwrap();
+    let mut context = GrantRiskContext {
+        selector: &scope,
+        level: GrantLevel::Desktop,
+        duration: GrantDuration::Once,
+        display_server: "",
+        machine_kind: "unknown",
+    };
+    assert!(condition.matches(&context).unwrap());
+    context.display_server = "wayland";
+    assert!(!condition.matches(&context).unwrap());
+    context.display_server = "x11";
+    assert!(condition.matches(&context).unwrap());
+}
+
+#[test]
 fn observation_and_network_calls_must_identify_their_actual_targets() {
     for cap in [GrantCapability::Observe, GrantCapability::Network] {
         let scope = GrantSelector::default();

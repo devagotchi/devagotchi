@@ -3766,11 +3766,15 @@
         "crates/hub/src/machines/access/admission_action.rs",
         "crates/hub/src/machines/access/grant_record.rs",
         "crates/hub/src/machines/access/admission_completion.rs",
-        "crates/hub/src/machines/access/admission_tests.rs"
+        "crates/hub/src/machines/access/admission_tests.rs",
+        "crates/hub/src/machines/access/broker.rs",
+        "crates/hub/src/machines/access/broker_tests.rs",
+        "crates/hub/src/machines/link/remote.rs"
       ],
       "evidence": [
         "Partial access foundation: typed scope/narrowing/risk checks and catalog snapshots; current identity, task lease and machine generation seams. 26 contracts, 3 AgentHub PostgreSQL binding and 28 hub focused tests passed. See .ai/dev/plans/absorption/a04-access.md. Durable request/grant/admission storage, all adapters and native enforcement remain open; no source closure or main delivery.",
-        "Partial durable access unit: transactional request snapshots, human decisions, versioned policies/revocation, durable ending outbox, and admission identity/once continuation. Required-PostgreSQL local slices passed 22 lifecycle/notification and 26 expanded admission tests; exact commands/logs and remaining source obligations are in .ai/dev/plans/absorption/a04-access.md. Broker/native enforcement, remaining lifecycle, surface adapters and UI are still open; no source closure or main delivery."
+        "Partial durable access unit: transactional request snapshots, human decisions, versioned policies/revocation, durable ending outbox, and admission identity/once continuation. Required-PostgreSQL local slices passed 22 lifecycle/notification and 26 expanded admission tests; exact commands/logs and remaining source obligations are in .ai/dev/plans/absorption/a04-access.md. Broker/native enforcement, remaining lifecycle, surface adapters and UI are still open; no source closure or main delivery.",
+        "2026-11-21 adapter integration: authenticated broker facts, request/decision HTTP and five MCP access tools are authored; required-PostgreSQL access regression passed 84 tests with zero failed/ignored. Broker authority/outbox checkpoint 498a06f and remaining obligations/evidence are detailed in .ai/dev/plans/absorption/a04-access.md. Ordinary machine dispatch, native sandbox levels, browser surfaces, shared/configured/guide authority and source role_route remain open where applicable; no source closure, push or main delivery."
       ]
     },
     {
@@ -3809,10 +3813,13 @@
         "crates/hub/src/machines/access/decisions.rs",
         "crates/hub/src/machines/access/records.rs",
         "crates/hub/src/machines/access/terms.rs",
-        "crates/hub/src/machines/access/decision_tests.rs"
+        "crates/hub/src/machines/access/decision_tests.rs",
+        "crates/hub/src/agenthub/http/access_decisions.rs",
+        "crates/hub/src/agenthub/http/tests/access_decisions.rs"
       ],
       "evidence": [
-        "Partial durable access unit: transactional request snapshots, human decisions, versioned policies/revocation, durable ending outbox, and admission identity/once continuation. Required-PostgreSQL local slices passed 22 lifecycle/notification and 26 expanded admission tests; exact commands/logs and remaining source obligations are in .ai/dev/plans/absorption/a04-access.md. Broker/native enforcement, remaining lifecycle, surface adapters and UI are still open; no source closure or main delivery."
+        "Partial durable access unit: transactional request snapshots, human decisions, versioned policies/revocation, durable ending outbox, and admission identity/once continuation. Required-PostgreSQL local slices passed 22 lifecycle/notification and 26 expanded admission tests; exact commands/logs and remaining source obligations are in .ai/dev/plans/absorption/a04-access.md. Broker/native enforcement, remaining lifecycle, surface adapters and UI are still open; no source closure or main delivery.",
+        "2026-11-21 adapter integration: authenticated broker facts, request/decision HTTP and five MCP access tools are authored; required-PostgreSQL access regression passed 84 tests with zero failed/ignored. Broker authority/outbox checkpoint 498a06f and remaining obligations/evidence are detailed in .ai/dev/plans/absorption/a04-access.md. Ordinary machine dispatch, native sandbox levels, browser surfaces, shared/configured/guide authority and source role_route remain open where applicable; no source closure, push or main delivery."
       ]
     },
     {
@@ -3861,10 +3868,13 @@
         "crates/hub/src/machines/access/read_tests.rs",
         "crates/hub/src/agenthub/http/access_reads.rs",
         "crates/hub/src/agenthub/http/tests/access_reads.rs",
-        "crates/hub/src/identity/accounts/machine_access.rs"
+        "crates/hub/src/identity/accounts/machine_access.rs",
+        "crates/hub/src/mcp/tools/access.rs",
+        "crates/hub/src/agenthub/http/tests/access_mcp.rs"
       ],
       "evidence": [
-        "Partial access surface unit: scoped paginated request/grant history and group lookup; long polls reverify credentials; human HTTP policy/revoke/resume/control adapters compose domain CAS and receipts. Machine generation preconditions refuse replacement enrollments; key machine/account/principal limits are preserved. Final required-PostgreSQL access_ slice: 66 passed, zero failed/ignored, target/absorption-access-surfaces.log. See a04-access.md for source display enrichment, request/decision adapters, MCP/browser, configured/shared-machine and broker/native obligations still open. No source closure or main delivery."
+        "Partial access surface unit: scoped paginated request/grant history and group lookup; long polls reverify credentials; human HTTP policy/revoke/resume/control adapters compose domain CAS and receipts. Machine generation preconditions refuse replacement enrollments; key machine/account/principal limits are preserved. Final required-PostgreSQL access_ slice: 66 passed, zero failed/ignored, target/absorption-access-surfaces.log. See a04-access.md for source display enrichment, request/decision adapters, MCP/browser, configured/shared-machine and broker/native obligations still open. No source closure or main delivery.",
+        "2026-11-21 adapter integration: authenticated broker facts, request/decision HTTP and five MCP access tools are authored; required-PostgreSQL access regression passed 84 tests with zero failed/ignored. Broker authority/outbox checkpoint 498a06f and remaining obligations/evidence are detailed in .ai/dev/plans/absorption/a04-access.md. Ordinary machine dispatch, native sandbox levels, browser surfaces, shared/configured/guide authority and source role_route remain open where applicable; no source closure, push or main delivery."
       ]
     },
     {
@@ -3879,10 +3889,14 @@
         "crates/hub/src/machines/access/reaper.rs",
         "crates/hub/src/machines/access/reaper_tests.rs",
         "crates/agenthub/src/hosted/access.rs",
-        "crates/hub/src/machines/access/task_tests.rs"
+        "crates/hub/src/machines/access/task_tests.rs",
+        "crates/hub/src/machines/access/runtime.rs",
+        "crates/hub/src/machines/access/runtime_tests.rs",
+        "crates/hub/src/machines/access/delivery.rs"
       ],
       "evidence": [
-        "Bounded pending expiry and grant reaping use current identity, original task lease and enrollment, live policy, durable ending outbox, and completion-aware once exhaustion. Six AgentHub and 45 hub focused tests passed in target/absorption-access-reaping.log. Runtime scheduling, broker delivery, guide reaping and native lifecycle integration remain open; no source closure."
+        "Bounded pending expiry and grant reaping use current identity, original task lease and enrollment, live policy, durable ending outbox, and completion-aware once exhaustion. Six AgentHub and 45 hub focused tests passed in target/absorption-access-reaping.log. Runtime scheduling, broker delivery, guide reaping and native lifecycle integration remain open; no source closure.",
+        "2026-11-21 adapter integration: authenticated broker facts, request/decision HTTP and five MCP access tools are authored; required-PostgreSQL access regression passed 84 tests with zero failed/ignored. Broker authority/outbox checkpoint 498a06f and remaining obligations/evidence are detailed in .ai/dev/plans/absorption/a04-access.md. Ordinary machine dispatch, native sandbox levels, browser surfaces, shared/configured/guide authority and source role_route remain open where applicable; no source closure, push or main delivery."
       ]
     },
     {
@@ -3898,11 +3912,15 @@
         "crates/hub/src/catalog/access/tests.rs",
         "crates/hub/src/machines/access/requests.rs",
         "crates/hub/src/machines/access/request_tests.rs",
-        "crates/hub/src/machines/access/task_tests.rs"
+        "crates/hub/src/machines/access/task_tests.rs",
+        "crates/hub/src/machines/access/discovery.rs",
+        "crates/hub/src/agenthub/http/access_requests.rs",
+        "crates/hub/src/agenthub/http/tests/access_requests.rs"
       ],
       "evidence": [
         "Partial access foundation: typed scope/narrowing/risk checks and catalog snapshots; current identity, task lease and machine generation seams. 26 contracts, 3 AgentHub PostgreSQL binding and 28 hub focused tests passed. See .ai/dev/plans/absorption/a04-access.md. Durable request/grant/admission storage, all adapters and native enforcement remain open; no source closure or main delivery.",
-        "Partial durable access unit: transactional request snapshots, human decisions, versioned policies/revocation, durable ending outbox, and admission identity/once continuation. Required-PostgreSQL local slices passed 22 lifecycle/notification and 26 expanded admission tests; exact commands/logs and remaining source obligations are in .ai/dev/plans/absorption/a04-access.md. Broker/native enforcement, remaining lifecycle, surface adapters and UI are still open; no source closure or main delivery."
+        "Partial durable access unit: transactional request snapshots, human decisions, versioned policies/revocation, durable ending outbox, and admission identity/once continuation. Required-PostgreSQL local slices passed 22 lifecycle/notification and 26 expanded admission tests; exact commands/logs and remaining source obligations are in .ai/dev/plans/absorption/a04-access.md. Broker/native enforcement, remaining lifecycle, surface adapters and UI are still open; no source closure or main delivery.",
+        "2026-11-21 adapter integration: authenticated broker facts, request/decision HTTP and five MCP access tools are authored; required-PostgreSQL access regression passed 84 tests with zero failed/ignored. Broker authority/outbox checkpoint 498a06f and remaining obligations/evidence are detailed in .ai/dev/plans/absorption/a04-access.md. Ordinary machine dispatch, native sandbox levels, browser surfaces, shared/configured/guide authority and source role_route remain open where applicable; no source closure, push or main delivery."
       ]
     },
     {
@@ -4533,10 +4551,14 @@
         "crates/hub/src/agenthub/http/access_reads.rs",
         "crates/hub/src/agenthub/http/access_admin.rs",
         "crates/hub/src/agenthub/http/tests/access_reads.rs",
-        "crates/hub/src/agenthub/http/tests/access_admin.rs"
+        "crates/hub/src/agenthub/http/tests/access_admin.rs",
+        "crates/hub/src/agenthub/http/access_requests.rs",
+        "crates/hub/src/agenthub/http/access_decisions.rs",
+        "crates/hub/src/agenthub/http/tests/access_requests.rs"
       ],
       "evidence": [
-        "Partial access surface unit: scoped paginated request/grant history and group lookup; long polls reverify credentials; human HTTP policy/revoke/resume/control adapters compose domain CAS and receipts. Machine generation preconditions refuse replacement enrollments; key machine/account/principal limits are preserved. Final required-PostgreSQL access_ slice: 66 passed, zero failed/ignored, target/absorption-access-surfaces.log. See a04-access.md for source display enrichment, request/decision adapters, MCP/browser, configured/shared-machine and broker/native obligations still open. No source closure or main delivery."
+        "Partial access surface unit: scoped paginated request/grant history and group lookup; long polls reverify credentials; human HTTP policy/revoke/resume/control adapters compose domain CAS and receipts. Machine generation preconditions refuse replacement enrollments; key machine/account/principal limits are preserved. Final required-PostgreSQL access_ slice: 66 passed, zero failed/ignored, target/absorption-access-surfaces.log. See a04-access.md for source display enrichment, request/decision adapters, MCP/browser, configured/shared-machine and broker/native obligations still open. No source closure or main delivery.",
+        "2026-11-21 adapter integration: authenticated broker facts, request/decision HTTP and five MCP access tools are authored; required-PostgreSQL access regression passed 84 tests with zero failed/ignored. Broker authority/outbox checkpoint 498a06f and remaining obligations/evidence are detailed in .ai/dev/plans/absorption/a04-access.md. Ordinary machine dispatch, native sandbox levels, browser surfaces, shared/configured/guide authority and source role_route remain open where applicable; no source closure, push or main delivery."
       ]
     },
     {
@@ -4651,9 +4673,17 @@
       "mode": "100644",
       "kind": "blob",
       "packet": "A04",
-      "status": "unverified",
-      "target_paths": [],
-      "evidence": []
+      "status": "partial",
+      "target_paths": [
+        "crates/hub/src/mcp/tools/access.rs",
+        "crates/hub/src/mcp/tools/access_caller.rs",
+        "crates/hub/src/catalog/discovery.rs",
+        "crates/hub/src/machines/access/discovery.rs",
+        "crates/hub/src/agenthub/http/tests/access_mcp.rs"
+      ],
+      "evidence": [
+        "2026-11-21 adapter integration: authenticated broker facts, request/decision HTTP and five MCP access tools are authored; required-PostgreSQL access regression passed 84 tests with zero failed/ignored. Broker authority/outbox checkpoint 498a06f and remaining obligations/evidence are detailed in .ai/dev/plans/absorption/a04-access.md. Ordinary machine dispatch, native sandbox levels, browser surfaces, shared/configured/guide authority and source role_route remain open where applicable; no source closure, push or main delivery."
+      ]
     },
     {
       "path": "server/internal/devapi/mcp_gui.go",

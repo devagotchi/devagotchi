@@ -14,6 +14,7 @@ mod access;
 mod access_admin;
 mod access_decisions;
 mod access_reads;
+mod access_requests;
 mod catalog;
 mod configuration;
 mod events;
@@ -37,6 +38,7 @@ pub(crate) fn routes() -> Router<AppState> {
         .merge(catalog::routes())
         .merge(machine_access::routes())
         .merge(access_reads::routes())
+        .merge(access_requests::routes())
         .merge(access_admin::routes())
         .merge(access_decisions::routes())
         .merge(principals::routes())

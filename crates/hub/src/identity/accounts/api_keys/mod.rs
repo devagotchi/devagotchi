@@ -19,6 +19,7 @@ use crate::{
     store::{Failed, transaction},
 };
 
+mod access;
 #[cfg(test)]
 mod corruption_tests;
 mod managed;

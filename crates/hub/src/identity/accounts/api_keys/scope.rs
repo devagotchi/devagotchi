@@ -92,7 +92,9 @@ impl Scope {
 pub fn scope_for(tool: &str) -> Option<Scope> {
     Some(match tool {
         "capabilities_list" => Scope::CatalogRead,
-        "machines" | "operation_get" | "operation_read" => Scope::MachinesRead,
+        "machines" | "machines_list" | "my_grants" | "operation_get" | "operation_read" => {
+            Scope::MachinesRead
+        }
         "operation_wait" | "operation_list" => Scope::MachinesRead,
         "get_config" | "list_processes" | "machine_inspect" => Scope::MachinesRead,
         "get_recent_tool_calls" | "get_usage_stats" => Scope::MachinesRead,
@@ -105,7 +107,9 @@ pub fn scope_for(tool: &str) -> Option<Scope> {
         "read_file" | "read_multiple_files" | "read_image" => Scope::FilesRead,
         "list_directory" | "get_file_info" | "search_files" => Scope::FilesRead,
         "write_file" | "edit_file" | "create_directory" | "move_file" => Scope::FilesWrite,
-        "approval_request" | "approval_wait" => Scope::ApprovalsRequest,
+        "approval_request" | "approval_wait" | "request_access" | "wait_for_access" => {
+            Scope::ApprovalsRequest
+        }
         "dictionary_get" | "lexicon_resolve" => Scope::WordsRead,
         "lexicon_propose" | "lexicon_review" | "lexicon_handoff" => Scope::WordsWrite,
         "board_settings" | "board_wake" => Scope::BoardsAdmin,

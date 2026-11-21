@@ -471,3 +471,58 @@ facts from tool or HTTP arguments. Offline or unnegotiated peers return an expli
 unavailable refusal; a pending request is never a permit. Preserve request-key replay,
 source risk snapshots, principal policy and exact task lease checks. Author discovery,
 creation, refusal and credential/enrollment race tests before the unit check.
+
+MCP adapter contract: mount `request_access`, `wait_for_access`, `my_grants`,
+`capabilities_list` and `machines_list` on the existing hub router. Keep canonical typed
+request selection, explicit retry keys and closed schemas. Supply live bearer verification
+through a server-created request extension, using the same verifier as HTTP; never store
+a credential on a persistent MCP session. Recheck it after broker waits and every long-poll
+iteration, and reapply machine/project key restrictions. Grants returned by `my_grants`
+are the credential-bound principal's, including when the account is an owner. Catalog
+discovery must read all bounded catalog rows plus current durations/default in one owned
+snapshot, never suppress store errors. Machine listing uses the fallible registry and
+distinguishes connection presence from successful broker execution. Configured/shared
+authority and provider `role_route` remain their planned owner integration work.
+
+HTTP request/discovery and all five MCP access tools are authored. The combined required-
+PostgreSQL access regression passed 84 tests, zero failed/ignored
+(`target/absorption-access-adapters.log`). New coverage includes cross-surface request and
+decision replay, exact task project/fence, credential revocation during HTTP broker waits
+and an existing MCP long poll, enrollment replacement, principal-only grants, closed typed
+schemas, and one audit append per MCP call. The HTTP test server now uses the same store
+for machine enrollment and account/access records, as `serve/mod.rs` actually does.
+Unknown broker display facts conservatively retain display-dependent risk warnings.
+Catalog discovery reads bounded complete catalog collections and settings under their
+domain locks; no source ignored-error fallback was copied. Requests can remain pending for
+a currently unavailable confinement level, but report actual broker availability separately;
+admission still refuses an unsupported level before consuming a use.
+
+The MCP regression passed 22 tests and found a stale source-scan rule: receipt-aware
+`board_mutation` already delegates to audited `board_call`, but the scan did not recognize
+it. The rule now names that actual helper. API-key middleware regression passed both tests.
+The cross-tenant test reached the new typed selection schema and exposed its fixture
+generator's missing JSON Schema `const` support; it now generates the literal discriminator,
+retaining the requirement that every call reaches its handler rather than passing on a
+deserialization error. Follow-up results are recorded below when complete.
+
+Browser integration contract, grounded in S1 `AccessCard.tsx`, `NarrowEditor.tsx`,
+`Grants.tsx` and `risk.tsx`: add an owner-access review page within the existing app, linked
+from Home and Approvals. Show actual requester/machine, reason as escaped untrusted text,
+requested capability, bounded scope, duration/use limit, task and frozen risk explanations.
+Human actions use same-origin forms with original request IDs and versions; refresh the
+session immediately before mutation. Narrowing must preserve untouched selector fields,
+distinguish an empty path list from unrestricted paths, and offer only levels related by
+the typed `within` check (the source's array-order level shortcut is insufficient).
+Preserve the user's entered draft and retry key on refusal. Show request/grant history,
+expiry and ended reason, with revoke delegated to the durable domain owner. Keep severity
+as text, not color alone. Catalog and policy administration remain linked to their owners.
+Add localization through site copy, including the neutral fixture. A stale displayed form,
+another origin, a forged principal/seat, revoked session, widened selector and repeated
+decision/revoke must be exercised through the actual browser routes before UI acceptance.
+
+Adapter follow-up evidence: audit registration/dispatch scan and the real cross-tenant
+all-tool/page regression both passed after their fixture corrections. All 29 contracts
+tests passed, including unknown-display warning preservation. Layout passed all eight
+checks after moving the schema argument generator into `tenancy/tests/schema.rs` and
+tightening the existing oversized fixture's limit; no size limit was raised. This is a
+local authored checkpoint only; the browser/native/full integration work above remains.

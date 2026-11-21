@@ -5,7 +5,11 @@ use rmcp::handler::server::router::tool::ToolRouter;
 
 use super::Hub;
 
+mod access;
+mod access_caller;
 mod machines;
+
+pub(super) const ACCESS_INSTRUCTIONS: &str = "Machine access: use machines_list and capabilities_list, then request_access with a stable request_id and a reason of at least 20 characters. Use wait_for_access to read the human decision and my_grants for your current terms. A pending request or listed grant is not an execution permit. Check actual broker sandbox availability; unavailable confinement must be resolved before running. Never ask the operator for secrets.";
 
 impl Hub {
     /// Every tool this hub serves: its own, and each domain's router added to them. Their
@@ -13,6 +17,7 @@ impl Hub {
     pub(crate) fn router() -> ToolRouter<Self> {
         devagotchi_mcp::outputs::open_outputs(
             Self::machines_router()
+                + Self::access_router()
                 + Self::machine_router()
                 + Self::board_router()
                 + Self::workflow_router()

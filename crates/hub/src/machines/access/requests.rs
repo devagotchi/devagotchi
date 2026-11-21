@@ -13,14 +13,14 @@ use devagotchi_contracts::{GrantCapability, GrantDuration};
 use devagotchi_store::receipts::{self, Outcome, Request};
 use serde_json::json;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct TaskRequest {
     pub project: String,
     pub ticket: String,
     pub fence: i64,
 }
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct RequestInput {
     pub machine: String,

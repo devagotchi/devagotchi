@@ -1,13 +1,13 @@
 use super::*;
 
 /// An explicit empty list permits nothing; missing unrestricted fields mean any.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(untagged)]
 pub enum AllowedNames {
     Names(Vec<String>),
     Any(AnyName),
 }
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
 pub enum AnyName {
     #[serde(rename = "any")]
     Any,
@@ -30,7 +30,7 @@ impl AllowedNames {
     }
 }
 
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct GrantSelector {
     #[serde(
@@ -38,84 +38,98 @@ pub struct GrantSelector {
         deserialize_with = "present",
         skip_serializing_if = "Option::is_none"
     )]
+    #[schemars(with = "Vec<String>")]
     pub paths: Option<Vec<String>>,
     #[serde(
         default,
         deserialize_with = "present",
         skip_serializing_if = "Option::is_none"
     )]
+    #[schemars(with = "Vec<Vec<String>>")]
     pub argv_prefix: Option<Vec<Vec<String>>>,
     #[serde(
         default,
         deserialize_with = "present",
         skip_serializing_if = "Option::is_none"
     )]
+    #[schemars(with = "Vec<String>")]
     pub hosts: Option<Vec<String>>,
     #[serde(
         default,
         deserialize_with = "present",
         skip_serializing_if = "Option::is_none"
     )]
+    #[schemars(with = "Vec<String>")]
     pub env_allow: Option<Vec<String>>,
     #[serde(
         default,
         deserialize_with = "present",
         skip_serializing_if = "Option::is_none"
     )]
+    #[schemars(with = "Vec<String>")]
     pub actions: Option<Vec<String>>,
     #[serde(
         default,
         deserialize_with = "present",
         skip_serializing_if = "Option::is_none"
     )]
+    #[schemars(with = "AllowedNames")]
     pub apps: Option<AllowedNames>,
     #[serde(
         default,
         deserialize_with = "present",
         skip_serializing_if = "Option::is_none"
     )]
+    #[schemars(with = "AllowedNames")]
     pub windows: Option<AllowedNames>,
     #[serde(
         default,
         deserialize_with = "present",
         skip_serializing_if = "Option::is_none"
     )]
+    #[schemars(with = "AllowedNames")]
     pub monitors: Option<AllowedNames>,
     #[serde(
         default,
         deserialize_with = "present",
         skip_serializing_if = "Option::is_none"
     )]
+    #[schemars(with = "Vec<String>")]
     pub deny_keys: Option<Vec<String>>,
     #[serde(
         default,
         deserialize_with = "present",
         skip_serializing_if = "Option::is_none"
     )]
+    #[schemars(with = "u32")]
     pub max_runtime_s: Option<u32>,
     #[serde(
         default,
         deserialize_with = "present",
         skip_serializing_if = "Option::is_none"
     )]
+    #[schemars(with = "u32")]
     pub max_actions_per_minute: Option<u32>,
     #[serde(
         default,
         deserialize_with = "present",
         skip_serializing_if = "Option::is_none"
     )]
+    #[schemars(with = "u32")]
     pub max_edge: Option<u32>,
     #[serde(
         default,
         deserialize_with = "present",
         skip_serializing_if = "Option::is_none"
     )]
+    #[schemars(with = "u32")]
     pub tree_depth: Option<u32>,
     #[serde(
         default,
         deserialize_with = "present",
         skip_serializing_if = "Option::is_none"
     )]
+    #[schemars(with = "String")]
     pub shell_profile: Option<String>,
 }
 pub(super) fn strings(values: &[String]) -> BridgeResult<()> {

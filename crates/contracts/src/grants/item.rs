@@ -1,7 +1,7 @@
 //! One requested or approved capability. Approval may only reduce this scope.
 use super::*;
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct GrantItem {
     pub capability: GrantCapability,

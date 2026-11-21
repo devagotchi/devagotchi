@@ -102,7 +102,10 @@ impl GrantRiskCondition {
             && self
                 .display_server
                 .as_ref()
-                .is_none_or(|display| display == context.display_server)
+                // Unknown display facts cannot silently remove a display-specific warning.
+                .is_none_or(|display| {
+                    context.display_server.is_empty() || display == context.display_server
+                })
             && self.argv0.as_ref().is_none_or(|names| {
                 !names.is_empty()
                     && s.argv_prefix.as_ref().is_none_or(|prefixes| {

@@ -32,7 +32,7 @@ fn denied(message: &str) -> BridgeError {
     BridgeError::new("outside_grant", message)
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
 pub enum GrantLevel {
     #[serde(rename = "read-only")]
     ReadOnly,
@@ -52,7 +52,7 @@ impl GrantLevel {
 }
 
 /// Bounded, validated duration; task lifetime and wall time are not interchangeable.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(try_from = "String", into = "String")]
 pub enum GrantDuration {
     Once,
@@ -115,7 +115,7 @@ impl GrantDuration {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
 pub enum GrantCapability {
     #[serde(rename = "exec")]
     Exec,

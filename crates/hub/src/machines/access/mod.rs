@@ -24,6 +24,7 @@ mod broker;
 mod broker_tests;
 mod control;
 mod delivery;
+mod discovery;
 mod runtime;
 pub(crate) use runtime::AccessRuntime;
 #[cfg(test)]
@@ -49,7 +50,7 @@ mod resume_ack;
 pub(crate) use resume_ack::ResumeAction;
 mod resume_agent;
 mod terms;
-pub(crate) use requests::{RequestInput, Requested};
+pub(crate) use requests::{RequestInput, Requested, TaskRequest};
 pub(crate) use terms::{GrantTerms, Narrow};
 mod settings;
 pub(crate) use settings::AccessSettings;

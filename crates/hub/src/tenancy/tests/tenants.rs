@@ -94,7 +94,9 @@ pub(crate) async fn hosted_with_ingress(
     let analytics = config.counts_visits().then(|| {
         ops::analytics::Analytics::start_with(accounts.store().clone(), config.live_handle(), &url)
     });
-    let devices = crate::machines::devices::test_registry().await?;
+    // The real server uses one PostgreSQL store for accounts, machine enrollment and
+    // access transactions. A second test database hides broken cross-owner wiring.
+    let devices = Arc::new(machines::devices::Devices::new(accounts.store().clone()));
     let audit = crate::ops::audit::test_audit().await?;
     let changes = Arc::new(tokio::sync::Notify::new());
     let links = Arc::new(
@@ -389,62 +391,7 @@ pub(crate) fn refused(answer: &Value) -> bool {
     answer["isError"] == true || answer.get("error").is_some() || answer.get("code").is_some()
 }
 
-/// Arguments for `schema`, filled from `ids` by property name and with harmless values
-/// elsewhere: enough for the call to reach the tool, with the other tenant's ids where a
-/// tool takes one.
-pub(crate) fn fill(schema: &Value, root: &Value, ids: &Value) -> Value {
-    if let Some(reference) = schema.get("$ref").and_then(Value::as_str) {
-        let name = reference.rsplit('/').next().unwrap();
-        let defs = root
-            .get("$defs")
-            .or_else(|| root.get("definitions"))
-            .unwrap();
-        return fill(&defs[name], root, ids);
-    }
-    for key in ["anyOf", "oneOf", "allOf"] {
-        if let Some(options) = schema.get(key).and_then(Value::as_array) {
-            let first = options
-                .iter()
-                .find(|o| o["type"] != "null")
-                .unwrap_or(&options[0]);
-            return fill(first, root, ids);
-        }
-    }
-    if let Some(choices) = schema.get("enum").and_then(Value::as_array) {
-        return choices[0].clone();
-    }
-    let kind = match &schema["type"] {
-        Value::Array(kinds) => kinds
-            .iter()
-            .find(|k| *k != "null")
-            .cloned()
-            .unwrap_or(Value::Null),
-        kind => kind.clone(),
-    };
-    match kind.as_str() {
-        Some("object") => {
-            let mut out = serde_json::Map::new();
-            let required: Vec<&str> = schema["required"]
-                .as_array()
-                .map(|r| r.iter().filter_map(Value::as_str).collect())
-                .unwrap_or_default();
-            if let Some(properties) = schema["properties"].as_object() {
-                for (name, property) in properties {
-                    if let Some(id) = ids.get(name) {
-                        out.insert(name.clone(), id.clone());
-                    } else if required.contains(&name.as_str()) {
-                        out.insert(name.clone(), fill(property, root, ids));
-                    }
-                }
-            }
-            Value::Object(out)
-        }
-        Some("integer") | Some("number") => json!(1),
-        Some("boolean") => json!(false),
-        Some("array") => json!([]),
-        _ => json!("x"),
-    }
-}
+pub(crate) use super::schema::fill;
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn tenant_a_reaches_nothing_of_tenant_bs_through_any_tool_or_page() {

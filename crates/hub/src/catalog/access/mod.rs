@@ -8,7 +8,7 @@ use std::collections::BTreeMap;
 #[cfg(test)]
 mod tests;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 pub(crate) enum Selection {
     Items { items: Vec<GrantItem> },

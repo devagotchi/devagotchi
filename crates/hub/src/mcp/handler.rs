@@ -126,7 +126,8 @@ impl ServerHandler for Hub {
                 .build(),
         )
         .with_server_info(site.mcp_info())
-        .with_instructions(
+        .with_instructions(format!(
+            "{} {}",
             match site.offers_instructions().filter(|_| self.offered()) {
                 Some(offers) => format!(
                     "{} {offers}",
@@ -134,6 +135,7 @@ impl ServerHandler for Hub {
                 ),
                 None => site.mcp_instructions(&self.config.public_url),
             },
-        )
+            super::tools::ACCESS_INSTRUCTIONS,
+        ))
     }
 }

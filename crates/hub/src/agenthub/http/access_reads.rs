@@ -16,22 +16,26 @@ use serde_json::json;
 
 pub(super) fn routes() -> Router<AppState> {
     Router::new()
-        .route("/api/v1/access-requests", get(requests))
+        .route(
+            "/api/v1/access-requests",
+            get(requests).post(super::access_requests::create),
+        )
         .route("/api/v1/access-requests/{id}", get(lookup))
         .route("/api/v1/grants", get(grants))
 }
-async fn scoped(state: &AppState, caller: &Caller) -> Result<(Access, Option<Identity>), Failure> {
-    super::reads::read(caller)?;
+pub(super) async fn identity(
+    state: &AppState,
+    caller: &Caller,
+) -> Result<(Access, Option<Identity>), Failure> {
     if let Some(error) = caller.hub.waiting_refusal(&caller.subject) {
         return Err(error.into());
     }
-    caller.require_scope(Scope::MachinesRead)?;
     if caller
         .headers
         .contains_key(crate::agenthub::mcp::SEAT_HEADER)
     {
         return Err(invalid(
-            "access history uses the credential-bound principal, not a seat header",
+            "machine access uses the credential-bound principal, not a seat header",
         ));
     }
     let accounts = state
@@ -42,7 +46,12 @@ async fn scoped(state: &AppState, caller: &Caller) -> Result<(Access, Option<Ide
     let profile = accounts.machine_identity(&caller.subject).await?;
     Ok((Access::new(accounts), profile))
 }
-fn actor(caller: &Caller, policy: Option<Identity>) -> Actor<'_> {
+async fn scoped(state: &AppState, caller: &Caller) -> Result<(Access, Option<Identity>), Failure> {
+    super::reads::read(caller)?;
+    caller.require_scope(Scope::MachinesRead)?;
+    identity(state, caller).await
+}
+pub(super) fn actor(caller: &Caller, policy: Option<Identity>) -> Actor<'_> {
     Actor {
         id: caller
             .subject

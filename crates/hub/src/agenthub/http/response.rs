@@ -22,13 +22,19 @@ impl From<BridgeError> for Failure {
 impl IntoResponse for Failure {
     fn into_response(self) -> Response {
         let status = match self.0.code.as_str() {
-            "invalid" | "invalid_settings" | "unknown_environment" | "usage" | "self_lockout" => {
-                StatusCode::BAD_REQUEST
-            }
+            "invalid"
+            | "invalid_settings"
+            | "invalid_grant"
+            | "reason_too_short"
+            | "unknown_environment"
+            | "usage"
+            | "self_lockout" => StatusCode::BAD_REQUEST,
             "unauthenticated" => StatusCode::UNAUTHORIZED,
-            "confirm_required" | "risks_not_acknowledged" | "scope_wider_than_request" => {
-                StatusCode::UNPROCESSABLE_ENTITY
-            }
+            "confirm_required"
+            | "risks_not_acknowledged"
+            | "scope_wider_than_request"
+            | "scope_wider_than_preset"
+            | "observe_required" => StatusCode::UNPROCESSABLE_ENTITY,
             "not_granted" | "read_only" | "policy_denied" | "humans_only" | "not_owner"
             | "key_denied" | "early_access" | "people_only" | "agent_disabled" | "own_request" => {
                 StatusCode::FORBIDDEN

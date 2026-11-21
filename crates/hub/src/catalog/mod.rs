@@ -16,6 +16,7 @@ use serde_json::{Value, json};
 use sqlx::AnyConnection;
 use std::sync::Arc;
 pub(crate) mod access;
+mod discovery;
 mod kinds;
 mod mutations;
 mod references;
