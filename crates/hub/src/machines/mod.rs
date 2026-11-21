@@ -31,6 +31,7 @@
 //! reaches its people's phones), `crate::config`, `crate::site` (the words), the `link` and
 //! `contracts` crates.
 
+pub(crate) mod access;
 pub(crate) mod cli;
 pub mod devices;
 pub mod downloads;

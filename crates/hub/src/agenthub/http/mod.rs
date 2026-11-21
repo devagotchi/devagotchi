@@ -16,6 +16,7 @@ mod configuration;
 mod events;
 mod input;
 mod leases;
+mod machine_access;
 mod principals;
 mod projects;
 mod protocol;
@@ -31,6 +32,7 @@ use response::{Failure, Reply, invalid};
 pub(crate) fn routes() -> Router<AppState> {
     Router::new()
         .merge(catalog::routes())
+        .merge(machine_access::routes())
         .merge(principals::routes())
         .merge(configuration::routes())
         .merge(projects::routes())

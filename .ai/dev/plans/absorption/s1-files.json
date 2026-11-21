@@ -4376,9 +4376,14 @@
       "mode": "100644",
       "kind": "blob",
       "packet": "A00",
-      "status": "unverified",
-      "target_paths": [],
-      "evidence": []
+      "status": "partial",
+      "target_paths": [
+        "crates/hub/migrations/0041_machine_access.sql",
+        "crates/hub/src/machines/access/schema_tests.rs"
+      ],
+      "evidence": [
+        "Partial: seven forced-RLS access coordination tables plus machine enrollment generation. Actual restricted-role RLS and foreign environment/account FK checks passed. Request/decision/admission operations, process/GUI integration and source/main closure remain open. See a04-access.md."
+      ]
     },
     {
       "path": "server/internal/db/migrations/005_devagotchi_guides.sql",
@@ -5462,9 +5467,16 @@
       "mode": "100644",
       "kind": "blob",
       "packet": "A05",
-      "status": "unverified",
-      "target_paths": [],
-      "evidence": []
+      "status": "partial",
+      "target_paths": [
+        "crates/agenthub/src/policy/catalog/access-presets.json",
+        "crates/agenthub/src/policy/catalog/access_seed.rs",
+        "crates/agenthub/src/policy/catalog/access_seed_tests.rs",
+        "crates/agenthub/migrations/0008_policy_seed_marks.sql"
+      ],
+      "evidence": [
+        "Pinned 27-policy/two-role access family seeded once with edit/deletion preservation; byte equality verified. 18 AgentHub and 20 hub focused policy/identity/catalog checks passed. Later consumers and source/main closure remain open; see a04-access.md."
+      ]
     },
     {
       "path": "server/internal/presets/devagotchi/provider-models.json",
@@ -5540,9 +5552,16 @@
       "mode": "100644",
       "kind": "blob",
       "packet": "A05",
-      "status": "unverified",
-      "target_paths": [],
-      "evidence": []
+      "status": "partial",
+      "target_paths": [
+        "crates/hub/src/machines/access/settings.rs",
+        "crates/hub/src/machines/access/settings_tests.rs",
+        "crates/hub/src/agenthub/http/machine_access.rs",
+        "crates/hub/src/agenthub/http/tests/machine_access.rs"
+      ],
+      "evidence": [
+        "Partial: expiry/cooldown/duration/risk settings and bounded authority TTL persisted with owner API, version/receipt/audit and reference checks. Focused domain and HTTP refusal/replay checks passed; browser access interface and other source settings remain open. See a04-access.md."
+      ]
     },
     {
       "path": "server/internal/presets/devagotchi/shell-profiles.json",

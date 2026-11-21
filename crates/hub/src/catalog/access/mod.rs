@@ -57,6 +57,23 @@ fn encode<T: Serialize>(value: &T) -> DbResult<Value> {
 }
 
 impl Catalog {
+    /// Snapshot acknowledged risks for the access owner while holding the catalog lock.
+    pub(crate) async fn access_risks_in(
+        &self,
+        c: &mut AnyConnection,
+        account: &str,
+        ids: &[String],
+    ) -> DbResult<Vec<Row>> {
+        if ids.is_empty() || ids.len() > 64 {
+            return Err(invalid("acknowledge 1 to 64 catalog risks").into());
+        }
+        let tenant = self.enter(c, account, Kind::Risks, None).await?;
+        let mut rows = Vec::with_capacity(ids.len());
+        for id in ids {
+            rows.push(validate::exists(c, &tenant, Kind::Risks, id).await?);
+        }
+        Ok(rows)
+    }
     /// Caller must authenticate the canonical account and principal in this transaction.
     /// Board/task locks must already be held when the request is task-bound.
     /// Live identity, policy, task and machine authority still belong to the access owner.

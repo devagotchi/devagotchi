@@ -83,6 +83,12 @@ Composition decisions grounded in the existing owners:
    PostgreSQL. Allocate identifiers outside retried transactions. Share identity/policy,
    machine directory, board lease and guide state through their owners. Every write has
    a version and canonical receipt; current authority precedes receipt replay.
+   Restore the pinned source access policy/role preset through the existing AgentHub
+   policy owner before exposing requests. A per-environment seed mark applies this
+   previously missing family once, preserving existing IDs and later edits/deletions.
+   Keep source actions (`access.request`, `grant.*`, `policy.unsandboxed.*`, operation
+   actions) and CLI/service indefinite-grant denials. Policies do not replace the
+   independent-person, account, machine, lease or native-enforcement checks.
 4. Request expands preset items, validates all selectors/levels/duration/use bounds,
    requires a substantive reason and valid live task/guide binding for task duration,
    snapshots the matching risk explanations, and applies denial cooldown/expiry settings.
@@ -107,6 +113,60 @@ Composition decisions grounded in the existing owners:
    implementation.md. Both internal and configured external decisions must permit.
 
 ## Acceptance
+
+### Durable lifecycle implementation contract
+
+The next domain unit uses `machine_` tables under forced PostgreSQL RLS and the existing
+store/receipt/audit owners. Request IDs, group IDs, grant IDs and admission IDs are
+allocated before retryable transactions. Keep request input separate from resolved
+catalog snapshots so retries cannot silently become a different request after a default
+or preset changes. Settings own bounded pending expiry/cooldown, offered durations,
+required risk IDs and the broker authority refresh window; no hidden constant overrides
+an editable source setting.
+
+- Requests retain account and canonical principal, machine enrollment binding, optional
+  physical task/lease binding or guide binding, reason, immutable prepared catalog data,
+  duration/use limit, pending deadline and independent decision/version. Group expansion
+  is atomic. A preset duration override narrows; `once` always means one admission.
+  Task duration requires an actually live task or guide owner. Missing guide integration
+  cannot be accepted as a free-form ID. Denial cooldown compares the original capability
+  and selector and collapses duplicates without approving them.
+- Decisions load the stored binding without locking it, acquire the bound board lock,
+  then current identity/policy/catalog/machine/access locks and reread the request.
+  Approver is a currently authenticated person and differs from requester. An approved
+  item passes `GrantItem::within`, duration/use narrowing and current policy. GUI input
+  requires live observation authority, not merely a historical observation row. Both
+  original risk explanations and the chosen effective scope remain inspectable.
+- Policies are either environment-wide or tied to a machine enrollment generation.
+  Enabling requires all configured risk acknowledgments and a future optional expiry;
+  record the actual acknowledged explanations. CAS changes, audit, affected grant endings
+  and notification intents commit together. A machine-specific enable never authorizes
+  the environment-wide full-access default. Default selection/escalation needs the
+  typed preset ID as well as the current acknowledged environment policy.
+- Admissions use a durable operation identity plus canonical input digest, unique for
+  principal/account and machine enrollment. Check live identity/policy/lease/machine
+  before recovering an admission; changed input is a conflict. Fresh admission and use
+  consumption are atomic. Retries/continuations do not consume again. Exhausting a
+  once grant stops additional starts but does not kill its already admitted operation.
+  Operation completion/retirement remains owned by the broker journal, with a durable
+  correlated receipt at the hub; do not create another process scheduler.
+- A short-lived authority envelope binds admission, principal, machine generation,
+  grant/version, effective item and task fence/lease, with expiry no later than the
+  live lease/grant and refresh window. The broker derives the actual `GrantCall` from
+  the operation. Remote requests cannot choose an identity, authority or trusted-local
+  IPC path. Unsupported peers fail before executing; refresh/reconnect cannot revive a
+  revoked grant. Explicitly separate already-completed retry/history reads from admitting
+  another effect, retaining current account/caller authorization for either path.
+- Endings update the grant once and create a unique durable machine notification intent
+  in the same transaction. Dispatch retries outside the transaction, acknowledges only
+  the exact delivered generation/version and reports failures. Lost delivery is bounded
+  by broker expiry. Policy disable can end rows without acquiring board locks; task-aware
+  reaping acquires each board first and never reverses the lock order. Resume alerts are
+  per person/grant/session, deduplicated while open; pause also ends ongoing authority.
+
+These are acceptance obligations for the unfinished domain. Migration 0041 now defines
+the lifecycle tables, and access settings have an owner API; the request/decision/
+admission operations, dispatcher and broker integration are not implemented by that schema.
 
 Port the source scope fixtures plus the corrected widening cases. Real PostgreSQL:
 duplicate/retried once admission, concurrent last-use starts, task renewal/reclaim/end,
@@ -153,3 +213,36 @@ header parsing and timeouts. These findings refine the existing native-enforceme
 
 Status: A04 remains partial and open. No enforced sandbox, source closure, CI, remote
 publication, branch deletion or main delivery is claimed by these local checks.
+
+## Policy defaults and durable schema/settings unit
+
+AgentHub checkpoint `a7c14ec` adds migration 0008 and the byte-exact source access policy
+preset: 27 rules and builder/researcher roles. Its per-environment seed mark preserves
+existing record IDs, edits and deletions. Stable mapped IDs are `source-access-01` through
+`source-access-27` in pinned file order. Focused policy/lease/catalog checks passed:
+18 AgentHub and 20 hub tests, zero ignored (`target/absorption-access-policy.log`).
+
+Hub migration 0041 defines seven lifecycle tables with forced RLS and composite
+environment/account foreign keys. `machines/access/settings.rs` implements validated,
+versioned access settings, permanent request receipts and one audit event per mutation.
+`/api/v1/access-settings` is owner/person-only with exact origin and request identity;
+required risk references block catalog deletion. The seven-table RLS test uses the actual
+non-superuser, non-bypass `devagotchi_hub` role, proves foreign rows cannot be read/changed/
+deleted/moved, and checks that a foreign environment's account cannot be attached.
+
+Validation: the 33-test settings/catalog/access/store slice passed 32 and exposed two
+HTTP-fixture assumptions in the remaining scenario: duplicate Origin headers are a 400,
+and the outer middleware's foreign-origin refusal is not the JSON adapter response.
+Both fixture corrections preserve the expected refusal. The focused HTTP scenario now
+passes (`target/absorption-access-settings-http.log`), with all other 32 scenarios already
+passing in `target/absorption-access-settings.log`. Eight layout checks and diff checks
+pass. This is not runtime acceptance of request approval or machine execution.
+
+Current next implementation: `machines/access/{requests,decisions,grants,admissions,policies}`
+against the above schema and transaction contract, followed by durable ending dispatch,
+broker authority/sandbox enforcement and complete source adapters/browser flows. The
+settings API has no browser editor yet; author it with the full access interface.
+
+Remote read-only check during this work: root `main` is still `4b01ac9`, remote integration
+is `ed92ea9`; AgentHub remote `main` is `8a6db52`; both repositories have no open PR.
+No remote push, CI run, merge, branch deletion or Docker development-image update occurred.

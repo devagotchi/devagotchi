@@ -4,6 +4,7 @@ mod catalog;
 mod catalog_access;
 mod configuration;
 mod events;
+mod machine_access;
 mod principals;
 mod project_races;
 mod projects;

@@ -25,12 +25,12 @@ pub(super) async fn deletion(
         ));
     }
     let used:bool=match kind {
-        Kind::Capabilities=>sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM catalog_capability_risks WHERE tenant_id=$1 AND capability_id=$2) OR EXISTS(SELECT 1 FROM catalog_grant_presets p,jsonb_array_elements(p.items) item WHERE p.tenant_id=$1 AND item->>'capability'=$2)").bind(tenant).bind(&row.id).fetch_one(c).await?,
-        Kind::Risks=>sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM catalog_capability_risks WHERE tenant_id=$1 AND risk_id=$2) OR EXISTS(SELECT 1 FROM catalog_docker_runtime_presets WHERE tenant_id=$1 AND jsonb_exists(risk_ids,$2))").bind(tenant).bind(&row.id).fetch_one(c).await?,
-        Kind::ShellProfiles=>sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM catalog_grant_presets p,jsonb_array_elements(p.items) item WHERE p.tenant_id=$1 AND item->'selector'->>'shell_profile'=$2)").bind(tenant).bind(&row.id).fetch_one(c).await?,
+        Kind::Capabilities=>sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM catalog_capability_risks WHERE tenant_id=$1 AND capability_id=$2) OR EXISTS(SELECT 1 FROM catalog_grant_presets p,jsonb_array_elements(p.items) item WHERE p.tenant_id=$1 AND item->>'capability'=$2)").bind(tenant).bind(&row.id).fetch_one(&mut *c).await?,
+        Kind::Risks=>sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM catalog_capability_risks WHERE tenant_id=$1 AND risk_id=$2) OR EXISTS(SELECT 1 FROM catalog_docker_runtime_presets WHERE tenant_id=$1 AND jsonb_exists(risk_ids,$2))").bind(tenant).bind(&row.id).fetch_one(&mut *c).await?,
+        Kind::ShellProfiles=>sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM catalog_grant_presets p,jsonb_array_elements(p.items) item WHERE p.tenant_id=$1 AND item->'selector'->>'shell_profile'=$2)").bind(tenant).bind(&row.id).fetch_one(&mut *c).await?,
         _=>false,
     };
-    if used {
+    if used || crate::machines::access::Access::catalog_in_use(c, tenant, kind, &row.id).await? {
         return Err(refused(
             "in_use",
             "another catalog record still refers to this record",

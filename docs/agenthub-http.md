@@ -226,6 +226,29 @@ or overwrite edits. Selector schemas are validated offline with bounded size and
 external network/file references are refused. JSON fields and lists round-trip as JSON
 in the owner editor, preserving commas inside values and retaining refused drafts.
 
+## Machine access settings
+
+`GET /api/v1/access-settings` reads the environment owner's current access settings.
+`PUT` accepts the complete record with its current `version` and a `request_id` or
+`Idempotency-Key`; it returns `{result, replayed}`. Only a current authenticated person
+who owns the environment may use these routes. Agent credentials, seat aliases,
+organization scope and foreign-origin changes are refused. Conflicting/repeated headers
+are invalid requests. A successful write advances the version and records one audit
+event; retrying the same request returns its original result after live authorization.
+
+Fields and bounds:
+
+- `request_expiry_minutes`: 1–1440, default 30.
+- `deny_cooldown_minutes`: 0–1440, default 10.
+- `grant_duration_options`: 1–32 distinct valid durations; defaults to `once`, `task`,
+  `1h`, `8h`, `until_revoked`.
+- `unsandboxed_risk_ids`: 1–64 distinct existing risk IDs; required risks cannot be
+  deleted while these settings refer to them.
+- `authority_ttl_ms`: 1000–30000, default 10000, for the pending broker-authority integration.
+
+These settings do not create grants or enable unsandboxed execution. The request,
+approval, admission and native-enforcement integration remains under active development.
+
 ## Reconnecting events and protocol discovery
 
 `GET /api/v1/stream?project=PROJECT` streams the same committed board events as the
