@@ -34,6 +34,8 @@ pub struct ConfigurationCopy {
     pub wip_help: String,
     pub priority: String,
     pub priority_help: String,
+    pub priority_labels: String,
+    pub priority_labels_help: String,
     pub repo: String,
     pub environments: String,
     pub environment_help: String,

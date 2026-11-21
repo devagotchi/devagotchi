@@ -135,16 +135,17 @@ pub async fn page(
             open_only: true,
             ..Filter::default()
         })?;
-        devagotchi_contracts::BridgeResult::Ok((all, open(&filter)?, board.workflow()?))
+        devagotchi_contracts::BridgeResult::Ok((all, open(&filter)?, board.configuration_state()?))
     })
     .await;
-    let (all, shown, workflow) = match read {
+    let (all, shown, configuration) = match read {
         Ok(Ok(value)) => value,
         other => {
             eprintln!("devagotchi hub: read board page: {other:?}");
             return crate::web::routes::unavailable();
         }
     };
+    let workflow = &configuration.workflow;
     let me = subject.id.as_str();
     let who = |assignee: &str| {
         if assignee == me {
@@ -199,7 +200,7 @@ pub async fn page(
                 .unwrap_or_default();
             format!(
                 "<li id=\"ticket-{i}\"><a href=\"/app/tickets/{}/{}\">{}</a> \
-<span class=\"meta\">{i} · {} · P{}{assignee}</span></li>",
+<span class=\"meta\">{i} · {} · {}{assignee}</span></li>",
                 encode(&project),
                 encode(&ticket.id),
                 escape(&ticket.title),
@@ -208,7 +209,7 @@ pub async fn page(
                         .state(&ticket.state)
                         .map_or(ticket.state.as_str(), |s| s.label.as_str())
                 ),
-                ticket.priority,
+                escape(&configuration.settings.priority_label(ticket.priority)),
                 i = escape(&ticket.id),
             )
         })

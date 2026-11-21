@@ -163,8 +163,20 @@ pub(super) fn settings(
     };
     let duration = "type=\"number\" min=\"0.001\" step=\"0.001\" required";
     let nonnegative = "type=\"number\" min=\"0\" step=\"1\" required";
+    let priority_names = format!(
+        "<label class=\"stack\">{}<textarea name=\"priority_labels\" rows=\"5\" maxlength=\"2624\">{}</textarea></label><p>{}</p>",
+        escape(&c.priority_labels),
+        escape(
+            draft
+                .values
+                .get("priority_labels")
+                .map(String::as_str)
+                .unwrap_or_default()
+        ),
+        escape(&c.priority_labels_help),
+    );
     let options = format!(
-        "<section class=\"card stack\">{}<p>{}</p>{}<p>{}</p></section>",
+        "<section class=\"card stack\">{}<p>{}</p>{}<p>{}</p>{priority_names}</section>",
         input(
             "heartbeat_hint",
             &c.heartbeat_hint,

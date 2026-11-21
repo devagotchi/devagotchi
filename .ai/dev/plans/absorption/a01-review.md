@@ -12,6 +12,7 @@ open even where an individual operation already exists. No CI/push/merge for thi
 | `store/notes.go`: any supplied stale fence refuses, including a previous holder | `hosted/notes.rs` uses the shared supplied-fence guard before writing | stale previous-holder note leaves notes/events unchanged; independent unfenced observation remains allowed |
 | `store/hint.go`, default preset: configured heartbeat hint capped by actual TTL | `settings.rs`, `hosted/leases.rs`, `board/prime.rs`; versioned browser settings expose the hint | `tests/runtime_settings.rs`: custom hint used by claim/heartbeat/prime; shorter actual TTL caps it; invalid values cause no writes |
 | `store/notes.go`, default preset: configured note kinds, empty permits any | `settings.rs`, `hosted/notes.rs`; browser settings expose allowed kinds | `tests/runtime_settings.rs`: allowed/unknown/empty list, duplicate/invalid configuration, lifecycle summary still written, legacy settings decode |
+| `presets/default.json`, `TaskCard.tsx`: configurable priority names | `settings.rs`; browser settings save names and board/ticket pages display them | priority-label bounds/fallback test and real browser save/read/escaped label test passed; priority numbers and sorting are unchanged |
 
 The default note list contains the source's note/handoff/blocker/decision/summary plus
 the existing Rust review/question types. Existing stored settings without this field
@@ -46,7 +47,8 @@ content. Full workspace, native visual, Docker and CI acceptance remain held for
 - `admin_config.go`, `config_read.go`, `admin_misc.go`, `conf.go`, `sort.go`: roles and
   policy configuration/read/matching belong to A02. Existing shared workflow CRUD covers
   only the workflow part; project removal and in-use checks still need per-surface review.
-- `admin_misc.go`, presets: priority labels and general versioned settings remain to map.
+- `admin_misc.go`, presets: priority labels are now authored and locally checked; remaining
+  general versioned settings still need operation-level mapping.
   Dedicated grant/schema settings must use their A04/A05/A07 owners, not generic unsafe CRUD.
 - `reaper.go`: current event-driven expiry is the replacement for fixed-interval polling;
   verify equivalent expiry timing/failure behavior. Original timed receipt deletion must

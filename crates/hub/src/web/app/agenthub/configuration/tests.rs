@@ -131,6 +131,7 @@ async fn settings_forms_save_through_the_board_and_retain_conflicting_or_invalid
     set(&mut fields, "environments", "dev, qa");
     set(&mut fields, "heartbeat_hint", "5");
     set(&mut fields, "note_kinds", "note, triage");
+    set(&mut fields, "priority_labels", "Urgent <work>\nNext");
     let response = post(&hub, &alice, false, &fields).await;
     assert_eq!(response.status(), 303);
     assert_eq!(
@@ -147,6 +148,30 @@ async fn settings_forms_save_through_the_board_and_retain_conflicting_or_invalid
         got["structuredContent"]["note_kinds"],
         json!(["note", "triage"])
     );
+    assert_eq!(
+        got["structuredContent"]["priority_labels"],
+        json!(["Urgent <work>", "Next"])
+    );
+    let made = hub
+        .call(
+            &mut alice,
+            "board_create",
+            json!({
+                "project":"alpha", "title":"Priority names are real settings", "priority":0
+            }),
+        )
+        .await;
+    assert!(!refused(&made), "{made}");
+    let id = made["structuredContent"]["id"].as_str().unwrap();
+    for path in [
+        "/app/boards/alpha".to_string(),
+        format!("/app/tickets/alpha/{id}"),
+    ] {
+        let (status, html) = page(&hub, &path, &alice).await;
+        assert_eq!(status, 200);
+        assert!(html.contains("Urgent &lt;work&gt;"));
+        assert!(!html.contains("Urgent <work>"));
+    }
     let saved = events(&hub, &mut alice).await;
     let (status, html) = Hosted::text(post(&hub, &alice, false, &fields).await).await;
     assert_eq!(status, 409);

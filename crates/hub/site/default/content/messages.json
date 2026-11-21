@@ -466,6 +466,8 @@
       "wip_help": "The default work limit for a worker. Use 0 for no limit. A worker-specific limit, when configured, takes precedence.",
       "priority": "Default task priority",
       "priority_help": "Lower numbers are picked first when choosing the next task.",
+      "priority_labels": "Priority names",
+      "priority_labels_help": "One name per line, starting at priority 0. These names appear on tasks; the numeric order stays the same. Leave empty to show P0, P1 and so on.",
       "repo": "Repository URL",
       "environments": "Environments",
       "environment_help": "Separate lowercase names with commas, for example dev, staging, prod. Tasks can name one of these environments.",

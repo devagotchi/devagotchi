@@ -31,7 +31,7 @@ impl Fields {
     }
 }
 
-pub(super) const SETTINGS: [&str; 10] = [
+pub(super) const SETTINGS: [&str; 11] = [
     "lease_ttl",
     "lease_min_ttl",
     "lease_max_ttl",
@@ -42,6 +42,7 @@ pub(super) const SETTINGS: [&str; 10] = [
     "environments",
     "heartbeat_hint",
     "note_kinds",
+    "priority_labels",
 ];
 #[derive(Clone)]
 pub(super) struct SettingsDraft {
@@ -65,6 +66,7 @@ impl SettingsDraft {
                     .unwrap_or(crate::agenthub::Settings::DEFAULT_HEARTBEAT_HINT_MS),
             ),
             s.note_kinds.as_deref().unwrap_or_default().join(", "),
+            s.priority_labels.as_deref().unwrap_or_default().join("\n"),
         ];
         Self {
             version: state.settings_version,
@@ -97,6 +99,12 @@ impl SettingsDraft {
             max_lease_expiries: integer("max_lease_expiries")?,
             wip_limit_default: integer("wip_limit_default")?,
             default_priority: integer("default_priority")?,
+            priority_labels: Some(
+                get("priority_labels")?
+                    .lines()
+                    .map(|line| line.trim().to_string())
+                    .collect(),
+            ),
             heartbeat_hint_ms: Some(milliseconds(get("heartbeat_hint")?)?),
             note_kinds: Some(if get("note_kinds")?.trim().is_empty() {
                 Vec::new()

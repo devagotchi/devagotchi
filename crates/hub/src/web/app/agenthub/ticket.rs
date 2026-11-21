@@ -134,10 +134,10 @@ pub async fn page(
                     .filter(|e| e.ticket.as_deref() == Some(wanted.as_str())),
             );
         }
-        BridgeResult::Ok((view, events, source, wakes, board.workflow()?))
+        BridgeResult::Ok((view, events, source, wakes, board.configuration_state()?))
     })
     .await;
-    let (view, events, source, wakes, workflow) = match read {
+    let (view, events, source, wakes, configuration) = match read {
         Ok(Ok(value)) => value,
         Ok(Err(error)) if error.code == "not_found" => return unknown(),
         other => {
@@ -145,6 +145,7 @@ pub async fn page(
             return crate::web::routes::unavailable();
         }
     };
+    let workflow = &configuration.workflow;
     let site = words();
     let copy = &site.messages.app;
     let ticket = &view.ticket;
@@ -416,7 +417,7 @@ spellcheck=\"false\" placeholder=\"{}\"></label></div>\
 <p class=\"meta\"><a href=\"/app/boards/{}\">{}</a> · {}</p><h1>{}</h1>{flash}{undo}</header>\
 <div class=\"sidebar\" data-side=\"end\"><div class=\"stack ticket-main\">\
 <section class=\"card query\" id=\"ticket\"><dl class=\"facts\"><dt>{}</dt><dd id=\"state\">{}</dd>\
-<dt>{}</dt><dd>P{}</dd><dt>{}</dt><dd>{}</dd><dt>{}</dt><dd id=\"assignee\">{}</dd><dt>{}</dt><dd>{}</dd>{anchors}{dependencies}</dl>\
+<dt>{}</dt><dd>{}</dd><dt>{}</dt><dd>{}</dd><dt>{}</dt><dd id=\"assignee\">{}</dd><dt>{}</dt><dd>{}</dd>{anchors}{dependencies}</dl>\
 <pre class=\"what\">{}</pre></section>{progress}{source}<h2>{}</h2>{notes}{comment}</div>\
 <aside class=\"stack ticket-side\"><section class=\"card\">{actions}<div class=\"delegate\">{delegate}</div></section>\
 <section class=\"card\"><h2>{}</h2><ul class=\"rows\" id=\"history\">{history}</ul></section></aside></div></div>",
@@ -431,7 +432,7 @@ spellcheck=\"false\" placeholder=\"{}\"></label></div>\
                 .map_or(ticket.state.as_str(), |s| s.label.as_str())
         ),
         escape(&copy.ticket_priority),
-        ticket.priority,
+        escape(&configuration.settings.priority_label(ticket.priority)),
         escape(&copy.ticket_labels),
         escape(&ticket.labels.join(", ")),
         escape(&copy.ticket_assignee),
