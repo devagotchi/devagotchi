@@ -3,6 +3,41 @@ use super::*;
 use devagotchi_agenthub::{Actor, policy::catalog};
 
 impl Accounts {
+    /// Historical display metadata, after the access owner has proved environment-owner
+    /// authority and loaded this principal from a scoped immutable request. Disabled
+    /// identities still have names; a missing historical name retains its stable ID.
+    pub(crate) async fn machine_principal_label_in(
+        &self,
+        c: &mut AnyConnection,
+        tenant: &str,
+        account: &str,
+        principal: &str,
+    ) -> Result<String, Failed> {
+        let name: Option<String> = if principal == account {
+            sqlx::query_scalar("SELECT name FROM auth_accounts WHERE tenant_id=$1 AND id=$2")
+                .bind(tenant)
+                .bind(account)
+                .fetch_optional(c)
+                .await?
+        } else {
+            let id = principal
+                .strip_prefix(&format!("@agent:{account}:"))
+                .ok_or_else(|| {
+                    BridgeError::new("access_damaged", "invalid stored access principal")
+                })?;
+            sqlx::query_scalar(
+                "SELECT name FROM auth_agents WHERE tenant_id=$1 AND account=$2 AND id=$3",
+            )
+            .bind(tenant)
+            .bind(account)
+            .bind(id)
+            .fetch_optional(c)
+            .await?
+        };
+        Ok(name
+            .filter(|name| !name.is_empty())
+            .unwrap_or_else(|| principal.into()))
+    }
     /// Resolve only a middleware-authenticated subject. Never accept a tool's actor,
     /// seat, kind or roles as the registered machine principal.
     pub(crate) async fn machine_identity(

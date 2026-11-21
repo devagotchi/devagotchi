@@ -20,6 +20,7 @@ pub(super) struct Pending {
     pub version: i64,
     pub status: String,
     pub expires_at: i64,
+    pub reason: String,
 }
 fn decode<T: serde::de::DeserializeOwned>(value: &str) -> DbResult<T> {
     serde_json::from_str(value)
@@ -28,7 +29,7 @@ fn decode<T: serde::de::DeserializeOwned>(value: &str) -> DbResult<T> {
 impl Pending {
     pub async fn load(c: &mut AnyConnection, tenant: &str, id: &str) -> DbResult<Self> {
         let row = sqlx::query("SELECT id,account,principal,machine_binding::text,task_binding::text,guide_binding::text,
-            prepared_item::text,preset_snapshot::text,duration,uses_max,version,status,expires_at
+            prepared_item::text,preset_snapshot::text,duration,uses_max,version,status,expires_at,reason
             FROM machine_access_requests WHERE tenant_id=$1 AND id=$2")
             .bind(tenant).bind(id).fetch_optional(c).await?
             .ok_or_else(|| refused("not_found", "access request not found"))?;
@@ -70,6 +71,7 @@ impl Pending {
             version: row.try_get("version")?,
             status: row.try_get("status")?,
             expires_at: row.try_get("expires_at")?,
+            reason: row.try_get("reason")?,
         })
     }
     pub fn require_pending(&self, expected: i64, now: i64, person: &str) -> DbResult<()> {

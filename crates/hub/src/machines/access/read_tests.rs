@@ -9,6 +9,63 @@ use devagotchi_contracts::GrantDuration;
 use serde_json::json;
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn access_read_ended_grants_are_filtered_before_pagination() {
+    let test = or_skip!(store::testing::postgres());
+    let f = Fixture::new(test.store).await;
+    let first = f.grant(false, "first").await;
+    let second = f.grant(false, "second").await;
+    f.access
+        .revoke(&f.owner.id, &first, 1, "end-first")
+        .await
+        .unwrap();
+    f.access
+        .revoke(&f.owner.id, &second, 1, "end-second")
+        .await
+        .unwrap();
+    let live = f.grant(false, "newest-live").await;
+    let mut query = AccessPageQuery {
+        ended: true,
+        limit: Some(1),
+        ..Default::default()
+    };
+    let page = f
+        .access
+        .access_grants(&f.owner.id, &f.actor(), &query)
+        .await
+        .unwrap();
+    assert_eq!(page.rows.len(), 1);
+    assert_ne!(page.rows[0]["id"], live);
+    assert_eq!(page.rows[0]["end_reason"], "revoked");
+    query.after = Some(page.next.expect("second ended grant"));
+    let next = f
+        .access
+        .access_grants(&f.owner.id, &f.actor(), &query)
+        .await
+        .unwrap();
+    assert_eq!(next.rows.len(), 1);
+    assert_ne!(next.rows[0]["id"], page.rows[0]["id"]);
+    assert_ne!(next.rows[0]["id"], live);
+    assert!(next.next.is_none());
+    query.live = true;
+    assert_eq!(
+        f.access
+            .access_grants(&f.owner.id, &f.actor(), &query)
+            .await
+            .unwrap_err()
+            .code,
+        "invalid"
+    );
+    assert_eq!(
+        f.access
+            .access_requests(&f.owner.id, &f.actor(), &query)
+            .await
+            .unwrap_err()
+            .code,
+        "invalid"
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn access_read_group_returns_narrowed_decisions_and_bounded_history() {
     let test = or_skip!(store::testing::postgres());
     let f = Fixture::new(test.store).await;

@@ -9,6 +9,7 @@ impl Site {
     pub(super) fn check(&self) -> Result<(), String> {
         self.info.check()?;
         self.messages.app.catalog.check()?;
+        self.messages.app.access.check()?;
         self.landing.check()?;
         self.check_assets()?;
         self.info.landing.check(&self.landing)?;

@@ -11,6 +11,8 @@ pub(crate) struct AccessPageQuery {
     pub status: Option<String>,
     #[serde(default)]
     pub live: bool,
+    #[serde(default)]
+    pub ended: bool,
     pub after: Option<String>,
     pub limit: Option<u32>,
 }
@@ -42,7 +44,8 @@ impl AccessPageQuery {
                 .flatten()
                 .any(|v| v.is_empty() || v.len() > 512 || v.contains('\0'))
             || grants && self.status.is_some()
-            || !grants && self.live
+            || !grants && (self.live || self.ended)
+            || self.live && self.ended
             || self.status.as_deref().is_some_and(|s| {
                 !matches!(
                     s,
@@ -145,16 +148,30 @@ impl Access {
                 'task',g.task_binding,'guide',g.guide_binding,'request_id',g.request_id,'item',g.item,
                 'duration',g.duration,'uses_max',g.uses_max,'uses',g.uses,'preset_id',g.preset_id,
                 'full_access',g.full_access,'risks',g.risk_snapshot,'approved_by',g.approved_by,'approved_at',g.approved_at,
-                'expires_at',g.expires_at,'paused',g.paused,'ended_at',g.ended_at,'end_reason',g.end_reason,
+                'expires_at',g.expires_at,'paused',g.paused,'ended_at',g.ended_at,'end_reason',CASE WHEN g.end_reason IS NOT NULL THEN g.end_reason WHEN g.live THEN NULL WHEN g.expires_at<=$4 THEN 'expired' ELSE 'uses_exhausted' END,
                 'ended_by',g.ended_by,'version',g.version,'live',g.live,
                 'high_risk',g.full_access OR g.item->>'sandbox_level'='unsandboxed' OR g.capability LIKE 'gui.%'
                     OR g.risk_snapshot @> '[{\"severity\":\"high\"}]')::text
-                FROM scoped g WHERE (NOT $9 OR g.live) AND (g.approved_at,g.id)<($10,$11)
+                FROM scoped g WHERE (NOT $9 OR g.live) AND (NOT $13 OR NOT g.live) AND (g.approved_at,g.id)<($10,$11)
                 ORDER BY g.approved_at DESC,g.id DESC LIMIT $12")
                 .bind(&found.tenant).bind(all).bind(account).bind(now).bind(actor.human).bind(actor.id)
                 .bind(&query.machine).bind(&query.principal).bind(query.live).bind(at).bind(&id).bind(limit+1)
-                .fetch_all(c).await?;
-            page(rows, limit, "approved_at")
+                .bind(query.ended).fetch_all(&mut *c).await?;
+            let mut result = page(rows, limit, "approved_at")?;
+            for row in &mut result.rows {
+                let account = row["account"]
+                    .as_str()
+                    .ok_or_else(|| refused("access_damaged", "invalid grant account"))?;
+                let principal = row["principal"]
+                    .as_str()
+                    .ok_or_else(|| refused("access_damaged", "invalid grant principal"))?;
+                let label = self
+                    .accounts
+                    .machine_principal_label_in(c, &found.tenant, account, principal)
+                    .await?;
+                row["requester"] = Value::String(label);
+            }
+            Ok(result)
         })
     }
     /// Revalidate on every wait iteration; a long poll never retains a database transaction.

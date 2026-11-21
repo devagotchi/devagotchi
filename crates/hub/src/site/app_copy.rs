@@ -5,6 +5,7 @@ use serde::Deserialize;
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct AppCopy {
+    pub access: super::access_copy::AccessCopy,
     pub tab_home: String,
     pub tab_machines: String,
     pub tab_boards: String,

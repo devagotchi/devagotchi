@@ -25,6 +25,7 @@
 //! that does not check out stops the start with what is wrong and where. With no directory
 //! the built-in default serves, compiled into the binary.
 
+pub(crate) mod access_copy;
 pub(crate) mod agents_copy;
 mod analytics_copy;
 pub(crate) mod app_copy;

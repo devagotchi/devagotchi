@@ -5,6 +5,7 @@
 //! banner, refreshes on a pull and registers the service worker, which keeps the frame and
 //! the stylesheet so the app opens offline on `/app/offline`.
 
+pub(crate) mod access;
 mod agenthub;
 mod agents;
 mod catalog;
@@ -35,6 +36,7 @@ use crate::{AppState, agenthub::Board, identity::Subject, site::Site};
 pub fn routes() -> Router<AppState> {
     Router::new()
         .merge(agents::routes())
+        .merge(access::routes())
         .merge(catalog::routes())
         .merge(agenthub::create::routes())
         .merge(agenthub::projects::routes())
@@ -154,6 +156,13 @@ async fn attention(
         }
     } else {
         0
+    };
+    let machine_requests = match access::attention(&state, &subject).await {
+        Ok(count) => count,
+        Err(_) => return unavailable(),
+    };
+    let Some(approvals) = (approvals as u64).checked_add(machine_requests.unwrap_or(0)) else {
+        return unavailable();
     };
     (
         [(axum::http::header::CACHE_CONTROL, "no-store")],

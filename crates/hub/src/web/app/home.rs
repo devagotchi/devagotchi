@@ -31,6 +31,10 @@ pub async fn home(State(state): State<AppState>, headers: HeaderMap) -> Response
         Ok(subject) => subject,
         Err(response) => return response,
     };
+    let access_count = match super::access::attention(&state, &subject).await {
+        Ok(count) => count,
+        Err(_) => return crate::web::routes::unavailable(),
+    };
     let machines = state.hub.machine_status(&subject).await;
     let approvals = if state.hub.may_approve(&subject) {
         match super::super::approvals::pending(&state, &subject).await {
@@ -111,9 +115,10 @@ pub async fn home(State(state): State<AppState>, headers: HeaderMap) -> Response
     });
     let me = super::me::identity(&state, &subject).await;
     let body = format!(
-        "{}{}{}{}{}",
+        "{}{}{}{}{}{}",
         hello(&me, needs.len(), trouble),
         review(approvals.len()),
+        super::access::attention_link(access_count),
         card("needs-you", &copy.needs_you, &needs, &copy.needs_you_empty),
         machines_card(&machines),
         boards_card(&boards),
