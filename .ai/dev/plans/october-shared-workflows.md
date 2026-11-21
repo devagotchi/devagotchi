@@ -70,5 +70,9 @@ absolute paths, generated contracts, AI checks, formatting and diff checks passe
 Dependency audit passed during backend preparation; dependency manifests/lockfile are
 unchanged. Two protocol invocations with relative arguments were refused by the harness;
 only the subsequent successful invocation is passing evidence. Linux IPC/MCP smoke and
-ClickHouse process proof remain CI gates. Push, PR, main and Docker: pending.
+ClickHouse process proof remain CI gates. Initial PR278 Linux browser CI found that the
+existing phone test expected raw cancelled/ready keys in the state label. It now checks
+configured Cancelled/Ready display names and separately checks both stored state keys
+through MCP. The assertions remain strict; no behavior check was skipped. Push and PR:
+published; final CI, main and Docker: pending.
 DELIVERY INCOMPLETE.
