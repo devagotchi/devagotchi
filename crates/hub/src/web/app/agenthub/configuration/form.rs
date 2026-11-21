@@ -16,17 +16,17 @@ impl Fields {
         }
         Ok(Self(fields))
     }
-    fn take(&mut self, key: &str) -> Result<String, ()> {
+    pub(super) fn take(&mut self, key: &str) -> Result<String, ()> {
         self.0.remove(key).ok_or(())
     }
-    fn number(&mut self, key: &str) -> Result<i64, ()> {
+    pub(super) fn number(&mut self, key: &str) -> Result<i64, ()> {
         self.take(key)?.parse().map_err(|_| ())
     }
     fn count(&mut self, key: &str) -> Result<usize, ()> {
         let count = usize::try_from(self.number(key)?).map_err(|_| ())?;
         if count > 512 { Err(()) } else { Ok(count) }
     }
-    fn finish(self) -> Result<(), ()> {
+    pub(super) fn finish(self) -> Result<(), ()> {
         if self.0.is_empty() { Ok(()) } else { Err(()) }
     }
 }

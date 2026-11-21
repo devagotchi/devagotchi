@@ -22,7 +22,7 @@ fn settings_fields(version: i64) -> Vec<(String, String)> {
     fields.push(("version".into(), version.to_string()));
     fields
 }
-fn workflow_fields(draft: &WorkflowDraft, action: &str) -> Vec<(String, String)> {
+pub(super) fn workflow_fields(draft: &WorkflowDraft, action: &str) -> Vec<(String, String)> {
     let w = &draft.workflow;
     let mut fields = vec![
         ("version".into(), draft.version.to_string()),
@@ -348,6 +348,23 @@ async fn configuration_authority_is_checked_again_after_each_role_change() {
     )
     .await;
     let root = "/app/boards/team%2Falpha";
+    // A project admin, and even this organization's owner, has no account-catalog authority.
+    for person in [&owner, &member] {
+        assert_eq!(
+            page(&hub, &format!("{root}/workflows"), person).await.0,
+            403
+        );
+        assert_eq!(
+            hub.form(
+                &format!("{root}/workflows"),
+                Some(&person.cookie),
+                &[("action", "detach"), ("board_version", "1")]
+            )
+            .await
+            .status(),
+            403
+        );
+    }
     for suffix in ["settings", "workflow"] {
         assert_eq!(
             page(&hub, &format!("{root}/{suffix}"), &member).await.0,

@@ -22,12 +22,14 @@ use std::sync::Arc;
 
 mod form;
 mod render;
+mod shared;
 #[cfg(test)]
 mod tests;
 use form::{Fields, SettingsDraft, WorkflowDraft};
 
 pub(crate) fn routes() -> Router<AppState> {
     Router::new()
+        .merge(shared::routes())
         .route(
             "/app/boards/{project}/settings",
             get(settings_page).post(save_settings),
@@ -65,7 +67,7 @@ async fn access(
     project: &str,
     workflow: bool,
     changing: bool,
-) -> Result<(Arc<Board>, String), Response> {
+) -> Result<(Arc<Board>, String, bool), Response> {
     if changing && !crate::web::from_this_hub(headers, &state.hub.config.public_url) {
         return Err(StatusCode::FORBIDDEN.into_response());
     }
@@ -74,7 +76,12 @@ async fn access(
         return Err(refused(StatusCode::FORBIDDEN, &error.message));
     }
     match state.hub.board_access(&subject, project) {
-        Ok((board, _, role)) if role.may_configure() => Ok((board, subject.id)),
+        Ok((board, kind, role)) if role.may_configure() => Ok((
+            board,
+            subject.id,
+            matches!(kind, crate::agenthub::mcp::Kind::Account)
+                && role == crate::tenancy::orgs::Role::Owner,
+        )),
         Ok(_) => Err(refused(
             StatusCode::FORBIDDEN,
             &words().messages.app.configuration.read_only,
@@ -112,11 +119,11 @@ async fn page(
     shown: Shown,
     workflow: bool,
 ) -> Response {
-    let (board, _) = match access(&state, &headers, &project, workflow, false).await {
+    let (board, _, catalog) = match access(&state, &headers, &project, workflow, false).await {
         Ok(a) => a,
         Err(r) => return r,
     };
-    let current = match tokio::task::spawn_blocking(move || board.configuration_state()).await {
+    let current = match tokio::task::spawn_blocking(move || board.workflow_configuration()).await {
         Ok(Ok(c)) => c,
         error => {
             eprintln!("devagotchi hub: read board configuration: {error:?}");
@@ -130,16 +137,20 @@ async fn page(
         ""
     };
     if workflow {
+        if current.shared_workflow.is_some() {
+            return shared::render::bound(&project, &current, catalog, notice);
+        }
         render::workflow(
             &project,
-            &WorkflowDraft::current(&current),
+            &WorkflowDraft::current(&current.configuration),
             StatusCode::OK,
             notice,
+            catalog,
         )
     } else {
         render::settings(
             &project,
-            &SettingsDraft::current(&current),
+            &SettingsDraft::current(&current.configuration),
             StatusCode::OK,
             notice,
         )
@@ -150,6 +161,11 @@ fn failure(error: &BridgeError) -> (StatusCode, String) {
     let c = &site.messages.app.configuration;
     match error.code.as_str() {
         "version_conflict" => (StatusCode::CONFLICT, c.conflict.clone()),
+        "shared_workflow" | "in_use" | "already_exists" => (
+            StatusCode::CONFLICT,
+            format!("{} {}", c.refused, error.message),
+        ),
+        "not_found" => (StatusCode::NOT_FOUND, error.message.clone()),
         "account_store" | "board_store" | "board_damaged" | "runtime" => {
             eprintln!("devagotchi hub: save board configuration: {error}");
             (StatusCode::SERVICE_UNAVAILABLE, c.refused.clone())
@@ -167,7 +183,7 @@ async fn save_settings(
     Path(project): Path<String>,
     Form(pairs): Form<Vec<(String, String)>>,
 ) -> Response {
-    let (board, me) = match access(&state, &headers, &project, false, true).await {
+    let (board, me, _) = match access(&state, &headers, &project, false, true).await {
         Ok(a) => a,
         Err(r) => return r,
     };
@@ -206,7 +222,7 @@ async fn save_workflow(
     Path(project): Path<String>,
     Form(pairs): Form<Vec<(String, String)>>,
 ) -> Response {
-    let (board, me) = match access(&state, &headers, &project, true, true).await {
+    let (board, me, catalog) = match access(&state, &headers, &project, true, true).await {
         Ok(a) => a,
         Err(r) => return r,
     };
@@ -218,9 +234,15 @@ async fn save_workflow(
         let site = words();
         let c = &site.messages.app.configuration;
         if draft.change_rows(&action, &c.new_state).is_err() {
-            return render::workflow(&project, &draft, StatusCode::BAD_REQUEST, &c.invalid_form);
+            return render::workflow(
+                &project,
+                &draft,
+                StatusCode::BAD_REQUEST,
+                &c.invalid_form,
+                catalog,
+            );
         }
-        return render::workflow(&project, &draft, StatusCode::OK, &c.draft);
+        return render::workflow(&project, &draft, StatusCode::OK, &c.draft, catalog);
     }
     let saved = draft.clone();
     let result = tokio::task::spawn_blocking(move || {
@@ -232,7 +254,7 @@ async fn save_workflow(
         Ok(_) => see_other(&format!("{}?saved=1", render::href(&project, true)), &[]),
         Err(error) => {
             let (status, message) = failure(&error);
-            render::workflow(&project, &draft, status, &message)
+            render::workflow(&project, &draft, status, &message, catalog)
         }
     }
 }

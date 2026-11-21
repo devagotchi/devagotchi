@@ -497,7 +497,29 @@
       "reload": "Reload current settings",
       "back": "Back to board",
       "invalid_form": "Check the fields. Durations accept up to three decimal places; limits and priorities must be whole numbers. Each workflow row needs all its fields, with at most 512 rows per section.",
-      "read_only": "Only a board owner or administrator can change its settings."
+      "read_only": "Only a board owner or administrator can change its settings.",
+      "shared_workflows": "Shared workflows",
+      "shared_help": "Use one workflow across boards you own. Editing it updates every board using it. Your other boards keep their own rules until you choose a shared workflow.",
+      "shared_authority": "Shared workflows require ownership of all boards in this account. A grant to manage one shared project is not enough.",
+      "shared_missing": "This shared workflow is no longer available in your account.",
+      "shared_used_by": "Used by:",
+      "shared_unused": "No boards",
+      "shared_unknown": "Unavailable; reload when the hub can read the catalog.",
+      "shared_bound": "This board uses a shared workflow",
+      "shared_bound_help": "Changes to the shared definition apply here and to every other board using it. To change only this board, first make an independent copy.",
+      "shared_edit": "Edit shared workflow",
+      "shared_edit_help": "Saving changes every board using this workflow. A state used by a task must keep its key and type. New rules apply to the next request.",
+      "shared_detach": "Make this board independent",
+      "shared_detach_help": "Keep the current rules on this board. Later shared changes will no longer affect it.",
+      "shared_publish": "Share this board's workflow",
+      "shared_publish_help": "Save this board's current rules as a shared workflow and use it here. You can then select it on another board you own.",
+      "shared_id": "Workflow ID",
+      "shared_use": "Use selected workflow on this board",
+      "shared_use_help": "Replace this board's rules with the selected shared definition. Existing task states must remain valid. Later shared edits will apply to this board.",
+      "shared_choose": "Choose a shared workflow",
+      "shared_empty": "You have no shared workflows yet.",
+      "shared_delete": "Delete unused workflow",
+      "shared_delete_help": "Delete this definition from your catalog. Its audit history remains available on the board that first shared it."
     }
   }
 }

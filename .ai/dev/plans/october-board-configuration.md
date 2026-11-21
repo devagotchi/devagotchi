@@ -61,5 +61,12 @@ including 510 hub and 102 AgentHub tests. Binary build, Windows E2E, protocol, d
 audit, generated contracts, AI contracts, formatting and diff checks passed. An earlier
 parallel run hit Windows' executable lock while the E2E server held the binary; it is not
 counted as passed. The complete sequential rerun passed after the server exited normally.
-Push, PR, main and Docker: pending for this change. Linux-specific gates remain CI work.
-DELIVERY INCOMPLETE.
+Parent PR277 passed all18 checks and merged as c52e773e74c39dda6df16331400f0c3cfc2ee89b.
+Its reviewed tree matches main; the feature branch is deleted. Main CI44833139317,
+security44833139256 and official Release44833139414 succeeded, including Linux gates.
+The immutable official image was deployed to the development Docker hub. Existing-owner
+and user login, owner-only boundaries, absent organization routes, PostgreSQL/ClickHouse/
+audit health, no-JS Edge at390/1280 and configuration persistence after restart passed.
+Implementation, validation, push, PR, main and development Docker: complete for this
+scoped change. Historical source absorption remains incomplete; shared workflows are
+tracked by the dependent [shared-workflow plan](october-shared-workflows.md).

@@ -287,11 +287,13 @@ def main() -> int:
             assert "Looked at it from the phone" in page.locator("#notes").inner_text()
             page.locator("#close").click()
             page.wait_for_url(re.compile(r".*\?done=close&from=ready$"))
-            assert page.locator("#state").inner_text() == "cancelled"
+            assert page.locator("#state").inner_text() == "Cancelled"
+            closed = ai.tool("board_get", {"project": "alpha", "id": made["structuredContent"]["id"]})
+            assert closed["structuredContent"]["ticket"]["state"] == "cancelled", closed
             assert page.locator("#undo button").is_visible()
             page.locator("#undo button").click()
             page.wait_for_url(re.compile(r".*\?done=undo$"))
-            assert page.locator("#state").inner_text() == "ready"
+            assert page.locator("#state").inner_text() == "Ready"
             assert page.locator("#flash").inner_text() == "Reopened."
             ticket = ai.tool("board_get", {"project": "alpha", "id": made["structuredContent"]["id"]})
             content = ticket["structuredContent"]

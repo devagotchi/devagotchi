@@ -26,6 +26,10 @@ fn next_for(code: &str, id: Option<&str>) -> String {
         }
         "held_by_other" => format!("board_get {id}; wait, or board_claim with no id for another ticket"),
         "version_conflict" => format!("board_get {id} and retry board_update with the current version"),
+        "shared_workflow" => "ask the board owner to edit the shared definition or detach this board before editing its private workflow".into(),
+        "in_use" => "ask the workflow owner to detach the boards using it before deleting it".into(),
+        "already_exists" => "ask the owner to select the existing shared workflow or choose a different workflow id".into(),
+        "not_available" => "this operation requires an owner-scoped board; ask the hub's operator".into(),
         "wip_limit" => "board_complete, board_handoff or board_release one of the tickets you hold first".into(),
         "blocked" => format!("board_get {id}: finish or hand off the blockers it lists"),
         "distinct_required" => "someone else must take this lane; leave it for them".into(),

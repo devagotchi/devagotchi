@@ -17,14 +17,14 @@ pub(super) fn href(project: &str, workflow: bool) -> String {
         if workflow { "workflow" } else { "settings" }
     )
 }
-fn hidden(name: &str, value: impl ToString) -> String {
+pub(super) fn hidden(name: &str, value: impl ToString) -> String {
     format!(
         "<input type=\"hidden\" name=\"{}\" value=\"{}\">",
         escape(name),
         escape(&value.to_string())
     )
 }
-fn field(name: &str, label: &str, value: &str, attributes: &str) -> String {
+pub(super) fn field(name: &str, label: &str, value: &str, attributes: &str) -> String {
     format!(
         "<label class=\"stack\">{}<input id=\"{}\" name=\"{}\" value=\"{}\" {attributes}></label>",
         escape(label),
@@ -33,7 +33,7 @@ fn field(name: &str, label: &str, value: &str, attributes: &str) -> String {
         escape(value)
     )
 }
-fn select(
+pub(super) fn select(
     name: &str,
     label: &str,
     value: &str,
@@ -71,12 +71,29 @@ fn row_button(action: &str, label: &str) -> String {
         escape(label)
     )
 }
-fn screen(
+pub(super) fn screen(
     project: &str,
     workflow: bool,
     status: StatusCode,
     notice: &str,
     form: String,
+) -> Response {
+    screen_at(
+        project,
+        workflow,
+        status,
+        notice,
+        form,
+        &href(project, workflow),
+    )
+}
+pub(super) fn screen_at(
+    project: &str,
+    workflow: bool,
+    status: StatusCode,
+    notice: &str,
+    form: String,
+    reload: &str,
 ) -> Response {
     let site = pages::site();
     let c = &site.messages.app.configuration;
@@ -93,11 +110,7 @@ fn screen(
             },
             escape(notice),
             if status == StatusCode::CONFLICT {
-                format!(
-                    "<a href=\"{}\">{}</a>",
-                    href(project, workflow),
-                    escape(&c.reload)
-                )
+                format!("<a href=\"{}\">{}</a>", escape(reload), escape(&c.reload))
             } else {
                 String::new()
             }
@@ -194,7 +207,22 @@ pub(super) fn workflow(
     draft: &WorkflowDraft,
     status: StatusCode,
     notice: &str,
+    catalog: bool,
 ) -> Response {
+    let site = pages::site();
+    let mut body = String::new();
+    if catalog {
+        body.push_str(&super::shared::render::catalog_link(project));
+    }
+    body.push_str(&workflow_form(
+        draft,
+        &href(project, true),
+        &site.messages.app.configuration.workflow_help,
+    ));
+    screen(project, true, status, notice, body)
+}
+
+pub(super) fn workflow_form(draft: &WorkflowDraft, action: &str, help: &str) -> String {
     let site = pages::site();
     let c = &site.messages.app.configuration;
     let w = &draft.workflow;
@@ -210,14 +238,14 @@ pub(super) fn workflow(
     .map(|(k, v)| (k.into(), v.clone()));
     let mut body = format!(
         "<form class=\"stack\" method=\"post\" action=\"{}\">{}{}{}{}{}<section class=\"card stack\"><h2>{}</h2><p>{}</p>{}<div class=\"auto-grid\">{}{}</div><button class=\"primary\" type=\"submit\" name=\"action\" value=\"save\">{}</button></section>",
-        href(project, true),
+        escape(action),
         hidden("version", draft.version),
         hidden("id", &w.id),
         hidden("states", w.states.len()),
         hidden("lanes", w.lanes.len()),
         hidden("transitions", w.transitions.len()),
         escape(&c.workflow),
-        escape(&c.workflow_help),
+        escape(help),
         field(
             "name",
             &c.workflow_name,
@@ -303,5 +331,5 @@ pub(super) fn workflow(
     }
     body.push_str(&row_button("add-transition", &c.add_transition));
     body.push_str(&format!("</section><button class=\"primary\" type=\"submit\" name=\"action\" value=\"save\">{}</button></form>",escape(&c.save_workflow)));
-    screen(project, true, status, notice, body)
+    body
 }

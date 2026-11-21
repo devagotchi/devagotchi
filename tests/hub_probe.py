@@ -392,12 +392,19 @@ if args.run_broker and args.run_dir:
     is_error, kept = call("set_config_value", {"machine": args.run_broker, "key": "exec_policy", "value": 1})
     check("set_config_value leaves what an agent may run to the operator",
           is_error and kept.get("code") == "setting_not_changeable", json.dumps(kept)[:200])
-    outsider = subprocess.Popen(["sleep", "77"])
-    is_error, listed = call("list_processes", {"machine": args.run_broker, "filter": "sleep 77"})
-    check("list_processes finds a process", not is_error
-          and any(p.get("pid") == outsider.pid for p in listed.get("processes", [])), json.dumps(listed)[:240])
-    is_error, stopped = call("kill_process", {"machine": args.run_broker, "pid": outsider.pid})
-    outsider.wait(timeout=5)
+    # Python is already required by this harness; a Unix `sleep` binary is not.
+    marker = f"dvg-hub-process-probe-{uuid.uuid4().hex}"
+    outsider = subprocess.Popen([sys.executable, "-c", f"import time; time.sleep(77) # {marker}"])
+    try:
+        is_error, listed = call("list_processes", {"machine": args.run_broker, "filter": marker})
+        check("list_processes finds a process", not is_error
+              and any(p.get("pid") == outsider.pid for p in listed.get("processes", [])), json.dumps(listed)[:240])
+        is_error, stopped = call("kill_process", {"machine": args.run_broker, "pid": outsider.pid})
+        outsider.wait(timeout=5)
+    finally:
+        if outsider.poll() is None:
+            outsider.kill()
+            outsider.wait(timeout=5)
     # A polite stop (SIGTERM, -15) where the system has one; Windows has none for another
     # process, so the broker ends it at once and says "kill".
     stopped_as = ("kill", lambda code: code is not None) if os.name == "nt" else ("terminate", lambda code: code == -15)
