@@ -41,6 +41,7 @@ fn check(origin: Option<&GrantOrigin>, wire: &RemoteWireRequest) -> BridgeResult
     }
     let supplied = match &wire.remote {
         RemoteRequest::Prepare { origin, .. } => Some(origin),
+        RemoteRequest::Status { binding } => Some(&binding.origin),
         RemoteRequest::Execute { authority, .. } | RemoteRequest::Refresh { authority } => {
             Some(&authority.binding.origin)
         }

@@ -126,6 +126,7 @@ impl Links {
         }
         let supplied = match &remote {
             RemoteRequest::Prepare { origin, .. } => Some(origin),
+            RemoteRequest::Status { binding } => Some(&binding.origin),
             RemoteRequest::Execute { authority, .. } | RemoteRequest::Refresh { authority } => {
                 Some(&authority.binding.origin)
             }

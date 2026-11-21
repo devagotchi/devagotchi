@@ -3,15 +3,18 @@ use super::*;
 use crate::{agenthub::mcp::Boards, machines::link::Links};
 use std::time::Duration;
 
-pub(crate) struct AccessRuntime(tokio::task::JoinHandle<()>);
+pub(crate) struct AccessRuntime([tokio::task::JoinHandle<()>; 2]);
 impl Drop for AccessRuntime {
     fn drop(&mut self) {
-        self.0.abort();
+        for task in &self.0 {
+            task.abort();
+        }
     }
 }
 impl AccessRuntime {
     pub(crate) fn start(accounts: Arc<Accounts>, links: Arc<Links>, boards: Arc<Boards>) -> Self {
-        Self(tokio::spawn(async move {
+        let admissions = super::maintenance::start(accounts.clone(), links.clone(), boards.clone());
+        let grants = tokio::spawn(async move {
             let access = Access::new(accounts);
             let mut ticks = tokio::time::interval(Duration::from_secs(5));
             ticks.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
@@ -21,7 +24,8 @@ impl AccessRuntime {
                     eprintln!("machine access maintenance failed: {}", error.code);
                 }
             }
-        }))
+        });
+        Self([grants, admissions])
     }
 }
 impl Access {

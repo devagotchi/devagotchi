@@ -66,7 +66,58 @@ pub(crate) struct Continuation {
     pub admitted: Admitted,
     pub operation_id: String,
 }
+pub(super) struct AdmissionSnapshot {
+    pub binding: devagotchi_contracts::GrantBinding,
+    pub machine: MachineBinding,
+    pub project: Option<String>,
+    pub operation_id: Option<String>,
+}
 impl Access {
+    /// Only the internal maintenance loop supplies tenant/id. This snapshot proves
+    /// which broker record to inspect; it is deliberately not a live authority.
+    pub(super) async fn admission_snapshot(
+        &self,
+        tenant: &str,
+        id: &str,
+        links: &crate::machines::link::Links,
+    ) -> BridgeResult<AdmissionSnapshot> {
+        transaction!(&self.accounts.store, |c| {
+            self.accounts.store.scope(c, tenant).await?;
+            let stored = Stored::load(c, tenant, id).await?;
+            let grant = super::grant_record::GrantRecord::load(c, tenant, &stored.grant).await?;
+            if grant.account != stored.account
+                || grant.principal != stored.principal
+                || grant.machine != stored.machine
+            {
+                return Err(refused(
+                    "access_damaged",
+                    "admission no longer identifies its original grant",
+                ));
+            }
+            let record = Admitted {
+                admission_id: id.into(),
+                grant_id: stored.grant,
+                grant_version: stored.version,
+                account: stored.account,
+                principal: stored.principal,
+                machine: stored.machine.name.clone(),
+                generation: stored.machine.generation.clone(),
+                operation_key: stored.key,
+                input_sha256: stored.digest,
+                effective: stored.material.item,
+                issued_at: 0,
+                expires_at: 0,
+                task: grant.task,
+                replayed: true,
+            };
+            Ok(AdmissionSnapshot {
+                binding: record.binding(links.grant_origin(&stored.machine))?,
+                machine: stored.machine,
+                project: record.task.map(|t| t.project),
+                operation_id: stored.operation,
+            })
+        })
+    }
     /// Only an authenticated broker reply supplies this identity. Never accept an
     /// agent-selected operation ID as evidence that a command was actually admitted.
     pub(crate) async fn bind_operation(

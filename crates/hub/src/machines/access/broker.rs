@@ -23,7 +23,7 @@ pub(crate) struct LinkExecution<'a> {
     pub client: &'a str,
 }
 impl Admitted {
-    pub(super) fn authority(&self, origin: GrantOrigin) -> BridgeResult<GrantAuthority> {
+    pub(super) fn binding(&self, origin: GrantOrigin) -> BridgeResult<GrantBinding> {
         if origin.machine != self.machine || origin.generation != self.generation {
             return Err(BridgeError::new(
                 "authority_mismatch",
@@ -48,19 +48,24 @@ impl Admitted {
             })
             .transpose()
             .map_err(|_| invalid("task identity cannot be encoded"))?;
+        let binding = GrantBinding {
+            origin,
+            account: self.account.clone(),
+            principal: self.principal.clone(),
+            admission_id: self.admission_id.clone(),
+            grant_id: self.grant_id.clone(),
+            grant_version: self.grant_version,
+            operation_key: self.operation_key.clone(),
+            input_sha256: self.input_sha256.clone(),
+            effective: self.effective.clone(),
+            lease_sha256,
+        };
+        binding.validate()?;
+        Ok(binding)
+    }
+    pub(super) fn authority(&self, origin: GrantOrigin) -> BridgeResult<GrantAuthority> {
         let authority = GrantAuthority {
-            binding: GrantBinding {
-                origin,
-                account: self.account.clone(),
-                principal: self.principal.clone(),
-                admission_id: self.admission_id.clone(),
-                grant_id: self.grant_id.clone(),
-                grant_version: self.grant_version,
-                operation_key: self.operation_key.clone(),
-                input_sha256: self.input_sha256.clone(),
-                effective: self.effective.clone(),
-                lease_sha256,
-            },
+            binding: self.binding(origin)?,
             issued_at: self.issued_at,
             expires_at: self.expires_at,
         };

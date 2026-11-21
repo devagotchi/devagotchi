@@ -2,6 +2,30 @@
 use super::*;
 
 impl Broker {
+    /// Private lifecycle observation by the authenticated hub, including after a
+    /// grant ends. Exact stored identity is required; no command/output is disclosed
+    /// and no grant floor or live authority clock is changed by observation.
+    pub(super) fn admission_status(&self, binding: &GrantBinding) -> BridgeResult<RemoteReply> {
+        binding.validate()?;
+        let state = self.shared.lock();
+        let id = state
+            .keys
+            .get(&binding.operation_key)
+            .ok_or_else(not_found)?;
+        let operation = state.operations.get(id).ok_or_else(not_found)?;
+        if operation.record.grant.as_ref() != Some(binding) {
+            return Err(denied(
+                "authority_mismatch",
+                "operation belongs to another admission",
+            ));
+        }
+        Ok(RemoteReply::Status {
+            operation_id: id.clone(),
+            state: operation.record.view.state.clone(),
+            exit_code: operation.record.view.exit_code,
+        })
+    }
+
     pub(super) async fn remote_process(
         &self,
         authority: GrantAuthority,

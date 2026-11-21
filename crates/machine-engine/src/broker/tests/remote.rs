@@ -189,9 +189,52 @@ async fn remote_expiry_stops_native_process_and_cannot_be_refreshed_or_retried()
     let started = launch(&broker, &auth, &input).await;
     let id = &started.operation.operation_id;
     until_output(&broker, id).await;
+    let status = broker
+        .handle_remote(RemoteWireRequest {
+            api_version: API_VERSION,
+            remote: RemoteRequest::Status {
+                binding: auth.binding.clone(),
+            },
+        })
+        .await
+        .unwrap();
+    assert!(
+        matches!(status, RemoteReply::Status { operation_id, state: OperationState::Running, .. } if operation_id == *id)
+    );
     let ended = settle(&broker, id).await;
     assert!(matches!(ended.state, OperationState::Cancelled));
     assert!(!output_text(&broker, id).contains("second"));
+    let status = broker
+        .handle_remote(RemoteWireRequest {
+            api_version: API_VERSION,
+            remote: RemoteRequest::Status {
+                binding: auth.binding.clone(),
+            },
+        })
+        .await
+        .unwrap();
+    let encoded = serde_json::to_value(&status).unwrap();
+    assert!(
+        matches!(status, RemoteReply::Status { operation_id, state: OperationState::Cancelled, .. } if operation_id == *id)
+    );
+    assert_eq!(
+        encoded["value"].as_object().unwrap().len(),
+        3,
+        "only lifecycle evidence, no command or output"
+    );
+    let mut foreign = auth.binding.clone();
+    foreign.principal = "@agent:owner:someone-else".into();
+    assert_eq!(
+        broker
+            .handle_remote(RemoteWireRequest {
+                api_version: API_VERSION,
+                remote: RemoteRequest::Status { binding: foreign },
+            })
+            .await
+            .unwrap_err()
+            .code,
+        "authority_mismatch"
+    );
     assert_eq!(
         broker.refresh_authority(auth.clone()).unwrap_err().code,
         "authority_expired"

@@ -589,3 +589,29 @@ raw command in admission material. Existing task and exact-operation-policy test
 exercise renewal too, including lease release/reclaim and a newly denied `proc.start`.
 Automatic renewal/completion maintenance and ordinary MCP execution adapters remain
 unwired; this domain/transport result does not establish their acceptance or source closure.
+
+Automatic renewal/completion maintenance is now authored through the same access owner.
+The broker's new private `Status` request accepts only the exact stored grant binding
+and returns operation ID, lifecycle state and exit code. It neither refreshes authority
+nor exposes commands/output; both link endpoints check the authenticated origin. This
+lets the hub collect termination evidence after a grant or principal has been disabled.
+`Admitted::binding` is separate from live authority issuance. The completion transaction
+is shared with the existing receipt path and retains owner checks, immutable operation
+identity, replay and one audit append. Successful evidence requires exit code zero.
+
+The runtime checks due admissions at half their configured authority lifetime, in pages
+of 100, with at most 16 concurrent broker calls and a three-second bound per admission.
+It recovers a missing start receipt from authenticated lifecycle evidence, rechecks the
+live principal/task/policy before renewal, and never refreshes a terminal operation.
+Lost connectivity or failed checks leave native expiry in force; no cached permission
+fallback was introduced. Dropping the runtime stops both maintenance loops and workers.
+
+Focused validation passed 77 tests: contracts 2, hub 64, link 2, native broker 9; zero
+failed/ignored (`target/absorption-access-maintenance.log`). The new test starts the actual
+maintenance loop and checks receipt recovery/renewal, then disabled-principal/revoked-grant
+completion, mismatched receipts, malformed success and repeat observation. The native
+expiry test exercises the real remote status envelope before/after process termination
+and rejects a different principal. Initial compile caught a test calling a private helper;
+the corrected test uses the real envelope handler. Generated contract check passed.
+Ordinary MCP execution adapters, confinement platforms and remaining A04 source surfaces
+are still open; these results do not close S1 or authorize deleting its preserved source.

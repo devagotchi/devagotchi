@@ -138,6 +138,7 @@ impl Broker {
                 }
             }
             RemoteRequest::Refresh { authority } => self.refresh_authority(authority),
+            RemoteRequest::Status { binding } => self.admission_status(&binding),
             RemoteRequest::Interrupt { notice } => self.interrupt_authority(notice),
         }
     }

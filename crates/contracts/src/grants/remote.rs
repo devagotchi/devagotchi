@@ -1,6 +1,6 @@
 //! Closed remote IPC vocabulary; local IPC remains its existing separate request shape.
 use super::*;
-use crate::{RequestBody, ResponseBody};
+use crate::{OperationState, RequestBody, ResponseBody};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -25,6 +25,11 @@ pub enum RemoteRequest {
     },
     Refresh {
         authority: GrantAuthority,
+    },
+    /// Read lifecycle evidence for the exact admitted identity. This confers no
+    /// execution authority and never extends the broker's monotonic deadline.
+    Status {
+        binding: GrantBinding,
     },
     Interrupt {
         notice: GrantInterruption,
@@ -52,6 +57,11 @@ pub enum RemoteReply {
     Executed(ResponseBody),
     Refreshed {
         operation_id: String,
+    },
+    Status {
+        operation_id: String,
+        state: OperationState,
+        exit_code: Option<i32>,
     },
     Interrupted {
         count: u32,

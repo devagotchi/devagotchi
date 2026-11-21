@@ -40,6 +40,9 @@ mod decisions;
 pub(crate) use decisions::Decision;
 mod grant_record;
 mod grants;
+mod maintenance;
+#[cfg(test)]
+mod maintenance_tests;
 mod notifications;
 mod observation;
 mod policies;
