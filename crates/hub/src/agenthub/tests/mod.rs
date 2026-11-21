@@ -1,5 +1,6 @@
 mod ahead;
 mod audited;
+mod cli_retries;
 mod heartbeat_progress;
 mod hosted;
 mod notes;

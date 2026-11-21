@@ -58,10 +58,10 @@ transaction and expose the optional request id through all supported adapters:
 
 | Source operation | Owning Rust implementation | Work still required |
 |---|---|---|
-| create_task, update_task | hosted/tickets.rs, updates.rs; MCP tools; browser creation/actions | CLI and REST adapters, complete source surface mapping |
-| claim, claim_next | hosted/claims.rs; MCP lease tools | CLI/REST retry contracts |
-| heartbeat, release, complete, handoff, force_release | hosted/leases.rs; MCP lease tools | CLI/REST retry contracts |
-| add_note, add_dep | hosted/notes.rs, graph.rs; MCP tools; browser comments | CLI/REST and browser dependency surface mapping |
+| create_task, update_task | hosted/tickets.rs, updates.rs; MCP tools; browser creation/actions | REST adapters and complete source surface mapping; CLI retry continuation below |
+| claim, claim_next | hosted/claims.rs; MCP lease tools | REST retry contracts and remaining source surface mapping; CLI retry continuation below |
+| heartbeat, release, complete, handoff, force_release | hosted/leases.rs; MCP lease tools | REST retry contracts and remaining source surface mapping; CLI retry continuation below |
+| add_note, add_dep | hosted/notes.rs, graph.rs; MCP tools; browser comments | REST and browser dependency surface mapping; CLI retry continuation below |
 | put_workflow, put_project, put_setting | hosted/settings.rs, shared_workflows/; MCP project settings; browser configuration | Arbitrary source setting/catalog equivalence, CLI/REST/admin MCP adapters |
 | put_role, put_policy, put_principal, revoke_token | identity/accounts/agents/, api_keys/revocation.rs; browser agents/keys | Remaining principal semantics and REST/admin MCP mappings; no credential issuance replay |
 | delete_ + dynamic configuration kind | role/rule and shared workflow deletes composed with identity/board receipts | Project deletion and other dynamic source kinds remain open; expand every branch |
@@ -212,3 +212,52 @@ lifecycle/isolation regression passed using the just-built test executable
 The just-built layout executable also passed all eight checks against the current files
 (target/absorption-configuration-receipt-layout-current.log). Formatting and diff whitespace
 checks passed. These are local checks, not CI or source absorption into main.
+
+
+## CLI retry continuation
+
+Source comparison and exact contract: [CLI retry handoff](a03-cli-retries.md), covering
+S1 server/cmd/hub/{main,client,run,state}.go request-id and cached-fence behavior. The source
+files contain other CLI behavior too; these mappings are partial, not source closure.
+
+Single task/project-settings writes generate a request key or accept --request-id. Before
+sending, cli/requests persists and locks bounded original input plus resolved session/fence
+under the ignored project requests directory. Storage/account secrets are excluded. Its
+namespace includes authenticated hub principal (whoami), board and acting seat, or the
+standalone PostgreSQL board/actor. Corrupt, mismatched and unwritable preparation refuses.
+Matching retries recover original defaults after process restart, claim-cache removal or a
+later claim. Absence of a cached fence is preserved too; command adapters cannot substitute
+a newer one. PostgreSQL still owns the result and same-transaction mutation receipt.
+
+Board and Remote expose request-local replay status. The CLI does not rewrite the claim
+cache on replay. Human output identifies the original result; JSON retains object fields
+and adds request_id/replayed, wrapping array results under result. Bound writes require the
+hub's whoami capability, send the key only to the prepared mutation, and validate the
+response's echoed key/replay boolean. An unexpected mutation is refused before transport.
+Reads and batches reject an explicit key; this does not claim batch/lifecycle replay.
+README documents the retry protocol and sensitive local record retention.
+
+Evidence so far: 18 existing CLI tests passed before added history cases
+(target/absorption-cli-retry-regressions.log). Three PostgreSQL history cases passed
+(target/absorption-cli-retry-history.log). The complete focused CLI domain then passed all
+30 checks, including simultaneous invocations, torn preparation, unsupported peers and
+malformed acknowledgements (target/absorption-cli-complete-regressions.log). The real HTTP
+hub case passed after correcting its assertion to account for the board-binding event
+(target/absorption-cli-bound-retries-fixed.log); it reconnects for every invocation, keeps a
+newer lease/cache, distinguishes omitted/null progress and refuses invalid credentials.
+A separate live API-key revocation/replacement check is being verified. Its initial compile
+caught the fixture trying to clone Accounts rather than its Arc; the fixture now shares
+Arc<Accounts>, as the application does. No CI, push, source closure or deployment.
+
+
+The live-credential check passed alongside the reconnect regression (2 tests,
+target/absorption-cli-bound-revocation-fixed.log). The hub uses its actual local account
+and API-key verifier. Revoking a key prevents replay; a different valid key for the same
+account returns the original task without another event. Both key secrets are absent from
+local request records. The two output-schema tests passed
+(target/absorption-cli-capability-schema.log), all eight layout checks passed
+(target/absorption-cli-retry-layout.log), and cargo check -p devagotchi-hub passed without
+compiler warnings (target/absorption-cli-retry-check.log). The schema/layout checks used
+the current built executables, with the layout executable reading current source files.
+Formatting, both repositories' diff-whitespace checks and pinned-object inventory passed.
+The 100 commits/907 source rows remain open; four CLI rows now carry partial source mappings.

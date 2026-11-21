@@ -3334,9 +3334,15 @@
       "mode": "100644",
       "kind": "blob",
       "packet": "A03",
-      "status": "unverified",
-      "target_paths": [],
-      "evidence": []
+      "status": "partial",
+      "target_paths": [
+        "crates/agenthub/src/cli/remote.rs",
+        "crates/hub/src/mcp/schema.rs",
+        "crates/hub/src/agenthub/tests/cli_retries.rs"
+      ],
+      "evidence": [
+        "Pinned source retry/key and cached-fence behavior compared; local CLI preparation and PostgreSQL/MCP retry adapters authored. Evidence and remaining source parity are in .ai/dev/plans/absorption/a03-review.md and a03-cli-retries.md. No main delivery or source closure."
+      ]
     },
     {
       "path": "server/cmd/hub/main.go",
@@ -3345,9 +3351,14 @@
       "mode": "100644",
       "kind": "blob",
       "packet": "A03",
-      "status": "unverified",
-      "target_paths": [],
-      "evidence": []
+      "status": "partial",
+      "target_paths": [
+        "crates/agenthub/src/cli/args.rs",
+        "crates/agenthub/src/cli/requests/mod.rs"
+      ],
+      "evidence": [
+        "Pinned source retry/key and cached-fence behavior compared; local CLI preparation and PostgreSQL/MCP retry adapters authored. Evidence and remaining source parity are in .ai/dev/plans/absorption/a03-review.md and a03-cli-retries.md. No main delivery or source closure."
+      ]
     },
     {
       "path": "server/cmd/hub/print.go",
@@ -3367,9 +3378,15 @@
       "mode": "100644",
       "kind": "blob",
       "packet": "A03",
-      "status": "unverified",
-      "target_paths": [],
-      "evidence": []
+      "status": "partial",
+      "target_paths": [
+        "crates/agenthub/src/cli/mod.rs",
+        "crates/agenthub/src/cli/commands/leases.rs",
+        "crates/agenthub/src/cli/tests/retries.rs"
+      ],
+      "evidence": [
+        "Pinned source retry/key and cached-fence behavior compared; local CLI preparation and PostgreSQL/MCP retry adapters authored. Evidence and remaining source parity are in .ai/dev/plans/absorption/a03-review.md and a03-cli-retries.md. No main delivery or source closure."
+      ]
     },
     {
       "path": "server/cmd/hub/state.go",
@@ -3378,9 +3395,15 @@
       "mode": "100644",
       "kind": "blob",
       "packet": "A03",
-      "status": "unverified",
-      "target_paths": [],
-      "evidence": []
+      "status": "partial",
+      "target_paths": [
+        "crates/agenthub/src/cli/requests/mod.rs",
+        "crates/agenthub/src/cli/requests/tests.rs",
+        "crates/agenthub/src/cli/claims.rs"
+      ],
+      "evidence": [
+        "Pinned source retry/key and cached-fence behavior compared; local CLI preparation and PostgreSQL/MCP retry adapters authored. Evidence and remaining source parity are in .ai/dev/plans/absorption/a03-review.md and a03-cli-retries.md. No main delivery or source closure."
+      ]
     },
     {
       "path": "server/go.mod",
