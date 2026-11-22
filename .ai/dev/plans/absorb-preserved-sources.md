@@ -351,3 +351,22 @@ not an ignored test or a claimed second full-suite run. Linux and Windows builds
 and process E2E passed; Linux security (16/16), protocol, smoke, real-client OAuth,
 organization browser, 20 Windows pipe stress iterations, dependency and generated
 contract checks passed. Required CI must still pass the full candidate before merge.
+
+### Windows native fixture follow-through after 10fce73
+
+The organization/browser, real clients, Linux and PostgreSQL gates pass in CI.
+Windows still blocks while acknowledging close: flushing exposes the still-pending
+pipe write as input_blocked instead of falsely acknowledging EOF and waiting until
+operation expiry. Local stress alone did not reproduce the hosted runner behavior.
+Keep the runtime close contract and existing authority deadlines. Make the Windows
+fixture consume the actual byte stream via OpenStandardInput, use canonical paths
+and direct filesystem existence checks for its read gate, and include child phase/
+stderr evidence in any close/settlement failure. Retain the real 2MiB saturation,
+500ms permit, 650ms closed gate, forbidden queued marker and successful EOF/exit.
+Validate native tests locally and the actual platform job before claiming closure.
+
+Follow-through local receipt: all 134 Windows machine-engine tests pass with zero
+skips; all five remote-control tests pass in each of 20 stress iterations (100 cases);
+all 15 selected Linux native remote tests pass. Only the native fixture and delivery
+status documents change in this follow-through; production code remains 10fce73.
+The actual Windows CI result remains required and is not inferred from local stress.

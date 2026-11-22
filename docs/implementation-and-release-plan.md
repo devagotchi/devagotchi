@@ -24,26 +24,30 @@ in Devagotchi and its AgentHub library. This section is the short operational ro
 the [branch execution plan](../.ai/dev/plans/absorption/branch-execution.md) owns exact
 source paths, implementation steps, tests and dependency order.
 
-Root integration `1bbb084` is pushed in [PR279](https://github.com/devagotchi/devagotchi/pull/279).
+Root integration `10fce73` is pushed in [PR279](https://github.com/devagotchi/devagotchi/pull/279).
 AgentHub [PR17](https://github.com/devagotchi/agenthub/pull/17) is merged at `8bdac83`;
 its 163 standalone PostgreSQL tests, PR CI and main CI passed, its merged tree matches
 validated `ac9c7ff`, and its integration branches were deleted. Recursive parent clones
 resolve the published dependency. Root main remains `4b01ac9`; PR279 is not merged yet.
 
-The published root corrections passed 1,199 local workspace tests, Linux/Windows process
-checks and the real self-hosted owner/OAuth/binding/approval/command/mobile journey. CI
-confirmed that browser journey and exposed two remaining defects: keyed organization
-comments incorrectly rechecked accounts inside the organization tenant, and a timed-out
-Windows pipe write could leave EOF incomplete. The current correction batch preserves
-project membership/account checks and native input expiry, with replay/demotion and
-actual backpressure regressions. Complete these checks, push the batch, merge the exact
-green candidate, verify main, then deploy that actual main image for owner testing.
+The published root corrections passed the real self-hosted owner/OAuth/binding/approval/
+command/mobile journey. The latest CI passes organization comment/retry/demotion,
+real SDK/Codex OAuth, Linux, macOS, PostgreSQL and deployment checks. Windows core
+still exposes a blocked-input fixture failure: close correctly reports its pending
+write instead of claiming EOF. The follow-through keeps the actual 2MiB pipe fill,
+expired queued-input refusal and existing deadlines, uses a raw byte reader and
+canonical read-gate path, and reports child read/EOF phases on failure. Local native
+stress passes; the Windows platform result is still required before merge.
+
+Next: push the validated fixture correction, merge the exact green candidate, verify
+main, then deploy that actual main image for owner testing. Source closure remains
+separate from integrating this authored work.
 
 | Sequence | Deliverable | Current evidence/status | Next acceptance |
 |---|---|---|---|
-| Now | Reproducible two-repository publication | Both dependency heads published; recursive clone and standalone 163-test run passed; AgentHub PR17 merged; library main CI green | Finish and push the two remaining PR279 corrections, obtain green platform CI; verify actual CI candidates and merged gitlink |
+| Now | Reproducible two-repository publication | Both dependency heads published; recursive clone and standalone 163-test run passed; AgentHub PR17 merged; library main CI green | Finish Windows native acceptance and obtain green platform CI; verify actual CI candidates and merged gitlink |
 | S1 / October | Complete baseline behavior | Task/configuration/principal/receipt/CLI/HTTP work authored; machine admission/start/read/control/heartbeat authored with focused PostgreSQL/native tests. These are partial source ports, not a completed baseline | Finish remaining coordination/catalog comparisons, file/batch/image authorization, operator stop/list/history, confinement/change policy, provider routing/secrets, executable guides, document/GUI tools, audit retention and all corresponding browser journeys |
-| S1 delivery | Green main integration | AgentHub PR17 merged; library main CI green; root PR279 corrections published; two defects remain in platform/browser CI; root main not merged | Review complete authored scope, required CI, exact dependency/gitlink verification, authorized merge and main verification; no source closure/deletion based on an incomplete port |
+| S1 delivery | Green main integration | AgentHub PR17 merged; library main CI green; root PR279 corrections published; Windows native acceptance remains; root main not merged | Review complete authored scope, required CI, exact dependency/gitlink verification, authorized merge and main verification; no source closure/deletion based on an incomplete port |
 | S2 | Documentation/packaging delta: 2 commits, 17 paths | Planned; no source closure | Complete source-specific changes, validate, green merge, verify and delete eligible ref |
 | S3 | Enrollment/transport/browser boundary: 5 commits, 79 paths | Planned; no source closure | Same complete-source delivery sequence after S2 |
 | S4 | Packaging/readiness/shutdown: 1 commit, 32 paths | Planned; no source closure | Same complete-source delivery sequence after S3 |

@@ -113,13 +113,17 @@ async fn remote_control_real_pipe_input_obeys_original_grant_without_renewing_ex
             .deadline
             .borrow()
     );
-    control(
+    let closed = control(
         &broker,
         proof(&auth, ProcessControl::Input),
         typed(id, "", vec![Key::CtrlD]),
     )
-    .await
-    .unwrap();
+    .await;
+    assert!(
+        closed.is_ok(),
+        "close: {closed:?}; child: {}",
+        output_text(&broker, id)
+    );
     assert!(matches!(
         settle(&broker, id).await.state,
         OperationState::Succeeded
@@ -247,14 +251,31 @@ async fn remote_control_queued_input_retains_its_deadline_and_current_revocation
 #[tokio::test]
 async fn remote_control_expired_input_is_not_delivered_after_actual_pipe_backpressure() {
     let dir = tempfile::tempdir().unwrap();
-    let gate = dir.path().join("read-input-now");
+    let fixture = dunce::canonicalize(dir.path()).unwrap();
+    let gate = fixture.join("read-input-now");
     #[cfg(windows)]
     let (exe, args) = {
-        let script = dir.path().join("blocked-input.ps1");
+        let script = fixture.join("blocked-input.ps1");
         let gate = gate.to_string_lossy().replace('\'', "''");
-        // Read the entire native pipe, but report only the properties under test.
-        // Echoing 2MiB makes this a persisted-output throughput test on CI disks.
-        std::fs::write(&script,format!("[Console]::WriteLine('first'); while (-not (Test-Path -LiteralPath '{gate}')) {{ Start-Sleep -Milliseconds 20 }}; $received = [Console]::In.ReadToEnd(); if ($received.Contains('x')) {{ [Console]::WriteLine('received-padding') }}; if ($received.Contains('expired-marker-must-never-arrive')) {{ [Console]::WriteLine('expired-marker-must-never-arrive') }}")).unwrap();
+        // This exercises bytes on a native pipe, not the console text reader or
+        // PowerShell provider path resolution (CI temp paths can use 8.3 aliases).
+        // Keep phase evidence in failures without persisting 2MiB of output.
+        std::fs::write(&script, format!(r#"
+$ErrorActionPreference = 'Stop'
+[Console]::WriteLine('first')
+while (-not [IO.File]::Exists('{gate}')) {{ [Threading.Thread]::Sleep(20) }}
+[Console]::WriteLine('reading-input')
+$inputPipe = [Console]::OpenStandardInput()
+$received = [IO.MemoryStream]::new()
+$buffer = [byte[]]::new(8192)
+while (($count = $inputPipe.Read($buffer, 0, $buffer.Length)) -gt 0) {{
+    $received.Write($buffer, 0, $count)
+}}
+[Console]::WriteLine('input-eof')
+$text = [Text.Encoding]::ASCII.GetString($received.ToArray())
+if ($text.Contains('x')) {{ [Console]::WriteLine('received-padding') }}
+if ($text.Contains('expired-marker-must-never-arrive')) {{ [Console]::WriteLine('expired-marker-must-never-arrive') }}
+"#)).unwrap();
         (
             system32("WindowsPowerShell/v1.0/powershell.exe"),
             vec![
@@ -341,7 +362,8 @@ async fn remote_control_expired_input_is_not_delivered_after_actual_pipe_backpre
     let settled = settle_within(&broker, id, 30).await;
     assert!(
         matches!(settled.state, OperationState::Succeeded),
-        "{settled:?}"
+        "{settled:?}; child: {}",
+        output_text(&broker, id)
     );
     let mut output = String::new();
     let mut cursor = 0;
