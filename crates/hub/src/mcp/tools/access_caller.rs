@@ -12,7 +12,7 @@ use devagotchi_contracts::{BridgeError, BridgeResult};
 use rmcp::{RoleServer, service::RequestContext};
 use std::sync::Arc;
 
-pub(super) struct AccessCaller {
+pub(crate) struct AccessCaller {
     pub subject: Subject,
     pub accounts: Arc<Accounts>,
     pub profile: Option<Identity>,

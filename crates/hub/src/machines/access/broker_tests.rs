@@ -110,7 +110,13 @@ async fn remote_access_bridge_prepares_then_consumes_one_admission_and_forwards_
         );
         authority
     };
-    let (result, authority) = tokio::join!(f.access.execute_start(&execution, start()), broker);
+    let (result, authority) = tokio::join!(
+        async {
+            let prepared = f.access.prepare_start(&execution, start()).await?;
+            f.access.execute_prepared(&execution, prepared).await
+        },
+        broker
+    );
     assert_eq!(result.unwrap_err().code, "observed_refusal");
     let retried = f.admit(&grant, "operation-key", &call()).await.unwrap();
     assert!(retried.replayed);
@@ -144,7 +150,13 @@ async fn remote_access_bridge_refuses_unproved_level_before_consuming_a_use() {
             }),
         );
     };
-    let (result, ()) = tokio::join!(f.access.execute_start(&execution, start()), broker);
+    let (result, ()) = tokio::join!(
+        async {
+            let prepared = f.access.prepare_start(&execution, start()).await?;
+            f.access.execute_prepared(&execution, prepared).await
+        },
+        broker
+    );
     assert_eq!(result.unwrap_err().code, "sandbox_unavailable");
     assert!(rx.try_recv().is_err());
     assert!(

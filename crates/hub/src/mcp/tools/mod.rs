@@ -7,6 +7,7 @@ use super::Hub;
 
 mod access;
 mod access_caller;
+pub(super) use access_caller::AccessCaller;
 mod machines;
 
 pub(super) const ACCESS_INSTRUCTIONS: &str = "Machine access: use machines_list and capabilities_list, then request_access with a stable request_id and a reason of at least 20 characters. Use wait_for_access to read the human decision and my_grants for your current terms. A pending request or listed grant is not an execution permit. Check actual broker sandbox availability; unavailable confinement must be resolved before running. Never ask the operator for secrets.";

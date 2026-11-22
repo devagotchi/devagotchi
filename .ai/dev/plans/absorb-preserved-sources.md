@@ -1,15 +1,18 @@
 # Complete preserved-source absorption before the self-hosted prerelease
 
-Operator instruction, 2026-11-20: plan the whole change, author the code locally, then
-validate and merge each source in oldest-first order. **No new CI runs or pushes that
-trigger CI until the complete absorption implementation is authored.** Do not disable
-checks, weaken assertions, or replace implementation with plans. This execution order
-supersedes the one-PR-per-small-milestone schedule in older absorption plans.
+Operator instruction, reconciled 2026-11-21: **plan every remaining source first; then
+fully author, validate, merge and delete S1 before implementing S2, and repeat oldest
+first.** No CI-triggering pushes while the current source is knowingly incomplete.
+Do not disable checks, weaken assertions, or replace implementation with plans. This
+supersedes both the tiny-milestone PR schedule and the earlier all-five-before-CI schedule.
 
 This is the active absorption plan. [The packet instructions](absorption/implementation.md)
 and [the exact source inventory](absorption/README.md) are part of it. The existing
 [release plan](../../../docs/implementation-and-release-plan.md) still owns product
 architecture; this document owns completion of the preserved source queue.
+
+The [branch execution detail](absorption/branch-execution.md) reconciles current code,
+later-source deltas, source-specific acceptance and the two-repository publication order.
 
 ## Outcome and boundaries
 
@@ -92,11 +95,12 @@ source-specific verification and a receipt, not a rewrite.
 | 11 | A08 | Action feed, category retention, archives and verification | A03-A10 |
 | 12 | A11 | Finish all corresponding user journeys and failure states | A01-A10 |
 | 13 | A12 | Baseline packaging, configuration, docs and release integration | A01-A11 |
-| 14 | B01 | S2's 17-path delta, including later product requirements | S1 authored |
-| 15 | C01 | S3's 79-path enrollment/auth/connectivity/security delta | S2 authored |
-| 16 | D01 | S4's 32-path packaging/readiness/shutdown delta | S3 authored |
-| 17 | E01 | S5's 42-path capabilities/provenance/retry/file/Windows delta | S4 authored |
-| 18 | R01 | Full validation, sequential green merges, deletion and prerelease acceptance | all authored |
+| 14 | B01 | S2's 17-path documentation/ignore/packaging delta | S1 merged and closed |
+| 15 | C01 | S3's 79-path enrollment/auth/connectivity/security delta | S2 merged and closed |
+| 16 | D01 | S4's 32-path packaging/readiness/shutdown delta | S3 merged and closed |
+| 17 | E01 | S5's 42-path capabilities/provenance/retry/file/Windows delta | S4 merged and closed |
+| each source | R01 | Applicable validation, green merge, main verification and deletion | current source authored |
+| final | R01 | Combined fresh/existing-data Docker and prerelease acceptance | S1-S5 merged and closed |
 
 No new commercial features, branding redesign, generic architecture cleanup, framework
 migration, or speculative roadmap work is added to these packets. Source-backed missing
@@ -115,28 +119,26 @@ evidence; it cannot be marked absorbed by an executor's guess.
    allowed. Each commit says source SHA/paths and packet ID. No pushes, PR creation or CI
    dispatch during authoring; no independent PR for a query, index or form component.
 3. At a source boundary, record the completed commit and tree for BOTH repositories in
-   the ledger. Continue the next source's **delta** on the same local integration branch;
-   do not create checkpoint/child branches during authoring. Keep S1-S5 order and separate
-   coherent commit ranges so each source can be reviewed and delivered in that order.
-   Do not start the next source while the preceding source still has unauthored rows.
+   the ledger. Complete steps4-7 for this source before authoring the next source's delta.
+   Do not create parallel checkpoint/child branches. Source ordering is S1 through S5.
 4. `authored` requires domain implementation, migration, every applicable surface, error
    handling, tests/probes and documentation actually present. TODOs, a route without an
    implementation, unsupported placeholders for supported source behavior, or a future
    milestone fail this state. It is distinct from `validated` and `merged`.
-5. **Only once S1-S5 are authored**, run the complete integration validation described below.
+5. **Once the current source is fully authored**, run its applicable integration validation.
    Resolve failures locally. Do not push a known failing tree to outsource debugging to CI.
-6. Publish the oldest ready source. If it changes the AgentHub submodule, validate/merge
-   that repository first, verify its reviewed tree on main, and update the parent gitlink
+6. Publish the oldest ready source. Follow the exact dependency-pinning sequence in the
+   branch execution detail: standalone AgentHub cannot rely on root workspace patches.
+   Merge the green library PR, verify its tree on main, and update the parent gitlink
    to the merged commit. Publish the parent source checkpoint, wait for all required checks,
    fix genuine failures, merge with the exact reviewed head, verify remote main and main CI.
 7. Delete only that completed integration branch, verifying its current remote head first.
    Original historical refs are eligible only after their entire file/behavior/commit ledger
    is closed and their source history has a durable archive/tag or Git bundle. This preserves
    provenance through cross-repository ports without pretending ancestry alone proves parity.
-8. Apply the next already-authored source commit range onto the verified new main for its
-   delivery; inspect every conflict against both source contracts, run affected checks,
-   and merge/delete its delivery ref by the same procedure. Preserve the complete local
-   authored history and recorded trees before moving any delivery ref.
+8. Start the next planned source delta from verified main, using one sequential integration
+   branch. Implement its complete plan, inspect conflicts against both source contracts,
+   validate, merge and delete by the same procedure. Preserve recorded source history.
    Do not use blind `ours`/`theirs`, blanket squash-away conflict resolution, or force pushes
    to main. Keep any original ref carrying unique unverified work.
 9. Finish with a fresh local and remote ref inventory for both canonical repos and every
@@ -154,7 +156,7 @@ coherent behavior change. PostgreSQL tests use isolated disposable data with the
 flag, never the development database. Do not repeatedly rebuild/test the entire workspace
 after an index, helper or copy change. Do not modify source files during a running suite.
 
-After all authoring: build the final binaries; run the default workspace suite with real
+After current-source authoring (runtime sources): build its final binaries; run the default workspace suite with real
 PostgreSQL required, the dependency audit, contract generation, layout/fmt/AI checks and
 Windows process/MCP probes. Run the native browser journeys in the packet instructions.
 Use outside-checkout scratch on D:. Do not run the target executable while Cargo replaces
@@ -227,6 +229,6 @@ also authored with focused evidence. Complete source absorption remains unfinish
 focused results are recorded in the packet review ledgers, not final integration evidence.
 Push/PR: no consolidated change published. Main: no consolidated source delivered. Continue
 Batch 2 on the existing integration branch, retaining remaining Batch 1 acceptance;
-CI remains held until S1-S5 are authored.
+CI remains held until S1 is fully authored and locally validated; deliver S1 before S2.
 
 **DELIVERY INCOMPLETE: FULL SOURCE ABSORPTION IS NOT YET IMPLEMENTED OR MERGED.**

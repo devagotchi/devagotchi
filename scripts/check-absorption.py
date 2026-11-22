@@ -2,7 +2,9 @@
 
 Pass --go-source and --rust-source to also compare the immutable Git objects. Without
 them this validates the committed ledger's structure and evidence requirements only.
---require-closed is for final delivery, never a way to skip unauthored requirements.
+--require-closed is for delivery, never a way to skip unauthored requirements.
+--source S1 checks closure of that complete source; structural/Git verification still
+covers all five sources. Without --source, closure always requires the entire queue.
 """
 
 import argparse
@@ -79,13 +81,17 @@ def main():
     parser.add_argument("--go-source", type=Path)
     parser.add_argument("--rust-source", type=Path)
     parser.add_argument("--require-closed", action="store_true")
+    parser.add_argument("--source", choices=[f"S{i}" for i in range(1, 6)],
+                        help="scope closure to one complete source; still validate every inventory")
     args = parser.parse_args()
     require(bool(args.go_source) == bool(args.rust_source), "supply both source paths or neither")
     instructions = (INVENTORY / "implementation.md").read_text(encoding="utf-8")
     for packet in PACKETS | {"R01"}:
         require(f"## {packet} " in instructions, f"missing instructions for {packet}")
     total_files = total_commits = open_files = open_commits = 0
+    closure_files = closure_commits = 0
     for index, (sha, commits, files) in enumerate(EXPECTED, 1):
+        before_files, before_commits = open_files, open_commits
         data = json.loads((INVENTORY / f"s{index}-files.json").read_text(encoding="utf-8"))
         require(data["source"] == f"S{index}" and data["sha"] == sha, "source identity differs")
         require(len(data["commits"]) == commits and len(data["files"]) == files,
@@ -123,11 +129,16 @@ def main():
             verify_source(data, args.rust_source if index == 5 else args.go_source)
         total_files += files
         total_commits += commits
+        if args.source is None or args.source == f"S{index}":
+            closure_files += open_files - before_files
+            closure_commits += open_commits - before_commits
     print(f"Inventory valid: {total_commits} commits, {total_files} file-change records.")
     print(f"Still open: {open_commits} commits, {open_files} file-change records.")
     print("Git objects verified." if args.go_source else "Git objects not checked (no source paths).")
+    print(f"Closure scope {args.source or 'ALL'}: {closure_commits} commits and {closure_files} file-change records still open.")
     if args.require_closed:
-        require(not open_files and not open_commits, "absorption is incomplete")
+        require(not closure_files and not closure_commits,
+                f"{args.source or 'ALL'} absorption is incomplete")
 
 
 if __name__ == "__main__":

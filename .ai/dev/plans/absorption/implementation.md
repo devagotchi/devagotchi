@@ -2,7 +2,8 @@
 
 Authority: [complete absorption plan](../absorb-preserved-sources.md). These are local
 work units on the oldest source's branch, not separate PRs. No CI-triggering pushes
-until S1-S5 are authored. The file manifests remain the coverage ledger; this document
+until the current source is completely authored. Plan S1-S5 first, then deliver each source
+before implementing the next. The file manifests remain the coverage ledger; this document
 does not mark their rows implemented. All paths below are relative to the Rust root
 unless explicitly prefixed `source:`. A proposed path is an implementation destination,
 not a claim that a file already exists.
@@ -26,7 +27,7 @@ replay responses, screenshots or committed fixtures.
 
 The named tests below are tests to author or locate and verify, not results. Run only
 focused local checks during authoring. Record exact commands, heads and outcomes privately.
-Full validation and publication belong to R01, after every source is authored.
+Full validation and publication belong to R01 at each completed source boundary.
 
 ## Code plan reconciled on 2026-11-21
 
@@ -47,8 +48,9 @@ this planning pass. No runtime build or CI was run during this reconciliation.
 | 3 | Providers and executable guides: A06 + A07 | Provider/model data, subscriptions and routing, sealed secrets, immutable guide publications, durable runs and actual broker effects, full editors/run UI |
 | 4 | Machine tool parity: A09 + A10 | Every registry operation, PDF/DOCX/XLSX, bounded search/process behavior, Linux GUI sessions/capture/input, generated contracts and both MCP faces |
 | 5 | Audit and product integration: A08 + A11 + A12 | Correlated actions, verified archives before retention, all page/action journeys, source-derived settings/install/docs, self-hosted Docker configuration |
-| 6 | Later source deltas: B01, then C01, then D01, then E01 | Review and author each complete delta in that order, preserving separate source-boundary commits; no CI between tiny changes |
-| 7 | R01 | Final integration validation, oldest-source green delivery, verified branch deletion, actual-main Docker acceptance |
+| 6 | R01 for S1 | Complete validation, green library/root delivery, main verification and eligible source deletion before S2 |
+| 7 | Later source deltas: B01, C01, D01, E01 | Plan all now using [branch execution detail](branch-execution.md); implement, validate and deliver each whole source before starting the next |
+| final | R01 | Combined actual-main Docker/prerelease acceptance and final ref inventory |
 
 A05 is not dependent on an already finished A04: source `access/check.go` reads capability
 schemas and `access/decide.go` reads grant presets. They form one batch with catalogs first.
@@ -336,7 +338,7 @@ cannot be closed by merely finding HTML route handlers.
 | Source | Grounded change and code owners | Closure evidence |
 |---|---|---|
 | S2 / B01, 17 paths | Two commits: Chatmaton design documents, then ignore/packaging changes. No new runtime room implementation in this delta. Map docs 39d-g to accepted application ownership in `docs/product-and-platform-plan.md`; preserve requirements and status. Existing hub workflows/approvals, `notify/push/`, `site/pwa.rs`, link update and connector owners supply hub interfaces; do not manufacture a Go chat sidecar from a proposal. Inspect deleted Go release/Docker files against current Rust equivalents, and each secret-ignore entry against its fixture. | Each path gets exact disposition; accepted missing hub behavior remains open and is authored before S2 checkpoint. Private Gold/APNs/FCM/signing-host proposals are not silently represented as shipped self-hosted code. |
-| S3 / C01, 79 paths / five commits | `bridge/config/enrollment*`, transport/grant changes -> `link/src/{state,run,session}`, machine enrollment and A04 grants. Browser auth/OIDC/TLS changes -> existing hub identity, sign-in/session, provider and serve owners. New TLS configuration stays with transport, private state ACLs with existing platform owner. Source tests define one-use enrollment, atomic/private storage, dedicated CA+hostname checks, redirect refusal, cookie/session/stream boundaries. | Translate each changed test, including Windows interrupted state writes and cached-grant revocation. New public agent guide is origin-configurable; private Gold deployment files remain outside public runtime. Source line-ending changes map to actual Unix artifacts. |
+| S3 / C01, 79 paths / five commits | `bridge/config/enrollment*`, transport/grant changes -> `link/src/{state,run,session}`, machine enrollment and A04 grants. Browser auth/OIDC/TLS changes -> existing hub identity, sign-in/session, provider and serve owners. New TLS configuration stays with transport, private state ACLs with existing platform owner. Source tests define one-use enrollment, atomic/private storage, dedicated CA+hostname checks, redirect refusal, cookie/session/stream boundaries. | Translate each changed test, including source Windows enrollment refusal, Unix interrupted state writes and cached-grant revocation; verify current Windows ACL storage independently. New public agent guide is origin-configurable; private Gold deployment files remain outside public runtime. Source line-ending changes map to actual Unix artifacts. |
 | S4 / D01, 32 paths | Source `health/ready.go` checks dependency in 1s with coarse `{ok}`/no-store; existing `ops/health.rs` is a detailed diagnostic, not that endpoint. Add `ops/readiness.rs` and `/readyz` using real DB query with a 1s total bound, keep `/healthz` diagnostics. `serve/mod.rs` graceful shutdown needs source 5s drain and explicit stream/link lifecycle before closing dependencies. Current deploy image gets nonroot/read-only code and writable private-state checks. | Real unreachable/slow PostgreSQL readiness, SIGTERM during request and persistent stream, embed/static-resource and browser auth regression. Historical screenshots/logs are source evidence only. |
 | S5 / E01, 42 paths | Current owners already include machine-engine broker tests for capabilities/retry/file_mutations, approved Windows execution, AgentHub `provenance.rs`, MCP capability helper and link session. Compare every hunk from `62820713747ba3b2c572e5642a8bbe8e779d769f` to preserved `c936f7f`; map old core/board paths to these real owners. Regenerate generated contracts rather than copy source output. | Reproduce the source concurrency/retry/provenance/live-capability/Windows-startup triggers. A renamed module or prior PR title is not equivalence. Record tested head before closing each row. |
 
@@ -702,7 +704,7 @@ Source: S1 deployment/configuration/installers/docs and source license notices.
    Keep alpha status and avoid claims unsupported by platform acceptance.
 
 Acceptance: all S1 rows and commits have authored dispositions; no original runtime feature
-is hidden behind a later milestone. Checkpoint S1 locally, then author S2's delta.
+is hidden behind a later milestone. Validate, merge and close S1 before authoring S2's delta.
 
 ## B01 — S2 delta, ca626db
 
@@ -711,24 +713,29 @@ source behavior from proposed later requirements and map the latter to accepted 
 owners. Chatmaton remains its separately owned application where the canonical product
 decision says so; required hub process/approval/connectivity interfaces remain in scope.
 
-Implement missing accepted hub approval/PWA/passkey decision signing, notification delivery,
-shell update/sync and diagnostics requirements in their current owners. Bind signed
-decisions to exact payload/version and reject replay. Offline queued actions require fresh
-authority and conflict handling on sync. Do not add a second chat runtime in this repo.
+Preserve the proposed approval/PWA/passkey, notification, shell/update/sync and diagnostics
+requirements with explicit implementation status and owner. This delta adds documents,
+not those implementations. `docs/devagotchi/README.md` assigns Chatmaton to its separate
+repository. Compare each hub requirement with the accepted release plan and current code;
+do not claim a design is shipped or create speculative runtime work solely because a
+historical construction plan names files. Accepted missing hub behavior stays explicitly
+open until implemented and verified; record any ownership decision with its exact source.
 Reconcile deleted Go packaging with the Rust release pipeline and secret-ignore rules;
 never copy broad secret-scanner allowlists without checking each fixture.
 
 Acceptance: each of 17 rows explains its exact effect or approved product ownership;
-pending requirements are not called absorbed. Focused signing/replay/offline-sync/update
-tests accompany applicable implementation. Checkpoint S2 before starting S3.
+pending requirements are not called implemented. Validate document links/ownership and
+ignore/packaging behavior, then green merge and close S2 before starting S3.
 
 ## C01 — S3 delta, 97172d9
 
 Read all 79 delta paths. Apply enrollment/configuration, bridge connectivity, browser auth,
 transport and dedicated-CA changes to the existing Rust counterparts.
 
-1. Enrollment/config writes are atomic and private on Unix and Windows; verify ACL/mode
-   and failed-write behavior. Tokens stay out of argv/logs; enrollment is one-use and
+1. Enrollment/config writes are atomic and private. Source Windows `stateSupported`
+   explicitly refuses enrollment pending verified ACL storage; it is not a working Windows
+   implementation. Verify the current Rust Windows ACL implementation with real Windows
+   tests before claiming support. Tokens stay out of argv/logs; enrollment is one-use and
    principal-bound. Inspect URL redirects and transport changes for credential forwarding.
 2. Compare grant cache invalidation with A04; fail closed after expiry/revocation or missing
    state. Preserve principal ids through reconnect and auth mappings.
@@ -739,7 +746,7 @@ transport and dedicated-CA changes to the existing Rust counterparts.
 
 Acceptance: tests derived from each changed source test, including cross-origin requests,
 redirect credential leaks, invalid CA, partial enrollment writes and revoked cached grant.
-Do not re-port unchanged S1 files. Checkpoint S3 before S4.
+Do not re-port unchanged S1 files. Validate, green merge and close S3 before S4.
 
 ## D01 — S4 delta, adca8b7
 
@@ -753,7 +760,7 @@ and logs remain historical evidence. Public image contents contain no private st
 
 Acceptance: isolated Docker readiness with reachable/unreachable PostgreSQL, SIGTERM during
 work, nonroot writable-state/read-only-code checks and fresh-browser login/navigation.
-Checkpoint S4 before S5.
+Validate, green merge and close S4 before S5.
 
 ## E01 — S5 delta, c936f7f
 
@@ -768,13 +775,14 @@ Provenance binds original source/revision and survives updates without being fab
 Translate preserved probe scripts to the canonical harness and run focused local probes.
 
 Acceptance: each delta row links actual current code and the source-specific check; missing
-behavior is implemented, not inferred from prior PR titles. Checkpoint S5. Only now may
-R01 begin full validation and publication.
+behavior is implemented, not inferred from prior PR titles. Validate, green merge and close
+S5, then run R01's combined main-image acceptance and final source-ref inventory.
 
 ## R01 — validate, merge oldest first, then delete
 
-Follow the parent plan's exact validation and Git procedure. Run full tests on the final
-authored tree with required PostgreSQL and actual supported platform fixtures. Fix failures
+Follow the parent plan's exact validation and Git procedure at each source boundary. Run
+applicable tests on that source's final authored tree with required PostgreSQL and actual
+supported platform fixtures for runtime changes. Fix failures
 without weakening checks. A validation receipt must name the tested tree; rebases/conflict
 fixes invalidate affected evidence.
 

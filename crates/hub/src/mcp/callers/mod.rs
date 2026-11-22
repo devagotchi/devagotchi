@@ -7,6 +7,7 @@ use rmcp::{RoleServer, service::RequestContext};
 
 use super::{Hub, hub::Route};
 use crate::identity::Subject;
+mod start;
 
 /// The header a Streamable HTTP client repeats on every request of its MCP session.
 const SESSION_HEADER: &str = "mcp-session-id";

@@ -40,3 +40,8 @@ instructions and target/evidence structure. `--require-closed` additionally refu
 rows; use it for delivery. Passing the ordinary inventory check proves accounting, not
 semantic parity. Initial check: 100 commits and 907 records matched their Git objects;
 all remained open.
+
+Sequential delivery uses `--source S1 --require-closed` (then S2, etc.). This scopes
+closure only; structure and supplied Git objects are still checked for all five sources.
+The final `--require-closed` without `--source` requires the complete queue. A per-source
+pass cannot establish final absorption or authorize deletion of any other source.

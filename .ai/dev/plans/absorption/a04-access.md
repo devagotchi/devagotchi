@@ -615,3 +615,49 @@ and rejects a different principal. Initial compile caught a test calling a priva
 the corrected test uses the real envelope handler. Generated contract check passed.
 Ordinary MCP execution adapters, confinement platforms and remaining A04 source surfaces
 are still open; these results do not close S1 or authorize deleting its preserved source.
+
+## Ordinary operation start and source grant selection, 2026-11-21
+
+Compared S1 `server/internal/access/authorize.go`, `machineops/ops.go` and
+`devapi/mcp_ops.go` at `46419c697964016eb547c60416a8f2f5e854a95f`. Enrolled,
+account-backed MCP `operation_start` now uses canonical broker preparation, automatic
+grant selection, live bearer/profile/scope refresh after waits, then the existing durable
+admission transaction and bound broker Execute. A pending request, an unbound account key,
+or a configured local IPC socket is not an account grant. Explicit non-account configured
+authority remains separate. No request fields accept caller-selected principal identity.
+
+`machines/access/broker/mod.rs` separates `prepare_start` and `execute_prepared` with
+owned, non-serializable preparation bound to account/principal/grant/client/enrollment.
+The latter still rechecks current domain authority before consuming a use. Selection in
+`broker/selection/mod.rs` reads at most 100 candidates per SQL page, follows source
+confinement/approval order with deterministic ID ties and prepares each encountered level
+at most once. Original operation keys stay with their original grant, including exhausted
+one-use grants. Malformed scope data fails instead of becoming unrestricted scope.
+
+Local evidence before the module-layout move: five new tests passed with required real
+PostgreSQL and no ignored tests (`target/absorption-start-selection-fixed.log`): actual MCP
+revocation during Prepare causes zero uses/admissions/Execute; unapproved/unbound callers
+refuse; transport uncertainty retains admission; exhausted retry affinity; 101-grant
+pagination with one canonical preparation and different-client preparation refusal.
+An initial borrow-check error was fixed before these passes. The 106 existing access
+regressions then passed (`target/absorption-start-regression.log`). Additional real MCP
+local-socket bypass coverage and the three MCP cases passed together (4 tests,
+`target/absorption-start-mcp-final.log`). The pagination fixture takes about two minutes
+because it creates/approves all 101 records through real domain methods; no test is skipped
+as missing infrastructure. Both PostgreSQL required flags and isolated port55441 are used.
+
+Layout initially rejected file/folder pairs. They were converted to normal `mod.rs`
+modules without increasing caps; all eight layout tests and formatting passed afterward.
+The same source inventory still verifies 100 commits/907 records. The per-source closure
+option correctly refuses open S1/S2 and default full-queue closure; it does not close rows.
+
+Still open: ordinary `run` and file/batch/image routes, input/cancel and historical output
+authority, task/credential-filter-aware selection refinements, native confinement, policy
+change review and the remaining A04 surface behavior. This is a local partial source port,
+not a green complete S1, published PR, main merge, or branch-deletion receipt.
+
+After the module-layout correction, the final access run passed 110 tests with zero
+failed/ignored (`target/absorption-start-final-regression.log`). The two selection tests
+were already passed on unchanged implementation and were explicitly filtered from that
+rerun; six new cases plus 106 existing cases have passing local evidence. Final layout
+passed all eight checks; formatting and inventory checks passed. No CI was dispatched.

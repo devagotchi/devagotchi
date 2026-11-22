@@ -8,7 +8,10 @@ use crate::machines::{
 use devagotchi_agenthub::{Actor, hosted::HostedBoard};
 use devagotchi_contracts::*;
 use sha2::{Digest, Sha256};
+mod selection;
+pub(crate) use selection::StartSelection;
 
+#[derive(Debug, Clone)]
 pub(crate) struct ExecutionTarget {
     pub machine: MachineBinding,
     pub level: GrantLevel,
@@ -21,6 +24,31 @@ pub(crate) struct LinkExecution<'a> {
     pub links: &'a Links,
     pub grant_id: &'a str,
     pub client: &'a str,
+}
+/// Owned, non-serializable broker preparation. Private fields prevent adapters from
+/// replacing canonical input, selected authority or request identity after validation.
+#[derive(Debug, Clone)]
+pub(crate) struct PreparedStart {
+    account: String,
+    principal: String,
+    grant_id: String,
+    client: String,
+    target: ExecutionTarget,
+    origin: GrantOrigin,
+    levels: Vec<GrantLevel>,
+    input: StartInput,
+    action: GrantAction,
+    operation_key: String,
+    input_sha256: String,
+    call: GrantCall,
+}
+impl PreparedStart {
+    pub(crate) fn grant_id(&self) -> &str {
+        &self.grant_id
+    }
+    pub(crate) fn project(&self) -> Option<&str> {
+        self.target.project.as_deref()
+    }
 }
 impl Admitted {
     pub(super) fn binding(&self, origin: GrantOrigin) -> BridgeResult<GrantBinding> {
@@ -97,22 +125,16 @@ impl Access {
             })
         })
     }
-    /// No external I/O occurs inside a SQL transaction; the broker rechecks the issued
-    /// authority immediately before durable admission and native process creation.
-    pub(crate) async fn execute_start(
+    /// Preparation has no effect and consumes no use. Adapters must refresh current
+    /// credentials and scopes after this wait, before calling execute_prepared.
+    pub(crate) async fn prepare_start(
         &self,
         execution: &LinkExecution<'_>,
         input: StartInput,
-    ) -> BridgeResult<(Admitted, StartOutput)> {
+    ) -> BridgeResult<PreparedStart> {
         let target = self
             .execution_target(execution.account, execution.actor, execution.grant_id)
             .await?;
-        if target.project.is_some() != execution.board.is_some() {
-            return Err(BridgeError::new(
-                "not_granted",
-                "execution needs the grant's original task board",
-            ));
-        }
         let origin = execution.links.grant_origin(&target.machine);
         let actor = GrantActor {
             account: execution.account.into(),
@@ -181,6 +203,50 @@ impl Access {
                 "broker preparation changed the requested operation identity",
             ));
         }
+        Ok(PreparedStart {
+            account: execution.account.into(),
+            principal: execution.actor.id.into(),
+            grant_id: execution.grant_id.into(),
+            client: execution.client.into(),
+            target,
+            origin,
+            levels,
+            input,
+            action,
+            operation_key,
+            input_sha256,
+            call,
+        })
+    }
+    /// Only the original request can consume this preparation. Current domain authority
+    /// is checked in the admission transaction, after adapter credential refresh.
+    pub(crate) async fn execute_prepared(
+        &self,
+        execution: &LinkExecution<'_>,
+        prepared: PreparedStart,
+    ) -> BridgeResult<(Admitted, StartOutput)> {
+        if prepared.account != execution.account
+            || prepared.principal != execution.actor.id
+            || prepared.grant_id != execution.grant_id
+            || prepared.client != execution.client
+            || prepared.origin != execution.links.grant_origin(&prepared.target.machine)
+        {
+            return Err(BridgeError::new(
+                "authority_mismatch",
+                "preparation belongs to another request",
+            ));
+        }
+        let PreparedStart {
+            target,
+            origin,
+            levels,
+            input,
+            action,
+            operation_key,
+            input_sha256,
+            call,
+            ..
+        } = prepared;
         let admitted = self
             .admit(
                 execution.account,
