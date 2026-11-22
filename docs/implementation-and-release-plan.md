@@ -1,6 +1,6 @@
 # Devagotchi and WardenMesh: implementation and release plan
 
-Updated: **2026-11-10 UTC**. Status: **alpha execution plan; incomplete work is not a product guarantee**.
+Updated: **2026-11-22 UTC**. Status: **alpha execution plan; incomplete work is not a product guarantee**.
 
 Lifecycle authority: [DG-LIFECYCLE-1](../.ai/docs/lifecycle.md), with machine state in
 [`.ai/project.json`](../.ai/project.json). Production promotion is explicit, never inferred.
@@ -16,6 +16,53 @@ repository boundary is [editions](../.ai/docs/editions.md), which records the pr
 `shippinAI/devagotchi-cloud` repository; the older claim here that it did not exist is stale.
 The current acceptance and integration receipt is
 [release readiness](../.ai/dev/plans/v0.1-release-readiness.md#self-hosted-baseline-2026-11-20).
+
+## Current integration status (2026-11-22)
+
+Delivery owner: the active absorption branch, `increment-288/absorb-october-baseline`,
+in Devagotchi and its AgentHub library. This section is the short operational roadmap;
+the [branch execution plan](../.ai/dev/plans/absorption/branch-execution.md) owns exact
+source paths, implementation steps, tests and dependency order.
+
+Verified directly against GitHub: root branch head `30ede40` is published; root main is
+`4b01ac9`. AgentHub main is `8bdac83` (PR17); dependency `0eb461e` is published and a fresh
+recursive parent clone succeeds. AgentHub `ac9c7ff` pins its shared Git dependencies to
+root `30ede40` and is published as [PR17](https://github.com/devagotchi/agenthub/pull/17).
+Its standalone 163 tests and Linux PR/main CI passed. The merged tree matches tested
+`ac9c7ff`; the remote integration branch was deleted. Root main has not adopted this
+integration yet; its PR follows the current broad checks.
+
+| Sequence | Deliverable | Current evidence/status | Next acceptance |
+|---|---|---|---|
+| Now | Reproducible two-repository publication | Both dependency heads published; recursive clone and standalone 163-test run passed; AgentHub PR17 merged; library main CI green | Finish root broad gates and publish root PR; verify actual CI candidates and merged gitlink |
+| S1 / October | Complete baseline behavior | Task/configuration/principal/receipt/CLI/HTTP work authored; machine admission/start/read/control/heartbeat authored with focused PostgreSQL/native tests. These are partial source ports, not a completed baseline | Finish remaining coordination/catalog comparisons, file/batch/image authorization, operator stop/list/history, confinement/change policy, provider routing/secrets, executable guides, document/GUI tools, audit retention and all corresponding browser journeys |
+| S1 delivery | Green main integration | AgentHub PR17 merged; library main CI green; root PR pending; root main not merged | Review complete authored scope, required CI, exact dependency/gitlink verification, authorized merge and main verification; no source closure/deletion based on an incomplete port |
+| S2 | Documentation/packaging delta: 2 commits, 17 paths | Planned; no source closure | Complete source-specific changes, validate, green merge, verify and delete eligible ref |
+| S3 | Enrollment/transport/browser boundary: 5 commits, 79 paths | Planned; no source closure | Same complete-source delivery sequence after S2 |
+| S4 | Packaging/readiness/shutdown: 1 commit, 32 paths | Planned; no source closure | Same complete-source delivery sequence after S3 |
+| S5 | Preserved November Rust delta: 1 commit, 42 paths | Planned; no source closure | Same complete-source delivery sequence after S4 |
+| Prerelease | Actual-main self-hosted Docker | Running image identifies main `4b01ac9`; no new deployment claimed | Fresh install, existing-data restart, owner/local-user and AgentHub browser/MCP/CLI journeys; PostgreSQL coordination; no customer-tenant UI |
+| Later | Commercial optimized offering and free tier | Deferred until self-hosted acceptance | Separate commercial implementation and acceptance |
+
+No raw development password belongs in this roadmap or public source. Source inventory is
+100 commits / 907 file-change records, with all closures still open. Update this status
+with actual PR URLs, checked heads and merge receipts as publication proceeds; test counts
+alone do not advance the delivery status. Publication validation on 2026-11-22:
+
+- Full default-workspace `cargo test --locked --no-fail-fast -- --test-threads=4`:
+  **1,199 passed, zero failed/ignored**, with isolated PostgreSQL required and real
+  ClickHouse configured. This includes 702 hub and 163 AgentHub tests.
+- Final binary build, Windows process E2E, MCP protocol, generated-contract drift,
+  formatting and repository AI-contract checks passed. Hosted E2E state has no SQLite.
+- Dependency audit passed advisories/bans/licenses/sources after URL 2.5.9 patched
+  RUSTSEC-2026-0592. The three initially failing hub checks were corrected and passed:
+  heartbeat metadata, website tool-list parity and ticket routing after refused execution.
+- Parent adopts AgentHub main `8bdac837d8311bed52251a2fc877ab6e1064833b`; its source tree
+  differs from the library tested in the full workspace only by dependency pin and plan.
+  Standalone 163 tests plus Linux PR/main CI validated that exact dependency pin.
+- Linux security/IPC, cross-platform PR CI and actual-main Docker acceptance remain
+  separate checks. These local passes do not close the preserved sources.
+
 
 This is the execution checklist for the user's issue-lifecycle, collaboration, connector,
 desktop-competitor, benchmark and commercial-hosting request. It replaces the speculative

@@ -2,11 +2,12 @@
 
 use super::*;
 
-/// P2c: a ticket an AI makes through the hub carries what the hub knows without the AI
-/// passing it: the one machine this session ran on, the token's seat, this MCP session,
-/// the board's repo. After runs on two machines the machine is left empty.
+/// P2c: a ticket carries routing context, not proof that a command executed: the one
+/// machine this session addressed, the token's seat, this MCP session and the board's
+/// repo. An unregistered AI is refused execution. After addressing two machines the
+/// machine is left empty.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn a_ticket_made_after_a_run_carries_the_machine_the_seat_and_the_repo() {
+async fn a_ticket_after_a_refused_run_keeps_routing_context_without_claiming_execution() {
     use serde_json::json;
 
     use crate::tenancy::tests::tenants::{hosted_with, refused};
@@ -52,7 +53,7 @@ async fn a_ticket_made_after_a_run_carries_the_machine_the_seat_and_the_repo() {
         .put_settings(&Actor::human("jesse"), &settings)
         .unwrap();
 
-    // The machine is offline (it never enrolled), but the call was routed to it.
+    // Routing is known, but this provisional client's unbound identity may not run.
     let ran = hub
         .call(
             &mut person,
@@ -60,7 +61,8 @@ async fn a_ticket_made_after_a_run_carries_the_machine_the_seat_and_the_repo() {
             json!({ "machine": "dabo", "command": "true" }),
         )
         .await;
-    assert!(ran.to_string().contains("dabo"), "{ran}");
+    assert!(refused(&ran), "{ran}");
+    assert_eq!(ran["structuredContent"]["code"], "not_granted", "{ran}");
     let first = hub
         .call(
             &mut person,
@@ -96,12 +98,15 @@ async fn a_ticket_made_after_a_run_carries_the_machine_the_seat_and_the_repo() {
     assert_eq!(given["agent"], "codex");
     assert_eq!(given["session"], "s-9");
 
-    hub.call(
-        &mut person,
-        "run",
-        json!({ "machine": "wisconsin", "command": "true" }),
-    )
-    .await;
+    let ran = hub
+        .call(
+            &mut person,
+            "run",
+            json!({ "machine": "wisconsin", "command": "true" }),
+        )
+        .await;
+    assert!(refused(&ran), "{ran}");
+    assert_eq!(ran["structuredContent"]["code"], "not_granted", "{ran}");
     let second = hub
         .call(
             &mut person,

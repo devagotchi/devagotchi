@@ -24,8 +24,10 @@ impl Hub {
         description = describe::OPERATION_HEARTBEAT,
         title = "Keep an interactive operation authorized",
         annotations(
+            title = "Keep an interactive operation authorized",
             read_only_hint = false,
             destructive_hint = false,
+            idempotent_hint = false,
             open_world_hint = false
         )
     )]

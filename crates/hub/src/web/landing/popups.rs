@@ -135,6 +135,10 @@ pub const TOOLS: [(&str, &[(&[&str], &str)]); 8] = [
                 "Types into a job that asks for input (a prompt, a REPL, a sign-in) and resizes its terminal. Only the conversation that started it types there.",
             ),
             (
+                &["operation_heartbeat"],
+                "Renews an interactive job's existing permission while its grant and task lease remain valid. It does not extend the task lease or restore expired access.",
+            ),
+            (
                 &["operation_cancel"],
                 "Stops a job. Disconnecting never does.",
             ),

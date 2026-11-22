@@ -5,6 +5,11 @@ Plan all five sources now. Execute **S1 fully -> validate -> green merge -> veri
 delete eligible refs**, then S2, S3, S4, S5. The original Git objects and dirty checkouts
 remain read-only throughout porting. No source is closed by this document.
 
+Publication update, 2026-11-22: the active plan's publication correction supersedes the
+older hold-publication statements below and in packet ledgers. Publish the validated
+authored integration through AgentHub PR17 and its parent PR; continue source completion
+oldest-first. Partial integration does not close S1 or permit deleting preserved sources.
+
 ## Starting evidence and remaining work
 
 Reconciliation began on `increment-288/absorb-october-baseline` at `a78b70f`; AgentHub is at

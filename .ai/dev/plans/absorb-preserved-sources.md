@@ -6,6 +6,21 @@ first.** No CI-triggering pushes while the current source is knowingly incomplet
 Do not disable checks, weaken assertions, or replace implementation with plans. This
 supersedes both the tiny-milestone PR schedule and the earlier all-five-before-CI schedule.
 
+Publication correction, 2026-11-22: the operator explicitly directs publishing the code
+and maintaining a clear roadmap toward green main. Root `30ede40` is already on GitHub,
+and AgentHub `0eb461e` has now been published and verified by fresh recursive clone.
+Standalone dependency pin `ac9c7ff` is published in [AgentHub PR17](https://github.com/devagotchi/agenthub/pull/17),
+with 163 PostgreSQL tests passing outside parent path patches. PR17 merged at `8bdac83`
+after green PR CI; main CI passed and its local/remote integration branches were deleted.
+The parent full workspace now passes 1,199 tests with PostgreSQL required and ClickHouse,
+plus Windows process/protocol, build, dependency and generated-contract checks. Publish
+the parent integration with the exact merged gitlink; platform PR CI remains required. The earlier instruction above to hold
+all publication until S1 closure must not leave an unreproducible remote branch or hide
+implemented code locally. This changes publication scheduling; it does not authorize a
+false S1 closure, deleting unabsorbed source or weakening checks. Source completion remains
+oldest-first. The [public roadmap](../../../docs/implementation-and-release-plan.md#current-integration-status-2026-11-22)
+tracks implementation/publication/merge independently.
+
 This is the active absorption plan. [The packet instructions](absorption/implementation.md)
 and [the exact source inventory](absorption/README.md) are part of it. The existing
 [release plan](../../../docs/implementation-and-release-plan.md) still owns product
