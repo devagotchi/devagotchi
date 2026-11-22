@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Real AI clients signing in to a hub in `auth.mode hub`: the MCP authorization flow end to end.
 
-Starts `devagotchi hub serve` in `auth.mode hub` on SQLite, claims it in Chromium with a
+Starts `devagotchi hub serve` in `auth.mode hub` on isolated PostgreSQL, claims it in Chromium with a
 virtual passkey (as tests/claim_browser.py does), and puts a recording proxy in front of it
 at the hub's `public_url`, so every request a client makes is captured (secrets redacted).
 Then each client connects the way it does for a person, and the person's approval is the
@@ -588,7 +588,7 @@ def claim(page, url: str, log: Path) -> None:
 
 
 def serve(binary: str, work: Path, hub_port: int, url: str, extra: dict):
-    """`devagotchi hub serve` in `auth.mode hub` on SQLite in `work`; its log file."""
+    """`devagotchi hub serve` in `auth.mode hub` on isolated PostgreSQL; its private state and log in `work`."""
     work.mkdir(parents=True, exist_ok=True)
     config = work / "hub.json"
     config.write_text(json.dumps({
@@ -704,7 +704,7 @@ def main() -> int:
         receipt = {
             "status": "passed",
             "what": "tests/clients_oauth.py: real MCP clients through the hub's own OAuth 2.1 "
-                    "server (auth.mode hub, SQLite) on loopback, consent with a virtual passkey",
+                    "server (auth.mode hub, PostgreSQL) on loopback, consent with a virtual passkey",
             "recorded_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
             "seconds": seconds,
             "source_commit": commit,

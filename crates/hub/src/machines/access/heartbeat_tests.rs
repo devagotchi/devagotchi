@@ -20,7 +20,7 @@ async fn access_heartbeat_keeps_original_task_and_refuses_foreign_holder_and_rec
         "work",
     )
     .unwrap()
-    .with_principals(Arc::new(Directory(Default::default())));
+    .with_principals(Arc::new(Directory(Default::default(), None)));
     board.initialize().await.unwrap();
     let ticket = board
         .create(

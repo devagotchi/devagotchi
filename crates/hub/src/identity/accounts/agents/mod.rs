@@ -21,6 +21,8 @@ pub use configuration::PrincipalConfiguration;
 #[cfg(test)]
 mod concurrency_tests;
 #[cfg(test)]
+mod directory_tests;
+#[cfg(test)]
 mod receipt_tests;
 #[cfg(test)]
 mod tests;

@@ -203,7 +203,7 @@ pub(super) async fn members_of(
 /// `subject`'s role on a project, in a transaction scoped to its tenant: the organisation's
 /// role when the organisation owns the project and the project is visible to it (always for
 /// admins and owners), the project's own rows for the subject and its teams; the higher.
-pub(super) async fn effective(
+pub(crate) async fn effective(
     connection: &mut AnyConnection,
     tenant: &str,
     owner: &str,

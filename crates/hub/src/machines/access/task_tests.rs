@@ -25,7 +25,7 @@ async fn access_task_approval_requires_the_original_lease_after_release_and_recl
         "work",
     )
     .unwrap()
-    .with_principals(Arc::new(Directory(Default::default())));
+    .with_principals(Arc::new(Directory(Default::default(), None)));
     board.initialize().await.unwrap();
     let ticket = board
         .create(

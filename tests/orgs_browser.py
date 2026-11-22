@@ -118,9 +118,19 @@ def main() -> int:
             bob.wait_for_url(re.compile(re.escape(f"{url}/app/tickets/acme%2Fsite/")))
             ticket = bob.url.split("?")[0]
             bob.fill('form[action$="/comment"] textarea[name="body"]', "on it")
-            bob.click('form[action$="/comment"] button[type="submit"]')
-            bob.wait_for_url(re.compile(r".*done=comment.*"))
-            print("PASS Bob opened the organisation's board and commented on its ticket")
+            comment = bob.locator('form[action$="/comment"]')
+            comment_action = comment.get_attribute("action")
+            comment_form = comment.evaluate("form => Object.fromEntries(new FormData(form))")
+            assert comment_form["request_id"]
+            with bob.expect_navigation():
+                bob.click('form[action$="/comment"] button[type="submit"]')
+            assert "done=comment" in bob.url, (bob.url, bob.inner_text("main"))
+            replay = bob.request.post(f"{url}{comment_action}", form=comment_form,
+                                      headers={"Origin": url}, max_redirects=0)
+            assert replay.status == 303 and "done=comment" in replay.headers["location"], replay.headers
+            bob.reload()
+            assert bob.get_by_text("on it", exact=True).count() == 1
+            print("PASS Bob commented and a keyed retry kept exactly one comment")
 
             # 4. Alice makes Bob a viewer; his next comment is refused, with why.
             alice.goto(f"{url}/orgs/acme")
@@ -133,7 +143,10 @@ def main() -> int:
             bob.click('form[action$="/comment"] button[type="submit"]')
             bob.wait_for_url(re.compile(r".*done=no.*"))
             assert "viewer" in bob.inner_text("main"), bob.inner_text("main")
-            print("PASS made a viewer, Bob's next comment was refused and said why")
+            replay = bob.request.post(f"{url}{comment_action}", form=comment_form,
+                                      headers={"Origin": url}, max_redirects=0)
+            assert replay.status == 303 and "done=no" in replay.headers["location"], replay.headers
+            print("PASS made a viewer, Bob's next comment and original keyed retry were refused")
 
             # 5. A phone-sized screen: the organisation page scrolls down, never sideways.
             phone = browser.new_context(viewport={"width": 390, "height": 844}, storage_state=alice.context.storage_state()).new_page()

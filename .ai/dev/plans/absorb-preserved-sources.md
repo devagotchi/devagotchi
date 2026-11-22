@@ -14,7 +14,7 @@ with 163 PostgreSQL tests passing outside parent path patches. PR17 merged at `8
 after green PR CI; main CI passed and its local/remote integration branches were deleted.
 The parent full workspace now passes 1,199 tests with PostgreSQL required and ClickHouse,
 plus Windows process/protocol, build, dependency and generated-contract checks. Root PR279 publishes
-the parent integration at `4cbd92c` with the exact merged gitlink; platform CI corrections
+the parent integration and corrections at `1bbb084` with the exact merged gitlink; platform CI corrections
 are tracked below and green PR CI remains required. The earlier instruction above to hold
 all publication until S1 closure must not leave an unreproducible remote branch or hide
 implemented code locally. This changes publication scheduling; it does not authorize a
@@ -242,7 +242,7 @@ Plan: all five source inventories and target execution batches are maintained ab
 Implementation: A01-A05 and access runtime work are partially authored; complete source
 absorption remains unfinished. Validation: full local 1,199-test integration receipt is
 published; PR279 platform/browser corrections and the real self-hosted flow are in progress.
-Push/PR: root `4cbd92c` is published in PR279; AgentHub PR17 is merged at `8bdac83` with
+Push/PR: root corrections `1bbb084` are published in PR279; AgentHub PR17 is merged at `8bdac83` with
 its main CI green and integration branches deleted. Root main is still `4b01ac9`.
 Continue complete corrections in PR279, merge on green, then complete S1 before S2.
 Historical source refs remain preserved until their complete-source acceptance passes.
@@ -311,3 +311,43 @@ canonical parent (including macOS's `/private` path).
 
 Root PR279 still requires green platform CI on the pushed correction commit, authorized
 merge, actual-main verification and Docker acceptance. No preserved source ref is deleted.
+
+### Remaining correction batch after 1bbb084
+
+CI passed the corrected self-hosted browser journey and exposed two later failures.
+The organization comment receipt incorrectly looks for an account inside the board's
+organization tenant. Preserve RLS: the board directory will carry its owner/project,
+recheck the existing effective project role inside the board transaction, and ask a
+restricted database function only whether the cross-tenant account is still live.
+Registered agents remain bound to their own environment. Prove successful keyed comments,
+replay, viewer/removal refusal and disabled-account refusal without changing tenant scope.
+
+Windows ARM still exposes an EOF hang after a timed-out blocking pipe write. Inspect the
+Tokio Windows blocking writer and reproduce close while its write is outstanding; retain
+the real buffer saturation, expiry refusal, forbidden-marker and terminal-success checks.
+Do not lengthen authority or skip the platform test. Publish both complete fixes together
+once focused acceptance and the applicable local suite pass, then merge PR279 on green.
+
+Focused acceptance for this remaining correction batch: restricted-role PostgreSQL
+checks pass for current member access, private-project refusal, viewer refusal and
+account disablement, while proving the board transaction never changes tenant scope.
+The actual organization browser journey passes with one comment after a keyed retry
+and refusal of that same retry after demotion. Real MCP SDK and Codex CLI OAuth flows
+pass for the owner and hosted account, including refresh and revocation. The native
+Windows backpressure/expiry/EOF regression passes 20 consecutive stress iterations.
+Tokio's Windows writer owns an outstanding blocking write after cancellation; pipe
+close now flushes that work before dropping stdin, within the close request's existing
+permit deadline. No timeout or authority lifetime is increased.
+
+The full workspace and process acceptance run is recorded with the final PR update;
+these focused receipts alone are not green platform CI or source closure.
+
+Final local receipt for this correction batch: the full 1,200-test workspace run
+finished with 1,199 passed, zero skipped, and one failure: the new migration was
+written with CRLF. Normalize this unpublished migration to LF before publication.
+After normalization and rebuild, its embedded-byte guard and all three affected
+PostgreSQL directory/organization tests pass (4/4). This is a corrected failure,
+not an ignored test or a claimed second full-suite run. Linux and Windows builds
+and process E2E passed; Linux security (16/16), protocol, smoke, real-client OAuth,
+organization browser, 20 Windows pipe stress iterations, dependency and generated
+contract checks passed. Required CI must still pass the full candidate before merge.

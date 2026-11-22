@@ -135,6 +135,11 @@ impl Registry {
         };
         let board = board.with_principals(Arc::new(crate::identity::accounts::agents::Directory(
             self.live.clone(),
+            Some(crate::tenancy::orgs::ProjectRef {
+                tenant,
+                owner: owner.into(),
+                project: project.into(),
+            }),
         )));
         Ok(Some((Arc::new(Board::from_hosted(board).await?), created)))
     }
@@ -149,6 +154,7 @@ impl Registry {
             HostedBoard::for_owner(self.store.clone(), &tenant, owner, project)?.with_principals(
                 Arc::new(crate::identity::accounts::agents::Directory(
                     self.live.clone(),
+                    None,
                 )),
             ),
         )
@@ -166,6 +172,7 @@ impl Registry {
                 .map(|board| {
                     board.with_principals(Arc::new(crate::identity::accounts::agents::Directory(
                         self.live.clone(),
+                        None,
                     )))
                 }),
         )
@@ -183,6 +190,7 @@ impl Registry {
                 .map(|board| {
                     board.with_principals(Arc::new(crate::identity::accounts::agents::Directory(
                         self.live.clone(),
+                        None,
                     )))
                 }),
         )

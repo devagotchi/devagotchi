@@ -2,7 +2,10 @@
 use super::*;
 use std::{future::Future, pin::Pin};
 
-pub(crate) struct Directory(pub(crate) crate::config::Live);
+pub(crate) struct Directory(
+    pub(crate) crate::config::Live,
+    pub(crate) Option<crate::tenancy::orgs::ProjectRef>,
+);
 
 impl devagotchi_agenthub::hosted::PrincipalDirectory for Directory {
     fn project_retirement<'a>(
@@ -46,6 +49,35 @@ impl devagotchi_agenthub::hosted::PrincipalDirectory for Directory {
                 && actor.policy.is_none()
             {
                 return Ok(());
+            }
+            // Organization and shared-board members keep their account in a different
+            // tenant. Recheck their exact project role without changing board scope.
+            if actor.policy.is_none()
+                && valid_account_id(principal)
+                && let Some(at) = &self.1
+                && at.tenant == tenant
+                && let Some(role) = crate::tenancy::orgs::effective_role_in(
+                    connection,
+                    tenant,
+                    &at.owner,
+                    &at.project,
+                    principal,
+                )
+                .await?
+                && if actor.human {
+                    actor.id == principal && role.is_person()
+                } else {
+                    role.may_work()
+                }
+            {
+                let live: bool = sqlx::query_scalar("SELECT request_account_live($1, $2)")
+                    .bind(principal)
+                    .bind(self.0.get().unsecured.idle_secs() as i64)
+                    .fetch_one(&mut *connection)
+                    .await?;
+                if live {
+                    return Ok(());
+                }
             }
             if !self.enabled(connection, tenant, principal).await? {
                 return Err(BridgeError::new(

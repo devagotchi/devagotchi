@@ -66,6 +66,13 @@ impl InputSink {
             (Self::Pipe { signals, .. }, InputStep::Interrupt) => signals.interrupt(),
             (Self::Pipe { signals, .. }, InputStep::Quit) => signals.quit(),
             (Self::Pipe { stdin, .. }, InputStep::Close) => {
+                // A timed-out Windows write can still own the pipe in Tokio's
+                // blocking worker. Drain that in-flight write before acknowledging
+                // EOF; shutdown alone is a no-op for that writer. Keep stdin here
+                // if the close permit expires so a later close can finish it.
+                if let Some(pipe) = stdin.as_mut() {
+                    pipe.flush().await.map_err(input_failed)?;
+                }
                 stdin.take();
                 Ok(())
             }
