@@ -279,6 +279,48 @@ impl Access {
         machine: &AdmissionMachine<'_>,
         admission_id: &str,
     ) -> BridgeResult<Continuation> {
+        self.renew_checked(account, actor, board, machine, admission_id, None)
+            .await
+    }
+
+    /// Explicit process heartbeats additionally need current heartbeat permission
+    /// and the same operation snapshot the authenticated adapter resolved.
+    pub(crate) async fn heartbeat_operation(
+        &self,
+        account: &str,
+        actor: &Actor<'_>,
+        board: Option<&HostedBoard>,
+        machine: &AdmissionMachine<'_>,
+        target: &super::operation_read::AdmissionTarget,
+    ) -> BridgeResult<Continuation> {
+        if target.snapshot.binding.effective.capability
+            != devagotchi_contracts::GrantCapability::Process
+        {
+            return Err(BridgeError::new(
+                "not_granted",
+                "heartbeat requires the original interactive process admission",
+            ));
+        }
+        self.renew_checked(
+            account,
+            actor,
+            board,
+            machine,
+            &target.snapshot.binding.admission_id,
+            Some(target),
+        )
+        .await
+    }
+
+    async fn renew_checked(
+        &self,
+        account: &str,
+        actor: &Actor<'_>,
+        board: Option<&HostedBoard>,
+        machine: &AdmissionMachine<'_>,
+        admission_id: &str,
+        heartbeat: Option<&super::operation_read::AdmissionTarget>,
+    ) -> BridgeResult<Continuation> {
         transaction!(&self.accounts.store, |c| {
             let found = self.accounts.catalog_actor_in(c, account, false).await?;
             let before = Stored::load(c, &found.tenant, admission_id).await?;
@@ -347,9 +389,7 @@ impl Access {
                     "admission has no authenticated broker operation receipt",
                 )
             })?;
-            sqlx::query("UPDATE machine_admissions SET authority_expires_at=$3 WHERE tenant_id=$1 AND id=$2")
-                .bind(&tenant).bind(admission_id).bind(expires_at).execute(c).await?;
-            Ok(Continuation {
+            let continuation = Continuation {
                 operation_id,
                 admitted: Admitted {
                     admission_id: admission_id.into(),
@@ -367,7 +407,44 @@ impl Access {
                     task,
                     replayed: true,
                 },
-            })
+            };
+            if let Some(target) = heartbeat {
+                if continuation.operation_id != target.operation
+                    || continuation
+                        .admitted
+                        .binding(target.snapshot.binding.origin.clone())?
+                        != target.snapshot.binding
+                {
+                    return Err(refused(
+                        "authority_mismatch",
+                        "heartbeat no longer identifies the original operation",
+                    ));
+                }
+                use devagotchi_agenthub::policy::{Resource, Subject, catalog as policy};
+                let roles = if actor.human && found.owner {
+                    vec!["admin".into()]
+                } else {
+                    vec![]
+                };
+                let subject = Subject {
+                    id: actor.id,
+                    human: actor.human,
+                    kind: actor.policy.as_ref().map_or("human", |p| p.kind.as_str()),
+                    roles: actor
+                        .policy
+                        .as_ref()
+                        .map_or(roles.as_slice(), |p| p.roles.as_slice()),
+                };
+                let task = continuation.admitted.task.as_ref();
+                let resource = Resource {
+                    project: task.map_or("", |t| t.project.as_str()),
+                    labels: task.map_or(&[], |t| t.labels.as_slice()),
+                };
+                policy::authorize_in(c, &tenant, &subject, "proc.heartbeat", &resource).await?;
+            }
+            sqlx::query("UPDATE machine_admissions SET authority_expires_at=$3 WHERE tenant_id=$1 AND id=$2")
+                .bind(&tenant).bind(admission_id).bind(expires_at).execute(c).await?;
+            Ok(continuation)
         })
     }
 }

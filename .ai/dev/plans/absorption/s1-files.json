@@ -1851,10 +1851,17 @@
         "crates/hub/src/mcp/callers/control.rs",
         "crates/machine-engine/src/broker/control.rs",
         "crates/machine-engine/src/broker/remote/control.rs",
-        "crates/machine-engine/src/execution/input.rs"
+        "crates/machine-engine/src/execution/input.rs",
+        "crates/hub/src/mcp/callers/heartbeat.rs",
+        "crates/hub/src/machines/access/heartbeat_tests.rs",
+        "crates/hub/src/machines/operations/mod.rs",
+        "crates/hub/src/agenthub/http/tests/access_heartbeat/mod.rs",
+        "crates/hub/src/agenthub/http/tests/access_heartbeat/fixture.rs",
+        "crates/contracts/src/interactive.rs"
       ],
       "evidence": [
-        ".ai/dev/plans/absorption/a04-access.md"
+        ".ai/dev/plans/absorption/a04-access.md",
+        "Explicit process heartbeat now uses original admission renewal with current credentials, exact proc.heartbeat policy and task generation. Nine new focused tests, the 146-test required-PostgreSQL access regression, 17 native remote tests, router/contract and repository checks passed locally. See a04-access.md for exact limits. Operator stop, other capabilities and source closure/main delivery remain open."
       ]
     },
     {
@@ -4787,10 +4794,17 @@
         "crates/hub/src/mcp/callers/control.rs",
         "crates/machine-engine/src/broker/control.rs",
         "crates/machine-engine/src/broker/remote/control.rs",
-        "crates/machine-engine/src/execution/input.rs"
+        "crates/machine-engine/src/execution/input.rs",
+        "crates/hub/src/mcp/callers/heartbeat.rs",
+        "crates/hub/src/machines/access/heartbeat_tests.rs",
+        "crates/hub/src/machines/operations/mod.rs",
+        "crates/hub/src/agenthub/http/tests/access_heartbeat/mod.rs",
+        "crates/hub/src/agenthub/http/tests/access_heartbeat/fixture.rs",
+        "crates/contracts/src/interactive.rs"
       ],
       "evidence": [
-        ".ai/dev/plans/absorption/a04-access.md"
+        ".ai/dev/plans/absorption/a04-access.md",
+        "Explicit process heartbeat now uses original admission renewal with current credentials, exact proc.heartbeat policy and task generation. Nine new focused tests, the 146-test required-PostgreSQL access regression, 17 native remote tests, router/contract and repository checks passed locally. See a04-access.md for exact limits. Operator stop, other capabilities and source closure/main delivery remain open."
       ]
     },
     {
@@ -5283,10 +5297,17 @@
         "crates/hub/src/mcp/callers/control.rs",
         "crates/machine-engine/src/broker/control.rs",
         "crates/machine-engine/src/broker/remote/control.rs",
-        "crates/machine-engine/src/execution/input.rs"
+        "crates/machine-engine/src/execution/input.rs",
+        "crates/hub/src/mcp/callers/heartbeat.rs",
+        "crates/hub/src/machines/access/heartbeat_tests.rs",
+        "crates/hub/src/machines/operations/mod.rs",
+        "crates/hub/src/agenthub/http/tests/access_heartbeat/mod.rs",
+        "crates/hub/src/agenthub/http/tests/access_heartbeat/fixture.rs",
+        "crates/contracts/src/interactive.rs"
       ],
       "evidence": [
-        ".ai/dev/plans/absorption/a04-access.md"
+        ".ai/dev/plans/absorption/a04-access.md",
+        "Explicit process heartbeat now uses original admission renewal with current credentials, exact proc.heartbeat policy and task generation. Nine new focused tests, the 146-test required-PostgreSQL access regression, 17 native remote tests, router/contract and repository checks passed locally. See a04-access.md for exact limits. Operator stop, other capabilities and source closure/main delivery remain open."
       ]
     },
     {

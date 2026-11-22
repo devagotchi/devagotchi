@@ -6,6 +6,26 @@ fn smuggled() -> serde_json::Value {
 }
 
 #[test]
+fn heartbeat_receipt_contains_no_reusable_authority() {
+    let receipt = HeartbeatOutput {
+        operation_id: "process-1".into(),
+        expires_at_ms: 123456,
+    };
+    assert_eq!(
+        serde_json::to_value(&receipt).unwrap(),
+        serde_json::json!({
+            "operation_id":"process-1", "expires_at_ms":123456
+        })
+    );
+    assert!(
+        serde_json::from_value::<HeartbeatOutput>(serde_json::json!({
+            "operation_id":"process-1", "expires_at_ms":123456, "authority":{}
+        }))
+        .is_err()
+    );
+}
+
+#[test]
 fn a_caller_in_a_tool_call_is_not_offered_and_a_transport_replaces_it() {
     // An AI is never shown the field...
     for schema in [

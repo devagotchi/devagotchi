@@ -794,3 +794,39 @@ This finishes the task/credential filter sub-unit for operation starts. Other ca
 file/batch/image dispatch, list/history, explicit heartbeat, human operator stop, native
 confinement and the remaining S1 batches are still open. Source records remain partial.
 Implementation and local validation exist; push/PR/main merge/deletion do not.
+
+
+### Explicit process heartbeat (local implementation)
+
+The source `devapi/mcp_proc.go::proc_heartbeat` and `machineops/proc.go::ProcOp` now map
+to `operation_heartbeat(machine, operation_id)` in the existing hub operation router.
+The original immutable admission replaces the source's separate process lease/fence.
+The tool requires a current account credential, machines:run, project limits, the original
+interactive grant and task generation, and exact `proc.heartbeat` policy on current task
+labels. It uses the existing transactional continuation and authenticated broker Refresh,
+without creating a process, consuming another use, renewing the task lease or reviving
+expired authority. A broker wait is followed by fresh credential checks before renewal;
+a revoked credential cannot receive the effect receipt. The returned contract contains
+only operation ID/deadline, not reusable grant authority. Local configured IPC has no
+hosted grant to renew; this is a hosted authority interface, not a new local capability.
+
+Validation (required isolated PostgreSQL, Windows native broker):
+- `target/absorption-heartbeat-focused.log`: all nine new MCP/domain tests passed.
+- `target/absorption-heartbeat-access-regression.log`: AgentHub7 + hub137 + native2 =
+  **146 passed, zero failed/ignored**, including prior selection, continuation, maintenance,
+  task, grant, credential and cancellation regressions. Five affected packages, --lib access.
+- `target/absorption-heartbeat-native.log`: 17 real native remote tests passed, including
+  refresh deadlines, refusal after expiry, interruption persistence, actual pipe/terminal
+  control and the blocked-input probe. Linux native execution remains separately required.
+- Two actual router parity/catalog tests and one closed heartbeat receipt contract test
+  passed. Generated contracts, AI repository checks, formatting, eight layout tests,
+  normal Git diff checks and Python syntax compilation of the updated hub probe passed.
+  The process-level hub_probe itself is not claimed run by these focused tests.
+
+Actual MCP tests cover unchanged admission/use count, key revocation during capabilities,
+revocation before receipt, mismatched broker acknowledgment, unknown operation, expired
+authority and an explicit current-policy deny without changing the stored deadline.
+Domain tests cover original task expiry/fence, foreign holder, reclaimed lease and
+noninteractive admission refusal. Source records stay partial: human-only operator stop,
+list/history, file/batch/image enforcement, native confinement and the other S1 batches
+remain. No CI, push, PR, main merge, deletion or Docker update occurred in this unit.

@@ -46,7 +46,8 @@ credential refresh and durable admission. Account-backed starts cannot use confi
 local sockets to evade that admission. Existing configured non-account authority stays
 separate. Six new tests cover these paths; see the A04 ledger for exact run evidence.
 Run and admission-bound Get/Read/Wait are now locally validated below. File/batch/image
-calls, operator stop/heartbeat, list/history surfaces and native confinement remain open.
+calls, operator stop, list/history surfaces and native confinement remain open. Explicit
+process heartbeat is implemented with evidence below.
 
 Next execution order within A04: finish unified dispatch, including `run` and original
 admission-bound process observation without renewing execution; complete broker file/process
@@ -94,6 +95,32 @@ project-limited key ignores unrelated/unbound grants and refuses an out-of-scope
 release during Prepare chooses a still-eligible candidate; database failure never becomes
 grant-required fallback. Existing last-use, canonical retry and 101-candidate tests remain
 required. No source closure follows from this unit alone.
+
+### Explicit process heartbeat: implemented and locally validated
+
+Source `server/internal/devapi/mcp_proc.go` exposes `proc_heartbeat`; its
+`machineops/proc.go::ProcOp` requires the original holder/fence and running lease.
+Current immutable admission/broker binding replaces that separate process lease.
+Expose `operation_heartbeat(machine, operation_id)` in the existing operation router.
+It is account-backed and requires `machines:run`; it cannot mint a grant, select another
+one, renew a task lease or revive expired execution. Return only the acknowledged
+operation ID and authority deadline, never an execution envelope to the caller.
+
+Extend `continuation.rs`'s existing transactional renewal with an explicit owned-target
+check and `proc.heartbeat` authorization using current task labels. Keep the existing
+maintenance API and original-action check. The adapter resolves the original board,
+asks the original broker for supported levels, refreshes bearer/scope/project limits
+after that wait, renews atomically and sends the existing authenticated Refresh frame.
+Refresh credentials again before exposing its receipt. The broker's immutable binding
+and expired-clock refusal remain the enforcing native boundary. No new scheduler,
+local IPC heartbeat or parallel lease table.
+
+Acceptance: actual MCP heartbeat sends only Capabilities/Refresh for the original
+admission; no new Execute/use/admission; revoked key during capability wait causes no
+Refresh or deadline change; released task, changed policy, foreign/unknown operation,
+noninteractive admission and expired authority refuse. A mismatched broker ack fails.
+Existing real native refresh/expiry tests and PostgreSQL renewal tests remain required.
+This is another local S1 unit; file enforcement and all other source work remain open.
 
 ## S2: documentation and retired packaging delta
 

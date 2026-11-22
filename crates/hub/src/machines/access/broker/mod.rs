@@ -91,7 +91,7 @@ impl Admitted {
         binding.validate()?;
         Ok(binding)
     }
-    pub(super) fn authority(&self, origin: GrantOrigin) -> BridgeResult<GrantAuthority> {
+    pub(crate) fn authority(&self, origin: GrantOrigin) -> BridgeResult<GrantAuthority> {
         let authority = GrantAuthority {
             binding: self.binding(origin)?,
             issued_at: self.issued_at,

@@ -99,7 +99,7 @@ pub fn scope_for(tool: &str) -> Option<Scope> {
         "get_config" | "list_processes" | "machine_inspect" => Scope::MachinesRead,
         "get_recent_tool_calls" | "get_usage_stats" => Scope::MachinesRead,
         "run" | "operation_start" | "operation_cancel" => Scope::MachinesRun,
-        "operation_input" | "operation_resize" => Scope::MachinesRun,
+        "operation_input" | "operation_resize" | "operation_heartbeat" => Scope::MachinesRun,
         "kill_process" | "read_url" => Scope::MachinesRun,
         "set_config_value" => Scope::MachinesManage,
         "machine_add" | "machine_update" | "workflow_list" | "workflow_start"

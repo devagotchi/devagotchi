@@ -14,10 +14,18 @@ from upstream. Devagotchi's side is the tools `devagotchi mcp` registers
 Devagotchi names a job by `operation_id`. Desktop Commander names a terminal session by pid.
 That is a different shape, not a missing stop or read.
 
-Every tool has one description and the same arguments on both surfaces; the hub adds `machine`
+Every shared machine tool has one description and the same arguments on both surfaces; the hub adds `machine`
 (B1, [the pattern](../patterns/machine-capability.md)). Since B1 the hub's `operation_*` tools take
 `machine` beside their arguments, not `{broker, input}`, and a known tool given bad arguments
 answers `invalid_arguments` as a tool error. `crates/hub/src/machines/tests/parity.rs` holds both.
+
+`operation_heartbeat(machine, operation_id)` is a hosted authority operation, so it is
+available only on an account-backed hub. It renews the original interactive admission
+with current credentials and `proc.heartbeat` policy; it creates no process, spends no
+additional grant use and does not renew a task lease or revive expired authority.
+Its receipt contains only the acknowledged operation ID and deadline. The existing
+local adapter has no hosted grant to renew. This is the preserved source's explicit
+process heartbeat mapped to the existing admission/Refresh protocol.
 
 ## Tool by tool
 

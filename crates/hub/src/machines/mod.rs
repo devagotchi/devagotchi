@@ -17,6 +17,8 @@
 //!   settings, processes and whether its broker answers (`system`: `machine_inspect`), and
 //!   the caller's own calls to them (`history`, from the audit); `machine_router` puts the
 //!   routers here together.
+//! - `operation_heartbeat`: account-backed renewal of an existing interactive admission;
+//!   the local adapter has no hosted grant authority to renew.
 //! - Pages: Machines and a machine's page (`crate::web::machines`, `crate::web::app::machine`).
 //!
 //! # Settings

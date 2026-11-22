@@ -19,6 +19,7 @@ mod administration;
 mod admission_action;
 mod admission_completion;
 mod admissions;
+pub(crate) use admissions::AdmissionMachine;
 mod broker;
 pub(crate) use broker::{LinkExecution, StartSelection};
 #[cfg(test)]
@@ -41,6 +42,8 @@ mod decisions;
 pub(crate) use decisions::Decision;
 mod grant_record;
 mod grants;
+#[cfg(test)]
+mod heartbeat_tests;
 mod maintenance;
 #[cfg(test)]
 mod maintenance_tests;
