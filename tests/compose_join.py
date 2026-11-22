@@ -1,19 +1,22 @@
 #!/usr/bin/env python3
 """A hub from the image hands out builds with nothing configured, and one line joins a machine.
 
-Runs against a deploy/compose stack already up from the hub image this commit built, hosted
-(`DEVAGOTCHI_HUB_TENANCY=multi`) with no `downloads` anywhere in its config or environment
+Runs against a deploy/compose stack already up from the hub image this commit built, self-hosted
+(`DEVAGOTCHI_HUB_TENANCY=single`) with no `downloads` anywhere in its config or environment
 (image.yml, `hub image / build`). Then, on this runner, as a person would:
 
 1. `/healthz` reports the builds the image carries (its VERSION, six files), and `/dist`
    serves every file `SHA256SUMS` lists with that checksum: the Linux archive holds the
    `devagotchi` binary and the Windows zip `devagotchi.exe`, for x86_64 and ARM64.
-2. A person's AI client connects (dynamic registration, Connect, PKCE) and calls
+2. The owner claims this environment with its host-issued link and a local password.
+   Their AI client connects (dynamic registration, Connect, PKCE) and calls
    `machine_add`. The Windows line's script names the checksum of both Windows builds and
    of the PowerShell installer, as served.
 3. The Linux line runs exactly as `machine_add` gave it (`curl -fsSL … | sudo sh`): it
    installs the hub's own build, enrolls the machine and starts it.
-4. The machine is online, the AI runs a command on it with `run`, and the machine runs the
+4. The machine is online. Its person registers and binds the AI agent, acknowledges the
+   execution policy and approves the agent's request; unapproved execution and agent
+   self-approval are refused. The AI runs a command with `run`, and the machine runs the
    hub's build (`/opt/devagotchi/current` -> `versions/<VERSION>`).
 5. With `--docker` (increment 209): the Docker line runs exactly as `machine_add` gave it, in
    an empty directory. It leaves a running machine (broker, link, and an enroll that
@@ -47,6 +50,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from operator_browser import Person, call  # noqa: E402
+from compose_join_access import approve, owner_cookie, register  # noqa: E402
 
 ARCHIVES = {
     "devagotchi-x86_64-unknown-linux-gnu.tar.xz": "devagotchi",
@@ -99,16 +103,25 @@ def image_of(version: str) -> str:
     return f"ghcr.io/devagotchi/devagotchi:{version}"
 
 
-def online(person: Person, name: str, seconds: int = 180) -> dict:
-    """`run echo` on `name` once its link has connected and its broker answers."""
+def online(person: Person, name: str, seconds: int = 180) -> None:
+    """Wait for link presence, never retry an authorization failure or command effect."""
     deadline = time.monotonic() + seconds
     while True:
-        ran = person.tool("run", {"machine": name, "command": f"echo hi-from-{name}"})
-        if not ran.get("isError") and f"hi-from-{name}" in ran["structuredContent"]["output"]:
-            return ran
+        result = person.tool("machines")
+        assert not result.get("isError"), result
+        listed = result["structuredContent"]["machines"]
+        if any(m["name"] == name and m["status"] == "online" for m in listed):
+            return
         if time.monotonic() > deadline:
-            raise AssertionError(f"{name} never ran a command: {ran}")
+            raise AssertionError(f"{name} never came online: {listed}")
         time.sleep(2)
+
+
+def command(person: Person, name: str) -> None:
+    ran = person.tool("run", {"machine": name, "command": f"echo hi-from-{name}"})
+    assert not ran.get("isError"), ran
+    assert ran["structuredContent"]["state"] == "succeeded", ran
+    assert ran["structuredContent"]["output"].strip() == f"hi-from-{name}", ran
 
 
 def docker_leg(person: Person, hub: str, version: str) -> None:
@@ -139,6 +152,8 @@ def docker_leg(person: Person, hub: str, version: str) -> None:
         ok(f"the Docker line brought up {image_of(version)} with the code in its environment only")
 
         online(person, "docked")
+        approve(person, "docked")
+        command(person, "docked")
         listed = person.tool("machines")["structuredContent"]["machines"]
         assert any(m["name"] == "docked" and m["status"] == "online" for m in listed), listed
         ok("the Docker machine is online and the AI ran a command on it")
@@ -153,6 +168,7 @@ def docker_leg(person: Person, hub: str, version: str) -> None:
         states = [json.loads(line) for line in enroll.splitlines() if line.strip()]
         assert states and all(s.get("ExitCode") == 0 for s in states), states
         online(person, "docked")
+        command(person, "docked")
         ok("docker compose up -d a second time: enroll exits 0 and the machine stays online")
 
         refused = person.tool("machine_update", {"machine": "docked"})
@@ -165,7 +181,9 @@ def docker_leg(person: Person, hub: str, version: str) -> None:
     except BaseException:
         logs()
         raise
-    subprocess.run(compose + ["down", "-v"], cwd=work, capture_output=True, timeout=300)
+    finally:
+        subprocess.run(compose + ["down", "-v"], cwd=work, capture_output=True,
+                       timeout=300, check=True)
 
 
 def main() -> int:
@@ -193,7 +211,13 @@ def main() -> int:
     ok(f"the image's hub hands out {args.version} with nothing configured: six files, each as listed")
 
     # 2. A person's AI connects and adds a machine; the Windows line is ready to run.
-    person = Person(hub)
+    owner_link = subprocess.run([
+        "docker", "exec", "devagotchi-hub", "/usr/local/bin/devagotchi", "hub", "owner",
+        "--state-dir", "/var/lib/devagotchi", "--config", "/etc/devagotchi/hub.json",
+        "--name", "Image owner",
+    ], capture_output=True, text=True, check=True, timeout=30).stdout.strip()
+    person = Person(hub, cookie=owner_cookie(hub, owner_link))
+    ok("the self-hosted owner claimed the environment and connected the AI with PKCE")
     added = person.tool("machine_add", {"name": "joined"})
     assert not added.get("isError"), added
     machine = added["structuredContent"]
@@ -216,15 +240,11 @@ def main() -> int:
     assert f"installing devagotchi {args.version} and joining {hub}" in joined.stderr, joined.stderr
     ok("the Linux line installed the hub's build and joined")
 
-    # 4. Online, and the AI runs a command on it.
-    ran = None
-    for _ in range(60):
-        ran = person.tool("run", {"machine": "joined", "command": "echo joined-from-the-image"})
-        if not ran.get("isError"):
-            break
-        time.sleep(1)
-    assert not ran.get("isError"), ran
-    assert "joined-from-the-image" in ran["structuredContent"]["output"], ran
+    # 4. Online, then registered and explicitly approved before command execution.
+    online(person, "joined")
+    register(person, "joined")
+    approve(person, "joined")
+    command(person, "joined")
     current = subprocess.run(["sudo", "readlink", "/opt/devagotchi/current"],
                              capture_output=True, text=True, check=True).stdout.strip()
     assert current == f"versions/{args.version}", current
