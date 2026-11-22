@@ -22,7 +22,7 @@ impl Hub {
             .request_machine(&caller.subject.id, &caller.actor(), machine)
             .await?;
         let target = access
-            .operation_read_target(
+            .operation_target(
                 &caller.subject.id,
                 &caller.actor(),
                 &machine,

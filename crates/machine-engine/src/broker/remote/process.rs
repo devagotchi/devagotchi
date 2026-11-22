@@ -1,4 +1,4 @@
-//! Admission-bound observation and cancellation. Interactive effects have their own adapter.
+//! Execution-bound status and legacy reads. Process effects use action-bound control.
 use super::*;
 
 impl Broker {
@@ -32,9 +32,7 @@ impl Broker {
         request: RequestBody,
     ) -> BridgeResult<RemoteReply> {
         let id = match &request {
-            RequestBody::OperationGet(input) | RequestBody::OperationCancel(input) => {
-                &input.operation_id
-            }
+            RequestBody::OperationGet(input) => &input.operation_id,
             RequestBody::OperationRead(input) => &input.operation_id,
             RequestBody::OperationWait(input) => &input.operation_id,
             _ => {

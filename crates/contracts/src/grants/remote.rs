@@ -56,6 +56,11 @@ pub enum RemoteRequest {
         client: String,
         request: RequestBody,
     },
+    Control {
+        control: GrantControl,
+        client: String,
+        request: RequestBody,
+    },
     Interrupt {
         notice: GrantInterruption,
     },
@@ -80,6 +85,7 @@ pub enum RemoteReply {
         call: GrantCall,
     },
     Executed(ResponseBody),
+    Controlled(ResponseBody),
     Observed {
         response: ResponseBody,
         /// False only when an observation-bounded wait needs another permission check.

@@ -84,3 +84,22 @@ fn remote_observation_lifetime_and_wire_fields_are_closed() {
     value["renew_execution"] = true.into();
     assert!(serde_json::from_value::<GrantObservation>(value).is_err());
 }
+
+#[test]
+fn remote_control_is_action_bound_and_rejects_unknown_authority_fields() {
+    let auth = authority();
+    let control = GrantControl {
+        binding: auth.binding,
+        action: ProcessControl::Cancel,
+        issued_at: 100,
+        expires_at: 200,
+    };
+    assert_eq!(control.remaining_ms(150).unwrap(), 50);
+    assert!(control.remaining_ms(200).is_err());
+    let mut value = serde_json::to_value(&control).unwrap();
+    value["action"] = "start".into();
+    assert!(serde_json::from_value::<GrantControl>(value).is_err());
+    let mut value = serde_json::to_value(&control).unwrap();
+    value["operator"] = true.into();
+    assert!(serde_json::from_value::<GrantControl>(value).is_err());
+}

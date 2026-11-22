@@ -43,6 +43,7 @@ fn check(origin: Option<&GrantOrigin>, wire: &RemoteWireRequest) -> BridgeResult
         RemoteRequest::Prepare { origin, .. } => Some(origin),
         RemoteRequest::Status { binding } => Some(&binding.origin),
         RemoteRequest::Observe { observation, .. } => Some(&observation.binding.origin),
+        RemoteRequest::Control { control, .. } => Some(&control.binding.origin),
         RemoteRequest::Execute { authority, .. } | RemoteRequest::Refresh { authority } => {
             Some(&authority.binding.origin)
         }
@@ -116,6 +117,35 @@ mod tests {
                     },
                     client: "client".into(),
                     request: RequestBody::OperationGet(GetInput {
+                        operation_id: "operation".into(),
+                        caller: None,
+                    }),
+                },
+            };
+            assert_eq!(check(Some(&origin), &wire).is_ok(), changed == 3);
+            assert_eq!(
+                check(None, &wire).unwrap_err().code,
+                "remote_access_unavailable"
+            );
+            let RemoteRequest::Observe {
+                observation,
+                client,
+                ..
+            } = wire.remote
+            else {
+                unreachable!()
+            };
+            let wire = RemoteWireRequest {
+                api_version: API_VERSION,
+                remote: RemoteRequest::Control {
+                    control: GrantControl {
+                        binding: observation.binding,
+                        action: ProcessControl::Cancel,
+                        issued_at: observation.issued_at,
+                        expires_at: observation.expires_at,
+                    },
+                    client,
+                    request: RequestBody::OperationCancel(GetInput {
                         operation_id: "operation".into(),
                         caller: None,
                     }),

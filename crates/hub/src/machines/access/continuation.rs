@@ -73,6 +73,109 @@ pub(super) struct AdmissionSnapshot {
     pub operation_id: Option<String>,
 }
 impl Access {
+    /// Control is authorized against the original live admission without renewal or use.
+    pub(crate) async fn operation_control(
+        &self,
+        account: &str,
+        actor: &Actor<'_>,
+        board: Option<&HostedBoard>,
+        target: &super::operation_read::AdmissionTarget,
+        action: devagotchi_contracts::ProcessControl,
+    ) -> BridgeResult<devagotchi_contracts::GrantControl> {
+        use devagotchi_agenthub::policy::{Resource, Subject, catalog as policy};
+        use devagotchi_contracts::{GrantCapability, GrantControl, ProcessControl};
+        let snapshot = &target.snapshot;
+        if snapshot.binding.account != account || snapshot.binding.principal != actor.id {
+            return Err(BridgeError::new(
+                "not_granted",
+                "operation belongs to another principal",
+            ));
+        }
+        if action != ProcessControl::Cancel
+            && snapshot.binding.effective.capability != GrantCapability::Process
+        {
+            return Err(BridgeError::new(
+                "not_granted",
+                "input needs the original interactive process grant",
+            ));
+        }
+        transaction!(&self.accounts.store, |c| {
+            let found = self.accounts.catalog_actor_in(c, account, false).await?;
+            let before = Stored::load(c, &found.tenant, &snapshot.binding.admission_id).await?;
+            before.owner(account, actor, &snapshot.machine)?;
+            let original = before
+                .material
+                .action
+                .ok_or_else(|| refused("admission_unbound", "operation has no original action"))?;
+            let current = self
+                .current_in(
+                    c,
+                    account,
+                    actor,
+                    board,
+                    &snapshot.machine,
+                    &CurrentInput {
+                        grant_id: &before.grant,
+                        action: original,
+                    },
+                )
+                .await?;
+            let stored = Stored::load(c, &current.tenant, &snapshot.binding.admission_id).await?;
+            stored.owner(account, actor, &snapshot.machine)?;
+            if stored.state != "admitted" || stored.expires_at <= current.now {
+                return Err(refused(
+                    "authority_expired",
+                    "only a live admission permits process control",
+                ));
+            }
+            if stored.grant != snapshot.binding.grant_id
+                || stored.version != snapshot.binding.grant_version
+                || stored.version != current.grant.version
+                || stored.key != snapshot.binding.operation_key
+                || stored.digest != snapshot.binding.input_sha256
+                || stored.material.item != snapshot.binding.effective
+                || stored.material.action != Some(original)
+                || stored.operation.as_deref() != Some(target.operation.as_str())
+            {
+                return Err(refused(
+                    "authority_mismatch",
+                    "control no longer matches the original admission",
+                ));
+            }
+            let roles = if actor.human && found.owner {
+                vec!["admin".into()]
+            } else {
+                vec![]
+            };
+            policy::authorize_in(
+                c,
+                &current.tenant,
+                &Subject {
+                    id: actor.id,
+                    human: actor.human,
+                    kind: actor.policy.as_ref().map_or("human", |p| p.kind.as_str()),
+                    roles: actor
+                        .policy
+                        .as_ref()
+                        .map_or(roles.as_slice(), |p| p.roles.as_slice()),
+                },
+                action.policy(),
+                &Resource {
+                    project: current.task.as_ref().map_or("", |t| t.project.as_str()),
+                    labels: current.task.as_ref().map_or(&[], |t| t.labels.as_slice()),
+                },
+            )
+            .await?;
+            let control = GrantControl {
+                binding: snapshot.binding.clone(),
+                action,
+                issued_at: current.now,
+                expires_at: current.expires_at.min(stored.expires_at),
+            };
+            control.remaining_ms(current.now)?;
+            Ok(control)
+        })
+    }
     /// Tenant/id comes from maintenance or an authenticated, owned-operation lookup.
     /// This identifies the broker record; it is deliberately not live authority.
     pub(super) async fn admission_snapshot(

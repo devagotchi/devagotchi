@@ -1845,7 +1845,13 @@
         "crates/hub/src/machines/access/operation_read.rs",
         "crates/hub/src/mcp/callers/read.rs",
         "crates/hub/src/machines/run.rs",
-        "crates/agenthub/src/hosted/access.rs"
+        "crates/agenthub/src/hosted/access.rs",
+        "crates/contracts/src/grants/control.rs",
+        "crates/hub/src/machines/access/continuation.rs",
+        "crates/hub/src/mcp/callers/control.rs",
+        "crates/machine-engine/src/broker/control.rs",
+        "crates/machine-engine/src/broker/remote/control.rs",
+        "crates/machine-engine/src/execution/input.rs"
       ],
       "evidence": [
         ".ai/dev/plans/absorption/a04-access.md"
@@ -4765,7 +4771,13 @@
         "crates/hub/src/machines/access/operation_read.rs",
         "crates/hub/src/mcp/callers/read.rs",
         "crates/hub/src/machines/run.rs",
-        "crates/agenthub/src/hosted/access.rs"
+        "crates/agenthub/src/hosted/access.rs",
+        "crates/contracts/src/grants/control.rs",
+        "crates/hub/src/machines/access/continuation.rs",
+        "crates/hub/src/mcp/callers/control.rs",
+        "crates/machine-engine/src/broker/control.rs",
+        "crates/machine-engine/src/broker/remote/control.rs",
+        "crates/machine-engine/src/execution/input.rs"
       ],
       "evidence": [
         ".ai/dev/plans/absorption/a04-access.md"
@@ -5250,7 +5262,13 @@
         "crates/hub/src/machines/access/operation_read.rs",
         "crates/hub/src/mcp/callers/read.rs",
         "crates/hub/src/machines/run.rs",
-        "crates/agenthub/src/hosted/access.rs"
+        "crates/agenthub/src/hosted/access.rs",
+        "crates/contracts/src/grants/control.rs",
+        "crates/hub/src/machines/access/continuation.rs",
+        "crates/hub/src/mcp/callers/control.rs",
+        "crates/machine-engine/src/broker/control.rs",
+        "crates/machine-engine/src/broker/remote/control.rs",
+        "crates/machine-engine/src/execution/input.rs"
       ],
       "evidence": [
         ".ai/dev/plans/absorption/a04-access.md"

@@ -129,12 +129,46 @@ async fn access_task_approval_requires_the_original_lease_after_release_and_recl
         lease.lease_id
     );
     assert!(renewed.admitted.expires_at <= renewed.admitted.task.as_ref().unwrap().expires_at);
+    let (control_links, _control_rx) = super::broker_tests::links(&f).await;
+    let control_target = f
+        .access
+        .operation_target(
+            &f.owner.id,
+            &f.actor(),
+            &f.machine,
+            "task-operation",
+            &control_links,
+        )
+        .await
+        .unwrap();
+    f.access
+        .operation_control(
+            &f.owner.id,
+            &f.actor(),
+            Some(&board),
+            &control_target,
+            devagotchi_contracts::ProcessControl::Cancel,
+        )
+        .await
+        .unwrap();
     board
         .release(&f.actor(), &ticket.id, lease.fence, "pause")
         .await
         .unwrap();
     let next = board.claim(&f.actor(), &ticket.id, None).await.unwrap();
     assert!(next.fence > lease.fence);
+    assert!(
+        f.access
+            .operation_control(
+                &f.owner.id,
+                &f.actor(),
+                Some(&board),
+                &control_target,
+                devagotchi_contracts::ProcessControl::Cancel
+            )
+            .await
+            .is_err()
+    );
     assert!(
         f.access
             .renew_admission(
@@ -158,7 +192,7 @@ async fn access_task_approval_requires_the_original_lease_after_release_and_recl
     let (links, _rx) = super::broker_tests::links(&f).await;
     let target = f
         .access
-        .operation_read_target(
+        .operation_target(
             &f.owner.id,
             &f.actor(),
             &f.machine,

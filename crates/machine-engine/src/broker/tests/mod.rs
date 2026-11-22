@@ -186,4 +186,5 @@ mod waits;
 mod processes;
 
 mod remote;
+mod remote_control;
 mod remote_observation;

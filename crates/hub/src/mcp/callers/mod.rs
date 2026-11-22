@@ -7,6 +7,7 @@ use rmcp::{RoleServer, service::RequestContext};
 
 use super::{Hub, hub::Route};
 use crate::identity::Subject;
+mod control;
 mod read;
 mod start;
 

@@ -3,6 +3,8 @@
 use crate::{BridgeError, BridgeResult};
 use serde::{Deserialize, Serialize};
 mod action;
+mod control;
+pub use control::{GrantControl, ProcessControl};
 mod authority;
 mod item;
 mod remote;

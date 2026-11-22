@@ -705,3 +705,64 @@ targets. Input/cancel/resize, heartbeat adapter and operator kill behavior, file
 routes, task/credential-aware grant selection, native confinement and policy-change review
 remain open. No complete source closure, push, PR, CI, merge, branch deletion or deployment
 is asserted by this local checkpoint.
+
+## Admitted process input, resize and cancellation, 2026-11-21
+
+The same S1 process source paths now map to action-bound `GrantControl`/`ProcessControl`
+contracts, `machines/access/continuation.rs::operation_control`, the MCP control adapter,
+and the existing native input/resize/cancel owners. Original admission lookup is shared
+as `AdmissionTarget`; it is an identity snapshot, not permission. Current original grant,
+principal, task generation, machine and policy are checked before `proc.write` or
+`proc.kill` is authorized. The proof expires no later than the existing admission and
+does not update its clock, heartbeat or use count. Input/resize require the original
+interactive capability. The legacy Execute envelope no longer admits cancellation.
+
+Broker effects verify the exact action, stored binding, current revocation floor and live
+execution clock. Input requests carry a `ControlPermit` into the existing native queue.
+The input worker checks it before each step and bounds pending I/O by its monotonic deadline.
+An expired partial write reports uncertain earlier delivery; it never promises rollback or
+safe blind retry. Local IPC retains its existing owner authority and input timeout semantics.
+Input/resize/cancel implementations moved from the capped broker file into `broker/control.rs`;
+they were not duplicated, and no layout allowance increased.
+
+Local evidence uses the same five library packages and required isolated PostgreSQL:
+
+- First control run: all eight hub cases and two of three native cases passed. The foreign
+  admission test found the durable retry check preceded the exact operation-binding check
+  (`idempotency_conflict` instead of `authority_mismatch`). The broker now checks the exact
+  stored operation binding before the durable grant floor; no assertion was weakened.
+- Corrected filter `control`: 16 passed, zero failed/ignored
+  (`target/absorption-control-fixed.log`). Includes actual native pipe input, terminal
+  resize, cancellation, closed control fields, current policy/paused grant refusals and
+  real MCP cancel/unknown-operation/revoked-credential cases. The queue test captures a
+  real constructed input request and verifies its carried check after expiry/revocation;
+  it is not a claim of a full OS backpressure/partial-write probe.
+- Filter `access`: AgentHub7 + hub119 + native2 = 128 passed.
+- Filter `remote`: AgentHub1 + contracts4 + hub10 + link2 + native16 = 33 passed.
+- Filter `interactive`: contracts1 + hub1 + native6 = 8 passed.
+- Filter `lifecycle`: AgentHub5 + hub8 + native11 = 24 passed.
+  All four regression runs had zero failures/ignored tests; filters overlap. Logs are
+  `target/absorption-control-{access,remote,interactive,lifecycle}-regression.log`.
+  The two previously passed unchanged selection cases remain explicitly filtered.
+- Generated contracts, formatting, normal Git diff checks, AI contracts and all eight
+  layout tests passed. Windows native behavior is proved here; Linux native behavior
+  remains a required platform check before source publication.
+
+Remaining process/source work includes the human-only cross-principal operator stop,
+source heartbeat surface, list/history authorization, Linux blocked-input native probe,
+task/credential-aware selection, file/batch/image routes and native confinement. The
+three source rows remain partial. No S1 closure, push, PR, CI, main merge, deletion or
+deployment is claimed.
+
+The remaining Windows backpressure probe was then implemented and passed
+(`target/absorption-control-backpressure-final.log`, one test, zero failed/ignored).
+A real native child waits on a file gate before reading stdin. The fixture saturates the
+native pipe with a large internal input step (the public 16KiB request cap is unchanged),
+then forwards a second real control request carrying an expiring permit into the same
+execution worker. Both replies come from that worker. After expiry the gate opens, input
+closes and the child exits successfully. Every retained output page is read: partial filler
+arrived, but the queued forbidden marker did not. This specifically covers actual blocked
+I/O followed by an expired queued request; it does not claim rollback of earlier bytes.
+The final test also checks the forwarded request identities and output cursor progress.
+All eight layout checks passed again. Runtime code is unchanged from the prior green
+regressions; only this additional native probe and its evidence were added.

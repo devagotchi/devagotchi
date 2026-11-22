@@ -14,7 +14,7 @@ fn command() -> Value {
     json!({"machine":"lab","command":"git status","cwd":"/work",
     "wait_seconds":5,"timeout_seconds":5})
 }
-fn view(terminal: bool) -> OperationView {
+pub(super) fn view(terminal: bool) -> OperationView {
     OperationView {
         operation_id: "observed-process".into(),
         executable: "/usr/bin/git".into(),
@@ -36,19 +36,81 @@ fn view(terminal: bool) -> OperationView {
         interactive: None,
     }
 }
-async fn next(calls: &mut mpsc::Receiver<(u64, RemoteWireRequest)>) -> (u64, RemoteRequest) {
+pub(super) async fn next(
+    calls: &mut mpsc::Receiver<(u64, RemoteWireRequest)>,
+) -> (u64, RemoteRequest) {
     let (id, wire) = tokio::time::timeout(std::time::Duration::from_secs(10), calls.recv())
         .await
         .unwrap()
         .unwrap();
     (id, wire.remote)
 }
-fn answer(admin: &Admin, id: u64, reply: RemoteReply) {
+pub(super) fn answer(admin: &Admin, id: u64, reply: RemoteReply) {
     admin
         .hub
         .hub
         .links
         .answer_remote_for_test("lab", id, RemoteWireResponse::Ok(reply));
+}
+pub(super) async fn admit_start(
+    admin: &Admin,
+    grant: &str,
+    calls: &mut mpsc::Receiver<(u64, RemoteWireRequest)>,
+) -> GrantAuthority {
+    let (id, request) = next(calls).await;
+    assert!(matches!(request, RemoteRequest::Capabilities {}));
+    answer(
+        admin,
+        id,
+        RemoteReply::Capabilities {
+            version: REMOTE_ACCESS_VERSION,
+            os: "linux".into(),
+            sandbox_levels: vec![GrantLevel::ReadOnly],
+        },
+    );
+    let (id, request) = next(calls).await;
+    let RemoteRequest::Prepare {
+        request: RequestBody::OperationStart(input),
+        ..
+    } = request
+    else {
+        panic!("expected prepared run")
+    };
+    assert_eq!(input.command.as_deref(), Some("git status"));
+    let mut call = GrantCall::new(GrantCapability::Exec, GrantLevel::ReadOnly);
+    call.argv = vec!["/usr/bin/git".into(), "status".into()];
+    call.paths = vec!["/work".into()];
+    call.runtime_s = Some(5);
+    answer(
+        admin,
+        id,
+        RemoteReply::Prepared {
+            action: GrantAction::Exec,
+            operation_key: input.idempotency_key,
+            input_sha256: "a".repeat(64),
+            call,
+        },
+    );
+    let (id, request) = next(calls).await;
+    let RemoteRequest::Execute {
+        authority,
+        request: RequestBody::OperationStart(_),
+        ..
+    } = request
+    else {
+        panic!("run bypassed admission")
+    };
+    assert_eq!(authority.binding.grant_id, grant);
+    assert_eq!(counts(admin, grant).await, (1, 1));
+    answer(
+        admin,
+        id,
+        RemoteReply::Executed(ResponseBody::Start(StartOutput {
+            operation: view(false),
+            replayed: false,
+        })),
+    );
+    authority
 }
 async fn run_race(revoke: bool) {
     let admin = or_skip!(Admin::new());
@@ -58,59 +120,7 @@ async fn run_race(revoke: bool) {
     let mut agent = person(bearer);
     let mut calls = connect(&admin).await;
     let broker = async {
-        let (id, request) = next(&mut calls).await;
-        assert!(matches!(request, RemoteRequest::Capabilities {}));
-        answer(
-            &admin,
-            id,
-            RemoteReply::Capabilities {
-                version: REMOTE_ACCESS_VERSION,
-                os: "linux".into(),
-                sandbox_levels: vec![GrantLevel::ReadOnly],
-            },
-        );
-        let (id, request) = next(&mut calls).await;
-        let RemoteRequest::Prepare {
-            request: RequestBody::OperationStart(input),
-            ..
-        } = request
-        else {
-            panic!("expected prepared run")
-        };
-        assert_eq!(input.command.as_deref(), Some("git status"));
-        let mut call = GrantCall::new(GrantCapability::Exec, GrantLevel::ReadOnly);
-        call.argv = vec!["/usr/bin/git".into(), "status".into()];
-        call.paths = vec!["/work".into()];
-        call.runtime_s = Some(5);
-        answer(
-            &admin,
-            id,
-            RemoteReply::Prepared {
-                action: GrantAction::Exec,
-                operation_key: input.idempotency_key,
-                input_sha256: "a".repeat(64),
-                call,
-            },
-        );
-        let (id, request) = next(&mut calls).await;
-        let RemoteRequest::Execute {
-            authority,
-            request: RequestBody::OperationStart(_),
-            ..
-        } = request
-        else {
-            panic!("run bypassed admission")
-        };
-        assert_eq!(authority.binding.grant_id, grant);
-        assert_eq!(counts(&admin, &grant).await, (1, 1));
-        answer(
-            &admin,
-            id,
-            RemoteReply::Executed(ResponseBody::Start(StartOutput {
-                operation: view(false),
-                replayed: false,
-            })),
-        );
+        let authority = admit_start(&admin, &grant, &mut calls).await;
         // First wait expires its observation slice; the adapter must get fresh permission.
         for ready in [false, true] {
             let (id, request) = next(&mut calls).await;

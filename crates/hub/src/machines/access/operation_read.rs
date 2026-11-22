@@ -12,24 +12,24 @@ use devagotchi_agenthub::{
 };
 use devagotchi_contracts::{GrantAction, GrantObservation};
 
-pub(crate) struct OperationReadTarget {
-    snapshot: AdmissionSnapshot,
-    operation: String,
+pub(crate) struct AdmissionTarget {
+    pub(super) snapshot: AdmissionSnapshot,
+    pub(super) operation: String,
 }
-impl OperationReadTarget {
+impl AdmissionTarget {
     pub(crate) fn project(&self) -> Option<&str> {
         self.snapshot.project.as_deref()
     }
 }
 impl Access {
-    pub(crate) async fn operation_read_target(
+    pub(crate) async fn operation_target(
         &self,
         account: &str,
         actor: &Actor<'_>,
         machine: &MachineBinding,
         operation: &str,
         links: &Links,
-    ) -> BridgeResult<OperationReadTarget> {
+    ) -> BridgeResult<AdmissionTarget> {
         let (tenant, id) = transaction!(&self.accounts.store, |c| {
             let found = self.accounts.machine_actor_in(c, account, actor).await?;
             Devices::new(self.accounts.store.clone())
@@ -53,7 +53,7 @@ impl Access {
                 "operation admission changed",
             ));
         }
-        Ok(OperationReadTarget {
+        Ok(AdmissionTarget {
             snapshot,
             operation: operation.into(),
         })
@@ -64,7 +64,7 @@ impl Access {
         account: &str,
         actor: &Actor<'_>,
         board: Option<&HostedBoard>,
-        target: &OperationReadTarget,
+        target: &AdmissionTarget,
     ) -> BridgeResult<GrantObservation> {
         let snapshot = &target.snapshot;
         if snapshot.binding.account != account || snapshot.binding.principal != actor.id {

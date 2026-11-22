@@ -128,6 +128,7 @@ impl Links {
             RemoteRequest::Prepare { origin, .. } => Some(origin),
             RemoteRequest::Status { binding } => Some(&binding.origin),
             RemoteRequest::Observe { observation, .. } => Some(&observation.binding.origin),
+            RemoteRequest::Control { control, .. } => Some(&control.binding.origin),
             RemoteRequest::Execute { authority, .. } | RemoteRequest::Refresh { authority } => {
                 Some(&authority.binding.origin)
             }

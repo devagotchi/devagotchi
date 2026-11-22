@@ -22,6 +22,7 @@ pub(crate) enum InputStep {
 pub(crate) struct InputRequest {
     pub(crate) steps: Vec<InputStep>,
     pub(crate) reply: oneshot::Sender<BridgeResult<()>>,
+    pub(crate) permit: Option<crate::broker::ControlPermit>,
 }
 
 /// Where an interactive job's input goes.
@@ -90,7 +91,20 @@ pub(super) async fn serve_input(mut requests: mpsc::Receiver<InputRequest>, mut 
     while let Some(request) = requests.recv().await {
         let mut result = Ok(());
         for step in request.steps {
-            if let Err(error) = sink.apply(step).await {
+            let applied = if let Some(permit) = &request.permit {
+                match permit.check() {
+                    Err(error) => Err(error),
+                    Ok(()) => {
+                        match tokio::time::timeout_at(permit.deadline, sink.apply(step)).await {
+                            Ok(result) => result,
+                            Err(_) => Err(crate::broker::ControlPermit::expired()),
+                        }
+                    }
+                }
+            } else {
+                sink.apply(step).await
+            };
+            if let Err(error) = applied {
                 result = Err(error);
                 break;
             }

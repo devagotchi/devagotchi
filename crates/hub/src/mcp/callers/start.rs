@@ -55,6 +55,18 @@ impl Hub {
                     "account operation reads require the original enrolled admission",
                 )),
             },
+            (
+                route,
+                body @ (RequestBody::OperationInput(_)
+                | RequestBody::OperationResize(_)
+                | RequestBody::OperationCancel(_)),
+            ) if account_backed => match route {
+                Route::Link(machine) => self.control_granted(machine, body, context).await,
+                Route::Local(_) => Err(BridgeError::new(
+                    "not_granted",
+                    "account process control requires the original enrolled admission",
+                )),
+            },
             (_, body) => self.send_hinted(route, body).await,
         }
     }

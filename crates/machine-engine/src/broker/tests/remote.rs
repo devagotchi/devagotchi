@@ -348,10 +348,26 @@ async fn remote_read_and_cancel_cannot_borrow_another_admission() {
             caller: None,
         }),
     ] {
-        assert_eq!(
-            execute(&broker, &stranger, request).await.unwrap_err().code,
-            "authority_mismatch"
-        );
+        let result = if matches!(&request, RequestBody::OperationCancel(_)) {
+            broker
+                .handle_remote(RemoteWireRequest {
+                    api_version: API_VERSION,
+                    remote: RemoteRequest::Control {
+                        control: GrantControl {
+                            binding: stranger.binding.clone(),
+                            action: ProcessControl::Cancel,
+                            issued_at: stranger.issued_at,
+                            expires_at: stranger.expires_at,
+                        },
+                        client: actor().client,
+                        request,
+                    },
+                })
+                .await
+        } else {
+            execute(&broker, &stranger, request).await
+        };
+        assert_eq!(result.unwrap_err().code, "authority_mismatch");
     }
     broker.shutdown().await;
 }
