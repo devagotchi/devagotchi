@@ -201,6 +201,11 @@ async fn run_race(revoke: bool) {
             result["structuredContent"]["output"], "private-output",
             "{result}"
         );
+        let jobs = admin.hub.hub.links.recent_jobs("lab");
+        assert_eq!(jobs.len(), 1);
+        assert_eq!(jobs[0].command, "git status");
+        assert_eq!(jobs[0].state, "succeeded");
+        assert_eq!(jobs[0].exit_code, Some(0));
     }
     assert_eq!(counts(&admin, &grant).await, (1, 1));
     assert!(calls.try_recv().is_err());

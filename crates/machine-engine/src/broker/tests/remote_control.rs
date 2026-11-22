@@ -252,7 +252,9 @@ async fn remote_control_expired_input_is_not_delivered_after_actual_pipe_backpre
     let (exe, args) = {
         let script = dir.path().join("blocked-input.ps1");
         let gate = gate.to_string_lossy().replace('\'', "''");
-        std::fs::write(&script,format!("[Console]::WriteLine('first'); while (-not (Test-Path -LiteralPath '{gate}')) {{ Start-Sleep -Milliseconds 20 }}; [Console]::Write([Console]::In.ReadToEnd())")).unwrap();
+        // Read the entire native pipe, but report only the properties under test.
+        // Echoing 2MiB makes this a persisted-output throughput test on CI disks.
+        std::fs::write(&script,format!("[Console]::WriteLine('first'); while (-not (Test-Path -LiteralPath '{gate}')) {{ Start-Sleep -Milliseconds 20 }}; $received = [Console]::In.ReadToEnd(); if ($received.Contains('x')) {{ [Console]::WriteLine('received-padding') }}; if ($received.Contains('expired-marker-must-never-arrive')) {{ [Console]::WriteLine('expired-marker-must-never-arrive') }}")).unwrap();
         (
             system32("WindowsPowerShell/v1.0/powershell.exe"),
             vec![
@@ -336,10 +338,11 @@ async fn remote_control_expired_input_is_not_delivered_after_actual_pipe_backpre
     )
     .await
     .unwrap();
-    assert!(matches!(
-        settle_within(&broker, id, 30).await.state,
-        OperationState::Succeeded
-    ));
+    let settled = settle_within(&broker, id, 30).await;
+    assert!(
+        matches!(settled.state, OperationState::Succeeded),
+        "{settled:?}"
+    );
     let mut output = String::new();
     let mut cursor = 0;
     loop {
@@ -360,6 +363,12 @@ async fn remote_control_expired_input_is_not_delivered_after_actual_pipe_backpre
         assert!(page.next_cursor > cursor, "output cursor must advance");
         cursor = page.next_cursor;
     }
+    #[cfg(windows)]
+    assert!(
+        output.contains("received-padding"),
+        "the native pipe was not exercised"
+    );
+    #[cfg(unix)]
     assert!(output.contains('x'), "the native pipe was not exercised");
     assert!(
         !output.contains("expired-marker-must-never-arrive"),

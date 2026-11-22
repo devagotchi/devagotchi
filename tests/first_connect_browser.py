@@ -2,7 +2,7 @@
 """First connect in a real browser (docs/spec-first-connect.md, acceptance 1).
 
 Starts `devagotchi hub serve` as a hosted hub (`tenancy.mode multi`, no `anonymous_connect`)
-on SQLite at http://localhost, handing out a build made from this binary (`downloads`). Then,
+on PostgreSQL at http://localhost, handing out a build made from this binary (`downloads`). Then,
 as a person and their AI would:
 
 1. An AI client registers (DCR) and opens its authorize URL in a browser that never signed
@@ -14,7 +14,7 @@ as a person and their AI would:
 3. The client's tokens; MCP `whoami` has no `secure_url`.
 4. `machine_add`, and its Linux line run (`--machine join`: as is, `curl … | sudo sh`, CI;
    `--machine link`, the default: a broker and `devagotchi link enroll` with its code).
-5. `machines` shows it online under its shown name, and `run echo ok` returns `ok`.
+5. `machines` shows it online under its shown name, and its unregistered OAuth client is refused command access.
 
 Needs Python Playwright with its Chromium (tests/requirements-browser.txt). CI runs it on
 ubuntu-24.04 (`e2e`); locally:
@@ -155,7 +155,7 @@ def main() -> int:
             processes.append(linked)
         print("PASS machine_add's Linux line ran")
 
-        # 5. Online under its shown name, and it runs.
+        # 5. Enrollment is visible but does not grant execution authority.
         online = []
         for _ in range(60):
             listed = ai.tool("machines")["structuredContent"]["machines"]
@@ -164,14 +164,9 @@ def main() -> int:
                 break
             time.sleep(0.5)
         assert online, listed
-        ran = None
-        for _ in range(30):
-            ran = ai.tool("run", {"machine": "desk", "command": "echo ok"})
-            if not ran.get("isError"):
-                break
-            time.sleep(0.5)
-        assert not ran.get("isError") and ran["structuredContent"]["output"].strip() == "ok", ran
-        print("PASS machines shows desk online; run echo ok returns ok")
+        refused = ai.tool("run", {"machine": "desk", "command": "echo ok"})
+        assert refused.get("isError") and refused["structuredContent"]["code"] == "not_granted", refused
+        print("PASS enrollment completed; an unregistered OAuth client cannot execute commands")
     finally:
         for process in reversed(processes):
             process.terminate()

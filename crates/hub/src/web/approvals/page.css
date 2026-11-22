@@ -6,6 +6,7 @@
     --stack-gap: var(--space-m); }
   [data-page="approvals"] > h1 { margin: 0; font-size: var(--step-3); }
   [data-page="approvals"] .asks > * { margin: 0; }
+  [data-page="approvals"] .ask .meta { overflow-wrap: anywhere; }
   [data-page="approvals"] .approvals-side { --stack-gap: var(--space-s); }
   [data-page="approvals"] .approvals-side:empty { display: none; }
   [data-page="approvals"] .approvals-side > .card { margin: 0; }

@@ -7,7 +7,8 @@ use devagotchi_ipc as ipc;
 async fn remote_link_forwards_exact_authority_to_private_ipc_and_returns_broker_refusal() {
     let (listener, mut config) = fake_hub().await;
     let state = tempfile::tempdir().unwrap();
-    let mut guard = ipc::StateGuard::acquire(&state.path().join("broker")).unwrap();
+    let mut guard =
+        ipc::StateGuard::acquire(&state.path().canonicalize().unwrap().join("broker")).unwrap();
     let mut local = guard.bind().await.unwrap();
     config.broker = guard.endpoint().display().to_string();
     let updater = Updater::new(&config, state.path(), "main-abc1234", false);

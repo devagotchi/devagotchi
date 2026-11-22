@@ -63,7 +63,8 @@ mod tests {
     #[tokio::test]
     async fn remote_ipc_preserves_envelope_and_uses_private_native_peer_checks() {
         let dir = tempfile::tempdir().unwrap();
-        let state = ipc::private_test_state(dir.path());
+        // Let StateGuard create the leaf with native private permissions, as startup does.
+        let state = dir.path().canonicalize().unwrap().join("state");
         let mut guard = ipc::StateGuard::acquire(&state).unwrap();
         let mut listener = guard.bind().await.unwrap();
         let broker = Broker::open(

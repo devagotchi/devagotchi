@@ -206,7 +206,10 @@ impl Links {
         }
         match response {
             RemoteWireResponse::Ok(reply) => {
-                if let RemoteReply::Executed(body) = &reply {
+                if let RemoteReply::Executed(body)
+                | RemoteReply::Controlled(body)
+                | RemoteReply::Observed { response: body, .. } = &reply
+                {
                     self.jobs_saw(device, started, body);
                 }
                 Ok(reply)

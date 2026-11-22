@@ -13,8 +13,9 @@ Standalone dependency pin `ac9c7ff` is published in [AgentHub PR17](https://gith
 with 163 PostgreSQL tests passing outside parent path patches. PR17 merged at `8bdac83`
 after green PR CI; main CI passed and its local/remote integration branches were deleted.
 The parent full workspace now passes 1,199 tests with PostgreSQL required and ClickHouse,
-plus Windows process/protocol, build, dependency and generated-contract checks. Publish
-the parent integration with the exact merged gitlink; platform PR CI remains required. The earlier instruction above to hold
+plus Windows process/protocol, build, dependency and generated-contract checks. Root PR279 publishes
+the parent integration at `4cbd92c` with the exact merged gitlink; platform CI corrections
+are tracked below and green PR CI remains required. The earlier instruction above to hold
 all publication until S1 closure must not leave an unreproducible remote branch or hide
 implemented code locally. This changes publication scheduling; it does not authorize a
 false S1 closure, deleting unabsorbed source or weakening checks. Source completion remains
@@ -237,13 +238,76 @@ heads, tested heads, check URLs/results, merged SHAs, deployed image where relev
 deleted refs. A source is closed only after its receipt has no open runtime or requirement
 row. Raw credentials/logs/screenshots stay private; public receipts contain only safe facts.
 
-Plan: source/target execution batches reconciled on 2026-11-21, including catalog-before-grant
-ordering, exact integration seams and later-delta distinctions. Implementation: A01-A03
-partially authored locally; A05 catalog administration and A04 access foundations are
-also authored with focused evidence. Complete source absorption remains unfinished. Validation:
-focused results are recorded in the packet review ledgers, not final integration evidence.
-Push/PR: no consolidated change published. Main: no consolidated source delivered. Continue
-Batch 2 on the existing integration branch, retaining remaining Batch 1 acceptance;
-CI remains held until S1 is fully authored and locally validated; deliver S1 before S2.
+Plan: all five source inventories and target execution batches are maintained above.
+Implementation: A01-A05 and access runtime work are partially authored; complete source
+absorption remains unfinished. Validation: full local 1,199-test integration receipt is
+published; PR279 platform/browser corrections and the real self-hosted flow are in progress.
+Push/PR: root `4cbd92c` is published in PR279; AgentHub PR17 is merged at `8bdac83` with
+its main CI green and integration branches deleted. Root main is still `4b01ac9`.
+Continue complete corrections in PR279, merge on green, then complete S1 before S2.
+Historical source refs remain preserved until their complete-source acceptance passes.
 
 **DELIVERY INCOMPLETE: FULL SOURCE ABSORPTION IS NOT YET IMPLEMENTED OR MERGED.**
+
+## PR279 integration corrections (2026-11-22)
+
+Candidate `4cbd92c` is published as https://github.com/devagotchi/devagotchi/pull/279.
+Its first platform run exposed integration gaps; no failed gate is waived:
+
+1. Remote IPC fixture: create a fresh state leaf through `StateGuard` so native 0700/ACL
+   creation is exercised. A temporary parent is not proof of private Unix permissions.
+2. Windows backpressure fixture: retain the actual 2MiB native pipe write and expired
+   queue checks, but have the child report padding/forbidden-marker observations instead
+   of echoing 2MiB through durable output storage. Keep the 30-second deadline and terminal
+   success assertion, with useful terminal-state diagnostics. Both original and proposed
+   flush implementations passed locally under nextest; the speculative runtime change was
+   removed. Platform CI must verify the bounded-output fixture.
+3. Browser onboarding: unbound OAuth is no machine permission. Keep grant enforcement.
+   Update the self-hosted phone/app journey to claim its owner, register/bind the OAuth
+   agent, acknowledge actual unsandboxed risks, request access and approve through the
+   owner page before real execution. Preserve machine/job/output, board and phone UI
+   assertions. Older hosted signup/workflow probes explicitly prove their unregistered
+   client cannot run; denied commands must not advance analytics operation counts.
+   This is an intentional authorization change, not a simulated successful command.
+
+4. Granted link observations/control must update the same recent-job projection as starts.
+   The real phone journey found completed commands stuck at accepted; retain its succeeded
+   assertion and add exact command/state/exit checks to the existing granted MCP run test.
+
+Validate native IPC/control/pipe tests on Windows, actual self-hosted browser execution
+with PostgreSQL, the affected hosted browser refusal/analytics journeys, and Linux/platform
+CI. Batch the complete corrections into the current PR after all remaining initial jobs
+have reported, then review and merge the exact green candidate. AgentHub PR17 is already
+merged and green; the root remains unmerged until this acceptance passes.
+
+### Correction validation receipt
+
+The correction batch keeps native authorization and deadlines unchanged. The Windows
+backpressure fixture reports what its child actually consumed without persisting 2MiB of
+irrelevant output. Native IPC fixtures let `StateGuard` create a private leaf beneath a
+canonical parent (including macOS's `/private` path).
+
+- Default workspace `cargo nextest run --locked --no-fail-fast --test-threads 4`:
+  **1,199 passed, zero skipped**, PostgreSQL required and ClickHouse configured.
+- Focused native remote/IPC/control: 19 passed on Windows and 19 on Linux. The granted
+  MCP run regression also verifies recent-job command, succeeded state and exit code.
+- Linux security boundary: all 16 passed under a privileged fixture runner, including
+  foreign-owner and distinct-UID checks. Relative PATH resolution still checks the grant;
+  relative cwd still checks workspace confinement; the public maximum deadline is one day.
+- Linux MCP protocol and all eight process smoke checks passed. Smoke catalog validation
+  shares the protocol probe's explicit 27-tool schemas; restart readiness uses byte offsets
+  consistently when earlier logs contain Unicode.
+- Actual PostgreSQL browser journeys passed: analytics, workflow and first-connect
+  refusal; self-hosted owner/password, OAuth profile binding, risk acknowledgment,
+  owner approval, real command/output, succeeded job, ticket edits, canonical agent inbox,
+  mobile approvals, preferences, Pixel login and offline reload. The longer registered
+  principal exposed approval metadata overflow; the page now wraps it at phone width.
+  Local workflow/first-connect used their native link mode; CI retains installer join mode.
+- Linux and Windows process E2E passed, with no SQLite in hosted state. Linux also
+  passed the promotion dry-run; that Linux deployment script is not run on Windows.
+- Dependency advisories/bans/licenses/sources, generated contracts, formatting, Python
+  syntax and repository AI contracts passed. Source Git objects still verify: all 100
+  commits and 907 file-change records remain open; this receipt does not close any source.
+
+Root PR279 still requires green platform CI on the pushed correction commit, authorized
+merge, actual-main verification and Docker acceptance. No preserved source ref is deleted.

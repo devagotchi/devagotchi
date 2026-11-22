@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """The phone control app in a real browser (docs/spec-phone-app.md, Tests), at phone size.
 
-Starts `devagotchi hub serve` as a hosted hub (`tenancy.mode multi`) on Postgres
+Starts `devagotchi hub serve` as a self-hosted hub (`tenancy.mode single`) on Postgres
 (`DEVAGOTCHI_HUB_STORAGE_URL`) at http://localhost (a secure context, so the service worker
 runs without TLS). Then:
 
-1. A person signs up from their AI client's sign-in page on an iPhone 13 (emulated); the AI
-   adds a machine (a broker and `devagotchi link`, online) and a board with a ticket.
+1. The owner claims the hub with a local password on an iPhone 13 (emulated), connects
+   an OAuth client, registers its agent and approves its requested machine access. The AI
+   adds a machine (a broker and `devagotchi link`, online), a board and a real command.
 2. `/app` on the iPhone shows the machine online and the board, in one frame that does not
    scroll sideways at 390 px; the install banner says Share, then Add to Home Screen.
    Its machine page: online, its build, last seen now, the AI's command among the recent
@@ -43,6 +44,7 @@ from pathlib import Path
 from analytics_browser import start
 from operator_browser import call, free_port, wait_ready
 from workflow_browser import Connector, downloads
+from self_hosted_access_browser import grant_command_access
 
 EMAIL, PASSWORD = "phone@example.com", "a good password"
 
@@ -154,7 +156,7 @@ def main() -> int:
         "listen": f"127.0.0.1:{port}",
         "public_url": url,
         "auth": {"mode": "hub"},
-        "tenancy": {"mode": "multi", "starts_per_hour": 100},
+        "tenancy": {"mode": "single"},
         "account_boards": {"free_limit": 5},
         "downloads": str(dist),
         "machines": {"auto_update": False},
@@ -182,17 +184,24 @@ def main() -> int:
             assert seen <= 390, f"the landing page is {seen} px wide at 390 px: it scrolls sideways"
             print("PASS the landing page fits an iPhone 13 (no sideways scroll at 390 px)")
 
-            # 1. Sign up from the AI's sign-in page; the AI adds a machine and a board.
-            page.goto(ai.authorize_url)
-            page.locator("a[href*='tab=up']").click()
-            assert page.locator("a[href*='tab=up'][aria-current=page]").count() == 1
+            # 1. Claim this environment with a local password, then connect the AI.
+            owner_link = subprocess.run(
+                [args.devagotchi, "hub", "owner", "--state-dir", str(state), "--config", str(config), "--name", "Phone"],
+                capture_output=True, text=True, check=True,
+            ).stdout.strip()
+            page.goto(owner_link)
+            page.click("#owner-password-link")
+            page.wait_for_url(f"{url}/owner/password")
             for field in ("email", "password"):
                 box = page.locator(f"input[name={field}]").bounding_box()
                 size = page.locator(f"input[name={field}]").evaluate("e => parseFloat(getComputedStyle(e).fontSize)")
                 assert box["height"] >= 44 and box["width"] >= 300 and size >= 16, (field, box, size)
             page.locator("input[name=email]").fill(EMAIL)
             page.locator("input[name=password]").fill(PASSWORD)
-            page.locator("form[action='/auth/password/new'] button[type=submit]").click()
+            page.click("#owner-password-submit")
+            page.wait_for_url(f"{url}/account", timeout=15_000)
+            page.goto(ai.authorize_url)
+            page.click("button[value=approve]")
             page.wait_for_url(re.compile(re.escape(ai.redirect) + r"\?.*code="), timeout=15_000)
             ai.finish()
             added = ai.tool("machine_add", {"name": "desk"})
@@ -209,9 +218,12 @@ def main() -> int:
             assert not bound.get("isError"), bound
             made = ai.tool("board_create", {"project": "alpha", "title": "Check the backups"})
             assert not made.get("isError"), made
+            agent_principal = grant_command_access(page, ai, "desk")
             ran = ai.tool("run", {"machine": "desk", "command": "echo from-the-phone"})
             assert not ran.get("isError"), ran
-            print("PASS signed up on an iPhone; the AI added desk (online) and the board alpha")
+            assert ran["structuredContent"]["state"] == "succeeded", ran
+            assert ran["structuredContent"]["output"].strip() == "from-the-phone", ran
+            print("PASS self-hosted owner approved the registered AI; desk is online, alpha exists and a command ran")
 
             # 2. Home on the iPhone: the machine and the board, one frame, no sideways scroll.
             page.goto(f"{url}/app")
@@ -304,11 +316,11 @@ def main() -> int:
             # A question left for the AI from the phone: its section, and it reaches the AI.
             page.locator("#comment").fill("Which region did you pick?")
             page.locator("#note-kind").select_option("question")
-            page.locator("#note-to").fill("claude")
+            page.locator("#note-to").fill(agent_principal)
             page.locator("button", has_text="Comment").click()
             page.wait_for_url(re.compile(r".*\?done=comment$"))
             section = page.locator("#notes-question").inner_text()
-            assert "Which region did you pick?" in section and "for claude" in section, section
+            assert "Which region did you pick?" in section and f"for {agent_principal}" in section, section
             no_sideways_scroll(page, 390)
             # (Inboxes are looked at no more than every 10 seconds per caller.)
             for _ in range(15):
@@ -357,7 +369,8 @@ def main() -> int:
             page.locator("nav.tabs a", has_text="You").click()
             page.wait_for_url(re.compile(r".*/app/me$"))
             assert page.locator("nav.tabs a[aria-current=page]").inner_text() == "You"
-            assert page.locator("#login").inner_text() == EMAIL
+            assert page.locator("#who h1").inner_text() == "Phone"
+            assert page.locator("#login").count() == 0  # The owner name is already the heading.
             no_sideways_scroll(page, 390)
             light = page.evaluate("getComputedStyle(document.body).backgroundColor")
             page.locator("#prefs input[name=name]").fill("Grace Hopper")

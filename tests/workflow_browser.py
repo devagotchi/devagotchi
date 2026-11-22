@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """A workflow's link in a real browser: no sign-in, one button, a real machine, a tick in place.
 
-Starts `devagotchi hub serve` as a hosted hub (`tenancy.mode multi`) on SQLite at
+Starts `devagotchi hub serve` as a hosted hub (`tenancy.mode multi`) on PostgreSQL at
 http://localhost (a secure context, so WebAuthn works without TLS), handing out a build made
 from this binary (`downloads`). Then, as a person and their AI would:
 
@@ -19,8 +19,8 @@ from this binary (`downloads`). Then, as a person and their AI would:
    button in this browser, ChatGPT's sign-in page here lands on the same account, and its
    first call ticks that step in place. Then a passkey keeps the account (the Chrome
    DevTools virtual authenticator).
-6. `workflow_status` reports the machine step done and the account kept, and the AI runs a
-   command on the machine.
+6. `workflow_status` reports the machine step done and the account kept, and the unregistered AI is
+   refused command execution until explicitly registered and granted access.
 
 Then the same with JavaScript off: Check again shows where it stands.
 
@@ -306,14 +306,9 @@ def main() -> int:
             assert states == ["done", "done"], status
             assert status["steps"][0]["fact"] == "desk is online.", status
             assert status["state"] == "completed", status
-            ran = None
-            for _ in range(30):
-                ran = ai.tool("run", {"machine": "desk", "command": "echo from-the-link"})
-                if not ran.get("isError"):
-                    break
-                time.sleep(0.5)
-            assert not ran.get("isError") and "from-the-link" in ran["structuredContent"]["output"], ran
-            print("PASS workflow_status reports the machine done and the account kept; the AI ran on it")
+            refused = ai.tool("run", {"machine": "desk", "command": "echo from-the-link"})
+            assert refused.get("isError") and refused["structuredContent"]["code"] == "not_granted", refused
+            print("PASS enrollment completed; an unregistered OAuth client cannot execute commands")
 
             # Without JavaScript: the finished link shows it is done, with no code; an open
             # one's Check again shows where it stands.

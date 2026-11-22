@@ -30,13 +30,17 @@ recursive parent clone succeeds. AgentHub `ac9c7ff` pins its shared Git dependen
 root `30ede40` and is published as [PR17](https://github.com/devagotchi/agenthub/pull/17).
 Its standalone 163 tests and Linux PR/main CI passed. The merged tree matches tested
 `ac9c7ff`; the remote integration branch was deleted. Root main has not adopted this
-integration yet; its PR follows the current broad checks.
+integration yet. [Root PR279](https://github.com/devagotchi/devagotchi/pull/279) is published
+at `4cbd92c`; its first CI run found Unix fixture permissions, Windows backpressure
+fixture output volume and outdated browser authorization assumptions. Corrections are
+validated together in the next PR update. The real self-hosted approval journey also
+exposed stale recent-job status after granted observations; the link projection is corrected.
 
 | Sequence | Deliverable | Current evidence/status | Next acceptance |
 |---|---|---|---|
-| Now | Reproducible two-repository publication | Both dependency heads published; recursive clone and standalone 163-test run passed; AgentHub PR17 merged; library main CI green | Finish root broad gates and publish root PR; verify actual CI candidates and merged gitlink |
+| Now | Reproducible two-repository publication | Both dependency heads published; recursive clone and standalone 163-test run passed; AgentHub PR17 merged; library main CI green | Push the validated PR279 corrections and obtain green platform CI; verify actual CI candidates and merged gitlink |
 | S1 / October | Complete baseline behavior | Task/configuration/principal/receipt/CLI/HTTP work authored; machine admission/start/read/control/heartbeat authored with focused PostgreSQL/native tests. These are partial source ports, not a completed baseline | Finish remaining coordination/catalog comparisons, file/batch/image authorization, operator stop/list/history, confinement/change policy, provider routing/secrets, executable guides, document/GUI tools, audit retention and all corresponding browser journeys |
-| S1 delivery | Green main integration | AgentHub PR17 merged; library main CI green; root PR pending; root main not merged | Review complete authored scope, required CI, exact dependency/gitlink verification, authorized merge and main verification; no source closure/deletion based on an incomplete port |
+| S1 delivery | Green main integration | AgentHub PR17 merged; library main CI green; root PR279 published; first CI run failed; root main not merged | Review complete authored scope, required CI, exact dependency/gitlink verification, authorized merge and main verification; no source closure/deletion based on an incomplete port |
 | S2 | Documentation/packaging delta: 2 commits, 17 paths | Planned; no source closure | Complete source-specific changes, validate, green merge, verify and delete eligible ref |
 | S3 | Enrollment/transport/browser boundary: 5 commits, 79 paths | Planned; no source closure | Same complete-source delivery sequence after S2 |
 | S4 | Packaging/readiness/shutdown: 1 commit, 32 paths | Planned; no source closure | Same complete-source delivery sequence after S3 |
@@ -62,6 +66,16 @@ alone do not advance the delivery status. Publication validation on 2026-11-22:
   Standalone 163 tests plus Linux PR/main CI validated that exact dependency pin.
 - Linux security/IPC, cross-platform PR CI and actual-main Docker acceptance remain
   separate checks. These local passes do not close the preserved sources.
+
+Correction receipt: 1,199/1,199 default-workspace tests passed under nextest with PostgreSQL
+required; 19 native remote checks passed on each of Windows and Linux. Linux security
+passed all 16 checks, and MCP protocol/process smoke and Linux E2E passed. Actual browser
+acceptance now covers a single-environment owner registering an OAuth agent, granting its
+request, executing a command, seeing its succeeded job, working AgentHub tickets/inbox,
+approving on a phone, changing preferences, signing in on a second phone and loading the
+offline page. Hosted signup/workflow/analytics probes verify explicit execution refusal
+without registration/grants. Platform CI and actual-main Docker acceptance remain open.
+
 
 
 This is the execution checklist for the user's issue-lifecycle, collaboration, connector,

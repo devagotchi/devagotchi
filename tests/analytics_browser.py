@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """The operator's analytics (`/operator/analytics`) in a real browser: counts and the funnel move.
 
-Starts `devagotchi hub serve` as a hosted hub (`tenancy.mode multi`, sign-up open) on SQLite
+Starts `devagotchi hub serve` as a hosted hub (`tenancy.mode multi`, sign-up open) on PostgreSQL
 at http://localhost (a secure context, so WebAuthn works without TLS). Then:
 
 1. The operator signs in with a passkey (`devagotchi hub owner`'s link, the Chrome DevTools
@@ -9,10 +9,9 @@ at http://localhost (a secure context, so WebAuthn works without TLS). Then:
 2. A visitor's browser (a person's User-Agent, JavaScript off) opens three public pages, one
    from a campaign link. A person's AI client connects (dynamic registration, Connect,
    PKCE), adds a machine with `machine_add`; a broker and its `devagotchi link` enroll it
-   with the code; the AI runs a command on it with `run`.
+   with the code; unregistered OAuth execution is refused.
 3. The analytics page and its funnel moved: one visitor and three page views today, the
-   campaign, one account made by Claude and let in, its first machine and first command, one
-   tenant active. The CSV holds today's totals. Nobody but the operator gets anything (404),
+   campaign, one account made by Claude and let in, its first machine, no command or active-tenant credit for refused execution. The CSV holds today's totals. Nobody but the operator gets anything (404),
    and the operator's own visits are not counted.
 
 Needs Python Playwright with its Chromium (tests/requirements-browser.txt). CI runs it on
@@ -179,14 +178,9 @@ def main() -> int:
             linked, _ = start([args.devagotchi, "link", "run", "--state-dir",
                                str(work / "link-state")], "link", work)
             processes.append(linked)
-            ran = None
-            for _ in range(30):
-                ran = person.tool("run", {"machine": "desk", "command": "echo counted"})
-                if not ran.get("isError"):
-                    break
-                time.sleep(0.5)
-            assert not ran.get("isError") and "counted" in ran["structuredContent"]["output"], ran
-            print("PASS a visitor read three pages; a person connected, enrolled a machine and ran on it")
+            refused = person.tool("run", {"machine": "desk", "command": "echo counted"})
+            assert refused.get("isError") and refused["structuredContent"]["code"] == "not_granted", refused
+            print("PASS enrollment completed; an unregistered OAuth client cannot execute commands")
 
             # 3. Nobody but the operator gets the page or its CSV.
             for path in ["/operator/analytics", "/operator/analytics.csv?days=7"]:
@@ -205,11 +199,11 @@ def main() -> int:
             assert step(text, "Accounts made") == ["1", "100.0%"], text
             assert step(text, "Let in")[0] == "1", text
             assert step(text, "First machine") == ["1", "100.0%"], text
-            assert step(text, "First command run") == ["1", "100.0%"], text
+            assert step(text, "First command run") == ["0", "0.0%"], text
             for want in ["newsletter", "email", "launch", "/docs", "/privacy", "Computer"]:
                 assert want in text, (want, text)
             assert board.locator("#clients tr", has_text="Claude").inner_text().split()[-1] == "1"
-            assert "1 in the last 7 days" in board.locator("#active").inner_text()
+            assert "0 in the last 7 days" in board.locator("#active").inner_text()
             assert "Waiting for early access now: 0." in text, text
             print("PASS the operator sees the visits, the campaign and the funnel move")
 
@@ -219,7 +213,7 @@ def main() -> int:
             csv = Path(download.value.path()).read_text()
             assert csv.startswith("day,metric,item,views,visitors"), csv
             assert re.search(r"^\d{4}-\d\d-\d\d,total,,3,1\r?$", csv, re.M), csv
-            assert re.search(r",event,operation,1,0\r?$", csv, re.M), csv
+            assert ",event,operation," not in csv, csv
             print("PASS the daily totals download as CSV")
             browser.close()
     finally:
