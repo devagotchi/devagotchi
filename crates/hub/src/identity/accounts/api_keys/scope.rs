@@ -6,6 +6,8 @@ use serde::{Deserialize, Serialize};
 /// What a key may do. Each tool needs exactly one of these (`scope_for`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum Scope {
+    #[serde(rename = "catalog.read")]
+    CatalogRead,
     #[serde(rename = "machines.read")]
     MachinesRead,
     #[serde(rename = "machines.run")]
@@ -31,7 +33,8 @@ pub enum Scope {
 }
 
 impl Scope {
-    pub const ALL: [Scope; 11] = [
+    pub const ALL: [Scope; 12] = [
+        Scope::CatalogRead,
         Scope::MachinesRead,
         Scope::MachinesRun,
         Scope::MachinesManage,
@@ -47,6 +50,7 @@ impl Scope {
 
     pub fn as_str(self) -> &'static str {
         match self {
+            Scope::CatalogRead => "catalog.read",
             Scope::MachinesRead => "machines.read",
             Scope::MachinesRun => "machines.run",
             Scope::MachinesManage => "machines.manage",
@@ -64,6 +68,7 @@ impl Scope {
     /// What it allows, as a person reads it.
     pub fn title(self) -> &'static str {
         match self {
+            Scope::CatalogRead => "Read capability and setup catalogs",
             Scope::MachinesRead => "See machines and running jobs",
             Scope::MachinesRun => "Run commands on machines",
             Scope::MachinesManage => "Add and update machines, start setup links",
@@ -86,12 +91,15 @@ impl Scope {
 /// The scope a tool needs. `None` means no key may call it.
 pub fn scope_for(tool: &str) -> Option<Scope> {
     Some(match tool {
-        "machines" | "operation_get" | "operation_read" => Scope::MachinesRead,
+        "capabilities_list" => Scope::CatalogRead,
+        "machines" | "machines_list" | "my_grants" | "operation_get" | "operation_read" => {
+            Scope::MachinesRead
+        }
         "operation_wait" | "operation_list" => Scope::MachinesRead,
         "get_config" | "list_processes" | "machine_inspect" => Scope::MachinesRead,
         "get_recent_tool_calls" | "get_usage_stats" => Scope::MachinesRead,
         "run" | "operation_start" | "operation_cancel" => Scope::MachinesRun,
-        "operation_input" | "operation_resize" => Scope::MachinesRun,
+        "operation_input" | "operation_resize" | "operation_heartbeat" => Scope::MachinesRun,
         "kill_process" | "read_url" => Scope::MachinesRun,
         "set_config_value" => Scope::MachinesManage,
         "machine_add" | "machine_update" | "workflow_list" | "workflow_start"
@@ -99,7 +107,9 @@ pub fn scope_for(tool: &str) -> Option<Scope> {
         "read_file" | "read_multiple_files" | "read_image" => Scope::FilesRead,
         "list_directory" | "get_file_info" | "search_files" => Scope::FilesRead,
         "write_file" | "edit_file" | "create_directory" | "move_file" => Scope::FilesWrite,
-        "approval_request" | "approval_wait" => Scope::ApprovalsRequest,
+        "approval_request" | "approval_wait" | "request_access" | "wait_for_access" => {
+            Scope::ApprovalsRequest
+        }
         "dictionary_get" | "lexicon_resolve" => Scope::WordsRead,
         "lexicon_propose" | "lexicon_review" | "lexicon_handoff" => Scope::WordsWrite,
         "board_settings" | "board_wake" => Scope::BoardsAdmin,

@@ -25,6 +25,8 @@
 //! that does not check out stops the start with what is wrong and where. With no directory
 //! the built-in default serves, compiled into the binary.
 
+pub(crate) mod access_copy;
+pub(crate) mod agents_copy;
 mod analytics_copy;
 pub(crate) mod app_copy;
 mod assets;
@@ -32,6 +34,7 @@ mod assets;
 mod assets_tests;
 #[cfg(test)]
 mod brand_tests;
+pub(crate) mod catalog_copy;
 mod check;
 pub(crate) mod configuration_copy;
 pub mod discovery;
@@ -40,6 +43,7 @@ mod markdown;
 pub(crate) mod model;
 pub mod offers;
 mod plans;
+pub(crate) mod projects_copy;
 mod pwa;
 mod style;
 #[cfg(test)]
@@ -94,7 +98,7 @@ pub struct Site {
     pub dir: Option<PathBuf>,
     pub info: SiteFile,
     pub landing: Landing,
-    pub messages: Messages,
+    pub messages: Box<Messages>,
     /// The workflows an AI can start for its person (`content/workflows.json`).
     pub workflows: WorkflowsFile,
     pub pages: BTreeMap<String, Page>,

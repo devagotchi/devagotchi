@@ -894,7 +894,7 @@ pub struct Messages {
     #[serde(default)]
     pub sign_in: SignInMessages,
     /// The phone control app (`web/app/`). Plain text; `{name}` and the like are filled in.
-    pub app: AppCopy,
+    pub app: Box<AppCopy>,
     /// The organisation pages (`web/orgs.rs`). Plain text; `{n}`, `{why}` are filled in.
     #[serde(default)]
     pub orgs: OrgsCopy,

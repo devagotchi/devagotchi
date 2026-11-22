@@ -12,6 +12,7 @@ mod admit;
 mod calls;
 mod container;
 mod presence;
+mod remote;
 mod socket;
 mod updates;
 mod wire;
@@ -60,6 +61,7 @@ fn hello(
         enroll_code: code.map(str::to_string),
         build: None,
         kind: None,
+        remote_access: None,
     })
 }
 

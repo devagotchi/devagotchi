@@ -270,6 +270,13 @@ pub(crate) async fn run(
     let listener = tokio::net::TcpListener::bind(listen)
         .await
         .map_err(|error| BridgeError::new("listen", format!("{listen}: {error}")))?;
+    let _access_runtime = state.passkeys.as_ref().map(|sign_in| {
+        crate::machines::access::AccessRuntime::start(
+            sign_in.accounts().clone(),
+            state.hub.links.clone(),
+            state.hub.boards.clone(),
+        )
+    });
     // Unclaimed, the hub prints a new claim code each time it starts, replacing the last
     // one: only once it listens, so a start that fails never replaces the code a running
     // hub printed.
@@ -407,6 +414,13 @@ pub(crate) fn app(state: AppState) -> Router {
                     state.clone(),
                     bearer::require_bearer,
                 )),
+        )
+        // Task and history JSON adapters share the existing bearer/session boundary.
+        .merge(
+            agenthub::http::routes().layer(middleware::from_fn_with_state(
+                state.clone(),
+                tenancy::orgs::api::bearer_or_session,
+            )),
         )
         // Board statistics from ClickHouse (`warehouse`), for anyone who reads the board.
         .merge(

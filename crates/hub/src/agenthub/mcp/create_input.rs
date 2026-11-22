@@ -1,10 +1,13 @@
 //! Creation inputs shared by the MCP tool schema.
 use schemars::JsonSchema;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Deserialize, JsonSchema)]
+#[derive(Debug, Deserialize, Serialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct CreateIn {
+    /// Reuse this key and identical input after an uncertain result (1..=200 bytes).
+    #[serde(default)]
+    pub request_id: Option<String>,
     /// The project whose board to use, as the hub names it (whoami lists yours).
     pub project: String,
     /// 1 to 300 characters.

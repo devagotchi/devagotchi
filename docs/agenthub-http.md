@@ -1,0 +1,320 @@
+# AgentHub task HTTP API
+
+This pre-release API reads and changes the same PostgreSQL boards used by AgentHub's pages,
+MCP tools and CLI. Each request needs a current bearer token, or a signed-in browser session.
+Browser writes must send this hub's exact `Origin`. API-key scopes and project restrictions
+apply to every request, including retries. A person's authority and an agent's authority
+are checked by the existing board resolver and domain policy.
+
+Every operation names a `project` the caller can reach. For reads, supply it in the query.
+For writes, supply it in the JSON body or query; both must agree if both are present. Task
+IDs are the existing string IDs returned by the board, not the old Go service's integers.
+
+| Method and route | Behavior |
+| --- | --- |
+| GET `/api/v1/tasks?project=demo` | List tasks; optional `state`, `holder`, `label`, `q`, `ready=1`, `limit` (1–500) |
+| POST `/api/v1/tasks` | Create a task; `project` and `title` required |
+| GET `/api/v1/tasks/{id}?project=demo` | Task, notes, dependencies, children and latest 200 events |
+| PATCH `/api/v1/tasks/{id}?project=demo` | Update metadata at the supplied `version` |
+| POST `/api/v1/claim-next` | Claim a ready task; `project`, optional `label`, `labels`, `states`, `parent`, `ttl_ms` |
+| POST `/api/v1/tasks/{id}/claim?project=demo` | Claim this task; optional `ttl_ms` |
+| POST `/api/v1/tasks/{id}/heartbeat?project=demo` | Renew the supplied `fence`; optional `progress` |
+| POST `/api/v1/tasks/{id}/release?project=demo` | Release the supplied `fence`; optional `reason` |
+| POST `/api/v1/tasks/{id}/complete?project=demo` | Complete the supplied `fence` with `summary` |
+| POST `/api/v1/tasks/{id}/handoff?project=demo` | Hand off the supplied `fence` with `note` and optional `to` |
+| POST `/api/v1/tasks/{id}/force-release?project=demo` | A person takes away a lease, with `reason` |
+| POST `/api/v1/tasks/{id}/notes?project=demo` | Append `body`, optional `kind`/`to`; held work needs `fence` |
+| POST `/api/v1/tasks/{id}/deps?project=demo` | Set `depends_on`, optional `kind`; `remove: true` removes it |
+| GET `/api/v1/events?project=demo` | Page the selected board's committed history |
+| GET `/api/v1/events/verify?project=demo` | Verify that board's event chain |
+
+Creation and updates use the same typed fields as `board_create` and `board_update` in
+the MCP tool schema. Creation supports `depends_on` as an array of string task IDs.
+Updates use `clear_assignee: true` to remove an assignment. `progress` omitted keeps its
+current value; `progress: null` clears it. REST never substitutes a remembered MCP fence
+or connection session. Claim routes also accept the old `ttl_seconds` field, converted
+with overflow checking; it must agree with `ttl_ms` if both are sent.
+
+Claim-next requires all entries in `labels`, plus `label` if supplied. Labels are trimmed,
+lowercased and deduplicated. State and label selection happens before the 25-candidate
+claim limit. Ordinary lists sort by priority, creation time and ID; actor-specific ready
+and claim selection prefer work assigned to that actor. The CLI accepts repeated `--label`
+for the same intersection. Adding an empty `labels` array does not change retry identity.
+
+`If-Match: "VERSION"` can supply an update's version. A body version must agree with it.
+A fresh stale `If-Match` returns 412. A stale body-only version returns 409. Weak tags and
+lists of tags are rejected. Unknown fields, malformed JSON and conflicting path/body
+identifiers are rejected. JSON bodies are limited to 1 MiB.
+
+## Retry a change
+
+Send `Idempotency-Key: KEY` or JSON `request_id`. If both are present, they must agree.
+Keep the key and identical input when the result is uncertain. The key belongs to the
+authenticated principal across operations and boards; changed input with the same key
+returns `request_conflict`. Successful retries return the original result with
+`replayed: true` and `Idempotent-Replayed: true`, without applying the change again.
+Every attempt still needs current authority. Issuing credentials is not part of this API.
+
+Typed task and lease inputs share receipt identity with the corresponding MCP mutations.
+For example, retrying an HTTP creation through `board_create` with the same key and input
+returns the original task. A replayed claim has its original fence and expiry; it does
+not renew a lease or replace a later claim. A replayed empty claim-next remains empty.
+
+Results keep their domain fields and add `request_id` when supplied and `replayed` for
+mutations. Claim-next returns `claimed` and an optional `lease`; individual claims return
+the lease directly. Dependencies are under `deps`. Errors use `{ "error": { "code": ...,
+"message": ... } }`. Task-route responses are marked `Cache-Control: no-store`.
+
+## Page history
+
+Events accept `after_seq`, exclusive `before_seq`, `actor`, `action` (a prefix), `task_id`,
+`order=asc|desc`, and `limit` (1–1000). Advance `after_seq` to the last event received when
+paging forward. `ticket` and `action_prefix` are accepted aliases for the MCP field names.
+Task lists return `tasks`, `head_seq` and `server_now` (Unix milliseconds). Their head is
+captured before reading tasks so a reconnect cannot skip a concurrent committed event;
+clients may see that change again when catching up. Event lists return `events` and a
+board-scoped `head_seq`. No endpoint aggregates another account's history.
+
+Project creation/deletion and aggregate configuration remain in the absorption
+plan. The routes below are local prerelease authoring, not a published release.
+
+## Principals and policy
+
+These administration routes require a live person. API keys, hub-issued agent OAuth
+tokens, bound agents and caller-selected seats cannot administer people or credentials.
+Human accounts keep their existing `/admin/users` and password/passkey/provider login;
+the principal routes manage registered nonhuman profiles. Setting an agent's `kind` to
+`human` never changes its credential into a human identity.
+
+| Method and route | Behavior |
+| --- | --- |
+| GET `/api/v1/principals` | Owner's environment roster; ordinary people see their own agents |
+| POST `/api/v1/principals` | Create a profile with version 0 |
+| GET/PUT `/api/v1/principals/{id}` | Read/edit a profile; PUT requires its positive version |
+| GET `/api/v1/principals/{id}/tokens` | Metadata only, including revoked keys |
+| POST `/api/v1/principals/{id}/tokens` | Issue a key bound to this registered agent; secret returned once |
+| DELETE `/api/v1/tokens/{id}` | Revoke a key; supports a replay key |
+| GET `/api/v1/principals/configuration` | Owner reads principal kinds/WIP, roles and policy rules |
+| POST `/api/v1/roles` or `/api/v1/policies` | Owner creates a version-0 role or rule |
+| PUT `/api/v1/roles/{id}` or `/api/v1/policies/{id}` | Owner updates the current positive version |
+| DELETE `/api/v1/roles/{id}` or `/api/v1/policies/{id}` | Owner deletes with `If-Match`; assigned roles refuse |
+| PUT `/api/v1/settings/principals` | Owner updates versioned principal kinds and default WIP |
+
+Profile/key routes accept `account` in the query, defaulting to the caller for individual
+operations. Only the environment owner may name another account. Roster reads accept
+`role` and the returned `next` cursor as `after`; token pages accept their own returned
+cursor. Both return at most 100 rows. Roster cursors qualify the profile ID with its account.
+The browser's `/app/agents` uses this same roster and links roles to their members.
+
+Profile fields are `id`, `name`, `kind`, `roles`, `enabled`, `wip_limit` and `version`.
+Role fields are `id`, `description`, `version`. Rules and principal settings use the
+records returned by the configuration route. Mutations return `result` and `replayed`;
+replays also set `Idempotent-Replayed: true`. Current authority is checked before replay.
+Path/body IDs and header/body versions must agree; stale domain versions return 409.
+
+Token issuance takes `name`, `scopes`, `hours`, optional `projects` and `machines`, using
+the existing API-key scope vocabulary and permitted durations. It rejects request keys
+because the secret cannot be cached for replay. The response contains `info` and `token`;
+later reads contain only metadata. An uncertain issuance is resolved by inspecting and
+revoking the resulting key before explicitly issuing another. Responses are `no-store`.
+
+## Workflow definitions and board configuration
+
+These routes require a person who owns the selected account board and its complete
+workflow catalog. Configured shared boards and organization namespaces retain their
+existing configuration pages; a grant on one board does not disclose a whole catalog.
+
+| Method and route | Behavior |
+| --- | --- |
+| GET `/api/v1/workflows?project=demo` | Shared workflow definitions in this account's catalog |
+| POST `/api/v1/workflows?project=demo` | Create `{version: 0, workflow: {...}}` without binding the board |
+| PUT `/api/v1/workflows/{id}?project=demo` | Edit `{version, workflow}` and atomically update every bound board |
+| DELETE `/api/v1/workflows/{id}?project=demo` | Delete an unused definition with `If-Match` |
+| GET `/api/v1/projects/{project}/configuration` | Settings, workflow, their independent versions, and current shared binding |
+| PUT `/api/v1/projects/{project}/settings` | Save `{version, settings}` using the editable settings fields |
+| PUT `/api/v1/projects/{project}/workflow` | Save `{version, workflow}` for an unbound board |
+| POST `/api/v1/projects/{project}/workflow/bind` | Select `{version, workflow_id, workflow_version}` |
+| POST `/api/v1/projects/{project}/workflow/detach` | Save `{version}` to retain an independent copy of the current workflow |
+
+`version` on board routes is the matching `settings_version` or `workflow_version` from
+the configuration response. On catalog routes it is the definition's `version`. Binding
+checks both board and catalog versions. A shared definition cannot be removed while a
+board uses it. Editing a definition validates its effect on all using boards before any
+change commits. All writes support request keys and current-authority replay.
+
+Editable settings are lease TTL/min/max, maximum lease expiries, default WIP/priority,
+heartbeat hint, note kinds, priority labels, repo and environments. Standing approvals
+have their own operations and cannot be inserted into the settings editor.
+
+## Combined owner configuration
+
+`GET /api/v1/config?project=demo` returns the selected account board's `workflows`,
+the person's `projects`, environment `roles`, `policies`, and registered `principals`,
+plus `state_kinds`. `settings.principals` contains principal settings;
+`settings.board` contains the board configuration and shared binding. These are the same
+typed records as the individual routes. They are independently versioned reads; writes
+must send the version belonging to the setting or definition being changed.
+
+This combined administration route requires the environment owner and their own account
+board. An ordinary user can still use the individual routes allowed to them. Agent keys,
+seats, org/shared-board grants and foreign projects do not grant aggregate authority.
+Any failed section fails the request; the endpoint never returns missing sections as a
+successful partial configuration. Projects and principals have separate 100-row pages:
+send `next.projects` as `projects_after` and `next.principals` as `principals_after`.
+
+## Account project lifecycle
+
+People manage their own projects through `/app/projects` or these API routes. Agent
+credentials and seats cannot administer projects. One user's ownership does not grant
+access to another user's project or archived history, including on a self-hosted hub.
+
+| Method and route | Behavior |
+| --- | --- |
+| GET `/api/v1/projects` | Active projects; `retired=true` selects removed projects; `after` takes the returned cursor |
+| POST `/api/v1/projects` | Create an empty project with `{id, name, version: 0}` |
+| GET `/api/v1/projects/{project}` | Current project record and metadata version |
+| PUT `/api/v1/projects/{project}` | Save `{id, name, version}`; the immutable address must agree with the path |
+| DELETE `/api/v1/projects/{project}` | Remove the empty project with its positive version in `If-Match` |
+| GET `/api/v1/projects/archive/{generation}/events` | Owner-only retained events, paged by `after_seq` |
+
+Creation and editing accept paired `workflow_id` and `workflow_version` to select a
+shared definition. Omit both to use a private workflow; detaching retains the effective
+definition. Creation, selection, defaults, metadata, audit and retry receipt commit
+together. Workflow changes also advance project metadata versions so a stale project
+editor cannot undo a newer binding. Mutations return `{result, replayed}` and support
+the same request identity across browser and HTTP.
+
+Removal refuses any tasks (including completed ones), live project-scoped API keys,
+or shared definitions whose audit history originates in that project. Revoke those keys
+and remove unused definitions before removing the empty project. Account-wide keys
+continue to cover future projects by their existing contract. Removed boards retain
+history and receipts but cannot be used for ordinary reads or writes. Reusing an address
+creates a different `board_id`; old handles and mutation keys cannot act on that new
+generation. Archived records are addressed by their original `board_id`.
+
+## Machine access history
+
+Access history uses `GET /api/v1/access-requests`, `GET /api/v1/grants`, and
+`GET /api/v1/access-requests/{request-or-group-id}`. Lists return `{rows,next}` and
+accept `machine`, `principal`, `after`, and `limit` (1–100). Request lists additionally
+accept `status`; grant lists accept `live=true`. Pass `next` back unchanged as `after`.
+Lookup returns `{status,items}` with the actual approved terms, decision note and grant
+ending state. Optional `timeout_s` (0–25) waits for a pending decision, rechecking the
+original credential and principal on every iteration without retaining a transaction.
+
+The owner can review the environment. Other people see their account's records; registered
+agents see only their own principal. Keys require `machines.read` and a registered agent
+binding. Machine-limited keys must select an allowed machine for lists; lookup checks each
+result's machine. Project-limited keys cannot read environment access history. Seat headers
+cannot substitute an identity. Expired pending requests appear expired before the reaper
+runs. `live` describes a grant's lifetime/use state, not executable authority: machine
+pause, current policy, enrollment and task lease are checked again at admission.
+
+Human administration routes use the current person, same-origin checks and domain policy.
+Writes require `request_id` or `Idempotency-Key`; versioned actions also require `version`
+(or matching `If-Match`). Registered agents cannot use these routes even with manage scopes.
+
+| Route | Input and effect |
+|---|---|
+| GET `/api/v1/sandbox-policies` | Bounded `after`/`limit` page with acknowledged risk snapshots and current policy state |
+| PUT `/api/v1/sandbox-policies` | `version`, `allowed`, `acknowledged:[{id,version}]`, `expires_at`; optional `machine:{name,generation}`, otherwise environment-wide |
+| POST `/api/v1/grants/{id}/revoke` | Expected grant `version`; ends it and commits the broker notification intent |
+| GET `/api/v1/machines/{id}/access-control` | Current enrollment binding and independently versioned pause/GUI-stop control |
+| POST `/api/v1/machines/{id}/access-control` | `generation`, control `version`, and `action`: `pause`, `resume`, or `stop_gui` |
+| POST `/api/v1/resume-alerts/check` | Noncredential `ui_session_id`, `reason` (`sign_in`, `load`, `reload`, `idle_return`), optional `after`/`limit`; records risky-grant alerts |
+| GET `/api/v1/resume-alerts` | Current person's open alerts, optional `after`/`limit` |
+| POST `/api/v1/resume-alerts/{id}/{action}` | Alert `version`; `continue`, `revoke`, or `pause` commits the effect together with acknowledgment |
+
+Policy and machine administration require the environment owner. An enrolled machine's
+generation must match, including on retries after reenrollment. Resume does not restart
+retired operations; Continue acknowledges a warning and does not create a grant. These
+routes coordinate durable state. Broker delivery, native enforcement and browser resume
+callbacks are separate integration work; a queued interruption is not proof of delivery.
+
+## Environment catalogs
+
+The owner edits capability and setup catalogs at `/app/catalog`, linked from the Me
+page. The eight API kinds are `capabilities`, `risks`, `capability-risks`, `shell-profiles`,
+`grant-presets`, `docker-runtime-presets`, `router-endpoints`, and `chat-apps`.
+There is no customer-tenant catalog in the self-hosted app.
+
+`GET /api/v1/{kind}` returns `{rows, next}` with at most 100 records; pass `next` as
+`after`. `GET /api/v1/{kind}/{id}` returns a record. Authenticated users read their
+environment's catalog; API keys need `catalog.read`. Mutations require the current
+environment owner as a person. Agent credentials, seats and organization scopes cannot
+write catalogs. Session writes reject foreign origins.
+
+`POST /api/v1/{kind}` creates a typed record with `id`, `version: 0` and its fields.
+`PUT` or `PATCH /api/v1/{kind}/{id}` merges supplied editable fields with the existing
+record and requires its positive version. The complete merged record is validated.
+`DELETE` requires the version in `If-Match` and refuses referenced records. Writes
+return `{result, replayed}` and accept the standard request identity. Stale versions
+return a conflict; retries return the original committed result. IDs allow letters,
+digits, dots, colons, hyphens and underscores, at most 64 bytes.
+
+`POST /api/v1/grant-presets/{id}/default` with `{version}` atomically switches the
+default and advances affected versions. Default records cannot be deleted. Selecting or
+editing a default with full access, unsandboxed items or unrestricted desktop input also
+requires `confirm_default` equal to its exact ID and a live, acknowledged environment-wide
+unsandboxed policy. A machine-specific policy is insufficient. Confirmation is separate
+from the preset's editable fields and participates in retry identity. Policy is rechecked
+on replay. The browser editor exposes the same confirmation without prefilling it.
+Selecting a default configures future requests; it does not approve or execute them.
+The A04 access integration remains open. Likewise provider reference enforcement belongs
+to the A06 provider integration. Catalog definitions by themselves confer no execution
+permission.
+
+Preset files seed once per environment; ordinary reads do not recreate deleted rows
+or overwrite edits. Selector schemas are validated offline with bounded size and depth;
+external network/file references are refused. JSON fields and lists round-trip as JSON
+in the owner editor, preserving commas inside values and retaining refused drafts.
+
+## Machine access settings
+
+`GET /api/v1/access-settings` reads the environment owner's current access settings.
+`PUT` accepts the complete record with its current `version` and a `request_id` or
+`Idempotency-Key`; it returns `{result, replayed}`. Only a current authenticated person
+who owns the environment may use these routes. Agent credentials, seat aliases,
+organization scope and foreign-origin changes are refused. Conflicting/repeated headers
+are invalid requests. A successful write advances the version and records one audit
+event; retrying the same request returns its original result after live authorization.
+
+Fields and bounds:
+
+- `request_expiry_minutes`: 1–1440, default 30.
+- `deny_cooldown_minutes`: 0–1440, default 10.
+- `grant_duration_options`: 1–32 distinct valid durations; defaults to `once`, `task`,
+  `1h`, `8h`, `until_revoked`.
+- `unsandboxed_risk_ids`: 1–64 distinct existing risk IDs; required risks cannot be
+  deleted while these settings refer to them.
+- `authority_ttl_ms`: 1000–30000, default 10000, for the pending broker-authority integration.
+- `resume_alert_idle_minutes`: 1–60, default 15, for the pending browser resume integration.
+
+These settings do not create grants or enable unsandboxed execution. The request,
+approval, admission and native-enforcement integration remains under active development.
+
+## Reconnecting events and protocol discovery
+
+`GET /api/v1/stream?project=PROJECT` streams the same committed board events as the
+events endpoint. Each frame has `event: hub`, its sequence as `id`, and the JSON event
+as `data`. The initial retry hint is 3000 ms; idle connections receive a keepalive.
+Use `Last-Event-ID` or `after_seq` to resume after the last received event. If both are
+supplied they must agree. `from=now` starts at the current board head and cannot be
+combined with a replay cursor. Negative, malformed, duplicate-header or future cursors
+are refused before the stream opens. A project is always required.
+
+The stream subscribes before its first history read, catches up in pages of at most
+100 events, and periodically reads history even when no notification arrived. Its
+credential, API-key limits, registered agent and board access are checked before
+delivery, including delivery from a buffered page. Idle authority is checked every
+five seconds. Revocation, lost board access, changed identity or a failed store/auth
+check ends the stream; reconnect with current authority and the last received cursor.
+Already delivered bytes cannot be withdrawn. Dropping a client drops its reader; there
+is no detached producer or unbounded event queue. Responses are `no-store`, with proxy
+buffering disabled. A mutation replay produces no new event.
+
+`GET /api/v1/protocol?project=PROJECT` returns `agents_md`, the board's effective default
+`heartbeat_hint_ms`, and `connect` with the existing connector catalog rendered for the
+configured hub address. Actual claim responses determine the lease's heartbeat/expiry.
+The catalog format is shared with `/api/v1/connectors`; this prerelease does not reproduce
+the Go source's handwritten per-client snippets. No caller credential is returned.

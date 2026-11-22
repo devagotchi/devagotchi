@@ -58,6 +58,10 @@ allow = [
 # sqlx checks a Postgres server's certificate against it. Allowed for that crate only.
 exceptions = [
   { crate = "webpki-roots", allow = ["CDLA-Permissive-2.0"] },
+  # jsonschema -> referencing -> fluent-uri uses this ownership helper. Its shipped
+  # LICENSE is SPDX MIT-0 (MIT without the attribution condition), within our
+  # permissive-dependency policy: https://spdx.org/licenses/MIT-0.html.
+  { crate = "borrow-or-share", allow = ["MIT-0"] },
 ]
 
 [licenses.private]

@@ -321,7 +321,18 @@ mod bound {
                 assert_eq!(set["environments"], json!(["dev", "prod"]));
                 let (code, read, err) = run(&project, &account, None, &["settings"]);
                 assert_eq!(code, EXIT_OK, "{err}");
-                assert_eq!(read, set, "read back as set");
+                // Mutation responses also carry their durable retry receipt. A read
+                // returns the settings only; compare every setting after checking it.
+                let mut saved_settings = set.clone();
+                let receipt = saved_settings.as_object_mut().unwrap();
+                assert_eq!(receipt.remove("replayed"), Some(json!(false)));
+                assert!(
+                    receipt
+                        .remove("request_id")
+                        .and_then(|value| value.as_str().map(str::to_owned))
+                        .is_some_and(|id| id.starts_with("cli-"))
+                );
+                assert_eq!(read, saved_settings, "read back as set");
                 let (code, ticket, err) = run(
                     &project,
                     &account,

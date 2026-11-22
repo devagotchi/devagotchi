@@ -8,6 +8,8 @@ impl Site {
     /// section that does not check out stops the start, not a page later.
     pub(super) fn check(&self) -> Result<(), String> {
         self.info.check()?;
+        self.messages.app.catalog.check()?;
+        self.messages.app.access.check()?;
         self.landing.check()?;
         self.check_assets()?;
         self.info.landing.check(&self.landing)?;

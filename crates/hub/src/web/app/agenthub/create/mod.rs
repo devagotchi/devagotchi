@@ -40,8 +40,10 @@ pub(super) struct BoardForm {
     project: String,
 }
 
-#[derive(Default, Deserialize)]
+#[derive(Default, Deserialize, serde::Serialize)]
 pub(super) struct TaskForm {
+    #[serde(skip_serializing)]
+    request_id: Option<String>,
     #[serde(default)]
     title: String,
     #[serde(default)]
@@ -67,6 +69,8 @@ fn failure(error: &BridgeError) -> StatusCode {
         "account_store" | "board_store" | "board_damaged" | "runtime" => {
             StatusCode::SERVICE_UNAVAILABLE
         }
+        "request_conflict" => StatusCode::CONFLICT,
+        "request_retired" => StatusCode::GONE,
         "unknown_board" | "not_found" => StatusCode::NOT_FOUND,
         "not_granted" | "not_owner" | "read_only" | "not_permitted" => StatusCode::FORBIDDEN,
         _ => StatusCode::UNPROCESSABLE_ENTITY,
@@ -168,11 +172,12 @@ fn task_page(project: &str, form: &TaskForm, error: Option<&BridgeError>) -> Res
     let notice = error
         .map(|e| format!("<p role=\"alert\">{}</p>", escape(&e.message)))
         .unwrap_or_default();
+    let request = crate::web::app::requests::request_field(form.request_id.as_deref());
     rendered(
         error.map(failure).unwrap_or(StatusCode::OK),
         &copy.task,
         &format!(
-            "<h1>{}</h1><p>{}</p>{notice}<form method=\"post\" action=\"/app/boards/{}/new\" class=\"card stack\">\
+            "<h1>{}</h1><p>{}</p>{notice}<form method=\"post\" action=\"/app/boards/{}/new\" class=\"card stack\">{request}\
 <label>{}<input type=\"text\" name=\"title\" value=\"{}\" required maxlength=\"300\"></label>\
 <label>{}<textarea name=\"description\" rows=\"6\">{}</textarea></label>\
 <label>{}<input type=\"number\" name=\"priority\" value=\"{}\" required></label>\
@@ -220,6 +225,7 @@ async fn task_form(
             &project,
             &TaskForm {
                 priority: Some(settings.default_priority),
+                request_id: Some(crate::web::app::requests::request_id()),
                 ..Default::default()
             },
             None,
@@ -264,11 +270,25 @@ async fn create_task(
         ..Default::default()
     };
     let actor = subject.id.clone();
-    let result = tokio::task::spawn_blocking(move || board.create(&Actor::human(&actor), new))
-        .await
-        .unwrap_or_else(|_| Err(BridgeError::new("board_store", "the board did not answer")));
+    let requested = match form
+        .request_id
+        .as_deref()
+        .map(|key| board.requested(&actor, key, "create_task", &form))
+        .transpose()
+    {
+        Ok(requested) => requested,
+        Err(error) => return task_page(&project, &form, Some(&error)),
+    };
+    let result = tokio::task::spawn_blocking(move || {
+        let board = requested.as_ref().unwrap_or(&board);
+        board
+            .create(&Actor::human(&actor), new)
+            .map(|ticket| (ticket, board.hosted().replayed()))
+    })
+    .await
+    .unwrap_or_else(|_| Err(BridgeError::new("board_store", "the board did not answer")));
     let (target, outcome) = match &result {
-        Ok(ticket) => (ticket.id.as_str(), "ok"),
+        Ok((ticket, _)) => (ticket.id.as_str(), "ok"),
         Err(error) => ("", error.code.as_str()),
     };
     state
@@ -276,9 +296,9 @@ async fn create_task(
         .record_completion(&subject, "board_create", &project, target, outcome)
         .await;
     match result {
-        Ok(ticket) => see_other(
+        Ok((ticket, replayed)) => crate::web::app::requests::redirect(
             &format!("/app/tickets/{}/{}", encode(&project), encode(&ticket.id)),
-            &[],
+            replayed,
         ),
         Err(error) => task_page(&project, &form, Some(&error)),
     }

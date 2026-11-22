@@ -321,15 +321,15 @@ class SecurityBoundaryTests(unittest.TestCase):
         outside_link = f.workspace / 'outside-link'
         outside_link.symlink_to(outside, target_is_directory=True)
         variants = [
-            ('relative executable', {'executable': Path(f.executable).name}),
+            ('relative ungranted executable', {'executable': Path(shell).name}),
             ('ungranted executable', {'executable': str(Path(shell).resolve())}),
             ('outside workspace cwd', {'cwd': str(outside)}),
             ('case-sensitive sibling cwd', {'cwd': str(case_sibling)}),
             ('partial-name sibling cwd', {'cwd': str(prefix_sibling)}),
             ('symlink to outside cwd', {'cwd': str(outside_link)}),
-            ('relative cwd', {'cwd': '.'}),
+            ('relative outside cwd', {'cwd': '../outside'}),
             ('zero deadline', {'deadline_ms': 0}),
-            ('oversized deadline', {'deadline_ms': 300001}),
+            ('oversized deadline', {'deadline_ms': 24 * 60 * 60 * 1000 + 1}),
             ('unknown permission claim', {'approved': True}),
         ]
         for label, changes in variants:
@@ -338,7 +338,7 @@ class SecurityBoundaryTests(unittest.TestCase):
                 markers.append(marker)
                 code = f'from pathlib import Path; Path({str(marker)!r}).write_text("executed")'
                 params = f.start_input(code, **changes)
-                if label == 'ungranted executable':
+                if label in ('ungranted executable', 'relative ungranted executable'):
                     # The shell would create a marker if mistakenly launched.
                     import shlex
                     params['args'] = ['-c', f'printf executed > {shlex.quote(str(marker))}']
@@ -356,6 +356,23 @@ class SecurityBoundaryTests(unittest.TestCase):
         for marker in markers:
             self.assertFalse(marker.exists(), f'Rejected request created {marker.name}')
         self.assert_responsive()
+
+    def test_normalized_granted_paths_and_current_deadline_execute(self):
+        f = self.fixture.start()
+        for changes in ({'executable': Path(f.executable).name}, {'cwd': '.'},
+                        {'deadline_ms': 24 * 60 * 60 * 1000}):
+            with self.subTest(changes=changes):
+                reply = f.call('operation_start', f.start_input('print("granted")', **changes))
+                self.assertEqual(reply['status'], 'ok', reply)
+                operation = reply['value']['value']['operation']
+                self.assertEqual(operation['executable'], f.executable)
+                self.assertEqual(operation['cwd'], str(f.workspace))
+                until = time.monotonic() + 5
+                while operation['state'] in ('accepted', 'running') and time.monotonic() < until:
+                    time.sleep(0.02)
+                    operation = f.operation(operation['operation_id'])
+                self.assertEqual(operation['state'], 'succeeded', operation)
+                self.assertEqual(operation['exit_code'], 0, operation)
 
     def test_only_one_request_is_processed_per_connection(self):
         f = self.fixture.start()

@@ -7,6 +7,16 @@ use serde::{Deserialize, Serialize};
 
 use crate::OperationView;
 
+/// Receipt for an explicitly renewed, already admitted hosted process.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct HeartbeatOutput {
+    pub operation_id: String,
+    /// Acknowledged authority deadline, in Unix milliseconds. Does not extend the
+    /// program's own execution deadline or its task lease.
+    pub expires_at_ms: i64,
+}
+
 /// The account of a caller on this machine itself (its adapter over local IPC): the machine's
 /// own user, who owns everything its broker runs.
 pub const LOCAL_ACCOUNT: &str = "local";

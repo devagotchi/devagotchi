@@ -1,11 +1,14 @@
 mod ahead;
 mod audited;
+pub(super) mod cli_retries;
+mod heartbeat_progress;
 mod hosted;
 mod notes;
+mod provider_receipts;
 mod scanned;
 mod searched;
 mod served;
-mod serving;
+pub(super) mod serving;
 mod settings;
 mod sourced;
 mod standalone;

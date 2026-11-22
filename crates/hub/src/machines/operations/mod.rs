@@ -20,6 +20,43 @@ use inputs::*;
 #[tool_router(router = operations_router, vis = "pub(crate)")]
 impl Hub {
     #[tool(
+        name = "operation_heartbeat",
+        description = describe::OPERATION_HEARTBEAT,
+        title = "Keep an interactive operation authorized",
+        annotations(
+            title = "Keep an interactive operation authorized",
+            read_only_hint = false,
+            destructive_hint = false,
+            idempotent_hint = false,
+            open_world_hint = false
+        )
+    )]
+    async fn operation_heartbeat(
+        &self,
+        Parameters(input): Parameters<GetRouted>,
+        context: RequestContext<RoleServer>,
+    ) -> Result<Json<devagotchi_contracts::HeartbeatOutput>, Json<BridgeError>> {
+        let subject = self.subject(&context)?;
+        let result = tokio::select! {
+            biased;
+            _ = context.ct.cancelled() => Err(BridgeError::new("request_cancelled", "stopped waiting; a heartbeat already sent may have renewed permission")),
+            result = self.heartbeat_granted(&input.machine, &input.operation_id, &context) => result,
+        };
+        let code = result
+            .as_ref()
+            .map_or_else(|error| error.code.as_str(), |_| "ok");
+        self.record_completion(
+            &subject,
+            "operation_heartbeat",
+            &input.machine,
+            &input.operation_id,
+            code,
+        )
+        .await;
+        result.map(Json).map_err(Json)
+    }
+
+    #[tool(
         name = "operation_start",
         description = describe::OPERATION_START,
         title = "Run a program on a machine",

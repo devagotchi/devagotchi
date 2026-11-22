@@ -18,6 +18,51 @@ use crate::{ops::audit::Recorded, tenancy::tests::tenants::hosted_with};
 
 type Device = WebSocketStream<MaybeTlsStream<tokio::net::TcpStream>>;
 
+#[tokio::test]
+async fn remote_link_socket_routes_granted_envelopes_and_answers() {
+    use devagotchi_contracts::{
+        REMOTE_ACCESS_VERSION, RemoteReply, RemoteRequest, RemoteWireResponse,
+    };
+    let hosted = or_skip!(hosted_with(None, |_, _| serde_json::json!({})));
+    let code = hosted.devices.issue_code(MACHINE, [77; 16]).await.unwrap();
+    let key = SigningKey::from_bytes(&[77; 32]);
+    let mut device = join_mode(&hosted.url, &key, Some(&code), Some(REMOTE_ACCESS_VERSION)).await;
+    let links = hosted.hub.links.clone();
+    let asked = tokio::spawn(async move {
+        links
+            .call_remote(MACHINE, RemoteRequest::Capabilities {})
+            .await
+    });
+    let Some(HubFrame::RemoteCall { id, request }) = next(&mut device).await else {
+        panic!("expected granted call")
+    };
+    assert!(matches!(request.remote, RemoteRequest::Capabilities {}));
+    say(
+        &mut device,
+        &LinkFrame::RemoteResult {
+            id,
+            response: RemoteWireResponse::Ok(RemoteReply::Capabilities {
+                version: REMOTE_ACCESS_VERSION,
+                os: "windows".into(),
+                sandbox_levels: vec![],
+            }),
+        },
+    )
+    .await;
+    assert!(matches!(
+        tokio::time::timeout(STEP, asked)
+            .await
+            .unwrap()
+            .unwrap()
+            .unwrap(),
+        RemoteReply::Capabilities {
+            version: REMOTE_ACCESS_VERSION,
+            ..
+        }
+    ));
+    device.close(None).await.unwrap();
+}
+
 /// The link broker the harness's config names.
 const MACHINE: &str = "wi1";
 /// Longest any step may take before the test fails instead of hanging.
@@ -40,6 +85,15 @@ async fn say(device: &mut Device, frame: &LinkFrame) {
 
 /// Dial `/link`, prove `key` over the challenge (with `code` the first time) and be welcomed.
 async fn join(url: &str, key: &SigningKey, code: Option<&str>) -> Device {
+    join_mode(url, key, code, None).await
+}
+
+async fn join_mode(
+    url: &str,
+    key: &SigningKey,
+    code: Option<&str>,
+    remote_access: Option<u32>,
+) -> Device {
     let socket = format!("{}/link", url.replacen("http://", "ws://", 1));
     let (mut device, _) = tokio_tungstenite::connect_async(socket).await.unwrap();
     let Some(HubFrame::Challenge { nonce, hub }) = next(&mut device).await else {
@@ -57,10 +111,20 @@ async fn join(url: &str, key: &SigningKey, code: Option<&str>) -> Device {
         enroll_code: code.map(str::to_string),
         build: Some("main-aaaaaaa".into()),
         kind: None,
+        remote_access,
     };
     say(&mut device, &hello).await;
     match next(&mut device).await {
-        Some(HubFrame::Welcome { device: name }) => assert_eq!(name, MACHINE),
+        Some(HubFrame::Welcome {
+            device: name,
+            generation,
+        }) => {
+            assert_eq!(name, MACHINE);
+            assert_eq!(
+                generation.is_some(),
+                remote_access == Some(devagotchi_contracts::REMOTE_ACCESS_VERSION)
+            );
+        }
         other => panic!("expected a welcome, got {other:?}"),
     }
     device
@@ -140,6 +204,7 @@ async fn a_live_link_answers_calls_and_a_hello_mid_session_ends_it_as_protocol_e
         enroll_code: None,
         build: None,
         kind: None,
+        remote_access: None,
     };
     say(&mut device, &again).await;
     assert!(next(&mut device).await.is_none(), "the hub closed the link");

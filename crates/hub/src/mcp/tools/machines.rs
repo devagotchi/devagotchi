@@ -25,6 +25,7 @@ impl Hub {
         let plan = self.held_plan(&subject).map(|plan| plan.id);
         let result = async {
             Ok(WhoAmI {
+                board_request_receipts: true,
                 access: subject.access.as_ref().map(|access| {
                     if access.waiting {
                         crate::tenancy::access::WAITING

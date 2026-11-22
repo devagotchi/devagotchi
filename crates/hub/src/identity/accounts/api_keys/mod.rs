@@ -19,7 +19,13 @@ use crate::{
     store::{Failed, transaction},
 };
 
+mod access;
+#[cfg(test)]
+mod corruption_tests;
+mod managed;
+mod revocation;
 mod scope;
+mod stored;
 #[cfg(test)]
 mod tests;
 
@@ -92,7 +98,7 @@ impl KeyLimits {
 }
 
 /// A key as its owner sees it.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
 pub struct ApiKey {
     pub id: String,
     pub name: String,
@@ -101,6 +107,8 @@ pub struct ApiKey {
     pub scopes: Vec<Scope>,
     pub projects: Vec<String>,
     pub machines: Vec<String>,
+    /// Immutable credential binding, preserved when the key is replaced.
+    pub agent_id: Option<String>,
     /// Unix seconds.
     pub created_at: u64,
     pub expires_at: u64,
@@ -121,6 +129,7 @@ pub struct NewKey {
     pub scopes: Vec<Scope>,
     pub projects: Vec<String>,
     pub machines: Vec<String>,
+    pub agent_id: Option<String>,
     pub hours: u64,
 }
 
@@ -175,14 +184,6 @@ fn hint_of(secret: &str) -> String {
         .collect()
 }
 
-fn list(raw: &str) -> Vec<String> {
-    serde_json::from_str(raw).unwrap_or_default()
-}
-
-fn scopes_of(raw: &str) -> Vec<Scope> {
-    serde_json::from_str(raw).unwrap_or_default()
-}
-
 fn key_from_row(row: &sqlx::any::AnyRow) -> Result<ApiKey, sqlx::Error> {
     let at = |name: &str| -> Result<Option<u64>, sqlx::Error> {
         Ok(row
@@ -193,9 +194,10 @@ fn key_from_row(row: &sqlx::any::AnyRow) -> Result<ApiKey, sqlx::Error> {
         id: row.try_get("id")?,
         name: row.try_get("name")?,
         hint: row.try_get("hint")?,
-        scopes: scopes_of(&row.try_get::<String, _>("scopes")?),
-        projects: list(&row.try_get::<String, _>("projects")?),
-        machines: list(&row.try_get::<String, _>("machines")?),
+        scopes: stored::scopes(row)?,
+        projects: stored::names(row, "projects")?,
+        machines: stored::names(row, "machines")?,
+        agent_id: row.try_get("agent_id")?,
         created_at: at("created_at")?.unwrap_or(0),
         expires_at: at("expires_at")?.unwrap_or(0),
         last_used_at: at("last_used_at")?,
@@ -205,7 +207,7 @@ fn key_from_row(row: &sqlx::any::AnyRow) -> Result<ApiKey, sqlx::Error> {
 
 macro_rules! key_columns {
     () => {
-        "id, name, hint, scopes, projects, machines, created_at, expires_at, last_used_at, revoked_at"
+        "id, name, hint, scopes, projects, machines, agent_id, created_at, expires_at, last_used_at, revoked_at"
     };
 }
 
@@ -219,6 +221,9 @@ impl Accounts {
         secret: &str,
         now: u64,
     ) -> Result<ApiKey, Failed> {
+        if let Some(id) = &new.agent_id {
+            super::agents::live_in(connection, tenant, account, id).await?;
+        }
         let live: i64 = sqlx::query_scalar(
             "SELECT COUNT(*) FROM auth_api_keys WHERE tenant_id = $1 AND account = $2
              AND revoked_at IS NULL AND expires_at > $3",
@@ -240,6 +245,7 @@ impl Accounts {
             scopes: new.scopes.clone(),
             projects: new.projects.clone(),
             machines: new.machines.clone(),
+            agent_id: new.agent_id.clone(),
             created_at: now,
             expires_at: now + new.hours * 3600,
             last_used_at: None,
@@ -248,8 +254,8 @@ impl Accounts {
         let json = |value: &[String]| serde_json::to_string(value).expect("names json");
         sqlx::query(
             "INSERT INTO auth_api_keys (tenant_id, id, account, name, hash, hint, scopes, projects,
-               machines, created_at, expires_at)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)",
+               machines, created_at, expires_at, agent_id)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)",
         )
         .bind(tenant)
         .bind(&key.id)
@@ -262,6 +268,7 @@ impl Accounts {
         .bind(json(&key.machines))
         .bind(secs(now))
         .bind(secs(key.expires_at))
+        .bind(&key.agent_id)
         .execute(&mut *connection)
         .await?;
         let detail = format!(
@@ -347,15 +354,6 @@ impl Accounts {
         Ok(())
     }
 
-    /// End a key at once.
-    pub async fn revoke_key(&self, tenant: &str, account: &str, id: &str) -> BridgeResult<()> {
-        let now = now_secs();
-        transaction!(&self.store, |connection| {
-            self.store.scope(connection, tenant).await?;
-            self.end_key(connection, tenant, account, id, now).await
-        })
-    }
-
     /// End a key and make another with the same limits and the same length as it was given.
     pub async fn rotate_key(
         &self,
@@ -390,6 +388,7 @@ impl Accounts {
                 scopes: old.scopes,
                 projects: old.projects,
                 machines: old.machines,
+                agent_id: old.agent_id,
                 hours: old.expires_at.saturating_sub(old.created_at) / 3600,
             };
             self.insert_key(connection, tenant, account, &new, &secret, now)
@@ -419,7 +418,7 @@ impl Accounts {
             let row = sqlx::query(concat!(
                 "SELECT ",
                 account_columns_a!(),
-                ", k.id AS key_id, k.name AS key_name, k.scopes, k.projects, k.machines
+                ", k.id AS key_id, k.name AS key_name, k.scopes, k.projects, k.machines, k.agent_id
                  FROM auth_api_keys k JOIN auth_accounts a ON a.id = k.account
                  WHERE k.hash = $1 AND k.revoked_at IS NULL AND k.expires_at > $2
                    AND a.disabled_at IS NULL"
@@ -434,14 +433,28 @@ impl Accounts {
             let mut account = account_row(&row)?;
             let limits = KeyLimits {
                 id: row.try_get("key_id")?,
-                scopes: scopes_of(&row.try_get::<String, _>("scopes")?),
-                projects: list(&row.try_get::<String, _>("projects")?),
-                machines: list(&row.try_get::<String, _>("machines")?),
+                scopes: stored::scopes(&row)?,
+                projects: stored::names(&row, "projects")?,
+                machines: stored::names(&row, "machines")?,
             };
             let name: String = row.try_get("key_name")?;
             if self.lapsed(&account, now) {
                 return Ok(None);
             }
+            let agent_id: Option<String> = row.try_get("agent_id")?;
+            let principal = if let Some(id) = agent_id {
+                match super::agents::live_in(connection, &tenant, &account.id, &id).await {
+                    Ok(agent) => Some(agent.principal()),
+                    Err(Failed::Refused(error))
+                        if matches!(error.code.as_str(), "agent_disabled" | "not_found") =>
+                    {
+                        return Ok(None);
+                    }
+                    Err(error) => return Err(error),
+                }
+            } else {
+                None
+            };
             tenants::touch(connection, &mut account, now).await?;
             let admitted = self.settle_in(connection, &mut account, now).await?;
             sqlx::query(
@@ -453,12 +466,13 @@ impl Accounts {
             .bind(secs(now.saturating_sub(60)))
             .execute(&mut *connection)
             .await?;
-            Ok(Some((account, limits, name, admitted)))
+            Ok(Some((account, limits, name, admitted, principal)))
         })?;
-        Ok(found.map(|(account, limits, name, admitted)| {
+        Ok(found.map(|(account, limits, name, admitted, principal)| {
             self.announce(admitted);
             let mut subject = self.subject(&account, "key");
             subject.client = Some(name);
+            subject.agent = principal;
             (subject, limits)
         }))
     }

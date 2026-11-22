@@ -165,12 +165,13 @@ unannotated = [t["name"] for t in listed if not t.get("title") or not (
     and (t["annotations"]["readOnlyHint"] or "destructiveHint" in t["annotations"]))]
 check("every tool has a title and annotations", not unannotated, ", ".join(unannotated))
 broker_tools = ["approval_request", "approval_wait", "connection_call", "connections", "create_directory", "dictionary_get", "edit_file", "get_config", "get_file_info", "get_recent_tool_calls",
-                "get_usage_stats", "kill_process", "lexicon_handoff", "lexicon_propose", "lexicon_resolve", "lexicon_review", "list_directory", "list_processes", "machine_add", "machine_inspect", "machine_update", "machines", "move_file", "operation_cancel", "operation_get", "operation_input",
+                "get_usage_stats", "kill_process", "lexicon_handoff", "lexicon_propose", "lexicon_resolve", "lexicon_review", "list_directory", "list_processes", "machine_add", "machine_inspect", "machine_update", "machines", "move_file", "operation_cancel", "operation_get", "operation_heartbeat", "operation_input",
                 "operation_list", "operation_read", "operation_resize", "operation_start", "operation_wait", "read_file", "read_image", "read_multiple_files", "read_url", "run", "search_files", "set_config_value", "whoami",
                 "workflow_cancel", "workflow_list", "workflow_start", "workflow_status", "workflow_wait",
                 "write_file"]
 board_tools = [t for t in tools if t.startswith("board_")]
-check("tools", [t for t in tools if not t.startswith("board_")] == broker_tools and len(board_tools) == 24,
+access_tools = ["capabilities_list", "machines_list", "my_grants", "request_access", "wait_for_access"]
+check("tools", [t for t in tools if not t.startswith("board_")] == sorted(broker_tools + access_tools) and len(board_tools) == 24,
       ", ".join(tools))
 
 is_error, me = call("whoami", {})

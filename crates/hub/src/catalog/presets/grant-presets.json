@@ -1,0 +1,25 @@
+{"kind": "grant-presets", "rows": [
+  {"id": "task-scoped", "label": "For this task", "description": "Run commands in the named folders inside the sandbox until the task ends. The default.",
+   "items": [{"capability": "exec", "selector": {}, "sandbox_level": "workspace-write"}], "duration": "task", "full_access": false, "requires_policy": null},
+  {"id": "read-only-look", "label": "Just look", "description": "Read files and run read-only commands; no writes, no network.",
+   "items": [{"capability": "fs.read", "selector": {}, "sandbox_level": "read-only"}, {"capability": "exec", "selector": {}, "sandbox_level": "read-only"}],
+   "duration": "task", "full_access": false, "requires_policy": null},
+  {"id": "docker-setup", "label": "Container runtime setup", "description": "Run only the container runtime and its installer, reach the vendor hosts, read the download folder. Ends with the task.",
+   "items": [
+     {"capability": "exec", "sandbox_level": "workspace-write", "selector": {
+       "argv_prefix": [["docker"], ["podman"], ["dockerd-rootless-setuptool.sh"], ["wsl", "--status"], ["winget", "install"], ["brew", "install"], ["id"], ["uname"]],
+       "hosts": ["registry-1.docker.io", "auth.docker.io", "production.cloudflare.docker.com", "quay.io", "cdn01.quay.io", "cdn02.quay.io", "cdn03.quay.io", "download.docker.com"]}},
+     {"capability": "fs.read", "sandbox_level": "read-only", "selector": {"paths": ["~/Downloads"]}}],
+   "duration": "task", "full_access": false, "requires_policy": null},
+  {"id": "gui-assist", "label": "Help on screen", "description": "See one screen and use mouse and keyboard only in the apps the agent names, until the task ends.",
+   "items": [{"capability": "gui.observe", "selector": {"monitors": ["primary"], "windows": "any"}, "sandbox_level": "desktop"},
+     {"capability": "gui.input", "selector": {"apps": []}, "sandbox_level": "desktop"},
+     {"capability": "gui.window", "selector": {"apps": []}, "sandbox_level": "desktop"}],
+   "duration": "task", "full_access": false, "requires_policy": null},
+  {"id": "experimental-full-access", "label": "Experimental: full access", "description": "Everything, without a sandbox, until you revoke it. Shows an alert every time a session resumes.",
+   "items": [{"capability": "exec", "selector": {}, "sandbox_level": "unsandboxed"}, {"capability": "fs.read", "selector": {}, "sandbox_level": "unsandboxed"},
+     {"capability": "fs.write", "selector": {}, "sandbox_level": "unsandboxed"}, {"capability": "proc.interactive", "selector": {}, "sandbox_level": "unsandboxed"},
+     {"capability": "gui.observe", "selector": {"windows": "any"}, "sandbox_level": "unsandboxed"}, {"capability": "gui.input", "selector": {"apps": "any"}, "sandbox_level": "unsandboxed"},
+     {"capability": "gui.window", "selector": {"apps": "any"}, "sandbox_level": "unsandboxed"}, {"capability": "gui.app", "selector": {"apps": "any"}, "sandbox_level": "unsandboxed"}],
+   "duration": "until_revoked", "full_access": true, "requires_policy": "unsandboxed"}
+]}

@@ -63,6 +63,7 @@ impl Links {
             enroll_code,
             build,
             kind,
+            remote_access,
         }) = hello
         else {
             return refuse("protocol_error", "expected a hello frame".into());
@@ -130,6 +131,7 @@ impl Links {
                 joined_for: bound.owner,
                 build,
                 container,
+                remote_access,
             });
         }
         match self.devices.get(&device).await? {
@@ -153,6 +155,7 @@ impl Links {
                 joined_for: None,
                 build,
                 container,
+                remote_access,
             }),
         }
     }

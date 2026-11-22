@@ -4,9 +4,9 @@ use devagotchi_contracts::{
     BridgeError, BrokerCapabilities, CapabilitiesInput, ChangesInput, ConfigGetInput,
     ConfigSetInput, ConfigView, DirectoryInput, FileContent, FileEditInput, FileInfo,
     FileInfoInput, FileListInput, FileListing, FileMoveInput, FileReadInput, FileSearchInput,
-    FileWriteInput, FileWritten, GetInput, InputSent, ListInput, OperationView, OperationsPage,
-    OutputPage, ProcessKillInput, ProcessKilled, ProcessListInput, ProcessPage, ReadInput,
-    ResizeInput, Revision, SearchPage, SendInput, StartInput, StartOutput, UrlContent,
+    FileWriteInput, FileWritten, GetInput, HeartbeatOutput, InputSent, ListInput, OperationView,
+    OperationsPage, OutputPage, ProcessKillInput, ProcessKilled, ProcessListInput, ProcessPage,
+    ReadInput, ResizeInput, Revision, SearchPage, SendInput, StartInput, StartOutput, UrlContent,
     UrlReadInput, WaitInput,
 };
 use schemars::{JsonSchema, generate::SchemaSettings};
@@ -24,6 +24,7 @@ struct BrokerContracts {
     send_input: SendInput,
     resize_input: ResizeInput,
     input_sent: InputSent,
+    heartbeat_output: HeartbeatOutput,
     get_input: GetInput,
     read_input: ReadInput,
     list_input: ListInput,

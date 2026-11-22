@@ -1,0 +1,389 @@
+[
+  {
+    "path": "bridge/agentguide/guide.go",
+    "packet": "C01",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "ForMode",
+      "Register"
+    ]
+  },
+  {
+    "path": "bridge/agentguide/guide_test.go",
+    "packet": "C01",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [
+      "TestContractOverMCP"
+    ],
+    "exported_functions": [
+      "TestContractOverMCP"
+    ]
+  },
+  {
+    "path": "bridge/config/config.go",
+    "packet": "C01",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Dir",
+      "Load",
+      "Save",
+      "WriteToken",
+      "ReadToken",
+      "UserDir"
+    ]
+  },
+  {
+    "path": "bridge/config/enrollment.go",
+    "packet": "C01",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "CheckEnrollmentStorage",
+      "SaveEnrollment",
+      "LoadConnection"
+    ]
+  },
+  {
+    "path": "bridge/config/enrollment_test.go",
+    "packet": "C01",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [
+      "TestEnrollmentCommitsOriginAndTokenTogether",
+      "TestEnrollmentRejectsPartialStateInsteadOfLegacyFallback",
+      "TestEnrollmentRejectsReadableStateAndSymlinks",
+      "TestMigrationDuringLegacyReadCannotMixCredentials"
+    ],
+    "exported_functions": [
+      "TestEnrollmentCommitsOriginAndTokenTogether",
+      "TestEnrollmentRejectsPartialStateInsteadOfLegacyFallback",
+      "TestEnrollmentRejectsReadableStateAndSymlinks",
+      "TestMigrationDuringLegacyReadCannotMixCredentials"
+    ]
+  },
+  {
+    "path": "bridge/config/state_windows_test.go",
+    "packet": "C01",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [
+      "TestWindowsHubStateFailsClosedUntilACLStorage"
+    ],
+    "exported_functions": [
+      "TestWindowsHubStateFailsClosedUntilACLStorage"
+    ]
+  },
+  {
+    "path": "bridge/hubclient/client.go",
+    "packet": "C01",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "New",
+      "Enroll",
+      "Poll",
+      "Send",
+      "GrantLive",
+      "GUIReady"
+    ]
+  },
+  {
+    "path": "bridge/hubclient/transport.go",
+    "packet": "C01",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "ValidateURL",
+      "ConnectWS"
+    ]
+  },
+  {
+    "path": "bridge/hubclient/transport_test.go",
+    "packet": "C01",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [
+      "TestOriginPolicy",
+      "TestRedirectCannotReplayEnrollmentOrToken",
+      "TestTLSAndWebSocketUseConfiguredTrust",
+      "TestUnsafeOriginRejectedBeforeNetwork",
+      "TestUpstreamErrorBodyIsNotReturned"
+    ],
+    "exported_functions": [
+      "TestOriginPolicy",
+      "TestRedirectCannotReplayEnrollmentOrToken",
+      "TestTLSAndWebSocketUseConfiguredTrust",
+      "TestUnsafeOriginRejectedBeforeNetwork",
+      "RoundTrip",
+      "TestUpstreamErrorBodyIsNotReturned"
+    ]
+  },
+  {
+    "path": "bridge/mcpserve/server.go",
+    "packet": "C01",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "New",
+      "Close",
+      "RunStdio"
+    ]
+  },
+  {
+    "path": "bridge/runner/grant_test.go",
+    "packet": "C01",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [
+      "TestExpiredGrantCacheCannotAuthorizeDuringOutage",
+      "TestGrantVersionMustMatchAfterNarrowing",
+      "TestWebSocketCloseReasonIsNotLogged"
+    ],
+    "exported_functions": [
+      "TestExpiredGrantCacheCannotAuthorizeDuringOutage",
+      "TestGrantVersionMustMatchAfterNarrowing",
+      "TestWebSocketCloseReasonIsNotLogged"
+    ]
+  },
+  {
+    "path": "bridge/runner/ws.go",
+    "packet": "C01",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "WSRun"
+    ]
+  },
+  {
+    "path": "server/internal/auth/auth.go",
+    "packet": "C01",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "New",
+      "Bearer",
+      "Identify",
+      "Token"
+    ]
+  },
+  {
+    "path": "server/internal/auth/browser.go",
+    "packet": "C01",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Wrap"
+    ]
+  },
+  {
+    "path": "server/internal/browserauth/atomic_test.go",
+    "packet": "C01",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [
+      "TestOIDCSessionAuditAtomicity",
+      "TestOIDCLogoutAuditAtomicity"
+    ],
+    "exported_functions": [
+      "TestOIDCSessionAuditAtomicity",
+      "TestOIDCLogoutAuditAtomicity"
+    ]
+  },
+  {
+    "path": "server/internal/browserauth/boundaries_test.go",
+    "packet": "C01",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [
+      "TestOIDCDiscoveryAndRedirects",
+      "TestOIDCAlgorithmAndAuthorizedParty",
+      "TestOIDCRouteDefaultDeny"
+    ],
+    "exported_functions": [
+      "TestOIDCDiscoveryAndRedirects",
+      "TestOIDCAlgorithmAndAuthorizedParty",
+      "TestOIDCRouteDefaultDeny"
+    ]
+  },
+  {
+    "path": "server/internal/browserauth/guard.go",
+    "packet": "C01",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Identify",
+      "Wrap"
+    ]
+  },
+  {
+    "path": "server/internal/browserauth/guard_test.go",
+    "packet": "C01",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [
+      "TestOIDCNoAlternateAuthentication",
+      "TestOIDCLogoutExpiryAndOwnerDisable",
+      "TestOIDCLogoutCancelsActiveStream"
+    ],
+    "exported_functions": [
+      "TestOIDCNoAlternateAuthentication",
+      "TestOIDCLogoutExpiryAndOwnerDisable",
+      "TestOIDCLogoutCancelsActiveStream"
+    ]
+  },
+  {
+    "path": "server/internal/browserauth/login_test.go",
+    "packet": "C01",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [
+      "TestOIDCIdentityAndReplay",
+      "TestOIDCRejectsWrongIdentityClaims",
+      "TestOIDCStateAndSignature",
+      "TestOIDCEmailIsNotAnAuthority"
+    ],
+    "exported_functions": [
+      "TestOIDCIdentityAndReplay",
+      "TestOIDCRejectsWrongIdentityClaims",
+      "TestOIDCStateAndSignature",
+      "TestOIDCEmailIsNotAnAuthority"
+    ]
+  },
+  {
+    "path": "server/internal/browserauth/service.go",
+    "packet": "C01",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "New"
+    ]
+  },
+  {
+    "path": "server/internal/config/config.go",
+    "packet": "C01",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Load"
+    ]
+  },
+  {
+    "path": "server/internal/config/oidc.go",
+    "packet": "C01",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "HTTPSOrigin",
+      "CheckOIDC"
+    ]
+  },
+  {
+    "path": "server/internal/config/oidc_test.go",
+    "packet": "C01",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [
+      "TestOIDCRequiresPinnedIdentityAndMTLS"
+    ],
+    "exported_functions": [
+      "TestOIDCRequiresPinnedIdentityAndMTLS"
+    ]
+  },
+  {
+    "path": "server/internal/devapi/build.go",
+    "packet": "C01",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Build"
+    ]
+  },
+  {
+    "path": "server/internal/devapi/mcp_access.go",
+    "packet": "C01",
+    "routes_literal": [],
+    "tools_literal": [
+      "machines_list",
+      "capabilities_list",
+      "request_access",
+      "wait_for_access",
+      "my_grants",
+      "role_route"
+    ],
+    "tests": [],
+    "exported_functions": []
+  },
+  {
+    "path": "server/internal/httpapi/server.go",
+    "packet": "C01",
+    "routes_literal": [
+      "GET /healthz"
+    ],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Handler"
+    ]
+  },
+  {
+    "path": "server/internal/store/principal_id.go",
+    "packet": "C01",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "PrincipalByID"
+    ]
+  },
+  {
+    "path": "server/internal/transport/startup_test.go",
+    "packet": "C01",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [
+      "TestHostedStartupLoadsMTLS"
+    ],
+    "exported_functions": [
+      "TestHostedStartupLoadsMTLS"
+    ]
+  },
+  {
+    "path": "server/internal/transport/tls.go",
+    "packet": "C01",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "TLS"
+    ]
+  },
+  {
+    "path": "server/internal/transport/tls_test.go",
+    "packet": "C01",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [
+      "TestHubBackendRequiresTrustedEdgeCertificate"
+    ],
+    "exported_functions": [
+      "TestHubBackendRequiresTrustedEdgeCertificate"
+    ]
+  }
+]

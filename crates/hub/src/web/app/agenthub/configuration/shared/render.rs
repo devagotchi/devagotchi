@@ -27,10 +27,16 @@ fn button(text: &str) -> String {
     format!("<button type=\"submit\">{}</button>", escape(text))
 }
 fn form(project: &str, action: &str, body: String) -> String {
+    form_with_key(project, action, body, None)
+}
+fn form_with_key(project: &str, action: &str, body: String, key: Option<&str>) -> String {
     format!(
         "<form class=\"stack\" method=\"post\" action=\"{}\">{}{body}</form>",
         href(project),
         hidden("action", action)
+            + &crate::web::app::requests::request_field(Some(
+                key.unwrap_or(&crate::web::app::requests::request_id())
+            ))
     )
 }
 fn used_by(names: Option<&[String]>) -> String {
@@ -95,6 +101,16 @@ pub(super) fn catalog(
     let site = pages::site();
     let c = &site.messages.app.configuration;
     let version = current.configuration.workflow_version;
+    let form = |project: &str, action: &str, body: String| {
+        form_with_key(
+            project,
+            action,
+            body,
+            draft
+                .filter(|d| d.action() == action)
+                .and_then(Change::request_id),
+        )
+    };
     let mut body = format!(
         "<section class=\"card stack\"><h2>{}</h2><p>{}</p></section>",
         escape(&c.shared_workflows),
@@ -102,7 +118,7 @@ pub(super) fn catalog(
     );
     if let Some(binding) = &current.shared_workflow {
         let board = match draft {
-            Some(Change::Detach { board }) => *board,
+            Some(Change::Detach { board, .. }) => *board,
             _ => version,
         };
         body.push_str(&format!(
@@ -125,7 +141,9 @@ pub(super) fn catalog(
     }
     if current.shared_workflow.is_none() || matches!(draft, Some(Change::Publish { .. })) {
         let (board, id, name) = match draft {
-            Some(Change::Publish { board, id, name }) => (*board, id.as_str(), name.as_str()),
+            Some(Change::Publish {
+                board, id, name, ..
+            }) => (*board, id.as_str(), name.as_str()),
             _ => (version, "", current.configuration.workflow.name.as_str()),
         };
         let inputs = format!(
@@ -159,7 +177,9 @@ pub(super) fn catalog(
             .map(|b| format!("{}:{}", b.id, b.version))
             .unwrap_or_default();
         let (board, selected) = match draft {
-            Some(Change::Bind { board, selection }) => (*board, selection.as_str()),
+            Some(Change::Bind {
+                board, selection, ..
+            }) => (*board, selection.as_str()),
             _ => (version, selected.as_str()),
         };
         let options = items
@@ -204,10 +224,10 @@ pub(super) fn catalog(
         ));
         if item.used_by.is_empty() {
             let version = match draft {
-                Some(Change::Delete { id, version }) if id == &item.workflow.id => *version,
+                Some(Change::Delete { id, version, .. }) if id == &item.workflow.id => *version,
                 _ => item.version,
             };
-            body.push_str(&form(
+            body.push_str(&form_with_key(
                 project,
                 "delete",
                 format!(
@@ -217,6 +237,9 @@ pub(super) fn catalog(
                     escape(&c.shared_delete_help),
                     button(&c.shared_delete)
                 ),
+                draft
+                    .filter(|d| matches!(d, Change::Delete {id, ..} if id == &item.workflow.id))
+                    .and_then(Change::request_id),
             ));
         }
         body.push_str("</section>");
@@ -250,7 +273,9 @@ pub(super) fn unavailable_change(project: &str, draft: &Change) -> Response {
     let site = pages::site();
     let c = &site.messages.app.configuration;
     let (action, inputs, label) = match draft {
-        Change::Publish { board, id, name } => (
+        Change::Publish {
+            board, id, name, ..
+        } => (
             "publish",
             format!(
                 "{}{}{}",
@@ -260,7 +285,9 @@ pub(super) fn unavailable_change(project: &str, draft: &Change) -> Response {
             ),
             &c.shared_publish,
         ),
-        Change::Bind { board, selection } => (
+        Change::Bind {
+            board, selection, ..
+        } => (
             "bind",
             format!(
                 "{}{}",
@@ -274,8 +301,10 @@ pub(super) fn unavailable_change(project: &str, draft: &Change) -> Response {
             ),
             &c.shared_use,
         ),
-        Change::Detach { board } => ("detach", hidden("board_version", board), &c.shared_detach),
-        Change::Delete { id, version } => (
+        Change::Detach { board, .. } => {
+            ("detach", hidden("board_version", board), &c.shared_detach)
+        }
+        Change::Delete { id, version, .. } => (
             "delete",
             format!(
                 "{}{}",
@@ -289,7 +318,12 @@ pub(super) fn unavailable_change(project: &str, draft: &Change) -> Response {
         "<section class=\"card stack\"><h2>{}</h2><p>{}</p>{}</section>",
         escape(label),
         escape(&c.shared_unknown),
-        form(project, action, format!("{inputs}{}", button(label)))
+        form_with_key(
+            project,
+            action,
+            format!("{inputs}{}", button(label)),
+            draft.request_id()
+        )
     );
     screen_at(
         project,

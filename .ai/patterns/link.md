@@ -78,7 +78,7 @@ field idiom.
 three frame matches name every variant; the serve loop Pings on every `LINK_HEARTBEAT`, gives
 the hub up after `LINK_IDLE_TIMEOUT` with nothing from it (its Pong included), and times out
 every write after `LINK_SEND_TIMEOUT` (`write`). `Liveness` carries the three so the tests in
-`session/tests.rs` run the loop in milliseconds against a fake hub.
+`session/tests/mod.rs` run the loop in milliseconds against a fake hub.
 
 ## The canonical shape
 
@@ -291,7 +291,7 @@ G10 holds.
 4. **Link unit** (`crates/link/src/<step>/tests.rs`).
    - Exercises the step with a fake broker (`update/tests.rs`) or none.
    - A dispatch arm or a deadline gets a fake hub on `127.0.0.1:0` with
-     `tokio_tungstenite::accept_async` (`session/tests.rs`), driven through `connect_with`
+     `tokio_tungstenite::accept_async` (`session/tests/mod.rs`), driven through `connect_with`
      with a short `Liveness`. `state::endpoint` allows loopback `http`.
 5. **Real binaries.**
    - `tests/e2e.py` link steps, run by the `e2e` job in `.github/workflows/ci.yml` on

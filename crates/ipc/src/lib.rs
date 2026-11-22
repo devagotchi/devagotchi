@@ -102,6 +102,27 @@ async fn exchange<S: AsyncRead + AsyncWrite + Unpin>(
     }
 }
 
+/// Granted envelopes retain their authority across the private local connection.
+async fn remote_exchange<S: AsyncRead + AsyncWrite + Unpin>(
+    stream: &mut S,
+    wire: RemoteWireRequest,
+) -> BridgeResult<RemoteReply> {
+    let held = match &wire.remote {
+        RemoteRequest::Execute { request, .. } => request.held_for(),
+        _ => Duration::ZERO,
+    };
+    let bytes =
+        serde_json::to_vec(&wire).map_err(|e| BridgeError::new("serialize", e.to_string()))?;
+    write_frame(stream, &bytes, MAX_FRAME_BYTES).await?;
+    let bytes = read_frame_within(stream, MAX_RESPONSE_BYTES, IO_TIMEOUT + held).await?;
+    match serde_json::from_slice(&bytes)
+        .map_err(|e| BridgeError::new("invalid_response", e.to_string()))?
+    {
+        RemoteWireResponse::Ok(reply) => Ok(reply),
+        RemoteWireResponse::Error(error) => Err(error),
+    }
+}
+
 /// A private state directory for tests, created as the broker creates one.
 #[cfg(any(test, feature = "test-support"))]
 #[doc(hidden)]

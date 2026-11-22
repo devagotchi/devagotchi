@@ -6,5 +6,11 @@
   "welcome": {
     "title": "Welcome to {product}",
     "body": "Open {hub}/approvals on your phone."
+  },
+  "app": {
+    "access": {
+      "title": "Machine permissions",
+      "granted": "Allowed scope"
+    }
   }
 }

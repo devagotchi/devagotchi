@@ -31,6 +31,10 @@ pub async fn home(State(state): State<AppState>, headers: HeaderMap) -> Response
         Ok(subject) => subject,
         Err(response) => return response,
     };
+    let access_count = match super::access::attention(&state, &subject).await {
+        Ok(count) => count,
+        Err(_) => return crate::web::routes::unavailable(),
+    };
     let machines = state.hub.machine_status(&subject).await;
     let approvals = if state.hub.may_approve(&subject) {
         match super::super::approvals::pending(&state, &subject).await {
@@ -111,9 +115,10 @@ pub async fn home(State(state): State<AppState>, headers: HeaderMap) -> Response
     });
     let me = super::me::identity(&state, &subject).await;
     let body = format!(
-        "{}{}{}{}{}",
+        "{}{}{}{}{}{}",
         hello(&me, needs.len(), trouble),
         review(approvals.len()),
+        super::access::attention_link(access_count),
         card("needs-you", &copy.needs_you, &needs, &copy.needs_you_empty),
         machines_card(&machines),
         boards_card(&boards),
@@ -151,6 +156,14 @@ pub async fn boards(State(state): State<AppState>, headers: HeaderMap) -> Respon
     };
     let site = words();
     let title = &site.messages.app.boards_title;
+    let management = if state.hub.boards.hosts_accounts() && subject.org.is_none() {
+        format!(
+            "<p><a href=\"/app/projects\">{}</a></p>",
+            escape(&site.messages.app.projects.title)
+        )
+    } else {
+        String::new()
+    };
     // The organisations a person's boards come from, and where they make one (`web/orgs.rs`);
     // a one-user hub has none to link to (`web/one_user`).
     let orgs = if state.hub.config.multi_tenant() && state.hub.boards.orgs().is_some() {
@@ -165,7 +178,7 @@ pub async fn boards(State(state): State<AppState>, headers: HeaderMap) -> Respon
         StatusCode::OK,
         title,
         &format!(
-            "<p><a class=\"button primary\" href=\"/app/new-board\">{}</a></p>{}{orgs}",
+            "<p><a class=\"button primary\" href=\"/app/new-board\">{}</a></p>{management}{}{orgs}",
             escape(&site.messages.app.creation.board),
             boards_card(&boards)
         ),

@@ -275,7 +275,7 @@ impl Accounts {
                 .enter(connection, crate::store::Lookup::Account(&account))
                 .await?
                 .unwrap_or_default();
-            if let Err(refused) = self.live_account(connection, &account, now).await? {
+            if let Err(refused) = self.live_account(connection, &account, client, now).await? {
                 return Ok(Err(refused));
             }
             let tokens = self

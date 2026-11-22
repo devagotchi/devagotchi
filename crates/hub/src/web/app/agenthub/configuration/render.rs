@@ -163,10 +163,38 @@ pub(super) fn settings(
     };
     let duration = "type=\"number\" min=\"0.001\" step=\"0.001\" required";
     let nonnegative = "type=\"number\" min=\"0\" step=\"1\" required";
+    let priority_names = format!(
+        "<label class=\"stack\">{}<textarea name=\"priority_labels\" rows=\"5\" maxlength=\"2624\">{}</textarea></label><p>{}</p>",
+        escape(&c.priority_labels),
+        escape(
+            draft
+                .values
+                .get("priority_labels")
+                .map(String::as_str)
+                .unwrap_or_default()
+        ),
+        escape(&c.priority_labels_help),
+    );
+    let options = format!(
+        "<section class=\"card stack\">{}<p>{}</p>{}<p>{}</p>{priority_names}</section>",
+        input(
+            "heartbeat_hint",
+            &c.heartbeat_hint,
+            "type=\"number\" min=\"1\" step=\"0.001\" required"
+        ),
+        escape(&c.heartbeat_help),
+        input(
+            "note_kinds",
+            &c.note_kinds,
+            "type=\"text\" maxlength=\"4096\""
+        ),
+        escape(&c.note_kinds_help),
+    );
     let body = format!(
-        "<form class=\"stack\" method=\"post\" action=\"{}\">{}<section class=\"card stack\"><h2>{}</h2><p>{}</p><div class=\"auto-grid\">{}{}{}</div></section><section class=\"card stack\"><div class=\"auto-grid\"><div class=\"stack\">{}<p>{}</p></div><div class=\"stack\">{}<p>{}</p></div><div class=\"stack\">{}<p>{}</p></div></div>{}{}<p>{}</p></section><button class=\"primary\" type=\"submit\">{}</button></form>",
+        "<form class=\"stack\" method=\"post\" action=\"{}\">{}<section class=\"card stack\"><h2>{}</h2><p>{}</p><div class=\"auto-grid\">{}{}{}</div></section><section class=\"card stack\"><div class=\"auto-grid\"><div class=\"stack\">{}<p>{}</p></div><div class=\"stack\">{}<p>{}</p></div><div class=\"stack\">{}<p>{}</p></div></div>{}{}<p>{}</p></section>{options}<button class=\"primary\" type=\"submit\">{}</button></form>",
         href(project, false),
-        hidden("version", draft.version),
+        hidden("version", draft.version)
+            + &crate::web::app::requests::request_field(draft.request_id.as_deref()),
         escape(&c.settings),
         escape(&c.lease_help),
         input("lease_ttl", &c.default_lease, duration),
@@ -239,7 +267,8 @@ pub(super) fn workflow_form(draft: &WorkflowDraft, action: &str, help: &str) -> 
     let mut body = format!(
         "<form class=\"stack\" method=\"post\" action=\"{}\">{}{}{}{}{}<section class=\"card stack\"><h2>{}</h2><p>{}</p>{}<div class=\"auto-grid\">{}{}</div><button class=\"primary\" type=\"submit\" name=\"action\" value=\"save\">{}</button></section>",
         escape(action),
-        hidden("version", draft.version),
+        hidden("version", draft.version)
+            + &crate::web::app::requests::request_field(draft.request_id.as_deref()),
         hidden("id", &w.id),
         hidden("states", w.states.len()),
         hidden("lanes", w.lanes.len()),

@@ -6,7 +6,7 @@
 // Native OS calls live here and nowhere else in this crate's dependents.
 #![allow(unsafe_code)]
 
-use super::{IO_TIMEOUT, exchange, io_error};
+use super::{IO_TIMEOUT, exchange, io_error, remote_exchange};
 use devagotchi_contracts::*;
 use security::{Entry, Operator, SecurityDescriptor};
 use sha2::{Digest, Sha256};
@@ -15,7 +15,9 @@ use std::os::windows::fs::{MetadataExt, OpenOptionsExt};
 use std::os::windows::io::AsRawHandle;
 use std::path::{Component, Path, PathBuf};
 use std::time::Duration;
-use tokio::net::windows::named_pipe::{ClientOptions, NamedPipeServer, PipeMode, ServerOptions};
+use tokio::net::windows::named_pipe::{
+    ClientOptions, NamedPipeClient, NamedPipeServer, PipeMode, ServerOptions,
+};
 use tokio::time::{Instant, sleep};
 use windows_sys::Win32::Foundation::{
     ERROR_ACCESS_DENIED, ERROR_NO_DATA, ERROR_PIPE_BUSY, ERROR_SHARING_VIOLATION,
@@ -130,11 +132,11 @@ fn validate_endpoint(endpoint: &Path) -> BridgeResult<()> {
     Ok(())
 }
 
-pub async fn request(endpoint: &Path, body: RequestBody) -> BridgeResult<ResponseBody> {
+async fn connect(endpoint: &Path) -> BridgeResult<NamedPipeClient> {
     validate_endpoint(endpoint)?;
     let operator = Operator::current().map_err(identity_error)?;
     let deadline = Instant::now() + IO_TIMEOUT;
-    let mut client = loop {
+    let client = loop {
         match ClientOptions::new().open(endpoint) {
             Ok(client) => break client,
             Err(error) if error.raw_os_error() == Some(ERROR_PIPE_BUSY as i32) => {
@@ -181,7 +183,15 @@ pub async fn request(endpoint: &Path, body: RequestBody) -> BridgeResult<Respons
             "Broker peer user does not match the local operator",
         ));
     }
-    exchange(&mut client, body).await
+    Ok(client)
+}
+
+pub async fn request(endpoint: &Path, body: RequestBody) -> BridgeResult<ResponseBody> {
+    exchange(&mut connect(endpoint).await?, body).await
+}
+
+pub async fn remote_request(endpoint: &Path, wire: RemoteWireRequest) -> BridgeResult<RemoteReply> {
+    remote_exchange(&mut connect(endpoint).await?, wire).await
 }
 
 fn absolute_without_traversal(path: &Path) -> bool {

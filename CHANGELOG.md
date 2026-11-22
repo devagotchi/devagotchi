@@ -15,6 +15,13 @@ prerelease tag would not move the `:latest` image. The project stage stays alpha
 install, not a production promotion. The gap that is still open is in
 [.ai/docs/desktop-commander-parity.md](.ai/docs/desktop-commander-parity.md).
 
+### Hosted process access
+
+- `operation_heartbeat(machine, operation_id)` renews an existing interactive process's
+  access permission after checking its current credential, original grant/task and policy.
+  Expired authority cannot be revived. The task lease and program deadline stay separate.
+  This account-hub tool does not spend another grant use or expose an authority token.
+
 ### A solo install
 
 - Sign in with Shippin has a card on `/admin` → Sign-in from the hub's first start. The

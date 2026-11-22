@@ -11,17 +11,22 @@
 //! the one-time link.
 
 mod account;
+pub mod agents;
 pub mod api_keys;
+mod catalog;
 mod challenges;
 pub mod claim;
 pub mod clients;
 pub mod email;
 pub mod identities;
 mod links;
+mod machine_access;
+mod maintenance;
 pub mod oauth;
 pub mod passkey;
 mod passwords;
 pub mod people;
+pub mod receipts;
 pub mod sessions;
 pub mod sign_in_settings;
 pub mod tenants;

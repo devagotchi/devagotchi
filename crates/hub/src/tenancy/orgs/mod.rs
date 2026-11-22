@@ -31,6 +31,7 @@ mod invites;
 mod members;
 mod org;
 mod project_roles;
+pub(crate) use project_roles::effective as effective_role_in;
 mod projects;
 mod roles;
 mod teams;

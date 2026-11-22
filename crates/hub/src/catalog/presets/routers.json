@@ -1,0 +1,4 @@
+{"kind": "router-endpoints", "rows": [
+  {"id": "litellm-local", "label": "LiteLLM on this box (loopback)", "url": "http://127.0.0.1:4000", "kind": "litellm"},
+  {"id": "openrouter", "label": "OpenRouter (BYOK)", "url": "https://openrouter.ai/api/v1", "kind": "openrouter"}
+]}

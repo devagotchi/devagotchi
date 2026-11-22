@@ -223,13 +223,17 @@ pub async fn page(
         format!("<p class=\"note\">{}</p>", escape(&copy.not_kept))
     };
     let admin = if crate::web::hub_settings::is_owner(&state, &subject) {
-        "<p><a href=\"/admin\" id=\"admin-link\">Hub settings</a></p>"
+        format!(
+            "<p><a href=\"/admin\" id=\"admin-link\">Hub settings</a></p><p><a href=\"/app/catalog\" id=\"catalog-link\">{}</a></p>",
+            escape(&site.messages.app.catalog.title)
+        )
     } else {
-        ""
+        String::new()
     };
     let leave = format!(
-        "<section class=\"card leave\" id=\"leave\"><p><a href=\"/app/keys\" id=\"keys-link\">API keys</a></p><p><a href=\"/app/connections\" id=\"connections-link\">Connections</a></p>{admin}<p><a href=\"/account\">{}</a></p>\
+        "<section class=\"card leave\" id=\"leave\"><p><a href=\"/app/agents\" id=\"agents-link\">{}</a></p><p><a href=\"/app/keys\" id=\"keys-link\">API keys</a></p><p><a href=\"/app/connections\" id=\"connections-link\">Connections</a></p>{admin}<p><a href=\"/account\">{}</a></p>\
 <form method=\"post\" action=\"/auth/logout\"><button type=\"submit\">{}</button></form></section>",
+        escape(&words().messages.app.agents.title),
         escape(&copy.account_link),
         escape(&copy.sign_out),
     );
@@ -387,6 +391,7 @@ async fn stop_own(state: &AppState, subject: &Subject, kinds: Vec<String>) -> us
             let actor = Actor {
                 id: &id,
                 human: true,
+                policy: None,
                 wip_limit: None,
             };
             board.revoke_own(&actor, &kinds)

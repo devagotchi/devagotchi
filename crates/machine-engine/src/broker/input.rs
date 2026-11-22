@@ -98,9 +98,15 @@ pub(super) fn input_steps(
 pub(super) async fn deliver(
     sender: &mpsc::Sender<InputRequest>,
     steps: Vec<InputStep>,
+    permit: Option<remote::ControlPermit>,
 ) -> BridgeResult<()> {
+    let bounded_authority = permit.is_some();
     let (reply, answer) = oneshot::channel();
-    match sender.try_send(InputRequest { steps, reply }) {
+    match sender.try_send(InputRequest {
+        steps,
+        reply,
+        permit,
+    }) {
         Ok(()) => {}
         Err(mpsc::error::TrySendError::Full(_)) => {
             return Err(BridgeError::new(
@@ -115,7 +121,11 @@ pub(super) async fn deliver(
         Ok(Err(_)) => Err(input_closed()),
         Err(_) => Err(BridgeError::new(
             "input_blocked",
-            "The program has not read its input for five seconds; it stays queued and is delivered when it reads",
+            if bounded_authority {
+                "The program has not confirmed its input for five seconds; pending input expires with its permission. Earlier bytes may have arrived; do not blindly retry."
+            } else {
+                "The program has not read its input for five seconds; it stays queued and is delivered when it reads"
+            },
         )),
     }
 }

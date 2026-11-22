@@ -802,6 +802,25 @@
       ],
       "type": "object"
     },
+    "HeartbeatOutput": {
+      "additionalProperties": false,
+      "description": "Receipt for an explicitly renewed, already admitted hosted process.",
+      "properties": {
+        "expires_at_ms": {
+          "description": "Acknowledged authority deadline, in Unix milliseconds. Does not extend the\nprogram's own execution deadline or its task lease.",
+          "format": "int64",
+          "type": "integer"
+        },
+        "operation_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "operation_id",
+        "expires_at_ms"
+      ],
+      "type": "object"
+    },
     "InputMode": {
       "description": "How an interactive operation takes input.",
       "oneOf": [
@@ -1897,6 +1916,9 @@
     "get_input": {
       "$ref": "#/$defs/GetInput"
     },
+    "heartbeat_output": {
+      "$ref": "#/$defs/HeartbeatOutput"
+    },
     "input_sent": {
       "$ref": "#/$defs/InputSent"
     },
@@ -1960,6 +1982,7 @@
     "send_input",
     "resize_input",
     "input_sent",
+    "heartbeat_output",
     "get_input",
     "read_input",
     "list_input",

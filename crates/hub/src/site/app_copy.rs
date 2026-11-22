@@ -5,6 +5,7 @@ use serde::Deserialize;
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct AppCopy {
+    pub access: super::access_copy::AccessCopy,
     pub tab_home: String,
     pub tab_machines: String,
     pub tab_boards: String,
@@ -76,6 +77,7 @@ pub struct AppCopy {
     pub ticket_labels: String,
     pub ticket_assignee: String,
     pub ticket_holder: String,
+    pub ticket_progress: String,
     pub issue_source: String,
     pub issue_source_state: String,
     pub issue_source_revision: String,
@@ -115,7 +117,10 @@ pub struct AppCopy {
     pub audit: AuditCopy,
     pub hub_audit: HubAuditCopy,
     pub people: PeopleCopy,
+    pub agents: super::agents_copy::AgentsCopy,
     pub configuration: super::configuration_copy::ConfigurationCopy,
+    pub projects: super::projects_copy::ProjectsCopy,
+    pub catalog: super::catalog_copy::CatalogCopy,
 }
 
 #[derive(Debug, Clone, Deserialize)]

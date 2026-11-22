@@ -12,6 +12,64 @@ use axum::{
 
 use crate::{AppState, identity::auth::AuthError, site, web};
 
+/// Request-local verification services installed by authenticated middleware. This holds
+/// no bearer and is never serialized or persisted on an MCP session.
+#[derive(Clone)]
+pub(crate) struct BearerVerifier {
+    pub accounts: Option<std::sync::Arc<crate::identity::accounts::Accounts>>,
+    verifier: std::sync::Arc<crate::identity::auth::Verifier>,
+}
+impl BearerVerifier {
+    fn new(state: &AppState) -> Self {
+        Self {
+            accounts: state.passkeys.as_ref().map(|hub| hub.accounts().clone()),
+            verifier: state.verifier.clone(),
+        }
+    }
+    pub(crate) async fn verify(
+        &self,
+        token: &str,
+    ) -> Result<
+        (
+            crate::identity::Subject,
+            Option<crate::identity::accounts::api_keys::KeyLimits>,
+        ),
+        AuthError,
+    > {
+        if token.starts_with("dgk_") {
+            let found = match &self.accounts {
+                Some(accounts) => accounts.verify_key(token).await.map_err(|error| {
+                    log_unavailable(&error.message);
+                    AuthError::Unavailable("the hub's store did not answer".into())
+                })?,
+                None => None,
+            };
+            return found
+                .map(|(subject, limits)| (subject, Some(limits)))
+                .ok_or(AuthError::Invalid("unknown, revoked or expired API key"));
+        }
+        self.verifier
+            .verify(token)
+            .await
+            .map(|subject| (subject, None))
+    }
+}
+
+/// The same live credential check for ordinary requests and long-lived readers.
+/// Callers keep credentials private and must reapply the returned key limits.
+pub(crate) async fn verify_token(
+    state: &AppState,
+    token: &str,
+) -> Result<
+    (
+        crate::identity::Subject,
+        Option<crate::identity::accounts::api_keys::KeyLimits>,
+    ),
+    AuthError,
+> {
+    BearerVerifier::new(state).verify(token).await
+}
+
 pub(crate) async fn require_bearer(
     State(state): State<AppState>,
     mut request: Request,
@@ -49,36 +107,13 @@ pub(crate) async fn require_bearer(
     let Some(token) = token else {
         return challenge(StatusCode::UNAUTHORIZED, &metadata, None);
     };
-    // An API key reaches this endpoint only, and only with the limits it was made with.
-    if token.starts_with("dgk_") {
-        let found = match &state.passkeys {
-            Some(hub) => hub.accounts().verify_key(&token).await,
-            None => Ok(None),
-        };
-        return match found {
-            Ok(Some((subject, limits))) => {
-                request.extensions_mut().insert(subject);
-                request.extensions_mut().insert(limits);
-                next.run(request).await
-            }
-            Ok(None) => {
-                log_refusal("unknown, revoked or expired API key");
-                challenge(StatusCode::UNAUTHORIZED, &metadata, Some("invalid_token"))
-            }
-            Err(error) => {
-                log_unavailable(&error.message);
-                (
-                    StatusCode::SERVICE_UNAVAILABLE,
-                    [(header::RETRY_AFTER, "5")],
-                    "the hub's store did not answer",
-                )
-                    .into_response()
-            }
-        };
-    }
-    match state.verifier.verify(&token).await {
-        Ok(subject) => {
+    match verify_token(&state, &token).await {
+        Ok((subject, limits)) => {
+            request.extensions_mut().insert(BearerVerifier::new(&state));
             request.extensions_mut().insert(subject);
+            if let Some(limits) = limits {
+                request.extensions_mut().insert(limits);
+            }
             next.run(request).await
         }
         Err(AuthError::Invalid(why)) => {
@@ -91,7 +126,11 @@ pub(crate) async fn require_bearer(
             (
                 StatusCode::SERVICE_UNAVAILABLE,
                 [(header::RETRY_AFTER, "5")],
-                format!("identity provider unavailable: {why}"),
+                if token.starts_with("dgk_") {
+                    "the hub's store did not answer".to_string()
+                } else {
+                    format!("identity provider unavailable: {why}")
+                },
             )
                 .into_response()
         }

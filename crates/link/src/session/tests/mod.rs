@@ -1,9 +1,11 @@
+//! Machine-link session fixtures and real WebSocket/IPC transport checks.
 use devagotchi_contracts::{Caller, GetInput, LOCAL_ACCOUNT, SendInput, UPDATE_FAILED};
 use tokio::net::{TcpListener, TcpStream};
 use tokio_tungstenite::WebSocketStream;
 
 use super::*;
 use crate::update::Updater;
+mod remote;
 
 fn input_from(caller: Option<Caller>) -> RequestBody {
     RequestBody::OperationInput(SendInput {
@@ -113,6 +115,7 @@ async fn open(hub: &mut WebSocketStream<TcpStream>, config: &LinkConfig) -> Link
     to_link(
         hub,
         HubFrame::Welcome {
+            generation: None,
             device: config.device.clone(),
         },
     )

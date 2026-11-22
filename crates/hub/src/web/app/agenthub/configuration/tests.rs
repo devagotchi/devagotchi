@@ -7,7 +7,7 @@ use crate::{
 };
 use serde_json::{Value, json};
 
-fn initial() -> ConfigurationState {
+pub(super) fn initial() -> ConfigurationState {
     ConfigurationState {
         settings: Settings::default(),
         settings_version: 1,
@@ -15,7 +15,7 @@ fn initial() -> ConfigurationState {
         workflow_version: 1,
     }
 }
-fn settings_fields(version: i64) -> Vec<(String, String)> {
+pub(super) fn settings_fields(version: i64) -> Vec<(String, String)> {
     let mut draft = SettingsDraft::current(&initial());
     draft.version = version;
     let mut fields: Vec<_> = draft.values.into_iter().collect();
@@ -66,10 +66,10 @@ pub(super) fn workflow_fields(draft: &WorkflowDraft, action: &str) -> Vec<(Strin
     }
     fields
 }
-fn set(fields: &mut [(String, String)], key: &str, value: &str) {
+pub(super) fn set(fields: &mut [(String, String)], key: &str, value: &str) {
     fields.iter_mut().find(|(k, _)| k == key).unwrap().1 = value.into();
 }
-async fn post(
+pub(super) async fn post(
     hub: &Hosted,
     person: &Person,
     workflow: bool,
@@ -89,13 +89,13 @@ async fn post(
     )
     .await
 }
-async fn bind(hub: &Hosted, person: &mut Person) {
+pub(super) async fn bind(hub: &Hosted, person: &mut Person) {
     let r = hub
         .call(person, "board_bind", json!({"project":"alpha"}))
         .await;
     assert!(!refused(&r), "{r}");
 }
-async fn events(hub: &Hosted, person: &mut Person) -> Value {
+pub(super) async fn events(hub: &Hosted, person: &mut Person) -> Value {
     hub.call(person, "board_events", json!({"project":"alpha"}))
         .await["structuredContent"]
         .clone()
@@ -129,6 +129,9 @@ async fn settings_forms_save_through_the_board_and_retain_conflicting_or_invalid
     set(&mut fields, "default_priority", "6");
     set(&mut fields, "lease_ttl", "60.001");
     set(&mut fields, "environments", "dev, qa");
+    set(&mut fields, "heartbeat_hint", "5");
+    set(&mut fields, "note_kinds", "note, triage");
+    set(&mut fields, "priority_labels", "Urgent <work>\nNext");
     let response = post(&hub, &alice, false, &fields).await;
     assert_eq!(response.status(), 303);
     assert_eq!(
@@ -140,6 +143,35 @@ async fn settings_forms_save_through_the_board_and_retain_conflicting_or_invalid
         .await;
     assert_eq!(got["structuredContent"]["default_priority"], 6);
     assert_eq!(got["structuredContent"]["lease_ttl_ms"], 60_001);
+    assert_eq!(got["structuredContent"]["heartbeat_hint_ms"], 5_000);
+    assert_eq!(
+        got["structuredContent"]["note_kinds"],
+        json!(["note", "triage"])
+    );
+    assert_eq!(
+        got["structuredContent"]["priority_labels"],
+        json!(["Urgent <work>", "Next"])
+    );
+    let made = hub
+        .call(
+            &mut alice,
+            "board_create",
+            json!({
+                "project":"alpha", "title":"Priority names are real settings", "priority":0
+            }),
+        )
+        .await;
+    assert!(!refused(&made), "{made}");
+    let id = made["structuredContent"]["id"].as_str().unwrap();
+    for path in [
+        "/app/boards/alpha".to_string(),
+        format!("/app/tickets/alpha/{id}"),
+    ] {
+        let (status, html) = page(&hub, &path, &alice).await;
+        assert_eq!(status, 200);
+        assert!(html.contains("Urgent &lt;work&gt;"));
+        assert!(!html.contains("Urgent <work>"));
+    }
     let saved = events(&hub, &mut alice).await;
     let (status, html) = Hosted::text(post(&hub, &alice, false, &fields).await).await;
     assert_eq!(status, 409);

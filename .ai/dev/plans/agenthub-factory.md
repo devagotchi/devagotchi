@@ -2,6 +2,10 @@
 
 ## Active oldest-first absorption, 2026-11-20
 
+Execution now follows [the complete source plan](absorb-preserved-sources.md), its immutable
+file/commit inventory and implementation packets. Complete local authoring precedes new CI;
+the earlier individual milestone schedules below are historical, not the active work order.
+
 The prior use of **absorbed** below included capabilities merely assigned future milestones.
 That is not implementation or feature parity. Those historical headings do not establish
 completion. The operator requires actual absorption, oldest source branch first, with each

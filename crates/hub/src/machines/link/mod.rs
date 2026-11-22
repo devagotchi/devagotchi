@@ -24,6 +24,8 @@ use crate::{
 };
 
 mod calls;
+mod remote;
+use remote::{RemotePending, RemoteSession};
 mod enroll;
 mod presence;
 mod registry;
@@ -51,6 +53,8 @@ struct Session {
     container: bool,
     /// Frames the hub sends on its own: `update` (`updates.rs`).
     control: mpsc::Sender<HubFrame>,
+    remote: RemoteSession,
+    capacity: Arc<Semaphore>,
 }
 
 /// Calls routed to a session, and the frames the hub sends it on its own, as a test reads them.
@@ -72,6 +76,8 @@ impl Session {
             build: build.map(str::to_string),
             container,
             control,
+            remote: RemoteSession::unavailable(),
+            capacity: Arc::new(Semaphore::new(CALL_QUEUE)),
         };
         (session, (routed, frames))
     }
@@ -175,6 +181,7 @@ struct Admitted {
     joined_for: Option<String>,
     build: Option<String>,
     container: bool,
+    remote_access: Option<u32>,
 }
 
 fn offline(device: &str) -> BridgeError {

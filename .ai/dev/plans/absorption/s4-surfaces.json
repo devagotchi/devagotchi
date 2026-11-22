@@ -1,0 +1,126 @@
+[
+  {
+    "path": "server/internal/browserauth/boundaries_test.go",
+    "packet": "D01",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [
+      "TestOIDCDiscoveryAndRedirects",
+      "TestOIDCAlgorithmAndAuthorizedParty",
+      "TestOIDCRouteDefaultDeny"
+    ],
+    "exported_functions": [
+      "TestOIDCDiscoveryAndRedirects",
+      "TestOIDCAlgorithmAndAuthorizedParty",
+      "TestOIDCRouteDefaultDeny"
+    ]
+  },
+  {
+    "path": "server/internal/browserauth/guard.go",
+    "packet": "D01",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Identify",
+      "Wrap"
+    ]
+  },
+  {
+    "path": "server/internal/devapi/build.go",
+    "packet": "D01",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Build"
+    ]
+  },
+  {
+    "path": "server/internal/health/ready.go",
+    "packet": "D01",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Ready"
+    ]
+  },
+  {
+    "path": "server/internal/health/ready_test.go",
+    "packet": "D01",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [
+      "TestReady",
+      "TestReadyCancelledEvenIfCheckReturnsSuccess"
+    ],
+    "exported_functions": [
+      "TestReady",
+      "TestReadyCancelledEvenIfCheckReturnsSuccess"
+    ]
+  },
+  {
+    "path": "server/internal/httpapi/embed_test.go",
+    "packet": "D01",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [
+      "TestEmbeddedEntryAssets"
+    ],
+    "exported_functions": [
+      "TestEmbeddedEntryAssets"
+    ]
+  },
+  {
+    "path": "server/internal/httpapi/server.go",
+    "packet": "D01",
+    "routes_literal": [
+      "GET /healthz",
+      "GET /readyz"
+    ],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Handler"
+    ]
+  },
+  {
+    "path": "server/internal/lifecycle/http.go",
+    "packet": "D01",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [],
+    "exported_functions": [
+      "Serve"
+    ]
+  },
+  {
+    "path": "server/internal/lifecycle/http_test.go",
+    "packet": "D01",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [
+      "TestServeDrainsBeforeReturning",
+      "TestServeForcesCloseAfterDeadline",
+      "TestServeReturnsListenFailure"
+    ],
+    "exported_functions": [
+      "TestServeDrainsBeforeReturning",
+      "TestServeForcesCloseAfterDeadline",
+      "TestServeReturnsListenFailure"
+    ]
+  },
+  {
+    "path": "server/internal/providers/enums_ts_test.go",
+    "packet": "D01",
+    "routes_literal": [],
+    "tools_literal": [],
+    "tests": [
+      "TestEnumsMatchWebTypes"
+    ],
+    "exported_functions": [
+      "TestEnumsMatchWebTypes"
+    ]
+  }
+]

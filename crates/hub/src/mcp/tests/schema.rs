@@ -14,6 +14,7 @@ fn whoami_output_has_every_required_property() {
         .expect("whoami is served");
     let schema = tool.output_schema.expect("whoami has an output schema");
     let written = serde_json::to_value(WhoAmI {
+        board_request_receipts: true,
         subject: "300000000000000001".into(),
         via: "hub".into(),
         name: None,

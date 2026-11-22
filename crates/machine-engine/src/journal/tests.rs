@@ -14,6 +14,7 @@ fn journal_reopens_exact_bytes_and_idempotency_evidence() {
                 request_digest: "request-digest".into(),
                 config_identity: "configuration-digest".into(),
                 owner: None,
+                grant: None,
                 view: OperationView {
                     operation_id: id.clone(),
                     executable: "/usr/bin/test".into(),
@@ -132,6 +133,7 @@ fn an_interactive_operations_owner_and_input_state_outlive_a_restart() {
                 request_digest: "digest".into(),
                 config_identity: "config".into(),
                 owner: Some(owner.clone()),
+                grant: None,
                 view: view.clone(),
                 latest_sequence: 0,
                 frames: VecDeque::new(),
@@ -159,6 +161,7 @@ fn accepted(id: &str) -> JournalOperation {
         request_digest: "digest".into(),
         config_identity: "config".into(),
         owner: None,
+        grant: None,
         view: OperationView {
             operation_id: id.into(),
             executable: "/usr/bin/test".into(),

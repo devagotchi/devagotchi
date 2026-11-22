@@ -1,0 +1,6 @@
+{"kind": "chat-apps", "rows": [
+  {"id": "claude", "label": "Claude Code", "provider_ids": ["anthropic-claude-code", "anthropic-api"], "connect_template": "claude mcp add --transport http agent-hub {{hub_url}}/mcp --header \"Authorization: Bearer $HUB_TOKEN\""},
+  {"id": "codex", "label": "Codex CLI", "provider_ids": ["openai-codex", "openai-api"], "connect_template": "codex mcp add agent-hub --url {{hub_url}}/mcp --bearer-token-env-var HUB_TOKEN"},
+  {"id": "grok", "label": "Grok", "provider_ids": ["xai-grok-build", "xai-api"], "connect_template": "Add a remote MCP server {{hub_url}}/mcp with header Authorization: Bearer $HUB_TOKEN"},
+  {"id": "cursor", "label": "Cursor", "provider_ids": ["cursor-cli"], "connect_template": "{\"mcpServers\":{\"agent-hub\":{\"url\":\"{{hub_url}}/mcp\",\"headers\":{\"Authorization\":\"Bearer ${env:HUB_TOKEN}\"}}}}"}
+]}

@@ -56,3 +56,26 @@ fn every_local_tool_has_the_same_contract_and_words_on_the_hub() {
         );
     }
 }
+
+#[test]
+fn hosted_heartbeat_has_only_operation_identity_and_requires_run_scope() {
+    let tools = crate::mcp::tools();
+    let tool = tools
+        .iter()
+        .find(|tool| tool.name == "operation_heartbeat")
+        .unwrap();
+    let properties = tool.input_schema["properties"].as_object().unwrap();
+    assert_eq!(properties.len(), 2);
+    assert!(properties.contains_key("machine"));
+    assert!(properties.contains_key("operation_id"));
+    assert_eq!(tool.input_schema["additionalProperties"], false);
+    assert_eq!(
+        crate::identity::accounts::api_keys::scope_for("operation_heartbeat"),
+        Some(crate::identity::accounts::api_keys::Scope::MachinesRun)
+    );
+    assert!(
+        !devagotchi_mcp::local_tools()
+            .iter()
+            .any(|tool| tool.name == "operation_heartbeat")
+    );
+}

@@ -15,6 +15,12 @@ pub const APPROVAL_WAIT_MAX_MS: u64 = 50_000;
 
 // ----- inputs ------------------------------------------------------------------
 
+pub(super) fn present_progress<'de, D: serde::Deserializer<'de>>(
+    deserializer: D,
+) -> Result<Option<serde_json::Value>, D::Error> {
+    serde_json::Value::deserialize(deserializer).map(Some)
+}
+
 #[derive(Debug, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ProjectIn {
@@ -103,28 +109,6 @@ pub struct TicketIn {
     pub id: String,
 }
 
-#[derive(Debug, Deserialize, JsonSchema)]
-#[serde(deny_unknown_fields)]
-pub struct ClaimIn {
-    /// The project whose board to use, as the hub names it (whoami lists yours).
-    pub project: String,
-    /// A ticket to claim. Omit it to claim the best ready ticket for you.
-    #[serde(default)]
-    pub id: Option<String>,
-    /// Lease length; the board clamps it to its min and max.
-    #[serde(default)]
-    pub ttl_ms: Option<i64>,
-    /// Without an id: only tickets carrying this label.
-    #[serde(default)]
-    pub label: Option<String>,
-    /// Without an id: only tickets in these queue states.
-    #[serde(default)]
-    pub states: Vec<String>,
-    /// Without an id: only children of this ticket.
-    #[serde(default)]
-    pub parent: Option<String>,
-}
-
 /// Tickets: as filtered (`board_list`), or ready for you, best first (`board_ready`). An
 /// answer is an object, so the list is inside one (MCP `structuredContent`).
 #[derive(Debug, Serialize, JsonSchema)]
@@ -152,30 +136,28 @@ pub struct ClaimOut {
     pub lease: Option<Lease>,
 }
 
-#[derive(Debug, Deserialize, JsonSchema)]
-#[serde(deny_unknown_fields)]
-pub struct HeartbeatIn {
-    /// The project whose board to use, as the hub names it (whoami lists yours).
-    pub project: String,
-    /// The ticket's id (from board_list, board_ready or board_get).
-    pub id: String,
-    /// The fence from your claim. Omit it to use the one this hub last gave you for this ticket.
-    #[serde(default)]
-    pub fence: Option<i64>,
-    /// Anything watchers should see about where you are; replaces the previous progress.
-    #[serde(default)]
-    pub progress: Option<serde_json::Value>,
-}
-
-#[derive(Debug, Deserialize, JsonSchema)]
+#[derive(Debug, Deserialize, Serialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct UpdateIn {
+    /// Reuse this key and identical input after an uncertain result (1..=200 bytes).
+    #[serde(default)]
+    pub request_id: Option<String>,
     /// The project whose board to use, as the hub names it (whoami lists yours).
     pub project: String,
     /// The ticket's id (from board_list, board_ready or board_get).
     pub id: String,
     /// The ticket's current version (optimistic concurrency); from board_get.
     pub version: i64,
+    /// Required while you hold the ticket; omit to use this hub's remembered claim fence.
+    #[serde(default)]
+    pub fence: Option<i64>,
+    /// Replace progress without extending the lease; null clears it. Omission keeps it.
+    #[serde(
+        default,
+        deserialize_with = "present_progress",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub progress: Option<serde_json::Value>,
     /// A new title, 1 to 300 characters.
     #[serde(default)]
     pub title: Option<String>,
@@ -219,9 +201,12 @@ pub struct UpdateIn {
     pub fingerprint: Option<String>,
 }
 
-#[derive(Debug, Deserialize, JsonSchema)]
+#[derive(Debug, Deserialize, Serialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct NoteIn {
+    /// Reuse this key and identical input after an uncertain result (1..=200 bytes).
+    #[serde(default)]
+    pub request_id: Option<String>,
     /// The project whose board to use, as the hub names it (whoami lists yours).
     pub project: String,
     /// The ticket's id (from board_list, board_ready or board_get).
@@ -240,54 +225,12 @@ pub struct NoteIn {
     pub fence: Option<i64>,
 }
 
-#[derive(Debug, Deserialize, JsonSchema)]
-#[serde(deny_unknown_fields)]
-pub struct HandoffIn {
-    /// The project whose board to use, as the hub names it (whoami lists yours).
-    pub project: String,
-    /// The ticket's id (from board_list, board_ready or board_get).
-    pub id: String,
-    /// The fence from your claim. Omit it to use the one this hub last gave you for this ticket.
-    #[serde(default)]
-    pub fence: Option<i64>,
-    /// What the next worker must know. Required.
-    pub note: String,
-    /// Who should pick it up; they become the assignee.
-    #[serde(default)]
-    pub to: Option<String>,
-}
-
-#[derive(Debug, Deserialize, JsonSchema)]
-#[serde(deny_unknown_fields)]
-pub struct ReleaseIn {
-    /// The project whose board to use, as the hub names it (whoami lists yours).
-    pub project: String,
-    /// The ticket's id (from board_list, board_ready or board_get).
-    pub id: String,
-    /// The fence from your claim. Omit it to use the one this hub last gave you for this ticket.
-    #[serde(default)]
-    pub fence: Option<i64>,
-    /// Why you are letting it go without finishing.
-    pub reason: String,
-}
-
-#[derive(Debug, Deserialize, JsonSchema)]
-#[serde(deny_unknown_fields)]
-pub struct CompleteIn {
-    /// The project whose board to use, as the hub names it (whoami lists yours).
-    pub project: String,
-    /// The ticket's id (from board_list, board_ready or board_get).
-    pub id: String,
-    /// The fence from your claim. Omit it to use the one this hub last gave you for this ticket.
-    #[serde(default)]
-    pub fence: Option<i64>,
-    /// What was done, for the reviewer. Required.
-    pub summary: String,
-}
-
-#[derive(Debug, Deserialize, JsonSchema)]
+#[derive(Debug, Deserialize, Serialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct DepIn {
+    /// Reuse this key and identical input after an uncertain result (1..=200 bytes).
+    #[serde(default)]
+    pub request_id: Option<String>,
     /// The project whose board to use, as the hub names it (whoami lists yours).
     pub project: String,
     /// The ticket that depends.
@@ -301,17 +244,6 @@ pub struct DepIn {
     /// True to remove the dependency instead of recording it.
     #[serde(default)]
     pub remove: bool,
-}
-
-#[derive(Debug, Deserialize, JsonSchema)]
-#[serde(deny_unknown_fields)]
-pub struct ForceIn {
-    /// The project whose board to use, as the hub names it (whoami lists yours).
-    pub project: String,
-    /// The ticket to take away from whoever holds it.
-    pub id: String,
-    /// At least three characters; recorded on the ticket.
-    pub reason: String,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -414,9 +346,12 @@ pub struct ApprovalRequestIn {
     pub target: Option<String>,
 }
 
-#[derive(Debug, Deserialize, JsonSchema)]
+#[derive(Debug, Deserialize, Serialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct SettingsIn {
+    /// Reuse for an identical settings change after an uncertain result.
+    #[serde(default)]
+    pub request_id: Option<String>,
     /// The project whose board to use, as the hub names it (whoami lists yours).
     pub project: String,
     /// The project's repository, an https URL (https://github.com/you/project). New tickets

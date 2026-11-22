@@ -109,6 +109,34 @@ pub async fn page(
             return crate::web::routes::unavailable();
         }
     };
+    let mut registered = Vec::new();
+    if let Some(hub) = &state.passkeys {
+        let mut after = None;
+        loop {
+            let mut page = match hub
+                .accounts()
+                .agents(&subject.id, &subject.id, after.as_deref())
+                .await
+            {
+                Ok(page) => page,
+                Err(error) => {
+                    eprintln!("devagotchi hub: ticket recipients: {error}");
+                    return crate::web::routes::unavailable();
+                }
+            };
+            let more = page.len() > 100;
+            page.truncate(100);
+            after = page.last().map(|agent| agent.id.clone());
+            registered.extend(
+                page.into_iter()
+                    .filter(|agent| agent.enabled)
+                    .map(|agent| (agent.principal(), agent.name)),
+            );
+            if !more {
+                break;
+            }
+        }
+    }
     let wanted = id.clone();
     let families = match (&state.passkeys, &subject.tenant) {
         (Some(hub), Some(tenant)) => hub
@@ -134,10 +162,10 @@ pub async fn page(
                     .filter(|e| e.ticket.as_deref() == Some(wanted.as_str())),
             );
         }
-        BridgeResult::Ok((view, events, source, wakes, board.workflow()?))
+        BridgeResult::Ok((view, events, source, wakes, board.configuration_state()?))
     })
     .await;
-    let (view, events, source, wakes, workflow) = match read {
+    let (view, events, source, wakes, configuration) = match read {
         Ok(Ok(value)) => value,
         Ok(Err(error)) if error.code == "not_found" => return unknown(),
         other => {
@@ -145,6 +173,7 @@ pub async fn page(
             return crate::web::routes::unavailable();
         }
     };
+    let workflow = &configuration.workflow;
     let site = words();
     let copy = &site.messages.app;
     let ticket = &view.ticket;
@@ -171,9 +200,19 @@ pub async fn page(
         _ => String::new(),
     };
     let form = |action: &str, inner: &str| {
+        let request =
+            super::super::requests::request_field(Some(&super::super::requests::request_id()));
+        let from = if action == "close" {
+            format!(
+                "<input type=\"hidden\" name=\"from\" value=\"{}\">",
+                escape(&ticket.state)
+            )
+        } else {
+            String::new()
+        };
         format!(
             "<form method=\"post\" action=\"{here}/{action}\"><input type=\"hidden\" name=\"version\" \
-value=\"{}\">{inner}</form>",
+value=\"{}\">{request}{from}{inner}</form>",
             ticket.version
         )
     };
@@ -306,7 +345,7 @@ value=\"{}\">{inner}</form>",
         "delegate",
         &format!(
             "<label>{}<input type=\"text\" name=\"to\" id=\"delegate-to\" list=\"agents\" required \
-pattern=\"[a-z0-9][a-z0-9-]{{0,62}}\" maxlength=\"63\" autocapitalize=\"none\" autocorrect=\"off\" \
+maxlength=\"256\" autocapitalize=\"none\" autocorrect=\"off\" \
 spellcheck=\"false\" placeholder=\"{}\"></label><datalist id=\"agents\">{}</datalist>\
 <p class=\"actions\"><button type=\"submit\" id=\"delegate\">{}</button></p>",
             escape(&copy.delegate.label),
@@ -314,6 +353,11 @@ spellcheck=\"false\" placeholder=\"{}\"></label><datalist id=\"agents\">{}</data
             agents
                 .iter()
                 .map(|name| format!("<option value=\"{}\">", escape(name)))
+                .chain(registered.iter().map(|(id, name)| format!(
+                    "<option value=\"{}\" label=\"{}\">",
+                    escape(id),
+                    escape(name)
+                )))
                 .collect::<String>(),
             escape(&copy.delegate.button),
         ),
@@ -407,13 +451,17 @@ spellcheck=\"false\" placeholder=\"{}\"></label></div>\
             escape(&copy.creation.dependencies)
         )
     };
+    let progress = ticket.progress.as_ref().filter(|value| !value.is_null()).map(|value| {
+        format!("<section class=\"card\" id=\"progress\"><h2>{}</h2><pre class=\"what\">{}</pre></section>",
+            escape(&copy.ticket_progress), escape(&value.to_string()))
+    }).unwrap_or_default();
     let body = format!(
         "<div class=\"stack\" data-page=\"ticket\"><header class=\"stack ticket-head\">\
 <p class=\"meta\"><a href=\"/app/boards/{}\">{}</a> · {}</p><h1>{}</h1>{flash}{undo}</header>\
 <div class=\"sidebar\" data-side=\"end\"><div class=\"stack ticket-main\">\
 <section class=\"card query\" id=\"ticket\"><dl class=\"facts\"><dt>{}</dt><dd id=\"state\">{}</dd>\
-<dt>{}</dt><dd>P{}</dd><dt>{}</dt><dd>{}</dd><dt>{}</dt><dd id=\"assignee\">{}</dd><dt>{}</dt><dd>{}</dd>{anchors}{dependencies}</dl>\
-<pre class=\"what\">{}</pre></section>{source}<h2>{}</h2>{notes}{comment}</div>\
+<dt>{}</dt><dd>{}</dd><dt>{}</dt><dd>{}</dd><dt>{}</dt><dd id=\"assignee\">{}</dd><dt>{}</dt><dd>{}</dd>{anchors}{dependencies}</dl>\
+<pre class=\"what\">{}</pre></section>{progress}{source}<h2>{}</h2>{notes}{comment}</div>\
 <aside class=\"stack ticket-side\"><section class=\"card\">{actions}<div class=\"delegate\">{delegate}</div></section>\
 <section class=\"card\"><h2>{}</h2><ul class=\"rows\" id=\"history\">{history}</ul></section></aside></div></div>",
         encode(&project),
@@ -427,7 +475,7 @@ spellcheck=\"false\" placeholder=\"{}\"></label></div>\
                 .map_or(ticket.state.as_str(), |s| s.label.as_str())
         ),
         escape(&copy.ticket_priority),
-        ticket.priority,
+        escape(&configuration.settings.priority_label(ticket.priority)),
         escape(&copy.ticket_labels),
         escape(&ticket.labels.join(", ")),
         escape(&copy.ticket_assignee),

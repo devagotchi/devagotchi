@@ -62,6 +62,7 @@ qrcode = { version = "0.14", default-features = false, features = ["svg"] }
 # Password sign-in (`identity/accounts/passwords/mod.rs`): argon2id, RustCrypto. The salt comes from the
 # hub's own random bytes, so no `rand` feature.
 argon2 = { version = "0.6", default-features = false, features = ["alloc", "password-hash"] }
+jsonschema = { version = "0.61.2", default-features = false }
 
 [dev-dependencies]
 devagotchi-store = { workspace = true, features = ["testing"] }

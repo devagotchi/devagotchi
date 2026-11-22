@@ -129,7 +129,7 @@ impl Hub {
             Self::caller(&subject, &context),
         );
         let ran = shared::run(
-            |body| self.send_hinted(&route, body),
+            |body| self.send_for_request("run", &route, body, &context),
             start,
             wait,
             context.ct.cancelled(),

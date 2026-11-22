@@ -16,6 +16,9 @@ impl Fields {
         }
         Ok(Self(fields))
     }
+    pub(super) fn optional(&mut self, key: &str) -> Option<String> {
+        self.0.remove(key)
+    }
     pub(super) fn take(&mut self, key: &str) -> Result<String, ()> {
         self.0.remove(key).ok_or(())
     }
@@ -31,7 +34,7 @@ impl Fields {
     }
 }
 
-pub(super) const SETTINGS: [&str; 8] = [
+pub(super) const SETTINGS: [&str; 11] = [
     "lease_ttl",
     "lease_min_ttl",
     "lease_max_ttl",
@@ -40,10 +43,14 @@ pub(super) const SETTINGS: [&str; 8] = [
     "default_priority",
     "repo",
     "environments",
+    "heartbeat_hint",
+    "note_kinds",
+    "priority_labels",
 ];
 #[derive(Clone)]
 pub(super) struct SettingsDraft {
     pub version: i64,
+    pub request_id: Option<String>,
     pub values: BTreeMap<String, String>,
 }
 impl SettingsDraft {
@@ -58,9 +65,16 @@ impl SettingsDraft {
             s.default_priority.to_string(),
             s.repo.clone().unwrap_or_default(),
             s.environments.join(", "),
+            seconds(
+                s.heartbeat_hint_ms
+                    .unwrap_or(crate::agenthub::Settings::DEFAULT_HEARTBEAT_HINT_MS),
+            ),
+            s.note_kinds.as_deref().unwrap_or_default().join(", "),
+            s.priority_labels.as_deref().unwrap_or_default().join("\n"),
         ];
         Self {
             version: state.settings_version,
+            request_id: Some(crate::web::app::requests::request_id()),
             values: SETTINGS
                 .into_iter()
                 .zip(values)
@@ -70,6 +84,7 @@ impl SettingsDraft {
     }
     pub fn parse(mut fields: Fields) -> Result<Self, ()> {
         let version = fields.number("version")?;
+        let request_id = fields.0.remove("request_id");
         let mut values = BTreeMap::new();
         for key in SETTINGS {
             values.insert(key.into(), fields.take(key)?);
@@ -78,7 +93,11 @@ impl SettingsDraft {
         if version < 1 {
             return Err(());
         }
-        Ok(Self { version, values })
+        Ok(Self {
+            version,
+            request_id,
+            values,
+        })
     }
     pub fn edit(&self) -> Result<SettingsEdit, ()> {
         let get = |key| self.values.get(key).ok_or(()).map(String::as_str);
@@ -90,6 +109,21 @@ impl SettingsDraft {
             max_lease_expiries: integer("max_lease_expiries")?,
             wip_limit_default: integer("wip_limit_default")?,
             default_priority: integer("default_priority")?,
+            priority_labels: Some(
+                get("priority_labels")?
+                    .lines()
+                    .map(|line| line.trim().to_string())
+                    .collect(),
+            ),
+            heartbeat_hint_ms: Some(milliseconds(get("heartbeat_hint")?)?),
+            note_kinds: Some(if get("note_kinds")?.trim().is_empty() {
+                Vec::new()
+            } else {
+                get("note_kinds")?
+                    .split(',')
+                    .map(|s| s.trim().to_string())
+                    .collect()
+            }),
             repo: Some(get("repo")?.to_string()),
             environments: get("environments")?
                 .split(',')
@@ -125,17 +159,20 @@ fn milliseconds(value: &str) -> Result<i64, ()> {
 #[derive(Clone)]
 pub(super) struct WorkflowDraft {
     pub version: i64,
+    pub request_id: Option<String>,
     pub workflow: Workflow,
 }
 impl WorkflowDraft {
     pub fn current(state: &ConfigurationState) -> Self {
         Self {
             version: state.workflow_version,
+            request_id: Some(crate::web::app::requests::request_id()),
             workflow: state.workflow.clone(),
         }
     }
     pub fn parse(mut fields: Fields) -> Result<(Self, String), ()> {
         let version = fields.number("version")?;
+        let request_id = fields.0.remove("request_id");
         let action = fields.0.remove("action").unwrap_or_else(|| "save".into());
         let id = fields.take("id")?;
         let name = fields.take("name")?;
@@ -189,6 +226,7 @@ impl WorkflowDraft {
         Ok((
             Self {
                 version,
+                request_id,
                 workflow: Workflow {
                     id,
                     name,

@@ -163,7 +163,7 @@ impl Hub {
         let inspection = matches!(body, RequestBody::BrokerCapabilities(_));
         let result = match self.route(&subject, broker).await {
             Ok(route) => {
-                let sent = self.send_hinted(&route, body);
+                let sent = self.send_for_request(tool, &route, body, &context);
                 let answer = async {
                     if inspection {
                         devagotchi_mcp::capabilities::response(sent).await

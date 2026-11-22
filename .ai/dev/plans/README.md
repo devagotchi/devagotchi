@@ -1,5 +1,10 @@
 # Plan registry
 
+Current source-consolidation work follows [complete preserved-source absorption](absorb-preserved-sources.md)
+and its [execution packets](absorption/implementation.md). Author all five sources locally,
+oldest first, before starting CI or CI-triggering pushes. Earlier increment schedules below
+do not override that operator instruction; planning rows are not implementation evidence.
+
 Use [TEMPLATE.md](TEMPLATE.md) for new task/PR plans. Keep each plan linked to its issue
 and actual PR once created; use `not_created` before a PR exists, never invent a URL.
 Plans are requested deliverables here, not a general permission to litter the repository

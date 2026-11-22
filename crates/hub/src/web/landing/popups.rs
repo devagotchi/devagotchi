@@ -60,7 +60,7 @@ fn claim(ctx: &Ctx) -> String {
 
 /// The hub's MCP tools, grouped by what they are for. They are the hub's own, so they stay
 /// with its code: a test holds this to the tools the hub serves (`hub::tool_names`).
-pub const TOOLS: [(&str, &[(&[&str], &str)]); 7] = [
+pub const TOOLS: [(&str, &[(&[&str], &str)]); 8] = [
     (
         "Find your machines",
         &[
@@ -95,6 +95,23 @@ pub const TOOLS: [(&str, &[(&[&str], &str)]); 7] = [
         ],
     ),
     (
+        "Request machine access",
+        &[
+            (
+                &["machines_list", "capabilities_list"],
+                "Lists your enrolled machines and the kinds of access you can request, including which restrictions a connected broker supports.",
+            ),
+            (
+                &["request_access", "wait_for_access"],
+                "Asks the environment owner to review a specific scope and duration, with your reason, and waits for the decision. A pending request grants no access.",
+            ),
+            (
+                &["my_grants"],
+                "Shows the signed-in person's or agent's machine grants, their limits, and whether they have ended.",
+            ),
+        ],
+    ),
+    (
         "Run commands",
         &[
             (
@@ -116,6 +133,10 @@ pub const TOOLS: [(&str, &[(&[&str], &str)]); 7] = [
             (
                 &["operation_input", "operation_resize"],
                 "Types into a job that asks for input (a prompt, a REPL, a sign-in) and resizes its terminal. Only the conversation that started it types there.",
+            ),
+            (
+                &["operation_heartbeat"],
+                "Renews an interactive job's existing permission while its grant and task lease remain valid. It does not extend the task lease or restore expired access.",
             ),
             (
                 &["operation_cancel"],

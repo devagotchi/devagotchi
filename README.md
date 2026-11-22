@@ -11,6 +11,13 @@ Linux today, and macOS is a target that does not work yet. It is alpha: pre-rele
 **[docs/product.md](docs/product.md) is the one description of what is being built and what
 works today, with the evidence for each.** Where another document disagrees, it holds.
 
+## Prerelease roadmap and integration status
+
+The [current delivery roadmap](docs/implementation-and-release-plan.md#current-integration-status-2026-11-22)
+tracks implemented code, missing work, publication and merge separately. The
+[oldest-first source plan](.ai/dev/plans/absorb-preserved-sources.md) names every remaining
+source branch and its acceptance requirements. The prerelease is not yet complete.
+
 ## Install: one line, for you or your AI
 
 Tell your AI "install Devagotchi from github.com/devagotchi/devagotchi", or paste the line

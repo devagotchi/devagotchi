@@ -72,6 +72,7 @@ export interface BrokerContracts {
   file_write_input: FileWriteInput;
   file_written: FileWritten;
   get_input: GetInput;
+  heartbeat_output: HeartbeatOutput;
   input_sent: InputSent;
   list_input: ListInput;
   operation_view: OperationView;
@@ -540,6 +541,17 @@ export interface GetInput {
   /**
    * The operation ID returned by operation_start or run.
    */
+  operation_id: string;
+}
+/**
+ * Receipt for an explicitly renewed, already admitted hosted process.
+ */
+export interface HeartbeatOutput {
+  /**
+   * Acknowledged authority deadline, in Unix milliseconds. Does not extend the
+   * program's own execution deadline or its task lease.
+   */
+  expires_at_ms: number;
   operation_id: string;
 }
 /**

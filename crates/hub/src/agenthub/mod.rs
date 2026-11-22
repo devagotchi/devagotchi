@@ -9,6 +9,7 @@
 
 pub use devagotchi_agenthub::*;
 
+pub(crate) mod http;
 pub mod issue_lifecycle;
 pub mod mcp;
 pub(crate) mod registry;

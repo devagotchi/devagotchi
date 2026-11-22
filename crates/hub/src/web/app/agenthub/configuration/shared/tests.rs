@@ -48,7 +48,11 @@ fn draft(version: i64, name: &str) -> WorkflowDraft {
     let mut workflow = Workflow::default_workflow();
     workflow.id = "delivery".into();
     workflow.name = name.into();
-    WorkflowDraft { version, workflow }
+    WorkflowDraft {
+        version,
+        workflow,
+        request_id: None,
+    }
 }
 async fn publish(hub: &Hosted, person: &Person) {
     assert_eq!(

@@ -102,6 +102,8 @@ pub struct OrgRole {
 
 #[derive(Debug, Serialize, JsonSchema)]
 pub struct WhoAmI {
+    /// Ticket, lease and project-settings tools honor request_id atomically.
+    pub board_request_receipts: bool,
     /// The account ID (`sub`) the identity provider proved, never a caller-supplied name.
     /// Grants are written against this.
     pub subject: String,

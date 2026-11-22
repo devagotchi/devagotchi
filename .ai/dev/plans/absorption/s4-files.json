@@ -1,0 +1,372 @@
+{
+  "source": "S4",
+  "ref": "preserve/packaging-2026-10-25",
+  "sha": "adca8b75ffb715a137d94166bf2677f13e5da5ab",
+  "previous": "97172d9a3388afb6c8800b4b28d1ecb3487b4eab",
+  "tree": "1a987d72e8b9cdb7c9a863c4fe22fcea6c1cfe70",
+  "head_path_count": 817,
+  "scope": "delta from previous source",
+  "commits": [
+    {
+      "sha": "adca8b75ffb715a137d94166bf2677f13e5da5ab",
+      "authored": "2026-11-18T11:28:26-05:00",
+      "subject": "Preserve the uncommitted 2026-10-25 packaging work for absorption into devagotchi plans",
+      "status": "unverified"
+    }
+  ],
+  "files": [
+    {
+      "path": "README.md",
+      "change": "M",
+      "blob": "fb7fb5ae8bd64d4123ff325d071a55b4c91b2028",
+      "mode": "100644",
+      "kind": "blob",
+      "packet": "D01",
+      "status": "unverified",
+      "target_paths": [],
+      "evidence": []
+    },
+    {
+      "path": "deploy/package/README.md",
+      "change": "A",
+      "blob": "64f480d4d4e70e28b523eda38ef8ddd7956d9c9e",
+      "mode": "100644",
+      "kind": "blob",
+      "packet": "D01",
+      "status": "unverified",
+      "target_paths": [],
+      "evidence": []
+    },
+    {
+      "path": "deploy/package/hub-server.Dockerfile",
+      "change": "A",
+      "blob": "a74fb0a307fbadedc6a27a721a616bdd587030d8",
+      "mode": "100644",
+      "kind": "blob",
+      "packet": "D01",
+      "status": "unverified",
+      "target_paths": [],
+      "evidence": []
+    },
+    {
+      "path": "deploy/package/hub-server.Dockerfile.dockerignore",
+      "change": "A",
+      "blob": "3c8fb5517fd5657eec136622d23c6d360f7073c4",
+      "mode": "100644",
+      "kind": "blob",
+      "packet": "D01",
+      "status": "unverified",
+      "target_paths": [],
+      "evidence": []
+    },
+    {
+      "path": "docs/agenthub-packaging-slice.md",
+      "change": "A",
+      "blob": "246c2ea3cdfbb6804accb986f5669d3c5ed44321",
+      "mode": "100644",
+      "kind": "blob",
+      "packet": "D01",
+      "status": "unverified",
+      "target_paths": [],
+      "evidence": []
+    },
+    {
+      "path": "docs/windows-private-storage-next-packet.md",
+      "change": "A",
+      "blob": "761503bcd9c1885e19ba05ffd608587c57cce563",
+      "mode": "100644",
+      "kind": "blob",
+      "packet": "D01",
+      "status": "unverified",
+      "target_paths": [],
+      "evidence": []
+    },
+    {
+      "path": "server/cmd/hub-server/main.go",
+      "change": "M",
+      "blob": "c11c8d41b5425b42efd4f20186a4eea82c139cb3",
+      "mode": "100644",
+      "kind": "blob",
+      "packet": "D01",
+      "status": "unverified",
+      "target_paths": [],
+      "evidence": []
+    },
+    {
+      "path": "server/internal/browserauth/boundaries_test.go",
+      "change": "M",
+      "blob": "24b0131b1d9c569a560cb0ded0d7f7e512f8bf04",
+      "mode": "100644",
+      "kind": "blob",
+      "packet": "D01",
+      "status": "unverified",
+      "target_paths": [],
+      "evidence": []
+    },
+    {
+      "path": "server/internal/browserauth/guard.go",
+      "change": "M",
+      "blob": "e8822bbd315ef75588fefd763f5a881a082f7b7d",
+      "mode": "100644",
+      "kind": "blob",
+      "packet": "D01",
+      "status": "unverified",
+      "target_paths": [],
+      "evidence": []
+    },
+    {
+      "path": "server/internal/devapi/build.go",
+      "change": "M",
+      "blob": "0f2b565e6199a6811297fb012de93f39212f3f45",
+      "mode": "100644",
+      "kind": "blob",
+      "packet": "D01",
+      "status": "unverified",
+      "target_paths": [],
+      "evidence": []
+    },
+    {
+      "path": "server/internal/health/ready.go",
+      "change": "A",
+      "blob": "e9b0782c33db81ce1c5d1afd583e24c4084cca70",
+      "mode": "100644",
+      "kind": "blob",
+      "packet": "D01",
+      "status": "unverified",
+      "target_paths": [],
+      "evidence": []
+    },
+    {
+      "path": "server/internal/health/ready_test.go",
+      "change": "A",
+      "blob": "0d30bf507cb8434319f6f6ef22cd77946e3ea6e3",
+      "mode": "100644",
+      "kind": "blob",
+      "packet": "D01",
+      "status": "unverified",
+      "target_paths": [],
+      "evidence": []
+    },
+    {
+      "path": "server/internal/httpapi/embed_test.go",
+      "change": "A",
+      "blob": "107162191c10ce01575970a7f297faa695fd18c0",
+      "mode": "100644",
+      "kind": "blob",
+      "packet": "D01",
+      "status": "unverified",
+      "target_paths": [],
+      "evidence": []
+    },
+    {
+      "path": "server/internal/httpapi/server.go",
+      "change": "M",
+      "blob": "fd22a3dfdc85f7292d477bf64d7b63edf4a7725e",
+      "mode": "100644",
+      "kind": "blob",
+      "packet": "D01",
+      "status": "unverified",
+      "target_paths": [],
+      "evidence": []
+    },
+    {
+      "path": "server/internal/lifecycle/http.go",
+      "change": "A",
+      "blob": "0f8dbbdd3a4d0283935550d83132dae578fe7ae9",
+      "mode": "100644",
+      "kind": "blob",
+      "packet": "D01",
+      "status": "unverified",
+      "target_paths": [],
+      "evidence": []
+    },
+    {
+      "path": "server/internal/lifecycle/http_test.go",
+      "change": "A",
+      "blob": "0a471e3c37365786ed0fd8512f0d1cdf0c507779",
+      "mode": "100644",
+      "kind": "blob",
+      "packet": "D01",
+      "status": "unverified",
+      "target_paths": [],
+      "evidence": []
+    },
+    {
+      "path": "server/internal/providers/enums_ts_test.go",
+      "change": "M",
+      "blob": "8b0dedb20a2313db8c9207c4b614deec145293f1",
+      "mode": "100644",
+      "kind": "blob",
+      "packet": "D01",
+      "status": "unverified",
+      "target_paths": [],
+      "evidence": []
+    },
+    {
+      "path": "test-evidence/claude-packaging-disclosure-check.md",
+      "change": "A",
+      "blob": "da80a1d69eef0a849a002b0697f35caaf8fdbc01",
+      "mode": "100644",
+      "kind": "blob",
+      "packet": "D01",
+      "status": "unverified",
+      "target_paths": [],
+      "evidence": []
+    },
+    {
+      "path": "test-evidence/claude-packaging-review-bundle.txt",
+      "change": "A",
+      "blob": "16176ba1bbd70e7de636b341ef050f1f775665a1",
+      "mode": "100644",
+      "kind": "blob",
+      "packet": "D01",
+      "status": "unverified",
+      "target_paths": [],
+      "evidence": []
+    },
+    {
+      "path": "test-evidence/packaging-2026-10-25.md",
+      "change": "A",
+      "blob": "6092ac5001755bc9ad35c9bfc739c8675cbd903e",
+      "mode": "100644",
+      "kind": "blob",
+      "packet": "D01",
+      "status": "unverified",
+      "target_paths": [],
+      "evidence": []
+    },
+    {
+      "path": "test-evidence/packaging-bridge-tests-2026-10-25.txt",
+      "change": "A",
+      "blob": "9159934042391ce28c8f34c9a8bade37383c73f0",
+      "mode": "100644",
+      "kind": "blob",
+      "packet": "D01",
+      "status": "unverified",
+      "target_paths": [],
+      "evidence": []
+    },
+    {
+      "path": "test-evidence/packaging-followup-2026-10-25.md",
+      "change": "A",
+      "blob": "7703134783d8e87bad51ebce03130b7a610af9b9",
+      "mode": "100644",
+      "kind": "blob",
+      "packet": "D01",
+      "status": "unverified",
+      "target_paths": [],
+      "evidence": []
+    },
+    {
+      "path": "test-evidence/packaging-linux-tests-2026-10-25.txt",
+      "change": "A",
+      "blob": "77810d3f357a6cb08dfe9fef846adfd348d974b2",
+      "mode": "100644",
+      "kind": "blob",
+      "packet": "D01",
+      "status": "unverified",
+      "target_paths": [],
+      "evidence": []
+    },
+    {
+      "path": "test-evidence/packaging-ui-2026-10-25/desktop-board.png",
+      "change": "A",
+      "blob": "51230a56a83c76c575b341cc1f9f589062782c92",
+      "mode": "100644",
+      "kind": "blob",
+      "packet": "D01",
+      "status": "unverified",
+      "target_paths": [],
+      "evidence": []
+    },
+    {
+      "path": "test-evidence/packaging-ui-2026-10-25/desktop-login.png",
+      "change": "A",
+      "blob": "9409049086b66da0b6360e5008e15844a85abc96",
+      "mode": "100644",
+      "kind": "blob",
+      "packet": "D01",
+      "status": "unverified",
+      "target_paths": [],
+      "evidence": []
+    },
+    {
+      "path": "test-evidence/packaging-ui-2026-10-25/desktop-task-form.png",
+      "change": "A",
+      "blob": "7cf90394c97cf35564b403f78219bd5ad9e3b1c3",
+      "mode": "100644",
+      "kind": "blob",
+      "packet": "D01",
+      "status": "unverified",
+      "target_paths": [],
+      "evidence": []
+    },
+    {
+      "path": "test-evidence/packaging-ui-2026-10-25/initial-harness-timeout.png",
+      "change": "A",
+      "blob": "2a5190e4ab573e7de6714fd1f135aa5c4bb0c0e1",
+      "mode": "100644",
+      "kind": "blob",
+      "packet": "D01",
+      "status": "unverified",
+      "target_paths": [],
+      "evidence": []
+    },
+    {
+      "path": "test-evidence/packaging-ui-2026-10-25/mobile-board.png",
+      "change": "A",
+      "blob": "6863cbdef877ed0579f70931ac82f800245fc49b",
+      "mode": "100644",
+      "kind": "blob",
+      "packet": "D01",
+      "status": "unverified",
+      "target_paths": [],
+      "evidence": []
+    },
+    {
+      "path": "test-evidence/packaging-ui-2026-10-25/mobile-task.png",
+      "change": "A",
+      "blob": "fa8b347dd80b6748b882a52357643d67d226e10b",
+      "mode": "100644",
+      "kind": "blob",
+      "packet": "D01",
+      "status": "unverified",
+      "target_paths": [],
+      "evidence": []
+    },
+    {
+      "path": "test-evidence/packaging-ui-2026-10-25/results.json",
+      "change": "A",
+      "blob": "a04bdd55c6a262acbca50d48409cdbed44b8fcce",
+      "mode": "100644",
+      "kind": "blob",
+      "packet": "D01",
+      "status": "unverified",
+      "target_paths": [],
+      "evidence": []
+    },
+    {
+      "path": "test-evidence/packaging-windows-tests-2026-10-25.txt",
+      "change": "A",
+      "blob": "d1abc296a798575c40f2e2a0c471e4707972ab09",
+      "mode": "100644",
+      "kind": "blob",
+      "packet": "D01",
+      "status": "unverified",
+      "target_paths": [],
+      "evidence": []
+    },
+    {
+      "path": "tests/ui/packaging-smoke.mjs",
+      "change": "A",
+      "blob": "2f9a37bdc7da1c6a7f81da34f0c328685ad28883",
+      "mode": "100644",
+      "kind": "blob",
+      "packet": "D01",
+      "status": "unverified",
+      "target_paths": [],
+      "evidence": []
+    }
+  ],
+  "note": "Assignment is an inventory, not proof of implementation. No row is closed by this generator."
+}

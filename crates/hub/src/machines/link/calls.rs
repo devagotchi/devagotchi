@@ -54,6 +54,11 @@ impl Links {
             .cloned()
             .ok_or_else(|| offline(device))?;
         let id = self.next.fetch_add(1, Ordering::Relaxed);
+        let _capacity = session
+            .capacity
+            .clone()
+            .try_acquire_owned()
+            .map_err(|_| BridgeError::new("link_busy", "machine call capacity is full"))?;
         let (tx, rx) = oneshot::channel();
         session.pending.lock().expect("pending").insert(id, tx);
         let _waiter = Waiter {

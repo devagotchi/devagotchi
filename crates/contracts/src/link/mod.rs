@@ -4,7 +4,7 @@
 
 use std::time::Duration;
 
-use crate::{WireRequest, WireResponse};
+use crate::{RemoteWireRequest, RemoteWireResponse, WireRequest, WireResponse};
 use serde::{Deserialize, Serialize};
 
 /// The machine link (plan N20): a broker on another machine is reached through one
@@ -47,6 +47,8 @@ pub enum HubFrame {
     },
     Welcome {
         device: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        generation: Option<String>,
     },
     Refused {
         code: String,
@@ -55,6 +57,11 @@ pub enum HubFrame {
     Call {
         id: u64,
         request: WireRequest,
+    },
+    /// Sent only after the link advertised the granted remote protocol.
+    RemoteCall {
+        id: u64,
+        request: RemoteWireRequest,
     },
     /// Update this machine to the hub's build `version`: wait for its running jobs unless
     /// `force`, then download, check and install it. The hub sends it only to a device
@@ -89,10 +96,16 @@ pub enum LinkFrame {
         /// image and never by itself; left out on any other machine (and by an older device).
         #[serde(default, skip_serializing_if = "Option::is_none")]
         kind: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        remote_access: Option<u32>,
     },
     Result {
         id: u64,
         response: WireResponse,
+    },
+    RemoteResult {
+        id: u64,
+        response: RemoteWireResponse,
     },
     Heartbeat,
     /// Where an update the hub asked for stands: `waiting_for_jobs`, `downloading`,
