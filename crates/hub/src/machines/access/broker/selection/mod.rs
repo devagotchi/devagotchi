@@ -1,6 +1,7 @@
 //! Source grant ordering, canonical broker matching and permanent retry affinity.
 use super::*;
 use sqlx::Row;
+mod eligibility;
 #[cfg(test)]
 mod tests;
 
@@ -10,6 +11,9 @@ pub(crate) struct StartSelection<'a> {
     pub machine: &'a MachineBinding,
     pub links: &'a Links,
     pub client: &'a str,
+    pub boards: Option<&'a Arc<crate::agenthub::mcp::Boards>>,
+    /// Empty means unrestricted; these come from verified credential limits.
+    pub projects: &'a [String],
 }
 impl StartSelection<'_> {
     fn execution<'a>(&'a self, id: &'a str) -> LinkExecution<'a> {
@@ -127,6 +131,15 @@ impl Access {
             .original_start_grant(selection, &input.idempotency_key)
             .await?
         {
+            let target = self
+                .execution_target(selection.account, selection.actor, &id)
+                .await?;
+            if !selection.project_allowed(target.project.as_deref()) {
+                return Err(BridgeError::new(
+                    "key_denied",
+                    "the original retry grant is outside this key's project limits",
+                ));
+            }
             return self.prepare_start(&selection.execution(&id), input).await;
         }
         let capability = if input.interactive.is_some() {
@@ -152,6 +165,17 @@ impl Access {
                         "grant target changed during selection",
                     ));
                 }
+                let action = if input.interactive.is_some() {
+                    GrantAction::ProcessStart
+                } else {
+                    GrantAction::Exec
+                };
+                if !self
+                    .start_candidate_live(selection, &candidate.id, &target, action)
+                    .await?
+                {
+                    continue;
+                }
                 let canonical = if let Some(cached) =
                     prepared.iter().find(|p| p.target.level == target.level)
                 {
@@ -169,6 +193,12 @@ impl Access {
                     &canonical.call,
                 ) {
                     Ok(()) => {
+                        if !self
+                            .start_candidate_live(selection, &candidate.id, &target, action)
+                            .await?
+                        {
+                            continue;
+                        }
                         return Ok(PreparedStart {
                             grant_id: candidate.id,
                             target,

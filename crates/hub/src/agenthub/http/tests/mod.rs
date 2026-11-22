@@ -8,6 +8,7 @@ mod access_mcp;
 mod access_reads;
 mod access_requests;
 mod access_run;
+mod access_selection;
 mod aggregate;
 mod catalog;
 mod catalog_access;

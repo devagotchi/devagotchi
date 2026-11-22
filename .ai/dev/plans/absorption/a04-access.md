@@ -766,3 +766,31 @@ I/O followed by an expired queued request; it does not claim rollback of earlier
 The final test also checks the forwarded request identities and output cursor progress.
 All eight layout checks passed again. Runtime code is unchanged from the prior green
 regressions; only this additional native probe and its evidence were added.
+
+
+### Task and credential-aware start selection (local implementation)
+
+`broker/selection/eligibility.rs` resolves the original task board through the existing
+registry and calls the shared `current_in` authority checks before and after broker
+preparation. Reclaimed/ended task grants and explicit current-policy denials can be
+skipped for a later eligible grant. Credential project limits filter unbound and other
+project grants before contacting the broker. Original retries stay on their original
+grant; an out-of-scope retry refuses rather than selecting another grant. No use or
+admission is created by selection. Final admission retains its atomic authority checks.
+Database failures, malformed snapshots and foreign task identities remain visible errors.
+
+Validation: `target/selection-eligibility-regression.log`, five affected packages with
+`--lib access -- --test-threads=4`, required isolated PostgreSQL enabled. AgentHub7 +
+hub128 + native2 = **137 passed, zero failed/ignored**. This includes all nine selection
+tests: 101-candidate paging and one preparation per level; original exhausted retry;
+reclaimed task; credential project filtering and out-of-scope retry; task release during
+Prepare with cached preparation; all candidates outside credential scope; malformed
+grant; foreign task identity; database pool failure during eligibility. Actual MCP tests
+assert the selected grant, zero rejected-grant uses and absence of extra broker calls.
+The earlier seven-test focused selection run also passed. Formatting, generated contracts,
+AI repository checks, all eight layout checks and normal Git diff checks passed.
+
+This finishes the task/credential filter sub-unit for operation starts. Other capabilities,
+file/batch/image dispatch, list/history, explicit heartbeat, human operator stop, native
+confinement and the remaining S1 batches are still open. Source records remain partial.
+Implementation and local validation exist; push/PR/main merge/deletion do not.

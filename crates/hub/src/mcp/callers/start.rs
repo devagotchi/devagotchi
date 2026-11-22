@@ -92,6 +92,8 @@ impl Hub {
                     machine: &binding,
                     links: &self.links,
                     client: &client,
+                    boards: Some(&self.boards),
+                    projects: caller.allowed_projects(),
                 },
                 input,
             )

@@ -3788,13 +3788,18 @@
         "crates/hub/src/machines/access/broker/selection/mod.rs",
         "crates/hub/src/machines/access/broker/selection/tests.rs",
         "crates/hub/src/mcp/callers/start.rs",
-        "crates/hub/src/agenthub/http/tests/access_execution.rs"
+        "crates/hub/src/agenthub/http/tests/access_execution.rs",
+        "crates/hub/src/machines/access/broker/selection/eligibility.rs",
+        "crates/hub/src/agenthub/http/tests/access_selection/mod.rs",
+        "crates/hub/src/agenthub/http/tests/access_selection/fixture.rs",
+        "crates/hub/src/mcp/tools/access_caller.rs"
       ],
       "evidence": [
         "Partial access foundation: typed scope/narrowing/risk checks and catalog snapshots; current identity, task lease and machine generation seams. 26 contracts, 3 AgentHub PostgreSQL binding and 28 hub focused tests passed. See .ai/dev/plans/absorption/a04-access.md. Durable request/grant/admission storage, all adapters and native enforcement remain open; no source closure or main delivery.",
         "Partial durable access unit: transactional request snapshots, human decisions, versioned policies/revocation, durable ending outbox, and admission identity/once continuation. Required-PostgreSQL local slices passed 22 lifecycle/notification and 26 expanded admission tests; exact commands/logs and remaining source obligations are in .ai/dev/plans/absorption/a04-access.md. Broker/native enforcement, remaining lifecycle, surface adapters and UI are still open; no source closure or main delivery.",
         "2026-11-21 adapter integration: authenticated broker facts, request/decision HTTP and five MCP access tools are authored; required-PostgreSQL access regression passed 84 tests with zero failed/ignored. Broker authority/outbox checkpoint 498a06f and remaining obligations/evidence are detailed in .ai/dev/plans/absorption/a04-access.md. Ordinary machine dispatch, native sandbox levels, browser surfaces, shared/configured/guide authority and source role_route remain open where applicable; no source closure, push or main delivery.",
-        "2026-11-21 ordinary MCP operation_start partial port: canonical preparation, ordered/paged grant selection, original retry affinity and post-wait credential refresh before durable admission. Six new focused tests and 106 existing access regressions passed with required PostgreSQL; exact logs, layout correction and remaining run/file/process/native gaps are recorded in .ai/dev/plans/absorption/a04-access.md. No complete source closure or main delivery."
+        "2026-11-21 ordinary MCP operation_start partial port: canonical preparation, ordered/paged grant selection, original retry affinity and post-wait credential refresh before durable admission. Six new focused tests and 106 existing access regressions passed with required PostgreSQL; exact logs, layout correction and remaining run/file/process/native gaps are recorded in .ai/dev/plans/absorption/a04-access.md. No complete source closure or main delivery.",
+        "Task/credential-aware start selection is locally validated: original task generation and current policy before/after broker preparation; project-limited keys filter candidates; retries retain original grants. Nine selection tests including 101-candidate paging, damaged identity and database failure pass within the 137-test required-PostgreSQL access regression. See a04-access.md. Source remains partial; no push, PR, main merge or deletion."
       ]
     },
     {
@@ -4740,10 +4745,15 @@
         "crates/hub/src/machines/access/broker/selection/mod.rs",
         "crates/hub/src/machines/access/broker/selection/tests.rs",
         "crates/hub/src/mcp/callers/start.rs",
-        "crates/hub/src/agenthub/http/tests/access_execution.rs"
+        "crates/hub/src/agenthub/http/tests/access_execution.rs",
+        "crates/hub/src/machines/access/broker/selection/eligibility.rs",
+        "crates/hub/src/agenthub/http/tests/access_selection/mod.rs",
+        "crates/hub/src/agenthub/http/tests/access_selection/fixture.rs",
+        "crates/hub/src/mcp/tools/access_caller.rs"
       ],
       "evidence": [
-        "2026-11-21 ordinary MCP operation_start partial port: canonical preparation, ordered/paged grant selection, original retry affinity and post-wait credential refresh before durable admission. Six new focused tests and 106 existing access regressions passed with required PostgreSQL; exact logs, layout correction and remaining run/file/process/native gaps are recorded in .ai/dev/plans/absorption/a04-access.md. No complete source closure or main delivery."
+        "2026-11-21 ordinary MCP operation_start partial port: canonical preparation, ordered/paged grant selection, original retry affinity and post-wait credential refresh before durable admission. Six new focused tests and 106 existing access regressions passed with required PostgreSQL; exact logs, layout correction and remaining run/file/process/native gaps are recorded in .ai/dev/plans/absorption/a04-access.md. No complete source closure or main delivery.",
+        "Task/credential-aware start selection is locally validated: original task generation and current policy before/after broker preparation; project-limited keys filter candidates; retries retain original grants. Nine selection tests including 101-candidate paging, damaged identity and database failure pass within the 137-test required-PostgreSQL access regression. See a04-access.md. Source remains partial; no push, PR, main merge or deletion."
       ]
     },
     {
@@ -5242,10 +5252,15 @@
         "crates/hub/src/machines/access/broker/selection/mod.rs",
         "crates/hub/src/machines/access/broker/selection/tests.rs",
         "crates/hub/src/mcp/callers/start.rs",
-        "crates/hub/src/agenthub/http/tests/access_execution.rs"
+        "crates/hub/src/agenthub/http/tests/access_execution.rs",
+        "crates/hub/src/machines/access/broker/selection/eligibility.rs",
+        "crates/hub/src/agenthub/http/tests/access_selection/mod.rs",
+        "crates/hub/src/agenthub/http/tests/access_selection/fixture.rs",
+        "crates/hub/src/mcp/tools/access_caller.rs"
       ],
       "evidence": [
-        "2026-11-21 ordinary MCP operation_start partial port: canonical preparation, ordered/paged grant selection, original retry affinity and post-wait credential refresh before durable admission. Six new focused tests and 106 existing access regressions passed with required PostgreSQL; exact logs, layout correction and remaining run/file/process/native gaps are recorded in .ai/dev/plans/absorption/a04-access.md. No complete source closure or main delivery."
+        "2026-11-21 ordinary MCP operation_start partial port: canonical preparation, ordered/paged grant selection, original retry affinity and post-wait credential refresh before durable admission. Six new focused tests and 106 existing access regressions passed with required PostgreSQL; exact logs, layout correction and remaining run/file/process/native gaps are recorded in .ai/dev/plans/absorption/a04-access.md. No complete source closure or main delivery.",
+        "Task/credential-aware start selection is locally validated: original task generation and current policy before/after broker preparation; project-limited keys filter candidates; retries retain original grants. Nine selection tests including 101-candidate paging, damaged identity and database failure pass within the 137-test required-PostgreSQL access regression. See a04-access.md. Source remains partial; no push, PR, main merge or deletion."
       ]
     },
     {

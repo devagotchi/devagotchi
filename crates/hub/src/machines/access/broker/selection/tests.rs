@@ -61,6 +61,8 @@ fn selection<'a>(f: &'a Fixture, actor: &'a Actor<'a>, links: &'a Links) -> Star
         machine: &f.machine,
         links,
         client: "selection-test",
+        boards: None,
+        projects: &[],
     }
 }
 
@@ -170,5 +172,72 @@ async fn access_start_selection_retry_keeps_exhausted_original_grant() {
             .code,
         "grant_required"
     );
+    assert!(rx.try_recv().is_err());
+}
+
+#[tokio::test]
+async fn access_start_selection_damaged_candidate_does_not_fall_through() {
+    let test = or_skip!(store::testing::postgres());
+    let f = Fixture::new(test.store).await;
+    let damaged = f.once().await;
+    let pending = f.request(&input(), "later-request").await.unwrap();
+    let live = f
+        .decide(
+            &pending.result.request_ids[0],
+            &Decision::Approve {
+                narrow: Narrow::default(),
+            },
+            "later-approve",
+        )
+        .await
+        .unwrap()
+        .result
+        .grant_id
+        .unwrap();
+    transaction!(&f.access.accounts.store, |c| {
+        f.access.accounts.store.scope(c, &f.owner.tenant).await?;
+        sqlx::query("UPDATE machine_grants SET approved_at=1,task_binding='{}'::jsonb WHERE tenant_id=$1 AND id=$2")
+            .bind(&f.owner.tenant).bind(&damaged).execute(c).await?;
+        Ok(())
+    }).unwrap();
+    let (links, mut rx) = links(&f).await;
+    let actor = f.actor();
+    let error = f
+        .access
+        .prepare_selected_start(&selection(&f, &actor, &links), start("damaged"))
+        .await
+        .unwrap_err();
+    assert_eq!(error.code, "access_damaged");
+    assert_eq!(f.admission_counts(&damaged).await, (0, 0, 0));
+    assert_eq!(f.admission_counts(&live).await, (0, 0, 0));
+    assert!(rx.try_recv().is_err());
+}
+
+#[tokio::test]
+async fn access_start_selection_eligibility_propagates_database_failure() {
+    let test = or_skip!(store::testing::postgres());
+    let f = Fixture::new(test.store).await;
+    let grant = f.once().await;
+    let actor = f.actor();
+    let target = f
+        .access
+        .execution_target(&f.owner.id, &actor, &grant)
+        .await
+        .unwrap();
+    let (links, mut rx) = links(&f).await;
+    // This fixture owns an isolated database/pool. Fail the candidate's current-state
+    // read after its metadata resolved; an unavailable store is never an ineligible grant.
+    f.access.accounts.store.pool().close().await;
+    let error = f
+        .access
+        .start_candidate_live(
+            &selection(&f, &actor, &links),
+            &grant,
+            &target,
+            GrantAction::Exec,
+        )
+        .await
+        .unwrap_err();
+    assert_eq!(error.code, "account_store");
     assert!(rx.try_recv().is_err());
 }

@@ -135,6 +135,11 @@ impl AccessCaller {
         }
         Ok(())
     }
+    pub fn allowed_projects(&self) -> &[String] {
+        self.limits
+            .as_ref()
+            .map_or(&[], |limits| limits.projects.as_slice())
+    }
     pub fn request_scope(&self, machine: &str, project: Option<&str>) -> BridgeResult<()> {
         if let Some(why) = self
             .limits
