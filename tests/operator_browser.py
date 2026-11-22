@@ -84,7 +84,7 @@ def call(url: str, data=None, headers=None, method=None):
 class Person:
     """An AI client connecting to the hub as a new person, with nothing but Connect."""
 
-    def __init__(self, hub: str):
+    def __init__(self, hub: str, cookie: str | None = None):
         self.hub = hub
         status, _, body = call(
             f"{hub}/oauth/register",
@@ -92,7 +92,7 @@ class Person:
             {"Content-Type": "application/json"},
         )
         assert status in (200, 201), body
-        client = json.loads(body)["client_id"]
+        client = self.client = json.loads(body)["client_id"]
         verifier = secrets.token_urlsafe(48)
         challenge = base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).rstrip(b"=").decode()
         resource = f"{hub}/mcp"
@@ -101,8 +101,11 @@ class Person:
             "code_challenge": challenge, "code_challenge_method": "S256", "state": "s1",
             "resource": resource,
         })
-        status, headers, page = call(f"{hub}/oauth/authorize?{query}")
+        cookies = {"Cookie": cookie} if cookie else {}
+        status, headers, page = call(f"{hub}/oauth/authorize?{query}", headers=cookies)
         jar = http.cookies.SimpleCookie()
+        if cookie:
+            jar.load(cookie)
         if status == 303 and headers["Location"].startswith("/auth/login?"):
             # A hosted hub without `anonymous_connect`: sign up with an email and a password,
             # then the same request goes straight back with the code (spec first-connect).
@@ -125,7 +128,7 @@ class Person:
                     "resource": resource, "scope": "mcp offline_access", "state": "s1",
                     "decision": "approve",
                 }).encode(),
-                {"Origin": hub, "Content-Type": "application/x-www-form-urlencoded"},
+                {**cookies, "Origin": hub, "Content-Type": "application/x-www-form-urlencoded"},
             )
         assert status == 303, status
         for value in headers.get_all("Set-Cookie") or []:

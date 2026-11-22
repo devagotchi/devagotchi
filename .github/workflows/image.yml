@@ -5,7 +5,7 @@ name: image
 # calls this once dist has built every target (`custom-hub-image`), so the image carries those
 # very archives: the Linux and Windows builds of the same commit, x86_64 and ARM64, with both
 # installers, laid down by scripts/stage-downloads.sh and passed between jobs as an artifact.
-# Each arch is built natively, brought up as a hosted compose stack with no downloads
+# Each arch is built natively, brought up as a self-hosted compose stack with no downloads
 # configured, and a machine joins it the way a person's AI tells them to (tests/compose_join.py).
 # Then, for main and release tags only: one multi-arch tag set with a signed build-provenance
 # attestation. Tags: `main` and `sha-<short>` for every main build; the version for every
@@ -115,14 +115,14 @@ jobs:
           load: true
           cache-from: type=gha,scope=image-${{ env.ARCH }}
           cache-to: type=gha,scope=image-${{ env.ARCH }},mode=max
-      # A hosted hub as app.devagotchi.com runs, at http://localhost so nothing needs TLS. No
+      # The self-hosted single-environment edition, at http://localhost for this check. No
       # `downloads` in its config or its environment: it serves the builds the image carries.
       - name: Bring the stack up from it
         working-directory: deploy/compose
         run: |
           printf '%s\n' DEVAGOTCHI_DOMAIN=localhost DEVAGOTCHI_HTTP_PORT=8080 \
             DEVAGOTCHI_HTTPS_PORT=8443 DEVAGOTCHI_PUBLIC_URL=http://localhost:8787 \
-            DEVAGOTCHI_HUB_TENANCY=multi DEVAGOTCHI_IMAGE=devagotchi-hub:ci > .env
+            DEVAGOTCHI_HUB_TENANCY=single DEVAGOTCHI_IMAGE=devagotchi-hub:ci > .env
           docker compose up -d --no-build --wait --wait-timeout 180
           env=$(docker inspect --format '{{json .Config.Env}}' "$(docker compose ps -q hub)")
           if grep -q DOWNLOADS <<<"$env"; then echo "the hub's environment names downloads: $env" >&2; exit 1; fi

@@ -19,71 +19,55 @@ The current acceptance and integration receipt is
 
 ## Current integration status (2026-11-22)
 
-Delivery owner: the active absorption branch, `increment-288/absorb-october-baseline`,
-in Devagotchi and its AgentHub library. This section is the short operational roadmap;
-the [branch execution plan](../.ai/dev/plans/absorption/branch-execution.md) owns exact
-source paths, implementation steps, tests and dependency order.
+Root [PR279](https://github.com/devagotchi/devagotchi/pull/279) is merged into main
+`38d9ec63763a1ec136fcf46d3c67479faf15a0e2`. The merged tree equals reviewed `40ecd0c`;
+all 17 PR CI jobs, all 17 main CI jobs and both security runs passed. AgentHub
+[PR17](https://github.com/devagotchi/agenthub/pull/17) is merged at `8bdac83`, with 163
+standalone PostgreSQL tests and green PR/main CI. Both absorbed integration branches
+were deleted locally and remotely. These are delivered integrations, not full source closure.
 
-Root integration `10fce73` is pushed in [PR279](https://github.com/devagotchi/devagotchi/pull/279).
-AgentHub [PR17](https://github.com/devagotchi/agenthub/pull/17) is merged at `8bdac83`;
-its 163 standalone PostgreSQL tests, PR CI and main CI passed, its merged tree matches
-validated `ac9c7ff`, and its integration branches were deleted. Recursive parent clones
-resolve the published dependency. Root main remains `4b01ac9`; PR279 is not merged yet.
+The development Docker hub has been replaced in place with main `38d9ec6`. It uses the
+GitHub-built Linux binary and all six matching checksum-verified downloads, packaged
+locally with the pinned nonroot runtime base. Existing PostgreSQL/data volumes remain.
+Owner login, AgentHub boards/agents, machine access, local-user management, hidden
+organization routes, 390-pixel phone layout and restart persistence passed on that image.
+The old container/image and unused validation containers/images were removed.
 
-The published root corrections passed the real self-hosted owner/OAuth/binding/approval/
-command/mobile journey. The latest CI passes organization comment/retry/demotion,
-real SDK/Codex OAuth, Linux, macOS, PostgreSQL and deployment checks. Windows core
-still exposes a blocked-input fixture failure: close correctly reports its pending
-write instead of claiming EOF. The follow-through keeps the actual 2MiB pipe fill,
-expired queued-input refusal and existing deadlines, uses a raw byte reader and
-canonical read-gate path, and reports child read/EOF phases on failure. Local native
-stress passes; the Windows platform result is still required before merge.
+Official GHCR publication is **not yet complete**: release run 45048691767 built all four
+platform archives and passed all seven installer checks, but the ARM image join test
+attempted execution with an unregistered OAuth client. Current authorization refused it.
+The follow-through branch `increment-289/compose-granted-join` updates the image journey
+for the self-hosted edition: claim the owner, bind the OAuth agent, acknowledge the actual
+execution risks, independently approve each machine grant, then run the real commands.
+Local isolated PostgreSQL/native-broker acceptance passed; publication is pending.
 
-Next: push the validated fixture correction, merge the exact green candidate, verify
-main, then deploy that actual main image for owner testing. Source closure remains
-separate from integrating this authored work.
+The [branch execution plan](../.ai/dev/plans/absorption/branch-execution.md) owns source
+paths, implementation steps, tests and dependency order. The
+[active plan](../.ai/dev/plans/absorb-preserved-sources.md) records delivery evidence.
 
 | Sequence | Deliverable | Current evidence/status | Next acceptance |
 |---|---|---|---|
-| Now | Reproducible two-repository publication | Both dependency heads published; recursive clone and standalone 163-test run passed; AgentHub PR17 merged; library main CI green | Finish Windows native acceptance and obtain green platform CI; verify actual CI candidates and merged gitlink |
-| S1 / October | Complete baseline behavior | Task/configuration/principal/receipt/CLI/HTTP work authored; machine admission/start/read/control/heartbeat authored with focused PostgreSQL/native tests. These are partial source ports, not a completed baseline | Finish remaining coordination/catalog comparisons, file/batch/image authorization, operator stop/list/history, confinement/change policy, provider routing/secrets, executable guides, document/GUI tools, audit retention and all corresponding browser journeys |
-| S1 delivery | Green main integration | AgentHub PR17 merged; library main CI green; root PR279 corrections published; Windows native acceptance remains; root main not merged | Review complete authored scope, required CI, exact dependency/gitlink verification, authorized merge and main verification; no source closure/deletion based on an incomplete port |
-| S2 | Documentation/packaging delta: 2 commits, 17 paths | Planned; no source closure | Complete source-specific changes, validate, green merge, verify and delete eligible ref |
+| Now | Finish official image publication | Authored integration merged on green; matching local development image running and browser/restart checked; complete owner/agent grant setup tested locally | Green PR/main for the image-join correction, successful actual Linux/Docker join image jobs, published digest, then replace local packaging with that official image |
+| S1 / October | Complete baseline behavior | Coordination, principal, receipt and machine start/read/control/heartbeat integration delivered; source parity remains partial | Finish coordination/catalog comparisons, file/batch/image authorization, operator stop/list/history, confinement/change policy, provider routing/secrets, executable guides, document/GUI tools, audit retention and corresponding browser journeys |
+| S1 closure | Complete October source absorption | Preserved source intact; no deletion eligibility claimed | Account for every source behavior, validate complete scope, green merge, verify main, then delete only eligible preserved refs |
+| S2 | Documentation/packaging delta: 2 commits, 17 paths | Planned; no source closure | Complete source-specific changes, validate, green merge, verify and delete eligible ref after S1 |
 | S3 | Enrollment/transport/browser boundary: 5 commits, 79 paths | Planned; no source closure | Same complete-source delivery sequence after S2 |
 | S4 | Packaging/readiness/shutdown: 1 commit, 32 paths | Planned; no source closure | Same complete-source delivery sequence after S3 |
 | S5 | Preserved November Rust delta: 1 commit, 42 paths | Planned; no source closure | Same complete-source delivery sequence after S4 |
-| Prerelease | Actual-main self-hosted Docker | Running image identifies main `4b01ac9`; no new deployment claimed | Fresh install, existing-data restart, owner/local-user and AgentHub browser/MCP/CLI journeys; PostgreSQL coordination; no customer-tenant UI |
+| Prerelease | Accepted self-hosted GitHub release | Local main Docker available; PostgreSQL coordination and local users; complete-source acceptance outstanding | Fresh install, existing-data restart, owner/local-user and AgentHub browser/MCP/CLI journeys, all remaining source closure; no customer-tenant UI |
 | Later | Commercial optimized offering and free tier | Deferred until self-hosted acceptance | Separate commercial implementation and acceptance |
 
-No raw development password belongs in this roadmap or public source. Source inventory is
-100 commits / 907 file-change records, with all closures still open. Update this status
-with actual PR URLs, checked heads and merge receipts as publication proceeds; test counts
-alone do not advance the delivery status. Publication validation on 2026-11-22:
+Inventory remains 100 commits / 907 file-change records. All five preserved-source closures
+are open. Local test counts, ancestry and an empty integration-branch list cannot close them.
+Development credentials and raw runtime evidence remain outside public source.
 
-- Full default-workspace `cargo test --locked --no-fail-fast -- --test-threads=4`:
-  **1,199 passed, zero failed/ignored**, with isolated PostgreSQL required and real
-  ClickHouse configured. This includes 702 hub and 163 AgentHub tests.
-- Final binary build, Windows process E2E, MCP protocol, generated-contract drift,
-  formatting and repository AI-contract checks passed. Hosted E2E state has no SQLite.
-- Dependency audit passed advisories/bans/licenses/sources after URL 2.5.9 patched
-  RUSTSEC-2026-0592. The three initially failing hub checks were corrected and passed:
-  heartbeat metadata, website tool-list parity and ticket routing after refused execution.
-- Parent adopts AgentHub main `8bdac837d8311bed52251a2fc877ab6e1064833b`; its source tree
-  differs from the library tested in the full workspace only by dependency pin and plan.
-  Standalone 163 tests plus Linux PR/main CI validated that exact dependency pin.
-- Linux security/IPC, cross-platform PR CI and actual-main Docker acceptance remain
-  separate checks. These local passes do not close the preserved sources.
-
-Correction receipt: 1,199/1,199 default-workspace tests passed under nextest with PostgreSQL
-required; 19 native remote checks passed on each of Windows and Linux. Linux security
-passed all 16 checks, and MCP protocol/process smoke and Linux E2E passed. Actual browser
-acceptance now covers a single-environment owner registering an OAuth agent, granting its
-request, executing a command, seeing its succeeded job, working AgentHub tickets/inbox,
-approving on a phone, changing preferences, signing in on a second phone and loading the
-offline page. Hosted signup/workflow/analytics probes verify explicit execution refusal
-without registration/grants. Platform CI and actual-main Docker acceptance remain open.
-
-
+Publication evidence for PR279 includes Windows/Linux builds and process E2E, 16 Linux
+security-boundary tests, real SDK/Codex OAuth, self-hosted owner/agent/approval/command/job/
+mobile acceptance, organization comment replay and demotion checks, and cross-platform CI.
+The final local workspace run passed 1,199/1,200 tests; its sole SQL line-ending guard failure
+was corrected and all four affected tests passed after rebuild. Full PR and main CI then
+passed. Native follow-through passed 134 Windows engine tests, 100 control stress cases and
+15 Linux remote tests. No assertion was skipped or weakened to obtain the merge.
 
 This is the execution checklist for the user's issue-lifecycle, collaboration, connector,
 desktop-competitor, benchmark and commercial-hosting request. It replaces the speculative

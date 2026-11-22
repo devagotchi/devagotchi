@@ -1,5 +1,64 @@
 # Complete preserved-source absorption before the self-hosted prerelease
 
+## Current delivery and image follow-through, 2026-11-22
+
+PR279 merged reviewed `40ecd0c` into main `38d9ec6` with identical source trees and
+AgentHub `8bdac83`. All 17 PR/main CI jobs and both security runs passed. Both active
+repositories had only main after that cleanup; the absorbed integration refs are deleted. S1-S5
+remain open and their preserved refs remain intact.
+
+Release run 45048691767 built all four platform archives and passed all seven installer
+checks, but its ARM image join test attempted `run` with an unregistered OAuth client.
+The expected current `not_granted` refusal stopped image publication. This is an
+unconverted acceptance journey, not permission to restore unapproved execution.
+
+Follow-through branch: `increment-289/compose-granted-join`. Objective: prove both Linux
+and Docker one-line joins followed by explicit agent registration, credential binding,
+human policy acknowledgment and independent grant approval, then actual commands and
+Docker re-entry. Reuse the public HTTP/forms/MCP owners; no database seeding, new runtime
+authority, skipped assertion or fabricated green release. Keep this within the existing
+source absorption plan.
+
+Execution and acceptance:
+
+1. Test the requested self-hosted single-environment edition, replacing the old hosted
+   signup assumption. Claim its owner through the real host CLI and local-password form.
+   Allow the shared Person fixture to connect using that authenticated cookie and expose
+   its existing OAuth client identifier. Register
+   and bind it through the current agent form, acknowledge current risk versions through
+   the human API, and request/approve a separate grant for each joined machine.
+2. Assert unbound and unapproved execution refusal, agent self-approval refusal, current
+   registered identity and successful execution after human approval. Wait only for machine
+   presence; authorization failures must fail immediately rather than retry for a minute.
+3. Preserve archive checksums, actual Linux install, Docker compose creation/re-entry,
+   installed version, and container-update refusal. Always tear down disposable Docker
+   test services on failure as well as success.
+4. Exercise the new setup against isolated PostgreSQL, the actual merged release binary
+   and enrolled native brokers. Run Python syntax, repository contracts and diff checks;
+   runtime is unchanged, so do not rebuild its whole local suite for fixture edits.
+5. Push after policy validation, green PR CI, merge under the operator's existing approval,
+   verify main, delete the integration branch, and require actual image/join pipeline green.
+
+The existing development hub has meanwhile been replaced in place with local packaging
+of main `38d9ec6`'s GitHub-built release binary and all six checksum-verified downloads,
+using the same pinned nonroot runtime base. It is not a published GHCR image. Owner login,
+AgentHub boards/agents, access, local-user management, hidden organization routes, phone
+layout and restart persistence passed against that container. Existing volumes remain;
+the old container/image, two disposable validation containers and eleven older unused
+images were removed. Development credentials and runtime receipts remain private.
+
+Fixture correction is authored. Isolated PostgreSQL and two actual enrolled native brokers
+passed owner setup, OAuth binding, unregistered/unapproved refusal, agent self-approval
+refusal, human approval and four successful commands. The initial probe caught incorrect
+fixture assumptions about hosted ownership, refusal codes and the versioned request
+projection; these were corrected using the existing public interfaces. Temporary databases
+and processes are removed on every exit. Full installer/image validation remains required
+in the release pipeline; the local probe does not claim to have run systemd installation.
+The existing operator browser journey also passed against isolated PostgreSQL, covering
+the shared Person fixture without an owner cookie. Workflow actionlint, Python syntax,
+repository AI contracts and patch checks passed. Publication remains pending. Completion of
+this delivery does not close preserved S1 or certify the full self-hosted prerelease.
+
 Operator instruction, reconciled 2026-11-21: **plan every remaining source first; then
 fully author, validate, merge and delete S1 before implementing S2, and repeat oldest
 first.** No CI-triggering pushes while the current source is knowingly incomplete.
