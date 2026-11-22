@@ -11,7 +11,9 @@ pub use authority::{
     GRANT_AUTHORITY_MAX_TTL_MS, GrantActor, GrantAuthority, GrantBinding, GrantInterruption,
     GrantOrigin, REMOTE_ACCESS_VERSION,
 };
-pub use remote::{RemoteReply, RemoteRequest, RemoteWireRequest, RemoteWireResponse};
+pub use remote::{
+    GrantObservation, RemoteReply, RemoteRequest, RemoteWireRequest, RemoteWireResponse,
+};
 #[cfg(test)]
 mod authority_tests;
 mod matching;

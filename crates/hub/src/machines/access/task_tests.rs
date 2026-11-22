@@ -154,6 +154,32 @@ async fn access_task_approval_requires_the_original_lease_after_release_and_recl
         .unwrap()
         .unwrap();
     assert_eq!(ended.reason, "task_ended");
+    // Original results remain readable under current permission, with no lease renewal.
+    let (links, _rx) = super::broker_tests::links(&f).await;
+    let target = f
+        .access
+        .operation_read_target(
+            &f.owner.id,
+            &f.actor(),
+            &f.machine,
+            "task-operation",
+            &links,
+        )
+        .await
+        .unwrap();
+    let proof = f
+        .access
+        .operation_observation(&f.owner.id, &f.actor(), Some(&board), &target)
+        .await
+        .unwrap();
+    assert_eq!(proof.binding.admission_id, admitted.admission_id);
+    assert_eq!(proof.binding.grant_version, admitted.grant_version);
+    assert!(
+        f.access
+            .operation_observation(&f.owner.id, &f.actor(), None, &target)
+            .await
+            .is_err()
+    );
     assert!(
         f.access
             .admit(&f.owner.id, &f.actor(), Some(&board), &machine, &input)

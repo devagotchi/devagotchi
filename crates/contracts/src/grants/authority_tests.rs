@@ -62,3 +62,25 @@ fn remote_authority_requires_canonical_principal_and_immutable_closed_binding() 
     json["binding"]["bypass"] = true.into();
     assert!(serde_json::from_value::<GrantAuthority>(json).is_err());
 }
+
+#[test]
+fn remote_observation_lifetime_and_wire_fields_are_closed() {
+    let auth = authority();
+    let mut observation = GrantObservation {
+        binding: auth.binding,
+        issued_at: 100,
+        expires_at: 200,
+    };
+    assert_eq!(observation.remaining_ms(150).unwrap(), 50);
+    for now in [-1, 99, 200, i64::MAX] {
+        assert!(observation.remaining_ms(now).is_err());
+    }
+    for (issued, expires) in [(0, 30_001), (1, 1), (-1, 100), (i64::MIN, i64::MAX)] {
+        observation.issued_at = issued;
+        observation.expires_at = expires;
+        assert!(observation.remaining_ms(100).is_err());
+    }
+    let mut value = serde_json::to_value(observation).unwrap();
+    value["renew_execution"] = true.into();
+    assert!(serde_json::from_value::<GrantObservation>(value).is_err());
+}

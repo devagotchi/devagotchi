@@ -10,6 +10,7 @@ use devagotchi_contracts::StartInput;
 impl Hub {
     pub(crate) async fn send_for_request(
         &self,
+        tool: &str,
         route: &Route,
         body: RequestBody,
         context: &RequestContext<RoleServer>,
@@ -30,6 +31,30 @@ impl Hub {
                     "account machine execution requires an enrolled broker and current access grant; configured local IPC is not an account grant",
                 ))
             }
+            (
+                route,
+                body @ (RequestBody::OperationGet(_)
+                | RequestBody::OperationRead(_)
+                | RequestBody::OperationWait(_)),
+            ) if account_backed => match route {
+                Route::Link(machine) => {
+                    self.read_granted(
+                        machine,
+                        body,
+                        context,
+                        if tool == "run" {
+                            Scope::MachinesRun
+                        } else {
+                            Scope::MachinesRead
+                        },
+                    )
+                    .await
+                }
+                Route::Local(_) => Err(BridgeError::new(
+                    "not_granted",
+                    "account operation reads require the original enrolled admission",
+                )),
+            },
             (_, body) => self.send_hinted(route, body).await,
         }
     }

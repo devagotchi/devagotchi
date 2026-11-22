@@ -70,11 +70,13 @@ impl Broker {
                         "interrupted work cannot be resumed",
                     ));
                 }
-                operation
+                if operation
                     .authority
-                    .as_mut()
-                    .ok_or_else(|| denied("authority_expired", "admission authority ended"))?
-                    .refresh(&authority)?;
+                    .as_ref()
+                    .is_none_or(|clock| Instant::now() >= *clock.deadline.borrow())
+                {
+                    return Err(denied("authority_expired", "admission authority ended"));
+                }
             }
         }
         // A long poll must not hold a remote observation open beyond its authority.

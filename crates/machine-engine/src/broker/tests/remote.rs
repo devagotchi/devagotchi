@@ -8,14 +8,14 @@ fn origin() -> GrantOrigin {
         generation: "enrollment-one".into(),
     }
 }
-fn actor() -> GrantActor {
+pub(super) fn actor() -> GrantActor {
     GrantActor {
         account: "owner".into(),
         principal: "@agent:owner:builder".into(),
         client: "first-client".into(),
     }
 }
-async fn prepare(broker: &Broker, input: &StartInput) -> GrantAuthority {
+pub(super) async fn prepare(broker: &Broker, input: &StartInput) -> GrantAuthority {
     let RemoteReply::Prepared {
         operation_key,
         input_sha256,
@@ -63,7 +63,7 @@ async fn prepare(broker: &Broker, input: &StartInput) -> GrantAuthority {
         expires_at: now + 30_000,
     }
 }
-async fn execute(
+pub(super) async fn execute(
     broker: &Broker,
     authority: &GrantAuthority,
     request: RequestBody,
@@ -79,7 +79,11 @@ async fn execute(
         })
         .await
 }
-async fn launch(broker: &Broker, authority: &GrantAuthority, input: &StartInput) -> StartOutput {
+pub(super) async fn launch(
+    broker: &Broker,
+    authority: &GrantAuthority,
+    input: &StartInput,
+) -> StartOutput {
     match execute(
         broker,
         authority,
@@ -92,7 +96,7 @@ async fn launch(broker: &Broker, authority: &GrantAuthority, input: &StartInput)
         _ => panic!("expected start"),
     }
 }
-async fn until_output(broker: &Broker, id: &str) {
+pub(super) async fn until_output(broker: &Broker, id: &str) {
     let until = Instant::now() + Duration::from_secs(5);
     while !output_text(broker, id).contains("first") {
         assert!(

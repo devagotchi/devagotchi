@@ -12,14 +12,14 @@ fn command() -> Value {
     json!({"machine":"lab","idempotency_key":"start-key","executable":"git",
         "args":["status"],"cwd":"/work","deadline_ms":5000})
 }
-fn person(token: String) -> Person {
+pub(super) fn person(token: String) -> Person {
     Person {
         token,
         cookie: String::new(),
         session: None,
     }
 }
-async fn granted(admin: &Admin) -> String {
+pub(super) async fn granted(admin: &Admin) -> String {
     let request = requested(admin).await;
     let (status, value, _) = response(
         admin
@@ -34,7 +34,7 @@ async fn granted(admin: &Admin) -> String {
     assert_eq!(status, StatusCode::OK, "{value}");
     value["result"]["grant_id"].as_str().unwrap().into()
 }
-async fn counts(admin: &Admin, grant: &str) -> (i64, i64) {
+pub(super) async fn counts(admin: &Admin, grant: &str) -> (i64, i64) {
     let accounts = &admin.hub.accounts;
     let owner = accounts.get(&admin.owner).await.unwrap().unwrap();
     devagotchi_store::transaction!(accounts.store(), |c| {

@@ -42,6 +42,7 @@ fn check(origin: Option<&GrantOrigin>, wire: &RemoteWireRequest) -> BridgeResult
     let supplied = match &wire.remote {
         RemoteRequest::Prepare { origin, .. } => Some(origin),
         RemoteRequest::Status { binding } => Some(&binding.origin),
+        RemoteRequest::Observe { observation, .. } => Some(&observation.binding.origin),
         RemoteRequest::Execute { authority, .. } | RemoteRequest::Refresh { authority } => {
             Some(&authority.binding.origin)
         }
@@ -79,10 +80,45 @@ mod tests {
                 api_version: API_VERSION,
                 remote: RemoteRequest::Interrupt {
                     notice: GrantInterruption {
-                        origin: supplied,
+                        origin: supplied.clone(),
                         grant_id: "grant".into(),
                         minimum_version: 2,
                     },
+                },
+            };
+            assert_eq!(check(Some(&origin), &wire).is_ok(), changed == 3);
+            assert_eq!(
+                check(None, &wire).unwrap_err().code,
+                "remote_access_unavailable"
+            );
+            let wire = RemoteWireRequest {
+                api_version: API_VERSION,
+                remote: RemoteRequest::Observe {
+                    observation: GrantObservation {
+                        binding: GrantBinding {
+                            origin: supplied,
+                            account: "owner".into(),
+                            principal: "owner".into(),
+                            admission_id: "admission".into(),
+                            grant_id: "grant".into(),
+                            grant_version: 1,
+                            operation_key: "key".into(),
+                            input_sha256: "a".repeat(64),
+                            effective: GrantItem {
+                                capability: GrantCapability::Exec,
+                                sandbox_level: GrantLevel::Unsandboxed,
+                                selector: Default::default(),
+                            },
+                            lease_sha256: None,
+                        },
+                        issued_at: 1,
+                        expires_at: 100,
+                    },
+                    client: "client".into(),
+                    request: RequestBody::OperationGet(GetInput {
+                        operation_id: "operation".into(),
+                        caller: None,
+                    }),
                 },
             };
             assert_eq!(check(Some(&origin), &wire).is_ok(), changed == 3);

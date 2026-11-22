@@ -5,6 +5,7 @@
 //! Depends on: shared grant contracts, canonical launch resolution and native execution.
 use super::*;
 mod clock;
+mod observation;
 mod process;
 pub(super) use clock::AuthorityClock;
 pub(super) use clock::watch_expiry;
@@ -139,6 +140,19 @@ impl Broker {
             }
             RemoteRequest::Refresh { authority } => self.refresh_authority(authority),
             RemoteRequest::Status { binding } => self.admission_status(&binding),
+            RemoteRequest::Observe {
+                observation,
+                client,
+                mut request,
+            } => {
+                let actor = GrantActor {
+                    account: observation.binding.account.clone(),
+                    principal: observation.binding.principal.clone(),
+                    client,
+                };
+                request.set_caller(&caller(&observation.binding.origin, &actor)?);
+                self.remote_observe(observation, request).await
+            }
             RemoteRequest::Interrupt { notice } => self.interrupt_authority(notice),
         }
     }

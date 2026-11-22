@@ -661,3 +661,47 @@ failed/ignored (`target/absorption-start-final-regression.log`). The two selecti
 were already passed on unchanged implementation and were explicitly filtered from that
 rerun; six new cases plus 106 existing cases have passing local evidence. Final layout
 passed all eight checks; formatting and inventory checks passed. No CI was dispatched.
+
+## Ordinary run and admission-bound result reads, 2026-11-21
+
+Compared the S1 process adapter and lease behavior in `server/internal/devapi/mcp_proc.go`,
+`server/internal/machineops/proc.go` and `bridge/runner/proc.go`. `run` now uses the same
+granted start dispatcher as `operation_start`; its wait/read and ordinary Get/Read/Wait
+resolve the authenticated principal's original admission and enrollment. A separate
+closed `GrantObservation` permits only observation. It cannot start, cancel, refresh a
+process clock or consume another use. Native Execute reads no longer renew execution
+as a side effect; explicit Refresh remains the execution-renewal owner.
+
+Current `proc.read` policy, current registered identity and current task labels are checked
+under the existing board/identity/machine/access lock order. AgentHub supplies current
+labels for the original task generation even after release/reclaim, without fabricating a
+live lease. Broker history requires the exact immutable admission. A paused/ended execution
+grant does not itself hide history when current read permission allows it; policy denial,
+another principal or changed enrollment refuses. The adapter refreshes bearer, machine and
+project scopes both before and after broker waits, before returning any output. Long waits
+use bounded observation slices and recheck permission between slices. A run-only key can
+retrieve its own run result; separate operation-read tools still require machines:read.
+
+Local validation (required isolated PostgreSQL on port55441):
+
+- First compile found an incorrect test field path (`record.cancellation_requested`);
+  corrected to `record.view.cancellation_requested`. No runtime failure was suppressed.
+- `cargo test --locked` with all five affected library packages and filter `observation`:
+  10 passed, zero failed/ignored (`target/absorption-observation-fixed.log`).
+- Same package set, filter `access`, excluding the two previously passed unchanged
+  `access_start_selection` cases: AgentHub7, hub114, native2 = 123 passed, zero failed/ignored
+  (`target/absorption-observation-access-regression.log`). This includes all three new real
+  MCP run tests and the original-task release/reclaim regression.
+- Same package set, filter `remote`: AgentHub1, contracts3, hub10, link2, native12 = 28 passed,
+  zero failed/ignored (`target/absorption-observation-remote-regression.log`). Filters overlap;
+  these totals are not a claim of 161 distinct tests. Native tests launch actual processes,
+  prove unchanged execution deadlines and termination at expiry, reject observation effects
+  and changed bindings, and read original output after expiry/revocation.
+- Generated contract check, formatting, AI contract check and all eight layout tests passed.
+  All 100 source commits/907 records still verify against their preserved Git objects.
+
+Only the three process rows were advanced from unverified to **partial**, with concrete
+targets. Input/cancel/resize, heartbeat adapter and operator kill behavior, file/batch/image
+routes, task/credential-aware grant selection, native confinement and policy-change review
+remain open. No complete source closure, push, PR, CI, merge, branch deletion or deployment
+is asserted by this local checkpoint.

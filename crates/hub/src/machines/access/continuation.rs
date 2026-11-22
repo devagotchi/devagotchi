@@ -73,8 +73,8 @@ pub(super) struct AdmissionSnapshot {
     pub operation_id: Option<String>,
 }
 impl Access {
-    /// Only the internal maintenance loop supplies tenant/id. This snapshot proves
-    /// which broker record to inspect; it is deliberately not a live authority.
+    /// Tenant/id comes from maintenance or an authenticated, owned-operation lookup.
+    /// This identifies the broker record; it is deliberately not live authority.
     pub(super) async fn admission_snapshot(
         &self,
         tenant: &str,

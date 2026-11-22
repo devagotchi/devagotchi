@@ -29,7 +29,7 @@ recreate them from older paragraphs that label their paths "new".
 |---|---|---|
 | A00 + A01-A03 | Finish each open operation/commit comparison in `a01-review.md`, `a02-review.md`, `a03-*.md`; existing `agenthub` hosted policy/task/receipt owners, hub HTTP/MCP/CLI and SSR forms remain destinations. Audit intermediate removed behavior across all 91 commits, not only head filenames. | Every source operation and refusal has an adapter and source-specific receipt; task fences, configuration CAS, API-key/OAuth principal binding, replay and stream revocation remain consistent across surfaces. |
 | A05 | Existing `hub/src/catalog/` and catalog web pages are authored. Finish schema consumers, referential deletion, edited-seed preservation and dynamic kind/route coverage. | All eight accepted kinds validate their actual consuming runtime; source customer-tenants catalog maps to the accepted one-environment/users decision. |
-| A04 ordinary dispatch | Source `machineops/ops.go` routes ordinary calls through `access.Authorize`. `mcp/hub.rs::call` now uses `mcp/callers/start.rs` for account-backed operation starts. Remaining `send_hinted`, `machines/run.rs`, non-start requests and direct sends in `machines/files/mod.rs` still need grant enforcement. Extend the same authenticated dispatch owner to every account-backed machine request. Keep explicitly configured local trusted IPC separate. | Actual MCP run/start/file/process calls with no grant, foreign principal, revoked key/profile/grant, stale task, exhausted use and changed enrollment refuse before effect. Owning an account or omitting a grant field cannot bypass. No alternate batch-file/image route escapes. |
+| A04 ordinary dispatch | Source `machineops/ops.go` routes ordinary calls through `access.Authorize`. `mcp/hub.rs::call` now uses `mcp/callers/start.rs` for account-backed operation starts. `machines/run.rs` and Get/Read/Wait now use the same dispatcher and admission-bound observation. Remaining effect requests, list/history surfaces and direct sends in `machines/files/mod.rs` still need grant enforcement. Extend the same authenticated dispatch owner to every account-backed machine request. Keep explicitly configured local trusted IPC separate. | Actual MCP run/start/file/process calls with no grant, foreign principal, revoked key/profile/grant, stale task, exhausted use and changed enrollment refuse before effect. Owning an account or omitting a grant field cannot bypass. No alternate batch-file/image route escapes. |
 | A04 selection and admission | Ordered, bounded candidate selection for starts is now authored in `machines/access/broker/selection/`; finish task/credential filters and other capability projections. Query only the credential's account/principal/machine; choose the source's least-privileged matching grant deterministically, never a caller-supplied principal. Existing retry key stays bound to its original grant even when a more permissive grant appears. Recheck selection in `current_in` and atomically consume in `admit`. | Concurrent last-use admissions; duplicate retry consumes once; changed canonical args conflict; no arbitrary first-row selection; matching grant survives pagination; no fallback on database/canonicalization failure. |
 | A04 broker requests | Extend existing `broker/remote/` Prepare/Execute for each non-start machine request; derive paths/argv/hosts from validated canonical inputs at the broker. File effects retain existing serialization/CAS/journal owner. Process follow-ups resolve original admission and operation; observation uses separate current read permission and never renews execution as a side effect. | Exact broker target, operation digest and grant scope match actual effects; changed path/symlink/host, cross-principal operation and unknown adapter refuse. Historical result retrieval cannot restart or renew ended work. |
 | A04 credential race | Authored `prepare_start`/`execute_prepared` and MCP post-wait refresh now replace `Access::execute_start`. Carry that mandatory refresh into the remaining adapters. Verify prepared operation key/action/level before storing. Tokens remain request-local; maintenance continues using durable identity, never a retained bearer. | Revoke/rotate key or disable/rebind agent while Prepare is outstanding: no Execute and no use consumed. Mismatched prepared request refuses. A valid current request reaches the real broker. |
@@ -45,14 +45,26 @@ pages with original retry affinity, and wires enrolled `operation_start` through
 credential refresh and durable admission. Account-backed starts cannot use configured
 local sockets to evade that admission. Existing configured non-account authority stays
 separate. Six new tests cover these paths; see the A04 ledger for exact run evidence.
-This does not finish ordinary dispatch: `run`, file/batch/image calls, process follow-ups,
-historical read authority and native confinement still need their complete adapters.
+Run and admission-bound Get/Read/Wait are now locally validated below. File/batch/image
+calls, process effects, list/history surfaces and native confinement remain open.
 
 Next execution order within A04: finish unified dispatch, including `run` and original
 admission-bound process observation without renewing execution; complete broker file/process
 enforcement; native confinement and change policy; finish corresponding UI and tests.
 This is one S1 integration branch, not one PR per helper. Remaining batch1 comparisons
 and batches3-5 are mandatory before S1 CI/publication.
+
+The authored run/read unit uses a distinct closed `GrantObservation` and remote Observe
+request for Get/Read/Wait only. The broker checks the exact stored admission and short
+observation deadline, never its execution clock. Hub lookup binds the original account,
+principal, enrollment and operation; current `proc.read` policy and current task labels
+are evaluated under the board/identity/machine lock order. Expired execution leases do
+not fabricate fresh execution authority. MCP refreshes bearer/scopes before and after a
+broker wait; `run` uses the same start/read dispatcher. Native tests prove observing
+does not prevent expiry and cannot cancel/start work; real MCP tests prove `run`
+has no plain-frame bypass and a revoked reader receives no output. See the A04 ledger
+for local test evidence and its limits. Input/cancel require
+their own effect authorization and remain open until implemented.
 
 ## S2: documentation and retired packaging delta
 

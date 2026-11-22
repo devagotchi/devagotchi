@@ -46,6 +46,9 @@ mod maintenance;
 mod maintenance_tests;
 mod notifications;
 mod observation;
+mod operation_read;
+#[cfg(test)]
+mod operation_read_tests;
 mod policies;
 pub(crate) use policies::PolicyEdit;
 mod reads;

@@ -1838,9 +1838,18 @@
       "mode": "100644",
       "kind": "blob",
       "packet": "A04",
-      "status": "unverified",
-      "target_paths": [],
-      "evidence": []
+      "status": "partial",
+      "target_paths": [
+        "crates/contracts/src/grants/remote.rs",
+        "crates/machine-engine/src/broker/remote/observation.rs",
+        "crates/hub/src/machines/access/operation_read.rs",
+        "crates/hub/src/mcp/callers/read.rs",
+        "crates/hub/src/machines/run.rs",
+        "crates/agenthub/src/hosted/access.rs"
+      ],
+      "evidence": [
+        ".ai/dev/plans/absorption/a04-access.md"
+      ]
     },
     {
       "path": "bridge/runner/proc_test.go",
@@ -4749,9 +4758,18 @@
       "mode": "100644",
       "kind": "blob",
       "packet": "A04",
-      "status": "unverified",
-      "target_paths": [],
-      "evidence": []
+      "status": "partial",
+      "target_paths": [
+        "crates/contracts/src/grants/remote.rs",
+        "crates/machine-engine/src/broker/remote/observation.rs",
+        "crates/hub/src/machines/access/operation_read.rs",
+        "crates/hub/src/mcp/callers/read.rs",
+        "crates/hub/src/machines/run.rs",
+        "crates/agenthub/src/hosted/access.rs"
+      ],
+      "evidence": [
+        ".ai/dev/plans/absorption/a04-access.md"
+      ]
     },
     {
       "path": "server/internal/devapi/mcp_providers.go",
@@ -5225,9 +5243,18 @@
       "mode": "100644",
       "kind": "blob",
       "packet": "A04",
-      "status": "unverified",
-      "target_paths": [],
-      "evidence": []
+      "status": "partial",
+      "target_paths": [
+        "crates/contracts/src/grants/remote.rs",
+        "crates/machine-engine/src/broker/remote/observation.rs",
+        "crates/hub/src/machines/access/operation_read.rs",
+        "crates/hub/src/mcp/callers/read.rs",
+        "crates/hub/src/machines/run.rs",
+        "crates/agenthub/src/hosted/access.rs"
+      ],
+      "evidence": [
+        ".ai/dev/plans/absorption/a04-access.md"
+      ]
     },
     {
       "path": "server/internal/machines/admin.go",
