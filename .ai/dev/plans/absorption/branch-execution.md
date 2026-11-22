@@ -122,6 +122,57 @@ noninteractive admission and expired authority refuse. A mismatched broker ack f
 Existing real native refresh/expiry tests and PostgreSQL renewal tests remain required.
 This is another local S1 unit; file enforcement and all other source work remain open.
 
+### File dispatch: source-grounded implementation constraints
+
+Read before authoring: S1 `server/internal/devapi/mcp_ops.go`, `mcp_tool.go`,
+`machineops/ops.go`, `access/authorize.go`, `bridge/runner/{fs,tool}.go` and
+`bridge/tools/{read_file,write_file}.go`. Current owners inspected:
+`hub/src/machines/files/mod.rs`, `mcp/callers/start.rs`, `machines/access/{current,
+admissions}.rs`, `machine-engine/src/{broker/files,files,files/write,files/manage}.rs`,
+`machine-engine/src/journal/grants.rs`, and `mcp/src/{files,image}.rs`.
+
+Concrete corrections to the generic file packet:
+
+- Source `fs_delete` is a real operation, absent from current RequestBody/tools. Include
+  a guarded delete contract, native implementation and both local/hub surfaces; recording
+  only existing read/write tools would leave this source operation unabsorbed.
+- Source `fs_write` requires the current SHA-256 or explicit absence; `fs_move` and
+  `fs_delete` require the source SHA-256. Current write guards are optional and move has
+  none. Specify these preconditions in the account-backed adapter and enforce them at
+  the broker under its existing mutation gate. Failed preconditions change nothing.
+  Keep exact-text/count edit semantics. Cover source changes, destination conflicts,
+  directory refusal and both source/destination grant boundaries.
+- Source authorization permits fs.write grants to cover fs.read. Current selector
+  `GrantCapability::covers` already expresses this, but current_in requires capability
+  equality and start_candidates queries exact capability. Extend these existing owners
+  for file selection; do not fork a second authorization algorithm. Preserve the exact
+  fs.read/fs.write policy action and current task/credential checks.
+- Current `read_multiple_files` and `read_image` directly call Hub::send. Move every
+  underlying read through the authenticated file invocation. Source machine_tool counts
+  one invocation against the grant and includes all requested paths. Do not accidentally
+  consume a once grant once per image page, or leave a raw image/batch bypass. Preserve
+  ordered per-file results, image identity consistency, bounds and credential refresh
+  before disclosing bytes. The bounded composite invocation/receipt must be designed
+  together with ordinary file admission before implementing the transport adapter.
+- Current broker file tools explicitly have **no journal/retry identity**. The existing
+  mutation gate serializes broker writers and preserves CAS, but does not provide crash
+  recovery or protect against external filesystem races. Do not claim a journal already
+  exists for these effects. Any durable admission/receipt belongs in the existing private
+  machine journal, not a second scheduler/database or a hosted SQLite fallback. An
+  uncertain mutation must never be replayed blindly to recover a lost response.
+- Prepare must not call `Scope::target(..., create_dirs=true)` or `make_dirs`: those
+  create directories. Canonical preparation is read-only. Recheck the actual source,
+  destination and original authority after waiting for the mutation gate, before effect.
+  A changed symlink between Prepare/Execute must refuse. Native path-handle/confinement
+  probes must also cover races during the operation; lexical/canonical checks alone are
+  not evidence of OS confinement. Do not advertise a new sandbox level from this adapter.
+
+Acceptance is the complete ordinary + batch + image + guarded-delete flow, not merely a
+helper compiling: valid grants reach native files; no-grant/current-policy/task/key/enrollment
+failures produce no effect or disclosure; concurrent CAS has one winner; replay/lost reply
+cannot duplicate an uncertain mutation; one composite consumes one use; all source registry
+entries have explicit destinations. Native platform and full S1 publication checks remain.
+
 ## S2: documentation and retired packaging delta
 
 Read both commits `ab616ee` then `ca626db`. No new Go runtime is added by this delta.
