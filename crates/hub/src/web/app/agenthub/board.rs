@@ -209,10 +209,14 @@ pub async fn page(
         .iter()
         .map(|state| {
             let on = chosen.state.as_deref() == Some(state.key.as_str());
-            let count = state_counts
-                .iter()
-                .filter(|ticket| ticket.state == state.key)
-                .count();
+            let count = if on {
+                shown.len()
+            } else {
+                state_counts
+                    .iter()
+                    .filter(|ticket| ticket.state == state.key)
+                    .count()
+            };
             format!(
                 "<a class=\"chip\" href=\"{}\"{}>{} <span class=\"chip-count\">{count}</span></a>",
                 escape(&chosen.href(&project, "state", (!on).then_some(state.key.as_str()))),

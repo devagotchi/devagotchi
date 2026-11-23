@@ -116,4 +116,22 @@ async fn workflow_board_exposes_leases_dependencies_and_completed_work_without_c
         events,
         "reading must not mutate the board"
     );
+
+    // A selected state has its own bounded read. Do not report zero when the general
+    // count sample is filled by higher-priority work in another state.
+    for index in 0..201 {
+        db.create(
+            &actor,
+            &NewTicket {
+                title: format!("Higher priority work {index}"),
+                priority: Some(0),
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap();
+    }
+    let (_, done) = page(&hub, "/app/boards/columns?state=done", &alice).await;
+    assert!(done.contains("Completed source work"));
+    assert!(done.contains("Done <span class=\"chip-count\">1</span>"));
 }

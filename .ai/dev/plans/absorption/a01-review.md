@@ -32,6 +32,11 @@ page-layout contract. Use the shared `query` container primitive and a container
 instead. All four styling-contract tests and the complete desktop/phone browser journey
 pass on the corrected binary. No contract test was weakened.
 
+The bounded reader returns at most 200 tasks per filter. A selected state uses its own
+result count, so higher-priority tasks filling the general sample cannot label that
+visible state as empty. The PostgreSQL regression creates 201 competing tasks to cover
+this boundary. Counts elsewhere describe the bounded sample, not unbounded totals.
+
 ## Earlier S1 authoring ledger
 
 Source: S1 `46419c697964016eb547c60416a8f2f5e854a95f`. This is a work ledger, not a
