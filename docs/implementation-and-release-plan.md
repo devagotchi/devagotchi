@@ -38,17 +38,21 @@ matching download checksums, phone layout and restart persistence passed. Existi
 PostgreSQL/data volumes remain. The superseded locally packaged image was removed.
 
 [PR281](https://github.com/devagotchi/devagotchi/pull/281) restored original S1 workflow
-columns and task cards, completed work, state counts and held-by-me filtering. It merged
-as main `5571260` with matching reviewed files and green PR/main CI/security. Its branch
-was deleted; official-image publication and development replacement are being followed.
+columns/task cards, completed work, state counts and held-by-me filtering. It merged as
+main `5571260` on green PR/main CI/security. The official image is deployed and verified
+before/after restart with the same volumes, four persisted boards, audit chains and
+local users. The old unused image and integration branch were removed.
 
-Current authored change: `increment-291/audit-request-correlation` restores the source
-request identifier in audit events, their hashes and the outbox, and exposes it in audit
-details. [AgentHub PR18](https://github.com/devagotchi/agenthub/pull/18) merged as `3acf12a`
-on green CI. Independent PostgreSQL and parent receipt/audit/site tests passed. The parent
-pin/display still requires green publication and deployment acceptance. See
-[A01](../.ai/dev/plans/absorption/a01-review.md). These units do not close the remaining
-source inventory.
+[PR282](https://github.com/devagotchi/devagotchi/pull/282) merged the audit request
+correlation as `d0c44ee`, pinning [AgentHub PR18](https://github.com/devagotchi/agenthub/pull/18)
+at `3acf12a`. All PR and main CI/security checks passed; reviewed and merged trees match,
+and both integration branches are deleted. Its official image replacement remains pending.
+
+Current authored change: `increment-292/live-agenthub-board` restores committed board
+updates and lease countdowns through the existing authenticated change wait, preserving
+search drafts, focus, filters and the static fallback. Local browser/HTTP/site verification and the locked binary build passed; publication
+is next. See [A01](../.ai/dev/plans/absorption/a01-review.md). Principal display names and
+all remaining source inventory gaps remain open.
 
 The [branch execution plan](../.ai/dev/plans/absorption/branch-execution.md) owns source
 paths, implementation steps, tests and dependency order. The
@@ -56,7 +60,7 @@ paths, implementation steps, tests and dependency order. The
 
 | Sequence | Deliverable | Current evidence/status | Next acceptance |
 |---|---|---|---|
-| Now | Deliver restored board and audit request correlation | Board merged with green PR/main; correlation backend merged with standalone PostgreSQL acceptance; parent integration authored | Finish official board image replacement; publish the parent correlation pin/display on green and verify persisted audit history |
+| Now | Deliver audit correlation and source live-board behavior | Board deployed and restart-verified; audit integration merged with green PR/main; live board authored | Deploy audit image; complete browser checks and green merge/deployment for live updates |
 | S1 / October | Complete baseline behavior | Coordination, principal, receipt and machine start/read/control/heartbeat integration delivered; source parity remains partial | Finish coordination/catalog comparisons, file/batch/image authorization, operator stop/list/history, confinement/change policy, provider routing/secrets, executable guides, document/GUI tools, audit retention and corresponding browser journeys |
 | S1 closure | Complete October source absorption | Preserved source intact; no deletion eligibility claimed | Account for every source behavior, validate complete scope, green merge, verify main, then delete only eligible preserved refs |
 | S2 | Documentation/packaging delta: 2 commits, 17 paths | Planned; no source closure | Complete source-specific changes, validate, green merge, verify and delete eligible ref after S1 |

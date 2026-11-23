@@ -4,7 +4,7 @@
 // ticket's Undo away when its 10 seconds run out, reloads the page when it is pulled down
 // from the top, and keeps the count of waiting approvals on the Approvals tab and on the
 // installed app's icon. It also moves between the tabs by swipe and opens the Go to sheet
-// (below). Everything else it shows is already on the page.
+// (below). Board snapshots follow committed changes through the existing scoped wait.
 (function () {
   "use strict";
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(function () {});
@@ -287,4 +287,128 @@
       if (dy < -40 && Math.abs(dx) < 40) open();
     });
   }
+})();
+
+// Source Board/useData/LeaseTimer: committed changes update this snapshot, never authority.
+(function () {
+  "use strict";
+  var board = document.querySelector('[data-page="board"][data-board-changes]');
+  if (!board || !window.AbortController) return;
+  var status = document.getElementById("board-live-status");
+  var generation = 0, pending = null, retry = null, clock = null, ended = false;
+  var serverNow = Number(board.dataset.boardNow), sampled = performance.now();
+  function active(turn) { return !ended && turn === generation && !document.hidden; }
+  function message(text) { if (status.textContent !== text) status.textContent = text; }
+  function stop() {
+    generation += 1;
+    if (pending) pending.abort();
+    window.clearTimeout(retry);
+    window.clearInterval(clock);
+  }
+  function deny() {
+    ended = true;
+    stop();
+    board.querySelectorAll(".board-list, .board-filters, .board-summary").forEach(function (el) {
+      el.replaceChildren();
+    });
+    message(board.dataset.ended);
+  }
+  async function fetchBoard(url, turn) {
+    var controller = new AbortController();
+    pending = controller;
+    var deadline = window.setTimeout(function () { controller.abort(); }, 30000);
+    try {
+      var answer = await fetch(url, { credentials: "same-origin", cache: "no-store",
+        redirect: "manual", signal: controller.signal });
+      if (!active(turn)) throw new Error("inactive");
+      if (answer.type === "opaqueredirect" || [401, 403, 404].indexOf(answer.status) >= 0) {
+        deny();
+        throw new Error("access ended");
+      }
+      if (!answer.ok) throw new Error("board unavailable");
+      // Read the entire bounded response before releasing its timeout/cancellation owner.
+      var text = await answer.text();
+      if (!active(turn)) throw new Error("inactive");
+      return text;
+    } finally {
+      window.clearTimeout(deadline);
+      if (pending === controller) pending = null;
+    }
+  }
+  function leaseTimes() {
+    var now = serverNow + performance.now() - sampled;
+    board.querySelectorAll("[data-lease-until]").forEach(function (el) {
+      if (!el.dataset.leaseUntil) return;
+      var until = Number(el.dataset.leaseUntil);
+      if (!Number.isSafeInteger(until)) return;
+      el.textContent = until <= now ? board.dataset.leaseExpired :
+        board.dataset.leaseRemaining.replace("{minutes}", String(Math.ceil((until - now) / 60000)));
+    });
+  }
+  async function refresh(turn) {
+    var html = await fetchBoard(location.href, turn);
+    var next = new DOMParser().parseFromString(html, "text/html")
+      .querySelector('[data-page="board"][data-board-changes]');
+    if (!next || next.dataset.boardChanges !== board.dataset.boardChanges ||
+        !/^\d+$/.test(next.dataset.boardSeq) || !Number.isSafeInteger(Number(next.dataset.boardNow))) {
+      throw new Error("invalid board snapshot");
+    }
+    var selectors = [".board-summary", ".board-filters", ".board-list"];
+    if (selectors.some(function (s) { return !next.querySelector(s) || !board.querySelector(s); })) {
+      throw new Error("incomplete board snapshot");
+    }
+    var focused = document.activeElement;
+    var href = board.contains(focused) && focused.closest(".board-filters, .board-list") &&
+      focused.getAttribute("href");
+    var main = board.closest("main"), top = main ? main.scrollTop : 0;
+    var columns = board.querySelector(".board-columns"), left = columns ? columns.scrollLeft : 0;
+    selectors.forEach(function (selector) {
+      board.querySelector(selector).replaceWith(next.querySelector(selector));
+    });
+    if (href) {
+      var replacement = Array.from(board.querySelectorAll("a[href]")).find(function (a) {
+        return a.getAttribute("href") === href;
+      });
+      if (replacement) replacement.focus({ preventScroll: true });
+    }
+    if (main) main.scrollTop = top;
+    columns = board.querySelector(".board-columns");
+    if (columns) columns.scrollLeft = left;
+    board.dataset.boardSeq = next.dataset.boardSeq;
+    serverNow = Number(next.dataset.boardNow);
+    sampled = performance.now();
+    leaseTimes();
+    message(board.dataset.live);
+  }
+  async function follow(turn) {
+    try {
+      await refresh(turn); // Also reconciles changes made while hidden or disconnected.
+      while (active(turn)) {
+        var update = JSON.parse(await fetchBoard(board.dataset.boardChanges +
+          "?after=" + encodeURIComponent(board.dataset.boardSeq), turn));
+        if (typeof update.changed !== "boolean") throw new Error("invalid change receipt");
+        if (update.changed) await refresh(turn);
+        message(board.dataset.live);
+      }
+    } catch (error) {
+      if (!active(turn)) return;
+      message(board.dataset.stale);
+      // One retry owner; never accumulate waiters or hide a failed read as fresh data.
+      retry = window.setTimeout(start, 3000);
+    }
+  }
+  function start() {
+    stop();
+    if (document.hidden || ended) return;
+    clock = window.setInterval(leaseTimes, 1000);
+    follow(generation);
+  }
+  document.addEventListener("visibilitychange", function () {
+    if (document.hidden) { stop(); if (!ended) message(board.dataset.stale); }
+    else start();
+  });
+  window.addEventListener("pagehide", stop);
+  window.addEventListener("pageshow", function (event) { if (event.persisted) start(); });
+  window.addEventListener("online", start);
+  start();
 })();

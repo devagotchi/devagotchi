@@ -10,16 +10,22 @@ download checksums, phone layout and restart persistence passed. The superseded 
 image and the merged integration branch were removed.
 
 PR281 restored source workflow columns/task cards, completed work, state counts and
-held-by-me filtering. It merged reviewed `45c96cb` as main `5571260` with matching
-trees; all 17 PR/main CI jobs and security passed. Its integration branch was deleted
-locally/remotely. Matching official-image publication and replacement are being followed.
+held-by-me filtering. It merged as main `5571260` with green PR/main CI/security and
+matching trees. Its official image is deployed and restart-verified: four saved boards,
+users, audit chains, mobile layout and download checksums passed; volumes were preserved
+and the superseded image removed. The integration branch is deleted locally/remotely.
 
-Current implementation: `increment-291/audit-request-correlation`, scoped in the existing
-[A01 ledger](absorption/a01-review.md#restore-audit-request-correlation-increment-291).
-AgentHub PR18 merged the request-key/event/hash/outbox restoration as `3acf12a` on green
-CI. All 166 standalone PostgreSQL tests passed both within the parent and independently;
-parent receipt/audit/site checks passed. Parent pin/display publication, main verification
-and deployment acceptance remain outstanding. S1-S5 remain open.
+PR282 merged the audit request correlation parent as `d0c44ee`, pinning AgentHub PR18
+at `3acf12a`. All 18 PR checks and all main CI/security checks passed; reviewed/merged
+trees match and both integration branches are deleted. Its official image publication
+and replacement are being followed. Existing event hashes remain verifiable.
+
+Current implementation: `increment-292/live-agenthub-board`, scoped in the existing
+[A01 ledger](absorption/a01-review.md#restore-live-board-updates-increment-292).
+Restore committed board updates and lease countdowns through the existing scoped wait;
+retain drafts/focus/filters, stop on ended authority, expose stale/disconnected state and
+keep the server-rendered fallback. Local HTTP, site, binary and complete browser checks passed; publication is next. Principal names
+and the remaining S1-S5 inventory remain open.
 
 ## Earlier image follow-through record
 

@@ -412,7 +412,10 @@
       "lease_expired": "Lease expired",
       "lease_remaining": "Lease: {minutes} min remaining",
       "expiry_count": "Lease expiries: {n}",
-      "snapshot": "Lease times are as of this page load. Refresh to see changes."
+      "snapshot": "Showing saved board and lease times. Refresh to see changes.",
+      "live": "Live updates connected.",
+      "stale": "Updates paused. Showing the last saved board; reconnecting?",
+      "ended": "Board access ended. Refresh to sign in or check your access."
     },
     "you": "You",
     "nobody": "Nobody",

@@ -95,9 +95,14 @@ fn card(
             String::new()
         };
         format!(
-            "<span>{}: {}</span><span class=\"lease\">{lease}</span>",
+            "<span>{}: {}</span><span class=\"lease\" data-lease-until=\"{}\">{lease}</span>",
             escape(&copy.ticket_holder),
-            who(holder)
+            who(holder),
+            ticket
+                .lease_expires_at
+                .filter(|_| !ticket.lease_expired)
+                .map(|at| at.to_string())
+                .unwrap_or_default(),
         )
     } else if !ticket.blocked_by.is_empty() {
         let links: Vec<_> = ticket
