@@ -16,6 +16,12 @@ impl Broker {
             spec.account_environment = false;
         }
         let mut state = self.shared.lock();
+        if state.journal.file_record(&input.idempotency_key)?.is_some() {
+            return Err(BridgeError::new(
+                "idempotency_conflict",
+                "retry key belongs to a file admission",
+            ));
+        }
         if let Some(authority) = &authority {
             state.journal.check_grant(&authority.binding)?;
         }

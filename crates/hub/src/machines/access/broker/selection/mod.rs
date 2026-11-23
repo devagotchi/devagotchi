@@ -97,7 +97,7 @@ impl Access {
                 SELECT id,item,approved_at,CASE item->>'sandbox_level'
                     WHEN 'read-only' THEN 0 WHEN 'workspace-write' THEN 1 WHEN 'desktop' THEN 1 ELSE 2 END AS rank
                 FROM machine_grants WHERE tenant_id=$1 AND account=$2 AND principal=$3
-                    AND machine_binding=$4::jsonb AND capability=$5 AND guide_binding IS NULL
+                    AND machine_binding=$4::jsonb AND (capability=$5 OR ($5='fs.read' AND capability='fs.write')) AND guide_binding IS NULL
                     AND ended_at IS NULL AND NOT paused AND (expires_at IS NULL OR expires_at>$6)
                     AND (uses_max IS NULL OR uses<uses_max))
                 SELECT id,item::text,approved_at,rank FROM candidates
@@ -126,11 +126,25 @@ impl Access {
         &self,
         selection: &StartSelection<'_>,
         input: StartInput,
-    ) -> BridgeResult<PreparedStart> {
-        if let Some(id) = self
-            .original_start_grant(selection, &input.idempotency_key)
-            .await?
-        {
+    ) -> BridgeResult<PreparedCall> {
+        self.prepare_selected_call(selection, PreparedInput::Start(input))
+            .await
+    }
+    pub(crate) async fn prepare_selected_files(
+        &self,
+        selection: &StartSelection<'_>,
+        input: FileInvocation,
+    ) -> BridgeResult<PreparedCall> {
+        input.validate()?;
+        self.prepare_selected_call(selection, PreparedInput::Files(input))
+            .await
+    }
+    async fn prepare_selected_call(
+        &self,
+        selection: &StartSelection<'_>,
+        input: PreparedInput,
+    ) -> BridgeResult<PreparedCall> {
+        if let Some(id) = self.original_start_grant(selection, input.key()).await? {
             let target = self
                 .execution_target(selection.account, selection.actor, &id)
                 .await?;
@@ -140,15 +154,11 @@ impl Access {
                     "the original retry grant is outside this key's project limits",
                 ));
             }
-            return self.prepare_start(&selection.execution(&id), input).await;
+            return self.prepare_call(&selection.execution(&id), input).await;
         }
-        let capability = if input.interactive.is_some() {
-            GrantCapability::Process
-        } else {
-            GrantCapability::Exec
-        };
+        let capability = input.action().capability();
         let mut after = (-1, 0, String::new());
-        let mut prepared: Vec<PreparedStart> = Vec::new();
+        let mut prepared: Vec<PreparedCall> = Vec::new();
         loop {
             let candidates = self.start_candidates(selection, capability, &after).await?;
             let count = candidates.len();
@@ -165,11 +175,7 @@ impl Access {
                         "grant target changed during selection",
                     ));
                 }
-                let action = if input.interactive.is_some() {
-                    GrantAction::ProcessStart
-                } else {
-                    GrantAction::Exec
-                };
+                let action = input.action();
                 if !self
                     .start_candidate_live(selection, &candidate.id, &target, action)
                     .await?
@@ -182,7 +188,7 @@ impl Access {
                     cached.clone()
                 } else {
                     let p = self
-                        .prepare_start(&selection.execution(&candidate.id), input.clone())
+                        .prepare_call(&selection.execution(&candidate.id), input.clone())
                         .await?;
                     prepared.push(p.clone());
                     p
@@ -199,7 +205,7 @@ impl Access {
                         {
                             continue;
                         }
-                        return Ok(PreparedStart {
+                        return Ok(PreparedCall {
                             grant_id: candidate.id,
                             target,
                             ..canonical

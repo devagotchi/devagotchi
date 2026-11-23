@@ -75,6 +75,7 @@ impl Broker {
             | RequestBody::FileInfo(_)
             | RequestBody::FileMkdir(_)
             | RequestBody::FileMove(_)
+            | RequestBody::FileDelete(_)
             | RequestBody::FileSearch(_)
             | RequestBody::OperationInput(_)
             | RequestBody::OperationResize(_) => (

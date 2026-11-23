@@ -1,4 +1,5 @@
-//! File requests: answered directly (no operation, nothing journaled) where the broker's
+//! Local file requests are answered directly. Account-backed remote file calls use the
+//! durable admission/result journal in `remote::files` and this same IO owner. The broker's
 //! policy lets files be reached, on the blocking pool so a large file or a long search never
 //! stalls the broker's jobs, waits or other callers. A refusal goes to the broker log.
 //!
@@ -145,6 +146,7 @@ impl Broker {
             let files = Scope {
                 workspace: &workspace,
                 policy,
+                authority: None,
             };
             work(&files)
         })
@@ -165,6 +167,7 @@ fn mutation(request: &RequestBody) -> Option<&'static str> {
         RequestBody::FileEdit(_) => Some("edit_file"),
         RequestBody::FileMkdir(_) => Some("create_directory"),
         RequestBody::FileMove(_) => Some("move_file"),
+        RequestBody::FileDelete(_) => Some("delete_file"),
         RequestBody::FileRead(_)
         | RequestBody::FileList(_)
         | RequestBody::FileInfo(_)
@@ -188,7 +191,10 @@ fn mutation(request: &RequestBody) -> Option<&'static str> {
 }
 
 /// The request's tool name, and its answer.
-fn answer(files: &Scope<'_>, request: RequestBody) -> (&'static str, BridgeResult<ResponseBody>) {
+pub(super) fn answer(
+    files: &Scope<'_>,
+    request: RequestBody,
+) -> (&'static str, BridgeResult<ResponseBody>) {
     match request {
         RequestBody::FileRead(input) => ("read_file", files.read(input).map(ResponseBody::File)),
         RequestBody::FileList(input) => (
@@ -207,6 +213,10 @@ fn answer(files: &Scope<'_>, request: RequestBody) -> (&'static str, BridgeResul
             files.mkdir(input).map(ResponseBody::Info),
         ),
         RequestBody::FileMove(input) => ("move_file", files.moved(input).map(ResponseBody::Info)),
+        RequestBody::FileDelete(input) => (
+            "delete_file",
+            files.delete(input).map(ResponseBody::Deleted),
+        ),
         RequestBody::FileSearch(input) => (
             "search_files",
             files.search(input).map(ResponseBody::Search),

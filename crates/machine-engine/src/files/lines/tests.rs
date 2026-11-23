@@ -1,6 +1,7 @@
 use std::io::Write;
 
 use super::*;
+use std::fs::File;
 
 fn file_with(text: &[u8]) -> (tempfile::NamedTempFile, File, u64) {
     let mut named = tempfile::NamedTempFile::new().unwrap();

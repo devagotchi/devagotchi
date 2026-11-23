@@ -144,6 +144,7 @@ impl Links {
             ResponseBody::Operations(_)
             | ResponseBody::File(_)
             | ResponseBody::Listing(_)
+            | ResponseBody::Deleted(_)
             | ResponseBody::Written(_)
             | ResponseBody::Revision(_)
             | ResponseBody::Info(_)

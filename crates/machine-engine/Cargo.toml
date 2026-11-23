@@ -30,6 +30,9 @@ libc = { workspace = true }
 [target.'cfg(any(target_os = "linux", windows))'.dependencies]
 base64 = { workspace = true }
 dunce = { workspace = true }
+# Handle-relative file IO; 4.0.3 includes the trailing-slash confinement fix.
+cap-std = "4.0.3"
+cap-fs-ext = "4.0.3"
 # search_files: ripgrep's walker (honours .gitignore and hidden files) and its regex engine.
 globset = "0.4"
 ignore = "0.4"

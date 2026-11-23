@@ -32,6 +32,24 @@ impl GrantObservation {
 #[serde(tag = "action", rename_all = "snake_case", deny_unknown_fields)]
 pub enum RemoteRequest {
     Capabilities {},
+    /// Separate negotiation leaves existing process capability replies unchanged.
+    FileCapabilities {},
+    PrepareFiles {
+        origin: GrantOrigin,
+        actor: GrantActor,
+        level: GrantLevel,
+        invocation: FileInvocation,
+    },
+    ExecuteFiles {
+        authority: GrantAuthority,
+        client: String,
+        invocation: FileInvocation,
+        step: FileStep,
+    },
+    /// End a read invocation; this cannot execute or renew filesystem work.
+    FinishFiles {
+        binding: GrantBinding,
+    },
     Prepare {
         origin: GrantOrigin,
         actor: GrantActor,
@@ -77,6 +95,23 @@ pub enum RemoteReply {
         version: u32,
         os: String,
         sandbox_levels: Vec<GrantLevel>,
+    },
+    FileCapabilities {
+        version: u32,
+        sandbox_levels: Vec<GrantLevel>,
+    },
+    FileExecuted {
+        operation_id: String,
+        outcome: FileOutcome,
+        replayed: bool,
+    },
+    FileFinished {
+        operation_id: String,
+        error_code: Option<String>,
+    },
+    FileStatus {
+        operation_id: String,
+        state: FileExecutionState,
     },
     Prepared {
         action: GrantAction,

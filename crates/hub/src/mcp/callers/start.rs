@@ -21,6 +21,24 @@ impl Hub {
             .and_then(|p| p.extensions.get::<BearerVerifier>())
             .is_some_and(|v| v.accounts.is_some());
         match (route, body) {
+            (
+                route,
+                body @ (RequestBody::FileRead(_)
+                | RequestBody::FileList(_)
+                | RequestBody::FileInfo(_)
+                | RequestBody::FileSearch(_)
+                | RequestBody::FileWrite(_)
+                | RequestBody::FileEdit(_)
+                | RequestBody::FileMkdir(_)
+                | RequestBody::FileMove(_)
+                | RequestBody::FileDelete(_)),
+            ) if account_backed => match route {
+                Route::Link(machine) => self.files_granted(machine, body, context).await,
+                Route::Local(_) => Err(BridgeError::new(
+                    "not_granted",
+                    "account file access requires an enrolled broker and current grant",
+                )),
+            },
             (Route::Link(machine), RequestBody::OperationStart(input)) if account_backed => self
                 .start_granted(machine, input, context)
                 .await

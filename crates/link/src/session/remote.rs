@@ -40,15 +40,19 @@ fn check(origin: Option<&GrantOrigin>, wire: &RemoteWireRequest) -> BridgeResult
         ));
     }
     let supplied = match &wire.remote {
-        RemoteRequest::Prepare { origin, .. } => Some(origin),
-        RemoteRequest::Status { binding } => Some(&binding.origin),
+        RemoteRequest::Prepare { origin, .. } | RemoteRequest::PrepareFiles { origin, .. } => {
+            Some(origin)
+        }
+        RemoteRequest::Status { binding } | RemoteRequest::FinishFiles { binding } => {
+            Some(&binding.origin)
+        }
         RemoteRequest::Observe { observation, .. } => Some(&observation.binding.origin),
         RemoteRequest::Control { control, .. } => Some(&control.binding.origin),
-        RemoteRequest::Execute { authority, .. } | RemoteRequest::Refresh { authority } => {
-            Some(&authority.binding.origin)
-        }
+        RemoteRequest::Execute { authority, .. }
+        | RemoteRequest::ExecuteFiles { authority, .. }
+        | RemoteRequest::Refresh { authority } => Some(&authority.binding.origin),
         RemoteRequest::Interrupt { notice } => Some(&notice.origin),
-        RemoteRequest::Capabilities {} => None,
+        RemoteRequest::Capabilities {} | RemoteRequest::FileCapabilities {} => None,
     };
     if supplied.is_some_and(|supplied| supplied != origin) {
         return Err(BridgeError::new(

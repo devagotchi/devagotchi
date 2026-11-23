@@ -2,7 +2,7 @@
 use super::*;
 impl Broker {
     pub(super) fn normalize(&self, input: &StartInput) -> BridgeResult<(ExecutionSpec, String)> {
-        if !(1..=128).contains(&input.idempotency_key.len()) {
+        if !(1..=MAX_OPERATION_KEY_BYTES).contains(&input.idempotency_key.len()) {
             return Err(invalid("idempotency_key must contain 1..=128 UTF-8 bytes"));
         }
         if input.args.len() > 128

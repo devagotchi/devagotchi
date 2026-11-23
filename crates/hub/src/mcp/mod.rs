@@ -31,6 +31,7 @@ mod machines;
 pub(crate) mod schema;
 mod tools;
 
+pub(crate) use callers::files::{FileRetryKey, read_key};
 /// What the rest of the hub uses of the router.
 pub use hub::Hub;
 #[cfg(test)]

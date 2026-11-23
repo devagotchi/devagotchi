@@ -1,3 +1,7 @@
+//! Owns: no persistent state; checked filesystem handles remain local to each call.
+//! Serves: directory creation, metadata and moves.
+//! Settings: the caller scope and existing file size/deadline bounds.
+//! Depends on: shared contracts, checked handles and checksum helpers.
 //! Managing files: what a path is (`info`), making directories (`mkdir`, and the parents a
 //! write asks for) and moving or renaming (`moved`). Reach is the read policy: inside the
 //! workspace under `granted`, wherever the account can under `account`. A symbolic link is
@@ -5,16 +9,16 @@
 //! workspace too, judged from where the link is, or would be after a move, and from its
 //! text when its target is missing.
 
-use std::fs::{self, Metadata};
+use cap_std::fs::Metadata;
+use std::fs;
 use std::path::{Component, Path, PathBuf};
-use std::time::UNIX_EPOCH;
 
-use devagotchi_contracts::{
-    BridgeError, BridgeResult, DirectoryInput, FileInfo, FileInfoInput, FileMoveInput,
-};
+use devagotchi_contracts::{BridgeError, BridgeResult, DirectoryInput, FileInfo, FileMoveInput};
 
-use super::{Scope, display, invalid, io_error, modified_ms, text_prefix};
+use super::{Scope, display, invalid, io_error};
+use super::{checked, checksum};
 use crate::broker::ExecPolicy;
+mod info;
 
 /// Most entries a directory move checks for links under `granted`.
 const MAX_CHECKED_ENTRIES: usize = 10_000;
@@ -43,40 +47,10 @@ fn split_existing(path: &Path) -> Option<(&Path, Vec<&std::ffi::OsStr>)> {
         .map(|names| (ancestor, names))
 }
 
-fn created_ms(metadata: &Metadata) -> Option<u64> {
-    let since = metadata.created().ok()?.duration_since(UNIX_EPOCH).ok()?;
-    Some(since.as_millis().min(u64::MAX as u128) as u64)
-}
-
-fn kind(metadata: &Metadata) -> &'static str {
-    match metadata.file_type() {
-        t if t.is_symlink() => "symlink",
-        t if t.is_dir() => "dir",
-        t if t.is_file() => "file",
-        _ => "other",
-    }
-}
-
-#[cfg(unix)]
-fn mode(metadata: &Metadata) -> Option<String> {
-    use std::os::unix::fs::PermissionsExt;
-    Some(format!("{:04o}", metadata.permissions().mode() & 0o7777))
-}
-
-#[cfg(not(unix))]
-fn mode(_: &Metadata) -> Option<String> {
-    None
-}
-
-/// Windows keeps a read-only attribute on folders that it ignores for writing into them.
-fn readonly(metadata: &Metadata) -> bool {
-    metadata.permissions().readonly() && !(cfg!(windows) && metadata.is_dir())
-}
-
 /// Two names of one file. Unix compares the inode; elsewhere this is only known by path.
 #[cfg(unix)]
 fn same_file(a: &Metadata, b: &Metadata) -> bool {
-    use std::os::unix::fs::MetadataExt;
+    use cap_std::fs::MetadataExt;
     a.dev() == b.dev() && a.ino() == b.ino()
 }
 
@@ -85,22 +59,11 @@ fn same_file(_: &Metadata, _: &Metadata) -> bool {
     false
 }
 
-/// Lines in a text file small enough to count; `None` for anything else.
-fn lines(path: &Path, metadata: &Metadata) -> Option<u64> {
-    if !metadata.is_file() || metadata.len() > super::lines::COUNTED_BYTES {
-        return None;
-    }
-    let bytes = fs::read(path).ok()?;
-    if text_prefix(&bytes)? != bytes.len() {
-        return None;
-    }
-    Some(super::lines::count(&bytes))
-}
-
 impl Scope<'_> {
     /// `path` canonical up to its own name, without following the name itself: the
     /// directory it is in, resolved, joined with its name (a root is itself).
-    fn place(&self, path: &str) -> BridgeResult<PathBuf> {
+    pub(super) fn place(&self, path: &str) -> BridgeResult<PathBuf> {
+        self.check()?;
         let given = self.given(path)?;
         let place = match (given.parent(), given.file_name()) {
             (Some(parent), Some(name)) => dunce::canonicalize(parent)
@@ -111,6 +74,7 @@ impl Scope<'_> {
         if self.policy == ExecPolicy::Granted && !place.starts_with(self.workspace) {
             return Err(outside());
         }
+        self.check_path(&place)?;
         Ok(place)
     }
 
@@ -135,14 +99,31 @@ impl Scope<'_> {
     }
 
     /// Under `granted`, a link must point inside the workspace for the broker to touch it.
-    pub(super) fn link_inside(&self, path: &Path, metadata: &Metadata) -> BridgeResult<()> {
-        if self.policy != ExecPolicy::Granted || !metadata.file_type().is_symlink() {
+    pub(super) fn link_inside(
+        &self,
+        path: &Path,
+        metadata: &std::fs::Metadata,
+    ) -> BridgeResult<()> {
+        if !metadata.file_type().is_symlink() {
             return Ok(());
         }
-        let target = fs::read_link(path).map_err(|e| io_error(&path.to_string_lossy(), e))?;
-        match path.parent() {
-            Some(from) if self.lands_inside(from, &target) => Ok(()),
-            _ => Err(outside()),
+        self.checked_link(path)
+    }
+
+    pub(super) fn checked_link(&self, path: &Path) -> BridgeResult<()> {
+        if self.policy != ExecPolicy::Granted {
+            return Ok(());
+        }
+        let entry = checked::Entry::at(path).map_err(|e| io_error(&path.to_string_lossy(), e))?;
+        let target = entry
+            .parent
+            .handle
+            .read_link_contents(&entry.name)
+            .map_err(|e| io_error(&path.to_string_lossy(), e))?;
+        if self.lands_inside(&entry.parent.path, &target) {
+            Ok(())
+        } else {
+            Err(outside())
         }
     }
 
@@ -150,65 +131,54 @@ impl Scope<'_> {
     /// already there: the part that exists is resolved (and under `granted` must be in the
     /// workspace), the missing part must be plain names and is made one name at a time.
     /// Returns the directory, canonical, and whether anything was made.
-    pub(super) fn make_dirs(&self, path: &str) -> BridgeResult<(PathBuf, bool)> {
+    pub(super) fn planned_dirs(
+        &self,
+        path: &str,
+    ) -> BridgeResult<(PathBuf, Vec<std::ffi::OsString>)> {
+        self.check()?;
         let given = self.given(path)?;
         let Some((existing, missing)) = split_existing(&given) else {
             return Err(invalid(
                 "the directories to make must be plain names, without . or ..",
             ));
         };
-        let mut current = dunce::canonicalize(existing).map_err(|e| io_error(path, e))?;
+        let current = dunce::canonicalize(existing).map_err(|e| io_error(path, e))?;
         if self.policy == ExecPolicy::Granted && !current.starts_with(self.workspace) {
             return Err(outside());
         }
-        if !fs::metadata(&current).is_ok_and(|m| m.is_dir()) {
+        if checked::Directory::open(&current).is_err() {
             return Err(BridgeError::new(
                 "not_a_directory",
                 format!("{} exists and is not a directory", display(&current)?),
             ));
         }
+        Ok((
+            current,
+            missing.into_iter().map(std::ffi::OsStr::to_owned).collect(),
+        ))
+    }
+
+    pub(super) fn make_dirs(&self, path: &str) -> BridgeResult<(PathBuf, bool)> {
+        let (existing, missing) = self.planned_dirs(path)?;
+        let mut current = checked::Directory::open(&existing).map_err(|e| io_error(path, e))?;
         for name in &missing {
-            current.push(name);
-            match fs::create_dir(&current) {
+            self.check()?;
+            self.check_path(&current.path.join(name))?;
+            current.verify().map_err(|e| io_error(path, e))?;
+            match current.handle.create_dir(name) {
                 Ok(()) => {}
                 Err(error)
                     if error.kind() == std::io::ErrorKind::AlreadyExists
-                        && fs::symlink_metadata(&current).is_ok_and(|m| m.is_dir()) => {}
+                        && current
+                            .handle
+                            .symlink_metadata(name)
+                            .is_ok_and(|m| m.is_dir()) => {}
                 Err(error) => return Err(io_error(path, error)),
             }
+            current = current.child(name).map_err(|e| io_error(path, e))?;
         }
-        if self.policy == ExecPolicy::Granted
-            && !dunce::canonicalize(&current).is_ok_and(|real| real.starts_with(self.workspace))
-        {
-            return Err(outside());
-        }
-        Ok((current, !missing.is_empty()))
-    }
-
-    fn describe(&self, path: &Path) -> BridgeResult<FileInfo> {
-        let shown = display(path)?;
-        let metadata = fs::symlink_metadata(path).map_err(|e| io_error(&shown, e))?;
-        self.link_inside(path, &metadata)?;
-        Ok(FileInfo {
-            kind: kind(&metadata).to_owned(),
-            size: metadata.len(),
-            modified_ms: modified_ms(&metadata),
-            created_ms: created_ms(&metadata),
-            readonly: readonly(&metadata),
-            mode: mode(&metadata),
-            link_target: fs::read_link(path)
-                .ok()
-                .map(|target| dunce::simplified(&target).to_string_lossy().into_owned()),
-            lines: lines(path, &metadata),
-            made: None,
-            replaced: None,
-            path: shown,
-        })
-    }
-
-    pub(crate) fn info(&self, input: FileInfoInput) -> BridgeResult<FileInfo> {
-        let path = self.place(&input.path)?;
-        self.describe(&path)
+        self.check()?;
+        Ok((current.path, !missing.is_empty()))
     }
 
     pub(crate) fn mkdir(&self, input: DirectoryInput) -> BridgeResult<FileInfo> {
@@ -221,12 +191,16 @@ impl Scope<'_> {
     /// Under `granted`, a directory moves only when no link inside it can point elsewhere
     /// once moved: none climbs with `..`, and every absolute one lands inside.
     fn links_stay_inside(&self, dir: &Path) -> BridgeResult<()> {
-        let mut pending = vec![dir.to_path_buf()];
+        let mut pending =
+            vec![checked::Directory::open(dir).map_err(|e| io_error("move directory", e))?];
         let mut seen = 0;
         while let Some(next) = pending.pop() {
-            let shown = next.to_string_lossy().into_owned();
-            for entry in fs::read_dir(&next).map_err(|e| io_error(&shown, e))? {
-                let path = entry.map_err(|e| io_error(&shown, e))?.path();
+            let shown = next.path.to_string_lossy().into_owned();
+            self.check()?;
+            next.verify().map_err(|e| io_error(&shown, e))?;
+            for entry in next.handle.entries().map_err(|e| io_error(&shown, e))? {
+                self.check()?;
+                let name = entry.map_err(|e| io_error(&shown, e))?.file_name();
                 seen += 1;
                 if seen > MAX_CHECKED_ENTRIES {
                     return Err(BridgeError::new(
@@ -236,11 +210,17 @@ impl Scope<'_> {
                         ),
                     ));
                 }
-                let metadata = fs::symlink_metadata(&path).map_err(|e| io_error(&shown, e))?;
+                let metadata = next
+                    .handle
+                    .symlink_metadata(&name)
+                    .map_err(|e| io_error(&shown, e))?;
                 if metadata.is_dir() {
-                    pending.push(path);
+                    pending.push(next.child(&name).map_err(|e| io_error(&shown, e))?);
                 } else if metadata.file_type().is_symlink() {
-                    let target = fs::read_link(&path).map_err(|e| io_error(&shown, e))?;
+                    let target = next
+                        .handle
+                        .read_link_contents(&name)
+                        .map_err(|e| io_error(&shown, e))?;
                     let climbs = target
                         .components()
                         .any(|part| matches!(part, Component::ParentDir));
@@ -256,8 +236,30 @@ impl Scope<'_> {
     pub(crate) fn moved(&self, input: FileMoveInput) -> BridgeResult<FileInfo> {
         let source = self.place(&input.source)?;
         let shown = display(&source)?;
-        let from = fs::symlink_metadata(&source).map_err(|e| io_error(&shown, e))?;
-        self.link_inside(&source, &from)?;
+        let source_entry = checked::Entry::at(&source).map_err(|e| io_error(&shown, e))?;
+        let from = source_entry
+            .parent
+            .handle
+            .symlink_metadata(&source_entry.name)
+            .map_err(|e| io_error(&shown, e))?;
+        if from.is_symlink() {
+            self.checked_link(&source)?;
+        }
+        if let Some(expected) = &input.expected_sha256 {
+            if !devagotchi_contracts::whole_sha(expected) {
+                return Err(invalid("expected_sha256 must be a whole-file SHA-256"));
+            }
+            if !from.is_file() {
+                return Err(BridgeError::new(
+                    "not_a_file",
+                    "guarded move requires a regular file",
+                ));
+            }
+            let mut file = source_entry.read().map_err(|e| io_error(&shown, e))?;
+            if !checksum::file(self, &mut file, &shown)?.eq_ignore_ascii_case(expected) {
+                return Err(checksum::changed());
+            }
+        }
         let destination = self.place(&input.destination)?;
         if destination == source {
             return Err(invalid("source and destination are the same entry"));
@@ -266,10 +268,15 @@ impl Scope<'_> {
             return Err(invalid("a directory cannot move inside itself"));
         }
         let to = display(&destination)?;
+        let destination_entry = checked::Entry::at(&destination).map_err(|e| io_error(&to, e))?;
         if self.policy == ExecPolicy::Granted {
             if from.file_type().is_symlink() {
                 // A relative link is followed from where it lands.
-                let target = fs::read_link(&source).map_err(|e| io_error(&shown, e))?;
+                let target = source_entry
+                    .parent
+                    .handle
+                    .read_link_contents(&source_entry.name)
+                    .map_err(|e| io_error(&shown, e))?;
                 if !destination
                     .parent()
                     .is_some_and(|dir| self.lands_inside(dir, &target))
@@ -282,7 +289,11 @@ impl Scope<'_> {
         }
         // Checked, then renamed: an entry made at the destination in between is replaced
         // when it is a file, as overwrite would.
-        let replaced = match fs::symlink_metadata(&destination) {
+        let replaced = match destination_entry
+            .parent
+            .handle
+            .symlink_metadata(&destination_entry.name)
+        {
             Ok(existing) => {
                 let one_file = !from.file_type().is_symlink()
                     && (same_file(&from, &existing)
@@ -304,7 +315,16 @@ impl Scope<'_> {
                             ),
                         ));
                     }
-                    fs::remove_file(&source).map_err(|e| io_error(&shown, e))?;
+                    self.check()?;
+                    source_entry
+                        .parent
+                        .verify()
+                        .map_err(|e| io_error(&shown, e))?;
+                    source_entry
+                        .parent
+                        .handle
+                        .remove_file(&source_entry.name)
+                        .map_err(|e| io_error(&shown, e))?;
                     let mut info = self.describe(&destination)?;
                     info.replaced = Some(false);
                     return Ok(info);
@@ -330,7 +350,16 @@ impl Scope<'_> {
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => false,
             Err(error) => return Err(io_error(&to, error)),
         };
-        fs::rename(&source, &destination).map_err(|error| {
+        self.check()?;
+        source_entry
+            .parent
+            .verify()
+            .map_err(|e| io_error(&shown, e))?;
+        destination_entry
+            .parent
+            .verify()
+            .map_err(|e| io_error(&to, e))?;
+        source_entry.parent.handle.rename(&source_entry.name, &destination_entry.parent.handle, &destination_entry.name).map_err(|error| {
             if error.kind() == std::io::ErrorKind::CrossesDevices {
                 BridgeError::new(
                     "cross_device",
@@ -340,17 +369,9 @@ impl Scope<'_> {
                 io_error(&shown, error)
             }
         })?;
-        match self.describe(&destination) {
-            Ok(mut info) => {
-                info.replaced = Some(replaced);
-                Ok(info)
-            }
-            Err(error) => {
-                // Out of reach after all (it changed while moving): put it back.
-                let _ = fs::rename(&destination, &source);
-                Err(error)
-            }
-        }
+        let mut info = self.describe(&destination)?;
+        info.replaced = Some(replaced);
+        Ok(info)
     }
 }
 

@@ -19,9 +19,9 @@ mod administration;
 mod admission_action;
 mod admission_completion;
 mod admissions;
-pub(crate) use admissions::AdmissionMachine;
+pub(crate) use admissions::{AdmissionMachine, Admitted};
 mod broker;
-pub(crate) use broker::{LinkExecution, StartSelection};
+pub(crate) use broker::{LinkExecution, PreparedCall, StartSelection};
 #[cfg(test)]
 mod broker_tests;
 mod continuation;
@@ -40,6 +40,7 @@ mod runtime_tests;
 pub(crate) use control::ControlChange;
 mod decisions;
 pub(crate) use decisions::Decision;
+mod file_maintenance;
 mod grant_record;
 mod grants;
 #[cfg(test)]

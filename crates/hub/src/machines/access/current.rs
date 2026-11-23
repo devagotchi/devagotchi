@@ -122,7 +122,12 @@ impl Access {
                 "grant's unsandboxed policy is no longer live",
             ));
         }
-        if input.action.capability() != grant.terms.item.capability {
+        if !grant
+            .terms
+            .item
+            .capability
+            .covers(input.action.capability())
+        {
             return Err(refused(
                 "access_damaged",
                 "admission action differs from its grant capability",

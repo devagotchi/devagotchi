@@ -49,6 +49,9 @@ pub struct ListDirectoryInput {
 #[derive(Debug, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct WriteFileInput {
+    /// Stable retry key required for account-backed mutations; reuse after a lost response.
+    #[serde(default)]
+    pub idempotency_key: Option<String>,
     /// The machine, by its name from `machines`.
     pub machine: String,
     /// Path (absolute, `~/...`, or relative to the workspace) of the file.
@@ -74,6 +77,9 @@ pub struct WriteFileInput {
 #[derive(Debug, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct EditFileInput {
+    /// Stable retry key required for account-backed mutations; reuse after a lost response.
+    #[serde(default)]
+    pub idempotency_key: Option<String>,
     /// The machine, by its name from `machines`.
     pub machine: String,
     /// Path (absolute, `~/...`, or relative to the workspace) of a UTF-8 text file.
@@ -104,6 +110,10 @@ pub struct ReadFilesInput {
 #[derive(Debug, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct PathOnMachine {
+    /// Stream a whole-file SHA-256 for a guarded change. Refuses non-regular files,
+    /// a changing file or a checksum that cannot finish within the broker deadline.
+    #[serde(default)]
+    pub sha256: bool,
     /// The machine, by its name from `machines`.
     pub machine: String,
     /// Path (absolute, `~/...`, or relative to the workspace) of a file, directory or symbolic link.
@@ -113,6 +123,14 @@ pub struct PathOnMachine {
 #[derive(Debug, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct MoveFileInput {
+    /// Move only if the regular source file still has this whole-file SHA-256.
+    /// Required for account-backed grant execution; omitted local moves keep their
+    /// existing file/directory/link behavior.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub expected_sha256: Option<String>,
+    /// Stable retry key required for account-backed mutations; reuse after a lost response.
+    #[serde(default)]
+    pub idempotency_key: Option<String>,
     /// The machine, by its name from `machines`.
     pub machine: String,
     /// Path (absolute, `~/...`, or relative to the workspace) of the file, directory or link to move or rename (a link moves as
@@ -129,6 +147,9 @@ pub struct MoveFileInput {
 #[derive(Debug, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct DirectoryOnMachine {
+    /// Stable retry key required for account-backed mutations; reuse after a lost response.
+    #[serde(default)]
+    pub idempotency_key: Option<String>,
     /// The machine, by its name from `machines`.
     pub machine: String,
     /// Path (absolute, `~/...`, or relative to the workspace) of the directory to make; missing parents are made too. An existing
@@ -143,4 +164,18 @@ pub struct ImageOnMachine {
     pub machine: String,
     /// Path (absolute, `~/...`, or relative to the workspace) of a PNG, JPEG, GIF or WebP image, up to 3.75 MB.
     pub path: String,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct DeleteFileInput {
+    /// The machine, by its name from machines_list.
+    pub machine: String,
+    /// Path (absolute, home-relative or workspace-relative) of the regular file to remove.
+    pub path: String,
+    /// SHA-256 from get_file_info with sha256=true, or a complete read/write result.
+    pub expected_sha256: String,
+    /// Stable retry key required for account-backed mutations.
+    #[serde(default)]
+    pub idempotency_key: Option<String>,
 }

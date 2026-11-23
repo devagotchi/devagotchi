@@ -1,6 +1,6 @@
 # Devagotchi and WardenMesh: implementation and release plan
 
-Updated: **2026-11-22 UTC**. Status: **alpha execution plan; incomplete work is not a product guarantee**.
+Updated: **2026-11-23 UTC**. Status: **alpha execution plan; incomplete work is not a product guarantee**.
 
 Lifecycle authority: [DG-LIFECYCLE-1](../.ai/docs/lifecycle.md), with machine state in
 [`.ai/project.json`](../.ai/project.json). Production promotion is explicit, never inferred.
@@ -17,7 +17,7 @@ repository boundary is [editions](../.ai/docs/editions.md), which records the pr
 The current acceptance and integration receipt is
 [release readiness](../.ai/dev/plans/v0.1-release-readiness.md#self-hosted-baseline-2026-11-20).
 
-## Current integration status (2026-11-22)
+## Current integration status (2026-11-23)
 
 Root [PR279](https://github.com/devagotchi/devagotchi/pull/279) is merged into main
 `38d9ec63763a1ec136fcf46d3c67479faf15a0e2`. The merged tree equals reviewed `40ecd0c`;
@@ -46,13 +46,20 @@ local users. The old unused image and integration branch were removed.
 [PR282](https://github.com/devagotchi/devagotchi/pull/282) merged the audit request
 correlation as `d0c44ee`, pinning [AgentHub PR18](https://github.com/devagotchi/agenthub/pull/18)
 at `3acf12a`. All PR and main CI/security checks passed; reviewed and merged trees match,
-and both integration branches are deleted. Its official image replacement remains pending.
+and both integration branches are deleted. Its image was deployed and restart-verified,
+then replaced by the following live-board image with the same persistent volumes.
 
-Current authored change: `increment-292/live-agenthub-board` restores committed board
-updates and lease countdowns through the existing authenticated change wait, preserving
-search drafts, focus, filters and the static fallback. Local browser/HTTP/site verification and the locked binary build passed; publication
-is next. See [A01](../.ai/dev/plans/absorption/a01-review.md). Principal display names and
-all remaining source inventory gaps remain open.
+[PR283](https://github.com/devagotchi/devagotchi/pull/283) restored committed board updates
+and lease countdowns, preserving drafts, focus, filters and the static fallback. It merged
+as `2a0b670` with matching reviewed/main trees and green PR/main CI/security. Its official
+image is deployed and restart-verified: seven authenticated routes, four saved boards with
+live updates and verified audit chains, local users, desktop/phone layout and all six
+download checksums. The previous image and integration branch were removed.
+
+Current work: `increment-293/absorb-file-access`, the complete ordinary, batch, image and
+guarded-delete authorization/retry unit in [A04](../.ai/dev/plans/absorption/a04-access.md#file-operations-increment-293).
+Implementation and verification are pending. Principal display names, the board refresh
+link's wording and the remaining source inventory gaps remain open.
 
 The [branch execution plan](../.ai/dev/plans/absorption/branch-execution.md) owns source
 paths, implementation steps, tests and dependency order. The
@@ -60,7 +67,7 @@ paths, implementation steps, tests and dependency order. The
 
 | Sequence | Deliverable | Current evidence/status | Next acceptance |
 |---|---|---|---|
-| Now | Deliver audit correlation and source live-board behavior | Board deployed and restart-verified; audit integration merged with green PR/main; live board authored | Deploy audit image; complete browser checks and green merge/deployment for live updates |
+| Now | Complete source file-operation authorization and retry handling | Audit correlation and live board are merged, deployed and restart-verified; file unit planned | Author ordinary/batch/image/delete flow with broker enforcement, durable mutation receipts and native race tests; then validate and publish the complete unit |
 | S1 / October | Complete baseline behavior | Coordination, principal, receipt and machine start/read/control/heartbeat integration delivered; source parity remains partial | Finish coordination/catalog comparisons, file/batch/image authorization, operator stop/list/history, confinement/change policy, provider routing/secrets, executable guides, document/GUI tools, audit retention and corresponding browser journeys |
 | S1 closure | Complete October source absorption | Preserved source intact; no deletion eligibility claimed | Account for every source behavior, validate complete scope, green merge, verify main, then delete only eligible preserved refs |
 | S2 | Documentation/packaging delta: 2 commits, 17 paths | Planned; no source closure | Complete source-specific changes, validate, green merge, verify and delete eligible ref after S1 |

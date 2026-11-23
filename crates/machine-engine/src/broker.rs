@@ -298,6 +298,7 @@ impl Broker {
             | RequestBody::FileInfo(_)
             | RequestBody::FileMkdir(_)
             | RequestBody::FileMove(_)
+            | RequestBody::FileDelete(_)
             | RequestBody::FileSearch(_)) => self.on_files(request).await,
             request @ (RequestBody::ConfigGet(_)
             | RequestBody::ConfigSet(_)

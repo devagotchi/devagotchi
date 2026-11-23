@@ -6,6 +6,13 @@ fn input(tool: &rmcp::model::Tool) -> Value {
     value.as_object_mut().unwrap().remove("title");
     if let Some(properties) = value.get_mut("properties").and_then(Value::as_object_mut) {
         properties.remove("machine");
+        if matches!(
+            tool.name.as_ref(),
+            "write_file" | "edit_file" | "move_file" | "delete_file" | "create_directory"
+        ) {
+            // The account hub binds durable retry identity; local direct IPC has no admission.
+            properties.remove("idempotency_key");
+        }
     }
     if let Some(required) = value.get_mut("required").and_then(Value::as_array_mut) {
         required.retain(|p| p != "machine");

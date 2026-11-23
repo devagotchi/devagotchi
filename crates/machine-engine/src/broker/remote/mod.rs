@@ -7,6 +7,7 @@ use super::*;
 mod clock;
 mod control;
 pub(crate) use control::ControlPermit;
+mod files;
 mod observation;
 mod process;
 pub(super) use clock::AuthorityClock;
@@ -87,6 +88,26 @@ impl Broker {
             return Err(denied("api_version", "unsupported broker API version"));
         }
         match wire.remote {
+            RemoteRequest::FileCapabilities {} => Ok(RemoteReply::FileCapabilities {
+                version: REMOTE_FILE_ACCESS_VERSION,
+                sandbox_levels: vec![GrantLevel::Unsandboxed],
+            }),
+            RemoteRequest::PrepareFiles {
+                origin,
+                actor,
+                level,
+                invocation,
+            } => self.prepare_files(origin, actor, level, invocation),
+            RemoteRequest::ExecuteFiles {
+                authority,
+                client,
+                invocation,
+                step,
+            } => {
+                self.execute_files(authority, client, invocation, step)
+                    .await
+            }
+            RemoteRequest::FinishFiles { binding } => self.finish_files(binding),
             RemoteRequest::Capabilities {} => {
                 let caps = self.capabilities()?;
                 Ok(RemoteReply::Capabilities {

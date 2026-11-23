@@ -27,6 +27,14 @@ Its receipt contains only the acknowledged operation ID and deadline. The existi
 local adapter has no hosted grant to renew. This is the preserved source's explicit
 process heartbeat mapped to the existing admission/Refresh protocol.
 
+Account-backed file mutations additionally take `idempotency_key`; local IPC does not.
+`get_file_info(sha256=true)` obtains a whole-file guard; partial `read_file` pages omit
+SHA-256. Account writes require a checksum or `mode=create`, move/delete require the
+source checksum, and edit keeps its exact text/count guard. `delete_file` removes one
+regular file, never a directory or link. Batch/image reads use one admission, and access
+failure aborts disclosure of the composite result. Search uses only in-root ignore files.
+External editors do not join the broker mutation gate; these guards are not filesystem-wide CAS.
+
 ## Tool by tool
 
 | Desktop Commander | What it does | Devagotchi | Gap |

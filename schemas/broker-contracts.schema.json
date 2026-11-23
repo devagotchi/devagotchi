@@ -298,6 +298,13 @@
           "description": "The file's canonical path.",
           "type": "string"
         },
+        "sha256": {
+          "description": "SHA-256 of the whole file, only when this read returned every byte. A page\nchecksum is never a write guard; request get_file_info with sha256 for larger files.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "size": {
           "description": "The file's size in bytes when it was read.",
           "format": "uint64",
@@ -336,6 +343,42 @@
         "offset",
         "next_offset",
         "eof"
+      ],
+      "type": "object"
+    },
+    "FileDeleteInput": {
+      "additionalProperties": false,
+      "description": "Delete one regular file only after checking its whole-file content. Never recursive.",
+      "properties": {
+        "expected_sha256": {
+          "description": "SHA-256 from get_file_info with sha256=true, or a complete read/write result.",
+          "type": "string"
+        },
+        "path": {
+          "description": "Path (absolute, home-relative or workspace-relative) of the regular file to remove.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "expected_sha256"
+      ],
+      "type": "object"
+    },
+    "FileDeleted": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "sha256": {
+          "description": "Verified whole-file digest of the removed regular file.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "sha256"
       ],
       "type": "object"
     },
@@ -482,6 +525,13 @@
             "null"
           ]
         },
+        "sha256": {
+          "description": "Whole-file SHA-256, when explicitly requested for a regular file.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "size": {
           "description": "Size in bytes (for a link, the link's own).",
           "format": "uint64",
@@ -503,6 +553,11 @@
         "path": {
           "description": "Path (absolute, `~/...`, or relative to the workspace) of a file, directory or symbolic link.",
           "type": "string"
+        },
+        "sha256": {
+          "default": false,
+          "description": "Stream a whole-file SHA-256 for a guarded change. Refuses non-regular files,\na changing file or a checksum that cannot finish within the broker deadline.",
+          "type": "boolean"
         }
       },
       "required": [
@@ -583,6 +638,13 @@
         "destination": {
           "description": "Path (absolute, `~/...`, or relative to the workspace) it moves to, on the same filesystem. Its parent directory must exist.",
           "type": "string"
+        },
+        "expected_sha256": {
+          "description": "Move only if the regular source file still has this whole-file SHA-256.\nRequired for account-backed grant execution; omitted local moves keep their\nexisting file/directory/link behavior.",
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "overwrite": {
           "default": false,
@@ -1883,6 +1945,12 @@
     "file_content": {
       "$ref": "#/$defs/FileContent"
     },
+    "file_delete_input": {
+      "$ref": "#/$defs/FileDeleteInput"
+    },
+    "file_deleted": {
+      "$ref": "#/$defs/FileDeleted"
+    },
     "file_edit_input": {
       "$ref": "#/$defs/FileEditInput"
     },
@@ -2003,6 +2071,8 @@
     "file_info_input",
     "directory_input",
     "file_move_input",
+    "file_delete_input",
+    "file_deleted",
     "file_info",
     "file_search_input",
     "search_page",

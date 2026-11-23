@@ -213,6 +213,10 @@ if args.account:
         raise SystemExit("get_file_info did not describe the moved file")
     if (both[0].get("content") or {}).get("text") != "two line\n" or both[1].get("error", {}).get("code") != "path_not_found":
         raise SystemExit("read_multiple_files did not read one file and report the other")
+    guard = call("get_file_info", {"path": moved["path"], "sha256": True})
+    removed = call("delete_file", {"path": moved["path"], "expected_sha256": guard["sha256"]})
+    if os.path.exists(moved["path"]) or removed["sha256"] != guard["sha256"]:
+        raise SystemExit("delete_file did not remove the guarded regular file")
     # A program that asks for input, typed into by this conversation. The caller a tool call
     # names is replaced by the adapter's own: were this forged one kept, the input below
     # would be refused as another account's.

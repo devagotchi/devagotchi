@@ -13,6 +13,7 @@ fn page(
     next: u64,
 ) -> FileContent {
     FileContent {
+        sha256: None,
         path: path.into(),
         size,
         offset,

@@ -59,6 +59,7 @@ async fn every_mutation_waits_on_the_gate_but_readers_and_queries_do_not() {
             path: path_of(&root.join("made/nested")),
         }),
         RequestBody::FileMove(FileMoveInput {
+            expected_sha256: None,
             source: path_of(&source),
             destination: path_of(&root.join("moved.txt")),
             overwrite: false,
@@ -156,6 +157,7 @@ async fn listing_searching_and_file_info_never_take_the_gate() {
             cursor: None,
         }),
         RequestBody::FileInfo(FileInfoInput {
+            sha256: false,
             path: path_of(&root.join("found.txt")),
         }),
         RequestBody::FileSearch(search),
@@ -326,6 +328,7 @@ async fn a_mutation_past_the_queue_cap_is_refused_at_once() {
     timeout_at(
         by,
         broker.handle(RequestBody::FileInfo(FileInfoInput {
+            sha256: false,
             path: path_of(root),
         })),
     )

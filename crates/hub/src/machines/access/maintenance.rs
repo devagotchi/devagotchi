@@ -115,18 +115,28 @@ impl Access {
         boards: &Arc<Boards>,
     ) -> BridgeResult<()> {
         let snapshot = self.admission_snapshot(tenant, id, links).await?;
-        let RemoteReply::Status {
-            operation_id,
-            state,
-            exit_code,
-        } = links
+        let reply = links
             .call_remote(
                 &snapshot.machine.name,
                 RemoteRequest::Status {
                     binding: snapshot.binding.clone(),
                 },
             )
-            .await?
+            .await?;
+        if let RemoteReply::FileStatus {
+            operation_id,
+            state,
+        } = reply
+        {
+            return self
+                .maintain_file_receipt(tenant, id, &snapshot, operation_id, state)
+                .await;
+        }
+        let RemoteReply::Status {
+            operation_id,
+            state,
+            exit_code,
+        } = reply
         else {
             return Err(BridgeError::new(
                 "invalid_response",
