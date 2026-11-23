@@ -16,7 +16,7 @@ use serde::Deserialize;
 use super::super::{open_board, person, words};
 use crate::{
     AppState,
-    agenthub::{Anchors, Filter, Ticket, approval},
+    agenthub::{Anchors, EventFilter, Filter, Ticket, approval},
     web::{
         encode,
         pages::{self, Tab, escape},
@@ -140,6 +140,15 @@ pub async fn page(
                 .filter(|ticket| ticket.kind != approval::KIND)
                 .collect())
         };
+        // Read the cursor first: changes during the following reads must wake the page.
+        let head = board
+            .events_matching(&EventFilter {
+                descending: true,
+                limit: Some(1),
+                ..Default::default()
+            })?
+            .first()
+            .map_or(0, |event| event.seq);
         let all = open(&Filter::default())?;
         let shown = open(&filter)?;
         let state_counts = if filter.state.is_some() {
@@ -151,6 +160,7 @@ pub async fn page(
             shown.clone()
         };
         devagotchi_contracts::BridgeResult::Ok((
+            head,
             all,
             shown,
             state_counts,
@@ -158,7 +168,7 @@ pub async fn page(
         ))
     })
     .await;
-    let (all, shown, state_counts, configuration) = match read {
+    let (head, all, shown, state_counts, configuration) = match read {
         Ok(Ok(value)) => value,
         other => {
             eprintln!("devagotchi hub: read board page: {other:?}");
@@ -319,14 +329,26 @@ placeholder=\"{l}\"><button type=\"submit\">{}</button></form>",
         encode(&project),
         escape(&copy.audit.title)
     );
+    let refresh = escape(&chosen.href(&project, "q", chosen.q.as_deref()));
+    let live = format!(
+        "data-board-seq=\"{head}\" data-board-now=\"{}\" data-board-changes=\"{here}/audit/changes\" \
+         data-live=\"{}\" data-stale=\"{}\" data-ended=\"{}\" data-lease-expired=\"{}\" data-lease-remaining=\"{}\"",
+        super::ticket::now_ms(),
+        escape(&copy.board_view.live),
+        escape(&copy.board_view.stale),
+        escape(&copy.board_view.ended),
+        escape(&copy.board_view.lease_expired),
+        escape(&copy.board_view.lease_remaining),
+    );
     let body = format!(
-        "<div class=\"stack query\" data-page=\"board\"><header class=\"cluster board-head\"><h1>{}</h1>{create}{audit}{configure}{search}</header>\
-<p class=\"board-summary\">{}</p><p class=\"board-snapshot\">{}</p>\
+        "<div class=\"stack query\" data-page=\"board\" {live}><header class=\"cluster board-head\"><h1>{}</h1>{create}{audit}{configure}{search}</header>\
+<p class=\"board-summary\">{}</p><p class=\"board-snapshot\"><span id=\"board-live-status\" role=\"status\">{}</span> <a href=\"{refresh}\">{}</a></p>\
 <aside class=\"board-filters\">{mine}{}{}{}{}{}{}{}</aside>\
 <section class=\"board-list\">{list}</section></div>",
         escape(&project),
         escape(&summary),
         escape(&copy.board_view.snapshot),
+        escape(&copy.audit.refresh),
         state_chips,
         chips(
             "assignee",

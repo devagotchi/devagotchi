@@ -45,6 +45,7 @@ from analytics_browser import start
 from operator_browser import call, free_port, wait_ready
 from workflow_browser import Connector, downloads
 from self_hosted_access_browser import grant_command_access
+from app_board_live_browser import live_board
 
 EMAIL, PASSWORD = "phone@example.com", "a good password"
 
@@ -313,6 +314,7 @@ def main() -> int:
             no_sideways_scroll(page, 390)
             page.goto(f"{url}/app/boards/alpha")
             print("PASS AgentHub workflow columns on desktop, state navigation and readable task cards on phone")
+            live_board(page, ai, url, EMAIL, PASSWORD)
             page.locator("#tickets a", has_text="Check the backups").click()
             page.wait_for_url(re.compile(r".*/app/tickets/alpha/[^/?]+$"))
             assert page.locator("h1").inner_text() == "Check the backups"

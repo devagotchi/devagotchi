@@ -68,6 +68,46 @@ The preceding board restoration is merged in PR281 at main `5571260` with a matc
 reviewed tree and all PR CI/security checks green. Its official image and post-merge
 checks are being followed independently while this source unit is authored.
 
+## Restore live board updates (increment-292)
+
+Source `46419c6`, `web/src/lib/useData.ts`, `Board.tsx` and `LeaseTimer.tsx`, refreshes
+board results after committed changes and advances lease clocks. Restore this in the
+existing server-rendered board and app script. Use the existing authenticated
+`/app/boards/{project}/audit/changes` wait; no new stream, polling authority or store.
+Capture the event cursor before reading the board so a concurrent write is not missed.
+Refresh only the board results, counts and filters; retain a person's unsubmitted search,
+keyboard focus and scroll position. Preserve the committed URL filters. Bound one pending
+request per page, abort when hidden/leaving, and refresh on return. A network/storage
+failure must visibly mark the retained snapshot stale and retry with a bounded delay;
+a denied/expired session must clear the board and stop. Show lease countdowns from the
+server clock; never use a displayed countdown as mutation authority. Without JavaScript,
+retain the server-rendered snapshot and ordinary refresh/navigation.
+
+Acceptance: real PostgreSQL page cursor and read-only behavior; actual-browser external
+create/edit/close reflected without navigation, draft/focus/filter preservation, lease
+countdown, network failure/recovery, hidden-page return and expired-session refusal.
+Reuse existing HTTP account-isolation and waiting-session tests. Run focused checks,
+locked build, site/script syntax and browser journey before publication. Merge on green,
+verify main and deploy the matching image. Principal display names and the remaining
+S1-S5 work are not closed by this unit.
+
+Local validation passed: 24 PostgreSQL/authenticated-page regressions, 17 site/asset tests,
+locked binary build, formatting/script syntax and repository contract checks. The complete
+actual-browser journey passes live external create/edit/close, escaped titles, retained
+search draft/focus/URL filters/scroll, network failure/recovery, lease countdown and
+revoked-session clearing, alongside existing comment/close/undo and offline/account flows.
+The no-JavaScript page and refresh link remain usable. Headless Chromium reports every tab
+visible, so visibility changes were explicitly emulated; actual server writes and browser
+fetch cancellation/resume were exercised. The clock probe uses a separate browser context:
+its initial shared-context clock expired the unrelated Undo fixture; no product guard was
+weakened. The disposable validation database/container was removed. CI/merge/deployment
+remain outstanding for this branch.
+
+PR281's official image is deployed and restart-verified with all four existing boards and
+users preserved. PR282 merged as `d0c44ee` after all 18 PR checks passed with matching
+reviewed/merged trees; both repositories' integration branches were deleted. Its main
+checks and official image are being followed while this source behavior is authored.
+
 ## Earlier S1 authoring ledger
 
 Source: S1 `46419c697964016eb547c60416a8f2f5e854a95f`. This is a work ledger, not a

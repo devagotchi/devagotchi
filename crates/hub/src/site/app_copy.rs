@@ -138,6 +138,9 @@ pub struct BoardViewCopy {
     pub lease_remaining: String,
     pub expiry_count: String,
     pub snapshot: String,
+    pub live: String,
+    pub stale: String,
+    pub ended: String,
 }
 
 #[derive(Debug, Clone, Deserialize)]

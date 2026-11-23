@@ -81,6 +81,12 @@ async fn workflow_board_exposes_leases_dependencies_and_completed_work_without_c
 
     let (status, html) = page(&hub, "/app/boards/columns", &alice).await;
     assert_eq!(status, 200, "{html}");
+    assert!(html.contains(&format!(
+        "data-board-seq=\"{}\"",
+        events.last().unwrap().seq
+    )));
+    assert!(html.contains("data-board-changes=\"/app/boards/columns/audit/changes\""));
+    assert!(html.contains("id=\"board-live-status\" role=\"status\""));
     for value in [
         "class=\"board-columns\"",
         "data-state=\"done\"",
