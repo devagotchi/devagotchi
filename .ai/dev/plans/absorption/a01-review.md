@@ -1,8 +1,49 @@
 # A01 source comparison and authored changes
 
+## Restore the source board experience (increment-290)
+
+The operator rejected the deployed interface on 2026-11-22 and requested immediate
+implementation from the original design. Source `46419c6`, `web/src/pages/Board.tsx`
+and `TaskCard.tsx`, has workflow columns, state counts, completed tasks, a held-by-me
+filter, and cards exposing holder/lease, blockers, assignment, labels and priority.
+Main `18d3ee2` instead renders a flat open-only list. Restore these behaviors through
+the existing scoped PostgreSQL board reader; preserve task links, search, configuration,
+creation and audit actions. No new task store, agent scheduler or workflow authority.
+
+Author the board render/copy/styles and HTTP/browser coverage together. Wide screens
+show workflow columns; phone screens retain readable cards without page overflow.
+State labels/order come from stored workflow configuration. Filters must preserve
+each other; a completed task remains reachable; foreign accounts remain isolated;
+untrusted labels and titles stay escaped. Show bounded-result counts honestly.
+Validate focused PostgreSQL/HTTP tests and desktop/phone browser behavior, then publish
+the completed screen change on green CI and replace the existing development image.
+This delivery is a source-derived board restoration, not closure of S1-S5 or the
+software-factory requirements. Source refs remain preserved until full closure.
+
+Local verification: 24 authenticated AgentHub PostgreSQL regressions and 17 site/copy
+tests passed, along with the actual-binary browser journey (desktop columns, phone state selection, closed
+task visibility, comment/close/undo and existing machine/account flows). Final review
+also preserves the other states' filtered counts when a state is selected; the final
+PostgreSQL rerun includes that regression. CI, merge
+and replacement-image acceptance remain delivery gates, not completed assertions.
+
+Initial PR281 CI found the new board used a viewport breakpoint, violating the existing
+page-layout contract. Use the shared `query` container primitive and a container query
+instead. All four styling-contract tests and the complete desktop/phone browser journey
+pass on the corrected binary. No contract test was weakened.
+
+The bounded reader returns at most 200 tasks per filter. A selected state uses its own
+result count, so higher-priority tasks filling the general sample cannot label that
+visible state as empty. The PostgreSQL regression creates 201 competing tasks to cover
+this boundary. Counts elsewhere describe the bounded sample, not unbounded totals.
+
+## Earlier S1 authoring ledger
+
 Source: S1 `46419c697964016eb547c60416a8f2f5e854a95f`. This is a work ledger, not a
 completion receipt. Remaining policy, replay and identity dependencies keep these files
-open even where an individual operation already exists. No CI/push/merge for this batch.
+open even where an individual operation already exists. The original whole-batch
+CI/push hold below records the earlier S1 plan; the scoped increment-290 delivery
+above follows the operator's subsequent instruction to implement and deliver now.
 
 ## Authored on the local S1 branch
 

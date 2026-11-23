@@ -136,6 +136,8 @@ def main() -> int:
                         help="exit 0 when Playwright is missing instead of failing")
     parser.add_argument("--channel", default=None,
                         help="a browser already installed (e.g. chrome) instead of Playwright's")
+    parser.add_argument("--screenshots", type=Path,
+                        help="optional private directory for board desktop/phone screenshots")
     args = parser.parse_args()
     try:
         from playwright.sync_api import sync_playwright
@@ -143,7 +145,8 @@ def main() -> int:
         print("NOT RUN: Python Playwright is not installed")
         return 0 if args.allow_skip else 2
 
-    work = Path(tempfile.mkdtemp(prefix="app-browser-"))
+    work_dir = tempfile.TemporaryDirectory(prefix="app-browser-")
+    work = Path(work_dir.name)
     state, config = work / "state", work / "hub.json"
     port = free_port()
     url = f"http://localhost:{port}"
@@ -289,6 +292,27 @@ def main() -> int:
             page.locator("#board-alpha a").click()
             page.wait_for_url(re.compile(r".*/app/boards/alpha$"))
             no_sideways_scroll(page, 390)
+            assert page.locator(".board-column:visible").count() == 1
+            assert page.locator('.board-column[data-state="ready"]').is_visible()
+            assert page.locator(".task-card", has_text="Check the backups").is_visible()
+            if args.screenshots:
+                args.screenshots.mkdir(parents=True, exist_ok=True)
+                page.screenshot(path=str(args.screenshots / "agenthub-board-phone.png"), full_page=True)
+            page.set_viewport_size({"width": 1280, "height": 900})
+            no_sideways_scroll(page, 1280)
+            assert page.locator(".board-column:visible").count() > 1
+            columns = page.locator(".board-column:visible").evaluate_all(
+                "xs => xs.map(x => x.getBoundingClientRect().x)")
+            assert len(set(columns)) == len(columns), columns
+            if args.screenshots:
+                page.screenshot(path=str(args.screenshots / "agenthub-board-desktop.png"), full_page=True)
+            page.set_viewport_size({"width": 390, "height": 844})
+            page.locator('#chips-state a', has_text="Review").first.click()
+            assert page.locator('.board-column[data-state="review"]').is_visible()
+            assert page.locator(".board-column:visible").count() == 1
+            no_sideways_scroll(page, 390)
+            page.goto(f"{url}/app/boards/alpha")
+            print("PASS AgentHub workflow columns on desktop, state navigation and readable task cards on phone")
             page.locator("#tickets a", has_text="Check the backups").click()
             page.wait_for_url(re.compile(r".*/app/tickets/alpha/[^/?]+$"))
             assert page.locator("h1").inner_text() == "Check the backups"
@@ -302,6 +326,12 @@ def main() -> int:
             assert page.locator("#state").inner_text() == "Cancelled"
             closed = ai.tool("board_get", {"project": "alpha", "id": made["structuredContent"]["id"]})
             assert closed["structuredContent"]["ticket"]["state"] == "cancelled", closed
+            history = iphone.new_page()
+            history.goto(f"{url}/app/boards/alpha?state=cancelled")
+            assert history.locator('.board-column[data-state="cancelled"]').is_visible()
+            assert history.locator(".task-card", has_text="Check the backups").is_visible()
+            no_sideways_scroll(history, 390)
+            history.close()
             assert page.locator("#undo button").is_visible()
             page.locator("#undo button").click()
             page.wait_for_url(re.compile(r".*\?done=undo$"))
@@ -431,6 +461,8 @@ def main() -> int:
                 process.wait(timeout=10)
             except subprocess.TimeoutExpired:
                 process.kill()
+                process.wait(timeout=10)
+        work_dir.cleanup()
     print("APP BROWSER PASSED")
     return 0
 

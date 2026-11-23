@@ -26,20 +26,22 @@ all 17 PR CI jobs, all 17 main CI jobs and both security runs passed. AgentHub
 standalone PostgreSQL tests and green PR/main CI. Both absorbed integration branches
 were deleted locally and remotely. These are delivered integrations, not full source closure.
 
-The development Docker hub has been replaced in place with main `38d9ec6`. It uses the
-GitHub-built Linux binary and all six matching checksum-verified downloads, packaged
-locally with the pinned nonroot runtime base. Existing PostgreSQL/data volumes remain.
-Owner login, AgentHub boards/agents, machine access, local-user management, hidden
-organization routes, 390-pixel phone layout and restart persistence passed on that image.
-The old container/image and unused validation containers/images were removed.
+[PR280](https://github.com/devagotchi/devagotchi/pull/280) is merged into main
+`18d3ee261cc70e8a09d786b7bf30e08f016f926e`. PR/main CI and security passed. Release
+run 45053944830 passed all four platform builds, seven installer checks and both
+architecture image/join journeys, then published the official GHCR image. The reviewed
+and merged trees match; the integration branch was deleted locally and remotely.
 
-Official GHCR publication is **not yet complete**: release run 45048691767 built all four
-platform archives and passed all seven installer checks, but the ARM image join test
-attempted execution with an unregistered OAuth client. Current authorization refused it.
-The follow-through branch `increment-289/compose-granted-join` updates the image journey
-for the self-hosted edition: claim the owner, bind the OAuth agent, acknowledge the actual
-execution risks, independently approve each machine grant, then run the real commands.
-Local isolated PostgreSQL/native-broker acceptance passed; publication is pending.
+The existing development hub now runs that official image pinned by digest. Owner login,
+AgentHub boards/agents, access, local-user management, hidden organization routes, all six
+matching download checksums, phone layout and restart persistence passed. Existing
+PostgreSQL/data volumes remain. The superseded locally packaged image was removed.
+
+Current authored change: `increment-290/restore-agenthub-board` restores original S1
+workflow columns and task cards, completed work, state counts and held-by-me filtering
+through the existing PostgreSQL reader. See [A01](../.ai/dev/plans/absorption/a01-review.md).
+Focused HTTP and browser tests passed; publishing, green CI, merge and replacing the
+existing image remain required. This does not close the remaining source inventory.
 
 The [branch execution plan](../.ai/dev/plans/absorption/branch-execution.md) owns source
 paths, implementation steps, tests and dependency order. The
@@ -47,7 +49,7 @@ paths, implementation steps, tests and dependency order. The
 
 | Sequence | Deliverable | Current evidence/status | Next acceptance |
 |---|---|---|---|
-| Now | Finish official image publication | Authored integration merged on green; matching local development image running and browser/restart checked; complete owner/agent grant setup tested locally | Green PR/main for the image-join correction, successful actual Linux/Docker join image jobs, published digest, then replace local packaging with that official image |
+| Now | Restore original AgentHub board experience | Authored columns/cards and filters; focused PostgreSQL and desktop/phone browser acceptance passed | Green PR/main, official image publication, replace existing Docker hub and verify the restored board there |
 | S1 / October | Complete baseline behavior | Coordination, principal, receipt and machine start/read/control/heartbeat integration delivered; source parity remains partial | Finish coordination/catalog comparisons, file/batch/image authorization, operator stop/list/history, confinement/change policy, provider routing/secrets, executable guides, document/GUI tools, audit retention and corresponding browser journeys |
 | S1 closure | Complete October source absorption | Preserved source intact; no deletion eligibility claimed | Account for every source behavior, validate complete scope, green merge, verify main, then delete only eligible preserved refs |
 | S2 | Documentation/packaging delta: 2 commits, 17 paths | Planned; no source closure | Complete source-specific changes, validate, green merge, verify and delete eligible ref after S1 |

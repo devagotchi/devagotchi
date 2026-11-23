@@ -70,5 +70,5 @@ async fn browser_and_mcp_find_task_ids_notes_and_words_without_crossing_accounts
         assert_eq!(absent["structuredContent"]["tickets"], json!([]));
     }
     let (_, filtered) = page(&hub, "/app/boards/search?q=migration&label=missing", &alice).await;
-    assert!(filtered.contains("No open tickets match."));
+    assert!(filtered.contains("No tasks match."));
 }

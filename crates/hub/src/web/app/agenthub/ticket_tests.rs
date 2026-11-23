@@ -92,7 +92,7 @@ async fn a_person_works_a_ticket_from_the_phone_and_the_board_records_it() {
     let (_, found) = page(&hub, "/app/boards/alpha?q=backups", &alice).await;
     assert!(found.contains("Check the backups") && !found.contains("A-PRIVATE-TICKET"));
     let (_, none) = page(&hub, "/app/boards/alpha?q=nothing-like-it", &alice).await;
-    assert!(none.contains("No open tickets match."));
+    assert!(none.contains("No tasks match."));
 
     // The ticket: its fields, description escaped, and the four actions.
     let (status, html) = page(&hub, &format!("/app/tickets/alpha/{id}"), &alice).await;
