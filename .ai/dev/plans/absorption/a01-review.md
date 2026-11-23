@@ -37,6 +37,37 @@ result count, so higher-priority tasks filling the general sample cannot label t
 visible state as empty. The PostgreSQL regression creates 201 competing tasks to cover
 this boundary. Counts elsewhere describe the bounded sample, not unbounded totals.
 
+## Restore audit request correlation (increment-291)
+
+Source `46419c6`, `server/internal/store/events.go`, records `W.ReqID` on each event
+and covers it with the event hash. The current Rust receipt owns the authenticated
+request key, but `Event` and `HostedBoard::event` discard it. Restore this through the
+existing request-local board, event transaction and outbox. No new identity, authority,
+receipt store or independent audit chain.
+
+Add the nullable request identifier to PostgreSQL and the event representation. Include
+present identifiers in canonical hashes while preserving existing hashes for events
+without one; never rewrite historical events. Expose the identifier in existing audit
+details, escaped, and through the existing event API/CLI serialization. Verify migration
+from existing history, tamper detection, direct writes without a request, multiple events
+from one request, replay without new events, outbox equality, MCP/browser propagation and
+account isolation. Run the standalone AgentHub PostgreSQL suite, parent adapter/site
+checks and applicable build/schema checks before publication. Publish AgentHub first,
+merge on green, then publish the parent pin and browser changes; delete each eligible
+integration branch after verified merge. This unit does not close the S1 inventory.
+
+Validation: all 166 AgentHub tests passed with PostgreSQL required, both inside the
+parent and in an independent temporary clone using published Git dependencies; the
+clone was removed. Parent checks passed: 25 receipt tests, three audit tests, 17 site
+tests, locked binaries, formatting, generated contracts and repository AI contracts.
+AgentHub PR18 merged reviewed `f00f61c` as `3acf12a` on green CI with matching trees.
+The parent pins that merged commit and adds audit display plus API/browser assertions.
+Parent PR/main CI and deployment acceptance remain required.
+
+The preceding board restoration is merged in PR281 at main `5571260` with a matching
+reviewed tree and all PR CI/security checks green. Its official image and post-merge
+checks are being followed independently while this source unit is authored.
+
 ## Earlier S1 authoring ledger
 
 Source: S1 `46419c697964016eb547c60416a8f2f5e854a95f`. This is a work ledger, not a

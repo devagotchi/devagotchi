@@ -15,7 +15,7 @@ async fn audit_filters_pages_verifies_and_never_shows_another_accounts_history()
         .call(
             &mut alice,
             "board_create",
-            json!({"project":"audit","title":"Evidence <b>private</b>"}),
+            json!({"project":"audit","title":"Evidence <b>private</b>","request_id":"create<script>request</script>"}),
         )
         .await;
     assert!(!refused(&made), "{made}");
@@ -28,6 +28,8 @@ async fn audit_filters_pages_verifies_and_never_shows_another_accounts_history()
     assert_eq!(status, 200, "{html}");
     assert!(html.contains("Evidence &lt;b&gt;private&lt;/b&gt;"));
     assert!(!html.contains("Evidence <b>private</b>"));
+    assert!(html.contains("create&lt;script&gt;request&lt;/script&gt;"));
+    assert!(!html.contains("create<script>request</script>"));
     assert_eq!(html.matches("<li id=\"event-").count(), 1);
     assert!(html.contains(&format!("/app/tickets/audit/{id}")));
     assert_eq!(page(&hub, &path, &bob).await.0, 404);

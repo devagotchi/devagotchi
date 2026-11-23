@@ -17,6 +17,7 @@ async fn browser_creation_and_ticket_actions_retry_once_with_original_close_redi
     things_of(&hub, &mut person).await;
     let (_, html) = page(&hub, "/app/boards/alpha/new", &person).await;
     let fields = [("title", "Browser retry"), ("request_id", key(&html))];
+    let create_key = fields[1].1.to_owned();
     let mut location = String::new();
     for attempt in 0..2 {
         let response = hub
@@ -40,6 +41,7 @@ async fn browser_creation_and_ticket_actions_retry_once_with_original_close_redi
         .find(|form| form.contains(&format!("action=\"{location}/comment\"")))
         .unwrap();
     let comment = [("body", "One comment"), ("request_id", key(form))];
+    let comment_key = comment[1].1.to_owned();
     for _ in 0..2 {
         assert_eq!(
             hub.form(
@@ -115,4 +117,26 @@ async fn browser_creation_and_ticket_actions_retry_once_with_original_close_redi
         .call(&mut person, "board_get", json!({"project":"alpha","id":id}))
         .await;
     assert_eq!(view["structuredContent"]["ticket"]["state"], from);
+    let history = hub
+        .call(
+            &mut person,
+            "board_events",
+            json!({"project":"alpha","ticket":id}),
+        )
+        .await;
+    let requests: Vec<_> = history["structuredContent"]["events"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|event| event["request_id"].as_str().unwrap())
+        .collect();
+    assert_eq!(
+        requests,
+        [
+            create_key.as_str(),
+            comment_key.as_str(),
+            "close-retry",
+            "undo-retry"
+        ]
+    );
 }

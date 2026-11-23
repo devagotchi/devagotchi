@@ -155,6 +155,7 @@ pub struct AuditCopy {
     pub broken: String,
     pub unverified: String,
     pub details: String,
+    pub request: String,
     pub hash: String,
     pub empty: String,
     pub older: String,

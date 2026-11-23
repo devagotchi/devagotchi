@@ -49,7 +49,8 @@ pub(super) fn body(
         let actor = if event.actor == me { &site.messages.app.you } else { &event.actor };
         let actor = format!("<span title=\"{}\">{}</span>", escape(&event.actor), escape(actor));
         let ticket = event.ticket.as_deref().map(|id| format!(" <a href=\"/app/tickets/{}/{}\">{}</a>", encode(project), encode(id), escape(id))).unwrap_or_default();
-        format!("<li id=\"event-{}\"><div class=\"meta\">#{} · {} · {}</div><p>{}{ticket}</p><details><summary>{}</summary><pre class=\"what\">{}</pre><p class=\"meta\">{}</p><pre class=\"what\">{}</pre></details></li>",
+        let request = event.request_id.as_deref().map(|id| format!("<p class=\"meta audit-request\">{}: <code>{}</code></p>", escape(&copy.request), escape(id))).unwrap_or_default();
+        format!("<li id=\"event-{}\"><div class=\"meta\">#{} · {} · {}</div><p>{}{ticket}</p><details><summary>{}</summary>{request}<pre class=\"what\">{}</pre><p class=\"meta\">{}</p><pre class=\"what\">{}</pre></details></li>",
             event.seq, event.seq, pages::utc((event.at / 1000).max(0) as u64), actor, escape(&event.action), escape(&copy.details),
             escape(&serde_json::to_string_pretty(&event.data).expect("event JSON")), escape(&copy.hash), escape(&event.hash))
     }).collect();

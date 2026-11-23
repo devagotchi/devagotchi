@@ -9,11 +9,17 @@ pinned digest with the same volumes. Owner login, local users, AgentHub navigati
 download checksums, phone layout and restart persistence passed. The superseded local
 image and the merged integration branch were removed.
 
-Current implementation: `increment-290/restore-agenthub-board`, scoped in the existing
-[A01 ledger](absorption/a01-review.md#restore-the-source-board-experience-increment-290).
-Restore the source workflow columns/cards, completed tasks, state counts and held-by-me
-filter using the existing PostgreSQL authority. Focused HTTP/browser checks passed;
-CI, merge and replacement-image acceptance remain outstanding. S1-S5 remain open.
+PR281 restored source workflow columns/task cards, completed work, state counts and
+held-by-me filtering. It merged reviewed `45c96cb` as main `5571260` with matching
+trees; all 17 PR/main CI jobs and security passed. Its integration branch was deleted
+locally/remotely. Matching official-image publication and replacement are being followed.
+
+Current implementation: `increment-291/audit-request-correlation`, scoped in the existing
+[A01 ledger](absorption/a01-review.md#restore-audit-request-correlation-increment-291).
+AgentHub PR18 merged the request-key/event/hash/outbox restoration as `3acf12a` on green
+CI. All 166 standalone PostgreSQL tests passed both within the parent and independently;
+parent receipt/audit/site checks passed. Parent pin/display publication, main verification
+and deployment acceptance remain outstanding. S1-S5 remain open.
 
 ## Earlier image follow-through record
 
