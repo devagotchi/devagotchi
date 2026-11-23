@@ -27,6 +27,11 @@ also preserves the other states' filtered counts when a state is selected; the f
 PostgreSQL rerun includes that regression. CI, merge
 and replacement-image acceptance remain delivery gates, not completed assertions.
 
+Initial PR281 CI found the new board used a viewport breakpoint, violating the existing
+page-layout contract. Use the shared `query` container primitive and a container query
+instead. All four styling-contract tests and the complete desktop/phone browser journey
+pass on the corrected binary. No contract test was weakened.
+
 ## Earlier S1 authoring ledger
 
 Source: S1 `46419c697964016eb547c60416a8f2f5e854a95f`. This is a work ledger, not a

@@ -27,7 +27,7 @@
   [data-page="board"] .task-label { border: 1px solid var(--line); border-radius: var(--radius-pill); padding: .1rem .5rem; font-size: var(--step--1); }
   [data-page="board"] .task-status { display: grid; gap: var(--space-3xs); font-size: var(--step--1); }
   [data-page="board"] .task-ready { font-weight: 650; color: var(--online); }
-  @media (max-width: 48rem) {
+  @container (max-width: 48rem) {
     [data-page="board"] .board-columns { display: block; overflow: visible; }
     [data-page="board"] .board-column:not(.is-selected) { display: none; }
     [data-page="board"] .board-filters #chips-state { flex-basis: 100%; }

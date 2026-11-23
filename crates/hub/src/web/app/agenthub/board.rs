@@ -316,7 +316,7 @@ placeholder=\"{l}\"><button type=\"submit\">{}</button></form>",
         escape(&copy.audit.title)
     );
     let body = format!(
-        "<div class=\"stack\" data-page=\"board\"><header class=\"cluster board-head\"><h1>{}</h1>{create}{audit}{configure}{search}</header>\
+        "<div class=\"stack query\" data-page=\"board\"><header class=\"cluster board-head\"><h1>{}</h1>{create}{audit}{configure}{search}</header>\
 <p class=\"board-summary\">{}</p><p class=\"board-snapshot\">{}</p>\
 <aside class=\"board-filters\">{mine}{}{}{}{}{}{}{}</aside>\
 <section class=\"board-list\">{list}</section></div>",
