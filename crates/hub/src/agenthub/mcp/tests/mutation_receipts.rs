@@ -93,4 +93,19 @@ async fn retry_keys_survive_mcp_sessions_and_replay_flags_match_saved_results() 
         view["structuredContent"]["notes"].as_array().unwrap().len(),
         1
     );
+    let history = hub
+        .call(
+            &mut person,
+            "board_events",
+            json!({"project":"retries","ticket":id}),
+        )
+        .await;
+    assert!(!refused(&history), "{history}");
+    let requests: Vec<_> = history["structuredContent"]["events"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|event| event["request_id"].as_str().unwrap())
+        .collect();
+    assert_eq!(requests, ["create-1", "edit-1", "note-1"]);
 }

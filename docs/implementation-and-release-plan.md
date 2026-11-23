@@ -37,11 +37,18 @@ AgentHub boards/agents, access, local-user management, hidden organization route
 matching download checksums, phone layout and restart persistence passed. Existing
 PostgreSQL/data volumes remain. The superseded locally packaged image was removed.
 
-Current authored change: `increment-290/restore-agenthub-board` restores original S1
-workflow columns and task cards, completed work, state counts and held-by-me filtering
-through the existing PostgreSQL reader. See [A01](../.ai/dev/plans/absorption/a01-review.md).
-Focused HTTP and browser tests passed; publishing, green CI, merge and replacing the
-existing image remain required. This does not close the remaining source inventory.
+[PR281](https://github.com/devagotchi/devagotchi/pull/281) restored original S1 workflow
+columns and task cards, completed work, state counts and held-by-me filtering. It merged
+as main `5571260` with matching reviewed files and green PR/main CI/security. Its branch
+was deleted; official-image publication and development replacement are being followed.
+
+Current authored change: `increment-291/audit-request-correlation` restores the source
+request identifier in audit events, their hashes and the outbox, and exposes it in audit
+details. [AgentHub PR18](https://github.com/devagotchi/agenthub/pull/18) merged as `3acf12a`
+on green CI. Independent PostgreSQL and parent receipt/audit/site tests passed. The parent
+pin/display still requires green publication and deployment acceptance. See
+[A01](../.ai/dev/plans/absorption/a01-review.md). These units do not close the remaining
+source inventory.
 
 The [branch execution plan](../.ai/dev/plans/absorption/branch-execution.md) owns source
 paths, implementation steps, tests and dependency order. The
@@ -49,7 +56,7 @@ paths, implementation steps, tests and dependency order. The
 
 | Sequence | Deliverable | Current evidence/status | Next acceptance |
 |---|---|---|---|
-| Now | Restore original AgentHub board experience | Authored columns/cards and filters; focused PostgreSQL and desktop/phone browser acceptance passed | Green PR/main, official image publication, replace existing Docker hub and verify the restored board there |
+| Now | Deliver restored board and audit request correlation | Board merged with green PR/main; correlation backend merged with standalone PostgreSQL acceptance; parent integration authored | Finish official board image replacement; publish the parent correlation pin/display on green and verify persisted audit history |
 | S1 / October | Complete baseline behavior | Coordination, principal, receipt and machine start/read/control/heartbeat integration delivered; source parity remains partial | Finish coordination/catalog comparisons, file/batch/image authorization, operator stop/list/history, confinement/change policy, provider routing/secrets, executable guides, document/GUI tools, audit retention and corresponding browser journeys |
 | S1 closure | Complete October source absorption | Preserved source intact; no deletion eligibility claimed | Account for every source behavior, validate complete scope, green merge, verify main, then delete only eligible preserved refs |
 | S2 | Documentation/packaging delta: 2 commits, 17 paths | Planned; no source closure | Complete source-specific changes, validate, green merge, verify and delete eligible ref after S1 |

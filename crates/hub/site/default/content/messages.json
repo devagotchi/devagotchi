@@ -466,6 +466,7 @@
       "broken": "History verification failed at event #{seq}.",
       "unverified": "Verify history checks for broken links or altered records.",
       "details": "Recorded details",
+      "request": "Request",
       "hash": "Event hash",
       "empty": "No recorded events match these filters.",
       "older": "Older events",
