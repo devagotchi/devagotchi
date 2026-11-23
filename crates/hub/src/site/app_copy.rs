@@ -70,6 +70,7 @@ pub struct AppCopy {
     pub search_label: String,
     pub search_button: String,
     pub tickets_empty: String,
+    pub board_view: BoardViewCopy,
     pub you: String,
     pub nobody: String,
     pub ticket_state: String,
@@ -121,6 +122,22 @@ pub struct AppCopy {
     pub configuration: super::configuration_copy::ConfigurationCopy,
     pub projects: super::projects_copy::ProjectsCopy,
     pub catalog: super::catalog_copy::CatalogCopy,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct BoardViewCopy {
+    pub summary: String,
+    pub held_by_me: String,
+    pub column_empty: String,
+    pub ready: String,
+    pub blocked_by: String,
+    pub reserved_for: String,
+    pub last_worker: String,
+    pub lease_expired: String,
+    pub lease_remaining: String,
+    pub expiry_count: String,
+    pub snapshot: String,
 }
 
 #[derive(Debug, Clone, Deserialize)]

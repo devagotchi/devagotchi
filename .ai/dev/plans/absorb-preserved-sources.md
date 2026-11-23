@@ -1,6 +1,21 @@
 # Complete preserved-source absorption before the self-hosted prerelease
 
-## Current delivery and image follow-through, 2026-11-22
+## Current delivery, 2026-11-22
+
+PR280 merged into main `18d3ee2`; PR/main CI and security passed. Release 45053944830
+passed all four platform builds, seven installer checks and both architecture image/join
+journeys, then published the official GHCR image. The existing development hub runs its
+pinned digest with the same volumes. Owner login, local users, AgentHub navigation,
+download checksums, phone layout and restart persistence passed. The superseded local
+image and the merged integration branch were removed.
+
+Current implementation: `increment-290/restore-agenthub-board`, scoped in the existing
+[A01 ledger](absorption/a01-review.md#restore-the-source-board-experience-increment-290).
+Restore the source workflow columns/cards, completed tasks, state counts and held-by-me
+filter using the existing PostgreSQL authority. Focused HTTP/browser checks passed;
+CI, merge and replacement-image acceptance remain outstanding. S1-S5 remain open.
+
+## Earlier image follow-through record
 
 PR279 merged reviewed `40ecd0c` into main `38d9ec6` with identical source trees and
 AgentHub `8bdac83`. All 17 PR/main CI jobs and both security runs passed. Both active

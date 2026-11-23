@@ -1,6 +1,6 @@
-//! `/app/boards/<project>`: a board's open tickets, read with `Board::list`. Filters are
+//! `/app/boards/<project>`: workflow columns and task cards, read with `Board::list`. Filters are
 //! chips (state, assignee, label and the anchors machine, environment, repo, agent: each
-//! value the open tickets have; tapping the chosen one clears it) and a search box over
+//! value the tickets have; tapping the chosen one clears it) and a search box over
 //! task IDs, notes, titles and descriptions. Approvals are not listed:
 //! they are decided on `/approvals`.
 
@@ -33,24 +33,30 @@ pub struct Chosen {
     repo: Option<String>,
     agent: Option<String>,
     q: Option<String>,
+    #[serde(default)]
+    mine: bool,
 }
 
 impl Chosen {
     /// This board's address with these filters, `key` set to `value` (or cleared).
     fn href(&self, project: &str, key: &str, value: Option<&str>) -> String {
         let mut next = self.clone();
-        let slot = match key {
-            "state" => &mut next.state,
-            "assignee" => &mut next.assignee,
-            "label" => &mut next.label,
-            "machine" => &mut next.machine,
-            "environment" => &mut next.environment,
-            "repo" => &mut next.repo,
-            "agent" => &mut next.agent,
-            _ => &mut next.q,
-        };
-        *slot = value.map(str::to_string);
-        let query: Vec<String> = [
+        if key == "mine" {
+            next.mine = value.is_some();
+        } else {
+            let slot = match key {
+                "state" => &mut next.state,
+                "assignee" => &mut next.assignee,
+                "label" => &mut next.label,
+                "machine" => &mut next.machine,
+                "environment" => &mut next.environment,
+                "repo" => &mut next.repo,
+                "agent" => &mut next.agent,
+                _ => &mut next.q,
+            };
+            *slot = value.map(str::to_string);
+        }
+        let mut query: Vec<String> = [
             ("state", &next.state),
             ("assignee", &next.assignee),
             ("label", &next.label),
@@ -67,6 +73,9 @@ impl Chosen {
                 .map(|v| format!("{k}={}", encode(v)))
         })
         .collect();
+        if next.mine {
+            query.push("mine=true".into());
+        }
         let path = format!("/app/boards/{}", encode(project));
         if query.is_empty() {
             path
@@ -113,7 +122,7 @@ pub async fn page(
         assignee: chosen.assignee.clone(),
         label: chosen.label.clone(),
         text: chosen.q.clone().filter(|q| !q.trim().is_empty()),
-        open_only: true,
+        holder: chosen.mine.then(|| subject.id.clone()),
         anchors: Anchors {
             machine: chosen.machine.clone(),
             environment: chosen.environment.clone(),
@@ -131,14 +140,25 @@ pub async fn page(
                 .filter(|ticket| ticket.kind != approval::KIND)
                 .collect())
         };
-        let all = open(&Filter {
-            open_only: true,
-            ..Filter::default()
-        })?;
-        devagotchi_contracts::BridgeResult::Ok((all, open(&filter)?, board.configuration_state()?))
+        let all = open(&Filter::default())?;
+        let shown = open(&filter)?;
+        let state_counts = if filter.state.is_some() {
+            open(&Filter {
+                state: None,
+                ..filter
+            })?
+        } else {
+            shown.clone()
+        };
+        devagotchi_contracts::BridgeResult::Ok((
+            all,
+            shown,
+            state_counts,
+            board.configuration_state()?,
+        ))
     })
     .await;
-    let (all, shown, configuration) = match read {
+    let (all, shown, state_counts, configuration) = match read {
         Ok(Ok(value)) => value,
         other => {
             eprintln!("devagotchi hub: read board page: {other:?}");
@@ -184,42 +204,65 @@ pub async fn page(
             escape(title)
         )
     };
-    let states: BTreeSet<String> = all.iter().map(|t| t.state.clone()).collect();
+    let state_links: String = workflow
+        .states
+        .iter()
+        .map(|state| {
+            let on = chosen.state.as_deref() == Some(state.key.as_str());
+            let count = state_counts
+                .iter()
+                .filter(|ticket| ticket.state == state.key)
+                .count();
+            format!(
+                "<a class=\"chip\" href=\"{}\"{}>{} <span class=\"chip-count\">{count}</span></a>",
+                escape(&chosen.href(&project, "state", (!on).then_some(state.key.as_str()))),
+                if on { " aria-current=\"true\"" } else { "" },
+                escape(&state.label)
+            )
+        })
+        .collect();
+    let state_chips = format!(
+        "<p class=\"chips\" id=\"chips-state\"><span class=\"chips-title\">{}</span>{state_links}</p>",
+        escape(&copy.filter_state)
+    );
     let assignees: BTreeSet<String> = all.iter().filter_map(|t| t.assignee.clone()).collect();
     let labels: BTreeSet<String> = all.iter().flat_map(|t| t.labels.clone()).collect();
     let anchor = |of: fn(&Ticket) -> &Option<String>| -> BTreeSet<String> {
         all.iter().filter_map(|t| of(t).clone()).collect()
     };
-    let rows: Vec<String> = shown
-        .iter()
-        .map(|ticket| {
-            let assignee = ticket
-                .assignee
-                .as_deref()
-                .map(|a| format!(" · {}", escape(&who(a))))
-                .unwrap_or_default();
-            format!(
-                "<li id=\"ticket-{i}\"><a href=\"/app/tickets/{}/{}\">{}</a> \
-<span class=\"meta\">{i} · {} · {}{assignee}</span></li>",
-                encode(&project),
-                encode(&ticket.id),
-                escape(&ticket.title),
-                escape(
-                    workflow
-                        .state(&ticket.state)
-                        .map_or(ticket.state.as_str(), |s| s.label.as_str())
-                ),
-                escape(&configuration.settings.priority_label(ticket.priority)),
-                i = escape(&ticket.id),
-            )
-        })
-        .collect();
-    let list = if rows.is_empty() {
-        format!("<p class=\"empty\">{}</p>", escape(&copy.tickets_empty))
-    } else {
-        format!("<ul class=\"rows\" id=\"tickets\">{}</ul>", rows.concat())
-    };
-    let hidden: String = [
+    let list = super::board_cards::columns(
+        &project,
+        &shown,
+        workflow,
+        &configuration.settings,
+        copy,
+        me,
+        chosen.state.as_deref(),
+    );
+    let summary = copy
+        .board_view
+        .summary
+        .replace("{n}", &shown.len().to_string())
+        .replace(
+            "{held}",
+            &shown
+                .iter()
+                .filter(|t| t.holder.is_some() && !t.lease_expired)
+                .count()
+                .to_string(),
+        )
+        .replace("{workflow}", &workflow.name);
+    let mine = format!(
+        "<a class=\"chip\" href=\"{}\"{}>{}</a>",
+        escape(&chosen.href(&project, "mine", (!chosen.mine).then_some("true"))),
+        if chosen.mine {
+            " aria-current=\"true\""
+        } else {
+            ""
+        },
+        escape(&copy.board_view.held_by_me)
+    );
+    let mut hidden: String = [
         ("state", &chosen.state),
         ("assignee", &chosen.assignee),
         ("label", &chosen.label),
@@ -238,6 +281,9 @@ pub async fn page(
         })
     })
     .collect();
+    if chosen.mine {
+        hidden.push_str("<input type=\"hidden\" name=\"mine\" value=\"true\">");
+    }
     let search = format!(
         "<form class=\"search\" method=\"get\" action=\"{here}\" role=\"search\">{hidden}\
 <label class=\"visually-hidden\" for=\"q\">{l}</label><input type=\"search\" id=\"q\" name=\"q\" value=\"{}\" \
@@ -271,10 +317,13 @@ placeholder=\"{l}\"><button type=\"submit\">{}</button></form>",
     );
     let body = format!(
         "<div class=\"stack\" data-page=\"board\"><header class=\"cluster board-head\"><h1>{}</h1>{create}{audit}{configure}{search}</header>\
-<div class=\"sidebar\"><aside class=\"stack board-filters\">{}{}{}{}{}{}{}</aside>\
-<section class=\"card query board-list\">{list}</section></div></div>",
+<p class=\"board-summary\">{}</p><p class=\"board-snapshot\">{}</p>\
+<aside class=\"board-filters\">{mine}{}{}{}{}{}{}{}</aside>\
+<section class=\"board-list\">{list}</section></div>",
         escape(&project),
-        chips("state", &copy.filter_state, states, &chosen.state),
+        escape(&summary),
+        escape(&copy.board_view.snapshot),
+        state_chips,
         chips(
             "assignee",
             &copy.filter_assignee,

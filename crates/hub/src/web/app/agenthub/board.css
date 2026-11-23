@@ -1,22 +1,35 @@
-/* A board (`board.rs`): its name and search on one line; the filters beside the tickets on a
-   wide screen and above them on a phone; each ticket's facts beside its title once the list
-   is wide enough to hold both, under it otherwise. */
+/* Original AgentHub workflow columns and task cards, backed by the shared board. */
 @layer pages {
-  [data-page="board"] { --side: 16rem; --main-min: 60%; --stack-gap: var(--space-m); }
-  [data-page="board"] .board-head { --cluster-gap: var(--space-xs) var(--space-s);
-    justify-content: space-between; }
+  [data-page="board"] { --stack-gap: var(--space-m); min-inline-size: 0; }
+  [data-page="board"] .board-head { --cluster-gap: var(--space-xs) var(--space-s); justify-content: space-between; }
   [data-page="board"] .board-head h1 { margin: 0; font-size: var(--step-3); }
   [data-page="board"] .board-head .search { flex: 1 1 18rem; max-inline-size: 32rem; margin: 0; }
-  [data-page="board"] .board-filters { --stack-gap: var(--space-2xs); }
-  [data-page="board"] .board-filters:empty { display: none; }
+  [data-page="board"] .board-summary { margin: 0; }
+  [data-page="board"] .board-snapshot { margin: 0; font-size: var(--step--1); opacity: .75; }
+  [data-page="board"] .board-filters { display: flex; flex-wrap: wrap; gap: var(--space-xs) var(--space-m); align-items: center; }
   [data-page="board"] .board-filters .chips { margin: 0; }
-  [data-page="board"] .board-list { margin: 0; }
-  [data-page="board"] #tickets li { display: grid; gap: var(--space-3xs) var(--space-s);
-    align-items: baseline; padding-block: var(--space-2xs); }
-  [data-page="board"] #tickets a { font-size: var(--step-0); }
-  [data-page="board"] #tickets .meta { display: block; font-size: var(--step--1); }
-  @container (min-width: 36rem) {
-    [data-page="board"] #tickets li { grid-template-columns: minmax(0, 1fr) auto; }
-    [data-page="board"] #tickets .meta { text-align: end; }
+  [data-page="board"] .board-list { min-inline-size: 0; max-inline-size: 100%; }
+  [data-page="board"] .board-columns { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(17rem, 1fr);
+    gap: var(--space-s); overflow-x: auto; padding-block-end: var(--space-s); max-inline-size: 100%; }
+  [data-page="board"] .board-column { min-inline-size: 0; padding: var(--space-s); border: 1px solid var(--line);
+    border-radius: var(--radius-l); background: var(--sunk); align-self: start; }
+  [data-page="board"] .column-head { display: flex; gap: var(--space-xs); justify-content: space-between; align-items: baseline;
+    padding-block-end: var(--space-s); }
+  [data-page="board"] .column-head h2 { font-size: var(--step-0); margin: 0; overflow-wrap: anywhere; }
+  [data-page="board"] .column-count { font-variant-numeric: tabular-nums; }
+  [data-page="board"] .task-cards { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-s); }
+  [data-page="board"] .task-card { padding: var(--space-s); border: 1px solid var(--line); border-radius: var(--radius-m); background: var(--surface);
+    display: grid; gap: var(--space-xs); overflow-wrap: anywhere; }
+  [data-page="board"] .task-top { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-xs); font-size: var(--step--1); }
+  [data-page="board"] .task-card h3 { font-size: var(--step-0); margin: 0; line-height: 1.5; }
+  [data-page="board"] .task-card h3 a { display: block; padding-block: var(--space-2xs); }
+  [data-page="board"] .task-labels { display: flex; flex-wrap: wrap; gap: var(--space-2xs); }
+  [data-page="board"] .task-label { border: 1px solid var(--line); border-radius: var(--radius-pill); padding: .1rem .5rem; font-size: var(--step--1); }
+  [data-page="board"] .task-status { display: grid; gap: var(--space-3xs); font-size: var(--step--1); }
+  [data-page="board"] .task-ready { font-weight: 650; color: var(--online); }
+  @media (max-width: 48rem) {
+    [data-page="board"] .board-columns { display: block; overflow: visible; }
+    [data-page="board"] .board-column:not(.is-selected) { display: none; }
+    [data-page="board"] .board-filters #chips-state { flex-basis: 100%; }
   }
 }
