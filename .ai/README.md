@@ -31,6 +31,8 @@ its versioned contracts, not another agent or task engine.
 | DG-ADAPTER-1 | [Harness-specific adapters and capability limits](docs/adapters.md) |
 | DG-RETRY-1 | [The broker's retry lifecycle: permanent retired keys, retry identity, refusal and history size](docs/retry-lifecycle.md) |
 
+- **[Operator rules](operator-rules.md): the operator's own instructions. They hold over
+  every other file here, this index and `AGENTS.md` included. Read them first.**
 - [What is being built](../docs/product.md): the one product description; every other
   document agrees with it. [Documentation map](../docs/documentation-map.md): every
   document, and whether it is kept, fixed, folded or retired.
