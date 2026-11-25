@@ -24,6 +24,7 @@ where the repo follows it, and where the repo departs from it the pattern says w
 | 9 | [hub-pages.md](hub-pages.md) | An axum page and its form: owned routes, one guard per caller, POST-303-GET, one render path, the site's words, the phone frame. |
 | 10 | [connectors.md](connectors.md) | An AI client is a catalog entry, not code. |
 | 11 | [tests-and-ci.md](tests-and-ci.md) | A test proves one claim or fails; it never passes without running. What CI runs, and on what cadence. |
+| 12 | [ui.md](ui.md) | Every screen: Svelte on ColdLight, Style Dictionary tokens, folder-driven navigation, a dumb UI over the engine's JSON, stories for every state, the conflict popup, failures that help. All existing UI converts to it (2026-11-25). |
 
 Product order, for deciding what comes first: the self-hosted Desktop Commander (patterns 3 to 5),
 then AgentHub (6), then what serves both (7 to 9), then plugins and clients (10). The commercial

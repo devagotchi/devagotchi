@@ -36,7 +36,10 @@ then and are recorded here until he moves them into it.
   follows industry practice (for example `interfaces/`, `engine/`). It is never flat, so the
   UI can derive its tabs and grouping from files and folders.
 - **UI** (2026-11-23, 2026-11-24, 2026-11-25).
-  - Svelte drives it. Style Dictionary generates all CSS: semantic and composite tokens on
+  - Svelte drives it, and **all existing UI converts to Svelte** (decided 2026-11-25): the
+    hub's server-rendered pages, the original React AgentHub UI, the website and the desktop
+    inspector. The pattern is [ui.md](../../patterns/ui.md). Style Dictionary generates all
+    CSS: semantic and composite tokens on
     ColdLight, his own component system.
   - Primitives come first; blocks, templates and patterns are made from them. Variants
     live with the code, and every component has a Storybook story.
@@ -115,7 +118,7 @@ later test checks that every domain exists consistently in `engine/`, `interface
 | 3 | The domain files in every crate. The hub's 63 flat `web/` files go to their domains. Defects found on main get fixed here: the contract drift (`scripts/generate-contracts.cjs --check` fails on main), and unused code in `engine/hub/src/machines/access/` (`Requested`, `Revoked`, `revoke_machine`, `agent_resumed`) | the layout check holds the roles | in progress: the pages moved into their domains (`web/` keeps only the shell: `mod.rs`, `routes.rs`, `pages.rs`, `hub.css` and the shell's folders), and each domain merges its own `routes()`. Still open: the role-file names in every domain, `/go/*` routes (`workflows/web` is at its ratchet), identity's handlers in `web/routes.rs`, the contract drift and the unused code |
 | 4 | Absorb the Go AgentHub (S1) by domain, in parallel worktrees. First a generated ledger (every Go file and function, its target, ported, equivalent or dropped with a reason) and a test that fails while a row is open. Then one complete PR per group, the Go tests ported first. The hub's engine and interface split is done per domain here | every S1 row closed | pending |
 | 5 | S2 to S4 (128 paths of docs, packaging, enrollment, auth and connectivity) as one batch. S5 is closed in the ledger: its content came in through #252 (increments 201 to 205) | S1 to S5 closed | pending |
-| 6 | The UI (§1, UI and Experience) | the stories and the routes for every domain | pending |
+| 6 | The UI ([ui.md](../../patterns/ui.md)): ColdLight tokens and primitives with their stories, then every screen converted, domain by domain, in the order the domains are ported | the stories and the routes for every domain | pending |
 | 7 | Alpha acceptance on the operator's own server and phone | his receipts | pending |
 
 **Step 4's groups:**

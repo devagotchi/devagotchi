@@ -1,5 +1,7 @@
 # Pattern: a hub page and its form
 
+> **For existing server-rendered pages only.** All UI converts to Svelte ([ui.md](ui.md), 2026-11-25); no new page is written this way.
+
 This is how a page of the hub's web UI is routed, guarded, drawn, worded and tested. It covers
 `engine/hub/src/web`: the phone app (`app/`), `/admin` (`hub_settings*`), sign-in, approvals,
 machines, the landing page, organisations and the operator page. Follow it for every new page
