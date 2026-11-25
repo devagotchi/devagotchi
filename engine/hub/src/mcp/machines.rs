@@ -83,7 +83,7 @@ impl Hub {
     }
 
     /// Update one of `subject`'s machines to the hub's build now: what `machine_update`
-    /// does, and the phone app's Update now (`web/app/machine.rs`).
+    /// does, and the phone app's Update now (`machines/web/machine.rs`).
     pub async fn update_machine(
         &self,
         subject: &Subject,

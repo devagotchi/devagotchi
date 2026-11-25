@@ -3,7 +3,6 @@
 # shorter. Never add a line: see .ai/patterns/layout.md, rule 2.
 platform/contracts/src/interactive.rs
 platform/contracts/src/system.rs
-engine/hub/src/web/landing.rs
 engine/hub/src/web/pages.rs
 platform/ipc/src/windows.rs
 engine/machine-engine/src/broker.rs

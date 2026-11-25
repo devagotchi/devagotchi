@@ -1,5 +1,5 @@
 //! `tokens.json`: the design tokens the stylesheet reads as custom properties, and the
-//! fonts a site serves itself. The hub's stylesheet (`web/hub.css`, `web/landing.css`, and
+//! fonts a site serves itself. The hub's stylesheet (`web/hub.css`, `site/web/landing/landing.css`, and
 //! the sheets `web/style/mod.rs` lists) only ever uses `var(--…)`; the tokens set them, light
 //! and dark, so a site restyles every page without touching a rule. `steps` and `space` are
 //! the fluid scales (`--step-0`, `--space-s`, …): each a `clamp()` from a phone to a desktop.
@@ -30,7 +30,7 @@ use super::{Asset, SiteFile};
 /// The hub's base rules, after the tokens: `@layer base`.
 const BASE: &str = concat!(
     include_str!("../web/hub.css"),
-    include_str!("../web/landing.css")
+    include_str!("web/landing/landing.css")
 );
 
 #[derive(Debug, Clone, Deserialize)]

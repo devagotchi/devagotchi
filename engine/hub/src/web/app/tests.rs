@@ -6,7 +6,7 @@ use serde_json::{Value, json};
 
 use crate::tenancy::tests::tenants::{Hosted, Person, hosted_with, refused};
 
-pub(super) async fn hosted() -> Option<Hosted> {
+pub(crate) async fn hosted() -> Option<Hosted> {
     hosted_with(None, |_, _| json!({})).await
 }
 
@@ -67,13 +67,13 @@ async fn real_postgres_mcp_and_app_share_one_board_and_surface_storage_failures(
     assert!(!hub.dir.path().join("account-boards").exists());
 }
 
-pub(super) async fn page(hub: &Hosted, path: &str, person: &Person) -> (u16, String) {
+pub(crate) async fn page(hub: &Hosted, path: &str, person: &Person) -> (u16, String) {
     Hosted::text(hub.get(path, Some(&person.cookie)).await).await
 }
 
 /// A's things: a machine that joined, a board with its getting-started ticket and one more
 /// assigned to A (2 open). The machine's name as the hub stores it.
-pub(super) async fn things_of(hub: &Hosted, person: &mut Person) -> String {
+pub(crate) async fn things_of(hub: &Hosted, person: &mut Person) -> String {
     let added = hub
         .call(person, "machine_add", json!({ "name": "desk" }))
         .await;
@@ -317,7 +317,7 @@ async fn the_app_installs_at_app_and_opens_offline() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn the_sign_in_page_carries_the_manifest_a_phone_installs_from() {
     let hosted = or_skip!(hosted());
-    let owned = or_skip!(crate::web::passkey_tests::world());
+    let owned = or_skip!(crate::identity::web::tests::passkeys::world());
     let answers = [
         ("hosted /auth/login", hosted.get("/auth/login", None).await),
         (

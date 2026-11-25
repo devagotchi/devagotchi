@@ -27,6 +27,7 @@ mod stored;
 mod tests;
 mod types;
 mod validate;
+pub(crate) mod web;
 pub(crate) use kinds::{FieldType, Kind};
 pub(crate) use mutations::WriteOptions;
 pub(crate) use types::Row;

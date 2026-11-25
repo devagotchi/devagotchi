@@ -1,7 +1,7 @@
 //! Sign-ins an account is reached by besides its passkeys: Google, GitHub, an email link,
 //! Sign in with Shippin (Nomen), any OpenID Connect provider. Each is `(provider, subject)`,
 //! the provider's own stable id for the person, never a name or an email (either can
-//! change hands). The flows that prove one are the web's (`web/providers.rs`); this is what
+//! change hands). The flows that prove one are the web's (`identity/web/providers.rs`); this is what
 //! the hub does with a proven one:
 //!
 //! - Signing in (`sign_in_identity`): the account it is linked to. Else, when it is one of

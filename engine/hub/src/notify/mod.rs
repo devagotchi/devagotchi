@@ -10,7 +10,7 @@
 //!
 //! # Serves
 //!
-//! - `/push/subscribe` and `/assets/push.js`: turning notifications on (`crate::web::notify`).
+//! - `/push/subscribe` and `/assets/push.js`: turning notifications on (`crate::notify::web`).
 //! - Web Push: an approval waiting, a machine joining or going offline (`push`).
 //! - Email over SMTP: sign-in links and the mail check (`mail`; `devagotchi hub check-mail`).
 //! - Signals: batches of NDJSON to each configured HTTPS sink (`signals`, `docs/signals.md`).
@@ -32,6 +32,7 @@ pub mod mail;
 pub mod push;
 pub mod signal_sinks;
 pub mod signals;
+pub(crate) mod web;
 
 #[cfg(test)]
 mod tests;

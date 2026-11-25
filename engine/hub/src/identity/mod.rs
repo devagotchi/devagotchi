@@ -18,7 +18,7 @@
 //! - Every request's subject: bearer tokens, API keys and sessions checked (`auth`).
 //! - Sign-in and the account: `/auth/login`, `/account`, `/signed-out`, `/owner`, `/claim`,
 //!   `/passkey/*`, `/device` (the device grant), the providers' callbacks
-//!   (`crate::web::sign_in`, `crate::web::passkeys`, `crate::web::claim`, `crate::web::device`).
+//!   (`crate::identity::web::sign_in`, `crate::identity::web::passkeys`, `crate::identity::web::claim`, `crate::identity::web::device`).
 //! - The OAuth 2.1 server for AI apps: `/oauth/*`, `/.well-known/oauth-*` (`accounts::oauth`).
 //! - `devagotchi hub owner` and `devagotchi hub connect-nomen` (`crate::lib`).
 //!
@@ -41,6 +41,7 @@ pub mod connect;
 pub mod nomen;
 pub mod preferences;
 pub mod sealed;
+pub(crate) mod web;
 
 /// What the rest of the hub names most: who is calling, the sealer of secrets at rest, and
 /// each person's preferences.

@@ -1,4 +1,4 @@
-//! What the operator's analytics page shows (`web/analytics.rs`), read from the store: each
+//! What the operator's analytics page shows (`ops/web/analytics.rs`), read from the store: each
 //! day's totals over a range (the daily table for finished days, the raw visits for days
 //! not rolled up yet, today among them), the funnel, the accounts' AI apps and sign-ins,
 //! who waits now and who is active. Never anything of one visitor.

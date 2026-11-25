@@ -21,42 +21,42 @@ use crate::{
     machines::link::Links, mcp::Hub, notify::push::Push,
 };
 
-const OWNER: &str = "300000000000000001";
-const OTHER: &str = "300000000000000002";
-const WEB_CLIENT: &str = "devagotchi-web";
+pub(crate) const OWNER: &str = "300000000000000001";
+pub(crate) const OTHER: &str = "300000000000000002";
+pub(crate) const WEB_CLIENT: &str = "devagotchi-web";
 #[cfg(unix)]
-const KEY_FILE: &str = "/nonexistent/hub-key.json";
+pub(crate) const KEY_FILE: &str = "/nonexistent/hub-key.json";
 #[cfg(windows)]
-const KEY_FILE: &str = r"C:\nonexistent\hub-key.json";
+pub(crate) const KEY_FILE: &str = r"C:\nonexistent\hub-key.json";
 #[cfg(unix)]
-const SOCKET: &str = "/nonexistent/devagotchi-broker.sock";
+pub(crate) const SOCKET: &str = "/nonexistent/devagotchi-broker.sock";
 #[cfg(windows)]
-const SOCKET: &str = r"\\.\pipe\devagotchi-web-test-absent";
+pub(crate) const SOCKET: &str = r"\\.\pipe\devagotchi-web-test-absent";
 
 /// A code the "authorization" step issued: the PKCE challenge it was bound to and the
 /// access token it buys.
-struct Grant {
-    challenge: String,
-    token: String,
-    expires_in: u64,
+pub(crate) struct Grant {
+    pub(crate) challenge: String,
+    pub(crate) token: String,
+    pub(crate) expires_in: u64,
 }
 
-struct FakeNomen {
-    issuer: String,
-    redirect_uri: Mutex<String>,
-    codes: Mutex<HashMap<String, Grant>>,
-    status: AtomicU16,
+pub(crate) struct FakeNomen {
+    pub(crate) issuer: String,
+    pub(crate) redirect_uri: Mutex<String>,
+    pub(crate) codes: Mutex<HashMap<String, Grant>>,
+    pub(crate) status: AtomicU16,
     /// Codes also buy a refresh token (the app has the refresh grant and the hub asked
     /// for `offline_access`).
-    refresh_on_code: AtomicBool,
+    pub(crate) refresh_on_code: AtomicBool,
     /// Live refresh tokens and the access token each buys; spent on use (rotation).
-    refreshes: Mutex<HashMap<String, String>>,
-    refreshed: AtomicUsize,
-    revoked: Mutex<Vec<String>>,
+    pub(crate) refreshes: Mutex<HashMap<String, String>>,
+    pub(crate) refreshed: AtomicUsize,
+    pub(crate) revoked: Mutex<Vec<String>>,
 }
 
 impl FakeNomen {
-    fn mint_refresh(&self, access: &str) -> String {
+    pub(crate) fn mint_refresh(&self, access: &str) -> String {
         let mut refreshes = self.refreshes.lock().unwrap();
         let token = format!(
             "refresh-token-{}",
@@ -67,7 +67,7 @@ impl FakeNomen {
     }
 }
 
-async fn revoke(
+pub(crate) async fn revoke(
     State(fake): State<Arc<FakeNomen>>,
     Form(form): Form<HashMap<String, String>>,
 ) -> StatusCode {
@@ -79,7 +79,7 @@ async fn revoke(
     StatusCode::OK
 }
 
-async fn token(
+pub(crate) async fn token(
     State(fake): State<Arc<FakeNomen>>,
     Form(form): Form<HashMap<String, String>>,
 ) -> axum::response::Response {
@@ -128,23 +128,23 @@ async fn token(
     axum::Json(answer).into_response()
 }
 
-struct World {
-    devices: Arc<Devices>,
+pub(crate) struct World {
+    pub(crate) devices: Arc<Devices>,
     /// Where the web login keeps its sessions (the test Postgres).
-    sessions: crate::store::Store,
-    fake: Arc<FakeNomen>,
-    url: String,
-    http: reqwest::Client,
-    hub: Hub,
-    dir: tempfile::TempDir,
+    pub(crate) sessions: crate::store::Store,
+    pub(crate) fake: Arc<FakeNomen>,
+    pub(crate) url: String,
+    pub(crate) http: reqwest::Client,
+    pub(crate) hub: Hub,
+    pub(crate) dir: tempfile::TempDir,
 }
 
-async fn world() -> Option<World> {
+pub(crate) async fn world() -> Option<World> {
     world_with(None).await
 }
 
 /// The world, handing out `downloads` to joining machines (`/join`, `/dist`).
-async fn world_with(
+pub(crate) async fn world_with(
     downloads: Option<Arc<crate::machines::downloads::Downloads>>,
 ) -> Option<World> {
     let nomen = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
@@ -205,7 +205,7 @@ async fn world_with(
         ("tok-other".to_string(), OTHER.to_string()),
     ]));
     let sessions = crate::store::testing::postgres().await?.store;
-    let web = WebLogin::new(
+    let web = crate::identity::web::nomen::WebLogin::new(
         &fake.issuer,
         &["hub-project".to_string()],
         WEB_CLIENT,
@@ -255,7 +255,7 @@ async fn world_with(
     })
 }
 
-fn location(response: &reqwest::Response) -> String {
+pub(crate) fn location(response: &reqwest::Response) -> String {
     response.headers()[header::LOCATION]
         .to_str()
         .unwrap()
@@ -263,7 +263,7 @@ fn location(response: &reqwest::Response) -> String {
 }
 
 /// `name=value` of the Set-Cookie whose name is `name`, with its attributes.
-fn set_cookie(response: &reqwest::Response, name: &str) -> Option<String> {
+pub(crate) fn set_cookie(response: &reqwest::Response, name: &str) -> Option<String> {
     response
         .headers()
         .get_all(header::SET_COOKIE)
@@ -272,11 +272,11 @@ fn set_cookie(response: &reqwest::Response, name: &str) -> Option<String> {
         .find(|v| v.starts_with(&format!("{name}=")))
 }
 
-fn cookie_pair(set_cookie: &str) -> String {
+pub(crate) fn cookie_pair(set_cookie: &str) -> String {
     set_cookie.split(';').next().unwrap().to_string()
 }
 
-fn query(url: &str) -> HashMap<String, String> {
+pub(crate) fn query(url: &str) -> HashMap<String, String> {
     let query = url.split_once('?').map(|(_, q)| q).unwrap_or_default();
     query
         .split('&')
@@ -285,7 +285,7 @@ fn query(url: &str) -> HashMap<String, String> {
         .collect()
 }
 
-fn percent_decode(value: &str) -> String {
+pub(crate) fn percent_decode(value: &str) -> String {
     let bytes = value.as_bytes();
     let mut out = Vec::new();
     let mut i = 0;
@@ -302,7 +302,7 @@ fn percent_decode(value: &str) -> String {
 }
 
 impl World {
-    async fn get(&self, path: &str, cookie: Option<&str>) -> reqwest::Response {
+    pub(crate) async fn get(&self, path: &str, cookie: Option<&str>) -> reqwest::Response {
         let mut request = self.http.get(format!("{}{path}", self.url));
         if let Some(cookie) = cookie {
             request = request.header(header::COOKIE, cookie);
@@ -312,7 +312,7 @@ impl World {
 
     /// Start a sign-in, then play Nomen's authorization step: issue a code bound to the
     /// challenge the hub sent. Returns the login cookie, the state and the code.
-    async fn authorize(
+    pub(crate) async fn authorize(
         &self,
         return_to: &str,
         token: &str,
@@ -358,7 +358,7 @@ impl World {
         (cookie_pair(&login), params["state"].clone(), code)
     }
 
-    async fn sign_in(&self, token: &str) -> String {
+    pub(crate) async fn sign_in(&self, token: &str) -> String {
         let (login, state, code) = self.authorize("/account", token, 3600).await;
         let back = self
             .get(
@@ -937,7 +937,7 @@ async fn a_new_board_says_how_to_start_and_one_tap_tests_the_phone() {
         if !seen.lock().unwrap().is_empty() {
             break;
         }
-        tokio::time::sleep(Duration::from_millis(50)).await;
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
     }
     let pushes = seen.lock().unwrap().clone();
     assert_eq!(
@@ -977,8 +977,7 @@ async fn a_new_board_says_how_to_start_and_one_tap_tests_the_phone() {
     );
 }
 
-mod machines;
-mod nomen_login;
+mod naming;
 
 // ------------------------------------------------ first connect (spec first-connect, A2)
 

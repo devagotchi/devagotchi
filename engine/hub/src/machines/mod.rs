@@ -19,7 +19,7 @@
 //!   routers here together.
 //! - `operation_heartbeat`: account-backed renewal of an existing interactive admission;
 //!   the local adapter has no hosted grant authority to renew.
-//! - Pages: Machines and a machine's page (`crate::web::machines`, `crate::web::app::machine`).
+//! - Pages: Machines and a machine's page (`crate::machines::web::forms`, `crate::machines::web::machine`).
 //!
 //! # Settings
 //!
@@ -50,6 +50,7 @@ pub mod system;
 #[cfg(test)]
 mod tests;
 pub mod update;
+pub(crate) mod web;
 
 pub(crate) use routes::routes;
 

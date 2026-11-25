@@ -56,7 +56,7 @@ pub(crate) async fn run(
     // now, so one that is missing stops the start rather than a sign-in later.
     let providers = if config.has_accounts() {
         Some(
-            web::Providers::from_config(&config)
+            crate::identity::web::providers::Providers::from_config(&config)
                 .map_err(|why| BridgeError::new("invalid_config", why))?
                 .sealing_in(&state_dir)
                 .map_err(|why| BridgeError::new("invalid_config", why))?,
@@ -67,13 +67,13 @@ pub(crate) async fn run(
     // A tenant let in hears so by email when the hub can send mail (early access): the mail
     // server at the moment it is let in, the file's or the one saved on /admin.
     if let (Some(accounts), Some(providers)) = (&accounts, &providers) {
-        accounts.on_admitted(web::announce_admissions(
+        accounts.on_admitted(crate::identity::web::email::announce_admissions(
             providers.email.clone(),
             config.clone(),
         ));
     }
     let passkeys = accounts.clone().and_then(|accounts| {
-        web::HubSignIn::new(config.clone(), accounts)
+        crate::identity::web::passkeys::HubSignIn::new(config.clone(), accounts)
             .map(|hub| match providers {
                 Some(providers) => hub.with_providers(providers),
                 None => hub,
@@ -83,10 +83,10 @@ pub(crate) async fn run(
     // What the owner set on the settings page, over what the config file says.
     if let Some(hub) = &passkeys {
         hub.reload_providers().await?;
-        web::apply_saved_mail(hub).await?;
+        crate::settings::web::mail::apply_saved(hub).await?;
     }
     if let Some(accounts) = &accounts {
-        ops::hub_settings::apply_saved(&config, accounts).await?;
+        crate::settings::store::apply_saved(&config, accounts).await?;
     }
     // A one-owner hub whose config names neither its owner nor its operators may be claimed
     // from the browser (`identity/accounts/claim/mod.rs`); its code is issued once the hub listens, below.
@@ -175,7 +175,8 @@ pub(crate) async fn run(
         None => None,
     };
     let verifier = Arc::new(Verifier::from_hub_config(&config, &board_store, accounts).await?);
-    let web = web::WebLogin::for_hub(&config, &state_dir, &board_store)?.map(Arc::new);
+    let web = crate::identity::web::nomen::WebLogin::for_hub(&config, &state_dir, &board_store)?
+        .map(Arc::new);
     let listen: SocketAddr = config
         .listen
         .parse()
@@ -233,7 +234,7 @@ pub(crate) async fn run(
     }
     // And the ones the owner set on /admin.
     if let Some(hub) = &passkeys {
-        web::start_saved_sinks(hub, &boards, &signals_store, &audit).await?;
+        crate::settings::web::sinks::start_saved(hub, &boards, &signals_store, &audit).await?;
     }
     let listener = agenthub::mcp::Boards::postgres_listener(&url).await?;
     tokio::spawn(boards.clone().listen_postgres(listener));
@@ -461,7 +462,7 @@ pub(crate) fn app(state: AppState) -> Router {
             web::router(true, state.hub.config.multi_tenant())
                 .layer(middleware::from_fn_with_state(
                     state.clone(),
-                    web::counted::count,
+                    crate::ops::web::counted::count,
                 ))
                 .layer(middleware::from_fn_with_state(state.clone(), web::bar)),
         );

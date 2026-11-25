@@ -5,18 +5,8 @@
 //! banner, refreshes on a pull and registers the service worker, which keeps the frame and
 //! the stylesheet so the app opens offline on `/app/offline`.
 
-pub(crate) mod access;
-mod agenthub;
-mod agents;
-mod catalog;
-mod connections;
-mod home;
-#[cfg(test)]
-mod key_tests;
-mod keys;
-mod machine;
-pub(super) mod me;
-mod requests;
+pub(crate) mod home;
+pub(crate) mod requests;
 
 use std::sync::Arc;
 
@@ -35,39 +25,9 @@ use crate::{AppState, agenthub::Board, identity::Subject, site::Site};
 
 pub fn routes() -> Router<AppState> {
     Router::new()
-        .merge(agents::routes())
-        .merge(access::routes())
-        .merge(catalog::routes())
-        .merge(agenthub::create::routes())
-        .merge(agenthub::projects::routes())
-        .merge(agenthub::audit::routes())
-        .merge(agenthub::configuration::routes())
         .route("/app", get(home::home))
         .route("/app/machines", get(home::machines))
-        .route("/app/machines/{name}", get(machine::page))
-        .route(
-            "/app/machines/{name}/update",
-            axum::routing::post(machine::update),
-        )
         .route("/app/boards", get(home::boards))
-        .route("/app/boards/{project}", get(agenthub::board::page))
-        .route("/app/tickets/{project}/{id}", get(agenthub::ticket::page))
-        .route(
-            "/app/tickets/{project}/{id}/{action}",
-            axum::routing::post(agenthub::ticket_actions::act),
-        )
-        .route("/app/me", get(me::page).post(me::save))
-        .route(
-            "/app/connections",
-            get(connections::page).post(connections::add),
-        )
-        .route(
-            "/app/connections/{name}/remove",
-            axum::routing::post(connections::remove),
-        )
-        .route("/app/keys", get(keys::page).post(keys::create))
-        .route("/app/keys/{id}/revoke", axum::routing::post(keys::revoke))
-        .route("/app/keys/{id}/rotate", axum::routing::post(keys::rotate))
         .route("/app/attention", get(attention))
         .route("/app/offline", get(offline))
         .route("/assets/app.js", get(script))
@@ -77,7 +37,7 @@ pub fn routes() -> Router<AppState> {
 
 /// The person signed in to this browser, or the page that answers instead: signed out,
 /// the sign-in page that comes back to `return_to`.
-pub(super) async fn person(
+pub(crate) async fn person(
     state: &AppState,
     headers: &HeaderMap,
     return_to: &str,
@@ -95,7 +55,7 @@ pub(super) async fn person(
 
 /// The boards the person may work on, by project, as `whoami` lists them: the account's
 /// own (or its org's) first, then the shared ones it holds a grant for.
-pub(super) fn board_names(
+pub(crate) fn board_names(
     state: &AppState,
     subject: &Subject,
 ) -> devagotchi_contracts::BridgeResult<Vec<String>> {
@@ -105,7 +65,7 @@ pub(super) fn board_names(
 /// The board `project` names for this person, as the board tools open it
 /// (`Hub::board_for`): the account's own first, then a shared one by grant. None when it
 /// is not theirs.
-pub(super) fn open_board(
+pub(crate) fn open_board(
     state: &AppState,
     subject: &Subject,
     project: &str,
@@ -118,12 +78,12 @@ pub(super) fn open_board(
 }
 
 /// The site's words for the app.
-pub(super) fn words() -> Arc<Site> {
+pub(crate) fn words() -> Arc<Site> {
     pages::site()
 }
 
 /// A card: a heading and what is under it, or the line that says it is empty.
-pub(super) fn card(id: &str, title: &str, rows: &[String], empty: &str) -> String {
+pub(crate) fn card(id: &str, title: &str, rows: &[String], empty: &str) -> String {
     let inner = if rows.is_empty() {
         format!("<p class=\"empty\">{}</p>", escape(empty))
     } else {
@@ -147,7 +107,7 @@ async fn attention(
         _ => return StatusCode::UNAUTHORIZED.into_response(),
     };
     let approvals = if state.hub.may_approve(&subject) {
-        match super::approvals::pending(&state, &subject).await {
+        match crate::agenthub::web::approvals::pending(&state, &subject).await {
             Ok(waiting) => waiting.len(),
             Err(error) => {
                 eprintln!("devagotchi hub: attention: {error}");
@@ -157,7 +117,7 @@ async fn attention(
     } else {
         0
     };
-    let machine_requests = match access::attention(&state, &subject).await {
+    let machine_requests = match crate::machines::web::access::attention(&state, &subject).await {
         Ok(count) => count,
         Err(_) => return unavailable(),
     };
@@ -201,7 +161,7 @@ async fn focus(
             })
         })
         .collect();
-    let owner = super::hub_settings::is_owner(&state, &subject);
+    let owner = crate::settings::web::admin::is_owner(&state, &subject);
     (
         [(axum::http::header::CACHE_CONTROL, "no-store")],
         axum::Json(serde_json::json!({ "boards": boards, "machines": machines, "owner": owner })),
@@ -227,7 +187,7 @@ async fn offline() -> Response {
 
 /// `/assets/app.js`: the app's one script.
 async fn script() -> Response {
-    super::notify::asset(
+    crate::notify::web::asset(
         include_str!("../assets/app.js").to_string(),
         "text/javascript; charset=utf-8",
         "no-cache",
@@ -237,7 +197,7 @@ async fn script() -> Response {
 /// `/assets/reveal.js`: run before an app page is first drawn, so it slides in from the side
 /// the person swiped or tapped towards.
 async fn reveal() -> Response {
-    super::notify::asset(
+    crate::notify::web::asset(
         include_str!("../assets/reveal.js").to_string(),
         "text/javascript; charset=utf-8",
         "no-cache",
@@ -245,6 +205,4 @@ async fn reveal() -> Response {
 }
 
 #[cfg(test)]
-mod approval_tests;
-#[cfg(test)]
-mod tests;
+pub(crate) mod tests;

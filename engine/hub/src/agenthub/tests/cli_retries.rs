@@ -52,7 +52,8 @@ pub(crate) async fn local_accounts_hub()
         },
         issue_store: Arc::new(crate::agenthub::issue_lifecycle::IssueLifecycleStore::disabled()),
         web: None,
-        passkeys: crate::web::HubSignIn::new(config, accounts.clone()).map(Arc::new),
+        passkeys: crate::identity::web::passkeys::HubSignIn::new(config, accounts.clone())
+            .map(Arc::new),
     };
     tokio::spawn(async move {
         axum::serve(listener, crate::serve::app(state))

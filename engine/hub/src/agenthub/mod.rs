@@ -5,7 +5,7 @@
 //! account client, `account::client::AccountHub`). What stays in the hub is how the hub
 //! serves it: its MCP tools (`mcp`), the tenant registry that opens hosted boards
 //! (`registry`), the GitHub webhook and issue routes (`issue_lifecycle`). Its pages are in
-//! `web/app/agenthub/`. Contract: `docs/agent-board.md`.
+//! `agenthub/web/`. Contract: `docs/agent-board.md`.
 
 pub use devagotchi_agenthub::*;
 
@@ -13,6 +13,7 @@ pub(crate) mod http;
 pub mod issue_lifecycle;
 pub mod mcp;
 pub(crate) mod registry;
+pub(crate) mod web;
 
 #[cfg(test)]
 mod tests;

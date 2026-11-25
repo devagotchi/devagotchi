@@ -1,6 +1,6 @@
 //! `content/workflows.json`: the step-by-step setups an AI can start for its person and hand
 //! them as one link (`src/workflows.rs`), and `content/messages.json` `workflow`, the words
-//! of the page that link opens (`web/workflow.rs`).
+//! of the page that link opens (`workflows/web/mod.rs`).
 //!
 //! Workflows are content and steps are code: a workflow is an id, a title, an intro and an
 //! ordered list of steps, each with its own words and a `kind` the hub implements

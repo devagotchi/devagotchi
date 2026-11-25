@@ -1,7 +1,7 @@
 //! Workflows with direct links (increment 68): the AI does the work, its person just clicks.
 //!
 //! An AI asked to "connect my server" starts a workflow (`workflow_start`, `mcp.rs`) and
-//! hands its person one link, `<hub>/go/<token>` (`web/workflow.rs`). The link is the
+//! hands its person one link, `<hub>/go/<token>` (`web/`). The link is the
 //! credential, as the line `machine_add` hands an AI already is: nobody signs in to follow
 //! it. The page walks them through the workflow's steps and ticks each the moment the hub
 //! sees it done, while the AI follows along with `workflow_wait` and carries on.
@@ -25,9 +25,9 @@
 pub(crate) mod mcp;
 mod status;
 pub mod stored;
+pub(crate) mod web;
 
 pub use status::{StepStatus, WorkflowStatus};
-
 use std::sync::Arc;
 
 use devagotchi_contracts::{BridgeError, BridgeResult};

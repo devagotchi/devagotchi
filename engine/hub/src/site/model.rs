@@ -780,7 +780,7 @@ pub struct ClaimPopup {
     pub source: String,
 }
 
-/// The tools popup's words; the tools themselves are the hub's (`web/landing/popups.rs`).
+/// The tools popup's words; the tools themselves are the hub's (`site/web/landing/popups.rs`).
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ToolsPopup {
@@ -884,21 +884,21 @@ pub struct Messages {
     pub page_footer: String,
     /// Early access and plans on a hosted hub (`tenancy/access/`).
     pub access: AccessCopy,
-    /// The operator page (`web/operator.rs`).
+    /// The operator page (`tenancy/web/operator.rs`).
     pub operator: OperatorCopy,
-    /// The operator's analytics page (`web/analytics.rs`).
+    /// The operator's analytics page (`ops/web/analytics.rs`).
     pub analytics: AnalyticsCopy,
-    /// The workflow page (`web/workflow.rs`) and what a workflow's steps stand at.
+    /// The workflow page (`workflows/web/mod.rs`) and what a workflow's steps stand at.
     pub workflow: super::workflows::WorkflowCopy,
-    /// The sign-in page of a hosted hub (`web/sign_in.rs`). Plain text.
+    /// The sign-in page of a hosted hub (`identity/web/sign_in.rs`). Plain text.
     #[serde(default)]
     pub sign_in: SignInMessages,
     /// The phone control app (`web/app/`). Plain text; `{name}` and the like are filled in.
     pub app: Box<AppCopy>,
-    /// The organisation pages (`web/orgs.rs`). Plain text; `{n}`, `{why}` are filled in.
+    /// The organisation pages (`tenancy/web/orgs.rs`). Plain text; `{n}`, `{why}` are filled in.
     #[serde(default)]
     pub orgs: OrgsCopy,
-    /// The person's own page and the app's greeting (`web/app/me.rs`, `web/app/home.rs`).
+    /// The person's own page and the app's greeting (`identity/web/me.rs`, `web/app/home.rs`).
     #[serde(default)]
     pub me: MeCopy,
     /// The app's Go to sheet (`web/pages.rs`, `assets/app.js`).
@@ -1084,7 +1084,7 @@ impl Default for MeCopy {
     }
 }
 
-/// The organisation pages' words (`web/orgs.rs`): organisations, their projects, members,
+/// The organisation pages' words (`tenancy/web/orgs.rs`): organisations, their projects, members,
 /// teams and invites, and the page an invite link opens.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields, default)]
@@ -1227,7 +1227,7 @@ impl Default for OrgsCopy {
 /// The phone control app's words (`web/app/`), every one of them: the tab bar, the install
 /// banner, the home page's cards and the offline page.
 
-/// The sign-in page's words (`web/sign_in.rs`): Google, or an email and a password.
+/// The sign-in page's words (`identity/web/sign_in.rs`): Google, or an email and a password.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields, default)]
 pub struct SignInMessages {
@@ -1328,7 +1328,7 @@ pub struct OperatorCopy {
     pub usage_unlimited: String,
 }
 
-/// The operator's analytics page (`web/analytics.rs`). Inline markup where it says so.
+/// The operator's analytics page (`ops/web/analytics.rs`). Inline markup where it says so.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct AnalyticsCopy {

@@ -358,7 +358,7 @@ pub fn message(
 /// `/` for someone not signed in: the product page (`landing.rs`). A hub nobody owns offers
 /// only the claim. The MCP address is this hub's own `public_url`, never a hosted one.
 pub fn home(front: Front, public_url: &str) -> Response {
-    let (title, body) = super::landing::page(&front, public_url);
+    let (title, body) = crate::site::web::landing::page(&front, public_url);
     let site = site();
     let meta = crate::site::discovery::head(
         &site,
@@ -433,7 +433,7 @@ autocapitalize=\"none\" autocomplete=\"off\" spellcheck=\"false\" placeholder=\"
 <p class=\"actions\"><button class=\"approve\" type=\"submit\">Get a one-time code</button></p></form>";
     let secure = viewer
         .unsecured_until
-        .map(|until| super::hosted::secure_offer(until, true, viewer.ways))
+        .map(|until| crate::tenancy::web::hosted::secure_offer(until, true, viewer.ways))
         .unwrap_or_default();
     // A secured hub account: the sign-ins that reach it, and the others it may add.
     let sign_ins = if viewer.hub_account && viewer.unsecured_until.is_none() {

@@ -34,9 +34,9 @@ async fn state_for(
     } else {
         None
     };
-    let passkeys = accounts
-        .clone()
-        .and_then(|accounts| web::HubSignIn::new(config.clone(), accounts).map(Arc::new));
+    let passkeys = accounts.clone().and_then(|accounts| {
+        crate::identity::web::passkeys::HubSignIn::new(config.clone(), accounts).map(Arc::new)
+    });
     let devices = machines::devices::test_registry().await?;
     let audit = crate::ops::audit::test_audit().await?;
     let links = Arc::new(Links::new(config.clone(), devices, audit.clone()));

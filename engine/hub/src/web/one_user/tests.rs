@@ -7,10 +7,8 @@
 
 use serde_json::json;
 
-use crate::{
-    tenancy::tests::tenants::{Hosted, hosted_with},
-    web::operator_tests_support::operator_cookie,
-};
+use crate::tenancy::tests::tenants::{Hosted, hosted_with};
+use crate::tenancy::web::tests::operator::operator_cookie;
 
 /// A hub in `mode` whose owner is `github:42`, and that owner's browser cookie.
 async fn hub(mode: &str) -> Option<(Hosted, String)> {

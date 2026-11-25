@@ -1,6 +1,6 @@
 //! A tenant's milestones: each recorded once, with the tenant's id, where it happens. The
 //! operator's funnel is visitors, then accounts made, secured, admitted, with a first
-//! machine, with a first operation (`web/operator` reads them). Its first workflow started
+//! machine, with a first operation (`tenancy/web/operator` reads them). Its first workflow started
 //! and first completed (`workflows.rs`) are kept beside them.
 //!
 //! Never for the home tenant (the operator's own), and only on a hub that counts

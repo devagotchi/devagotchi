@@ -85,8 +85,8 @@ pub struct TenancyConfig {
     /// Accounts not yet secured that may be live at once on the hub.
     pub max_unsecured: u32,
     /// Whether someone with no session may connect an AI client straight away, the hub
-    /// making an account nobody has secured yet (`web/hosted.rs`). Off: they sign in or sign
-    /// up first (`web/sign_in.rs`).
+    /// making an account nobody has secured yet (`tenancy/web/hosted.rs`). Off: they sign in or sign
+    /// up first (`identity/web/sign_in.rs`).
     #[serde(default)]
     pub anonymous_connect: bool,
     pub unsecured: UnsecuredLimits,

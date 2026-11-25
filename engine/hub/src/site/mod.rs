@@ -51,6 +51,7 @@ pub(crate) mod tests;
 pub(crate) mod text;
 pub mod walkthrough;
 mod watch;
+pub(crate) mod web;
 pub(crate) mod workflows;
 
 use std::{

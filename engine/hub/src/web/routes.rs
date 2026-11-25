@@ -1,19 +1,22 @@
-//! The browser routes: the landing page and claiming a new hub (`/claim`), sign in, the
-//! account page, the operator page (`/operator`) and its analytics (`/operator/analytics`), sign out, `/api/v1/me` (which also takes a bearer token, so scripts and AI
-//! clients see the same view), `/approvals`, a workflow's link (`/go/<token>`), the public
-//! pages the AI directories link to (`/docs`, `/privacy`, `/terms`, `/support`), and what
-//! search engines and AI agents read (`/llms.txt`, `/llms-full.txt`, `/robots.txt`,
-//! `/sitemap.xml`).
+//! The browser routes: every domain's pages, merged from each domain's `web::routes()`
+//! (identity, AgentHub, machines, catalog, connections, settings, tenancy, ops, notify, the
+//! site, offers), and the shell's own: the landing page (`/`), sign in and out, the account
+//! page, `/api/v1/me` (which also takes a bearer token, so scripts and AI clients see the same
+//! view), the stylesheet and a workflow's link (`/go/<token>`).
 use super::{
-    Exchange, SessionToken, WebLogin, analytics, approvals, claim, device, discovery, email,
-    machines, notify, oauth, offers, operator,
     pages::{self, Viewer},
-    passkeys::{self, owner_password_script},
-    providers, public, safe_return_to, sign_in, workflow,
+    safe_return_to,
 };
 use crate::{
     AppState,
     identity::auth::{AuthError, Subject},
+};
+use crate::{
+    identity::web::{
+        nomen::{Exchange, SessionToken, WebLogin},
+        passkeys, sign_in,
+    },
+    workflows::web as workflow,
 };
 use axum::{
     Router,
@@ -31,117 +34,52 @@ use serde::Deserialize;
 /// and the metadata itself: axum refuses the same path twice. `multi_tenant`: `one_user`.
 pub fn router(hub_authorization: bool, multi_tenant: bool) -> Router<AppState> {
     let router = Router::new()
-        .merge(super::audit_live::routes())
-        .merge(super::hub_audit::routes())
         .route("/", get(root))
         .route("/account", get(account))
         .route("/signed-out", get(signed_out))
         .route("/auth/login", get(login))
         .route("/auth/callback", get(callback))
         .route("/auth/logout", post(logout))
-        .route("/owner", get(passkeys::owner_page))
-        .route(
-            "/owner/password",
-            get(passkeys::owner_password_page).post(passkeys::owner_password),
-        )
-        .route(
-            "/passkey/register/options",
-            post(passkeys::register_options),
-        )
-        .route("/passkey/register", post(passkeys::register))
-        .route("/passkey/sign-in/options", post(passkeys::sign_in_options))
-        .route("/passkey/sign-in", post(passkeys::sign_in))
-        .route("/assets/passkey.js", get(passkeys::script))
-        .route("/assets/landing.js", get(super::landing::script))
-        .route("/assets/owner-password.js", get(owner_password_script))
-        .route("/auth/provider/link", post(providers::link))
-        .route("/auth/provider/{name}", get(providers::start))
-        .route("/auth/provider/{name}/callback", get(providers::callback))
-        .route("/auth/email", get(email::page).post(email::ask))
-        .route("/auth/email/verify", post(email::verify))
-        .merge(sign_in::routes())
-        // The phone control app (`app/`).
-        .merge(super::app::routes())
-        .merge(super::one_user::routes(multi_tenant))
         .route("/auth/password/set", post(set_password))
         .route("/api/v1/me", get(me))
-        .route("/api/v1/machines", post(machines::add_json))
-        .merge(super::hub_settings_live::routes())
-        .route("/operator", get(operator::page))
-        .route("/operator/admit", post(operator::admit))
-        .route("/operator/plan", post(operator::plan))
-        .route("/operator/analytics", get(analytics::page))
-        .route("/operator/analytics.csv", get(analytics::csv))
-        .route("/approvals", get(approvals::list))
-        .route("/approvals/decide", post(approvals::decide))
-        .route("/approvals/test", post(approvals::test))
-        .route("/approvals/standing", post(approvals::grant))
-        .route("/approvals/standing/revoke", post(approvals::revoke))
-        .route("/machines/add", post(machines::add))
-        .route("/machines/revoke", post(machines::revoke))
-        .route("/push/subscribe", post(notify::subscribe))
-        .route("/sw.js", get(notify::service_worker))
-        .route("/manifest.webmanifest", get(notify::manifest))
-        .route("/assets/push.js", get(notify::script))
-        .route("/docs", get(public::docs))
-        .route("/connect", get(super::connectors::page))
-        .route("/api/v1/connectors", get(super::connectors::api))
-        .route("/privacy", get(public::privacy))
-        .route("/terms", get(public::terms))
-        .route("/support", get(public::support))
-        // What search engines and AI agents read (`discovery.rs`).
-        .route("/llms.txt", get(discovery::llms))
-        .route("/llms-full.txt", get(discovery::llms_full))
-        .route("/robots.txt", get(discovery::robots))
-        .route("/sitemap.xml", get(discovery::sitemap))
-        // A workflow's link (`workflow.rs`).
+        .route("/assets/hub.css", get(css))
+        // The phone control app's frame and home (`app/`).
+        .merge(super::app::routes())
+        .merge(super::one_user::routes(multi_tenant))
+        // Each domain's pages, from its own `web`.
+        .merge(crate::identity::web::routes())
+        .merge(crate::identity::connect::web::routes())
+        .merge(crate::agenthub::web::routes())
+        .merge(crate::machines::web::routes())
+        .merge(crate::catalog::web::routes())
+        .merge(crate::connections::web::routes())
+        .merge(crate::settings::web::routes())
+        .merge(crate::tenancy::web::routes())
+        .merge(crate::ops::web::routes())
+        .merge(crate::notify::web::routes())
+        .merge(crate::site::web::routes())
+        // The one-tap link that links an account to the site's network (`offers/web.rs`).
+        .merge(crate::offers::web::routes())
+        // A workflow's link (`workflows/web`).
         .route("/go/{token}", get(workflow::page))
         .route("/go/{token}/status", get(workflow::status))
         .route("/go/{token}/command", post(workflow::command))
         .route("/go/{token}/phone", post(workflow::phone))
         .route("/go/{token}/keep", post(workflow::keep))
         .route("/go/{token}/client", post(workflow::client))
-        .route("/assets/workflow.js", get(workflow::script))
-        // The one-tap link that links an account to the site's network (`offers.rs`).
-        .route("/offers/{token}", get(offers::show).post(offers::go))
-        .route("/assets/hub.css", get(css))
-        // The site's own files: its logo, icon, pictures and fonts.
-        .route("/assets/{file}", get(super::media::asset));
+        .route("/assets/workflow.js", get(workflow::script));
     if !hub_authorization {
         return router;
     }
-    router
-        .route("/claim", get(claim::page).post(claim::claim))
-        .route(
-            "/.well-known/oauth-authorization-server",
-            get(oauth::metadata).options(oauth::preflight),
-        )
-        .route(
-            "/oauth/register",
-            post(oauth::register).options(oauth::preflight),
-        )
-        .route(
-            "/oauth/authorize",
-            get(oauth::authorize).post(oauth::decide),
-        )
-        .route("/oauth/token", post(oauth::token).options(oauth::preflight))
-        .route(
-            "/oauth/revoke",
-            post(oauth::revoke).options(oauth::preflight),
-        )
-        .route(
-            "/oauth/device",
-            post(device::start).options(oauth::preflight),
-        )
-        .route("/device", get(device::page).post(device::decide))
+    router.merge(crate::identity::web::authorization_routes())
 }
 
 #[derive(Deserialize)]
-pub(super) struct LoginQuery {
-    pub(super) return_to: Option<String>,
+pub(crate) struct LoginQuery {
+    pub(crate) return_to: Option<String>,
     /// On a hosted hub's sign-in page: `up` shows Sign up.
     #[serde(default)]
-    pub(super) tab: Option<String>,
+    pub(crate) tab: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -153,7 +91,7 @@ struct CallbackQuery {
 
 /// Who the browser's session belongs to: a hub account's session, or (in Nomen mode) a
 /// session whose token is checked against Nomen like any bearer token.
-pub(super) enum Who {
+pub(crate) enum Who {
     Person(Subject),
     SignedOut,
     Unavailable,
@@ -161,7 +99,7 @@ pub(super) enum Who {
     NotSetUp,
 }
 
-pub(super) fn see_other(location: &str, cookies: &[String]) -> Response {
+pub(crate) fn see_other(location: &str, cookies: &[String]) -> Response {
     let mut response = StatusCode::SEE_OTHER.into_response();
     let headers = response.headers_mut();
     if let Ok(value) = HeaderValue::from_str(location) {
@@ -176,7 +114,7 @@ pub(super) fn see_other(location: &str, cookies: &[String]) -> Response {
     response
 }
 
-pub(super) fn not_set_up() -> Response {
+pub(crate) fn not_set_up() -> Response {
     pages::message(
         StatusCode::NOT_FOUND,
         "Browser sign-in is not set up",
@@ -185,7 +123,7 @@ pub(super) fn not_set_up() -> Response {
     )
 }
 
-pub(super) fn unavailable() -> Response {
+pub(crate) fn unavailable() -> Response {
     pages::message(
         StatusCode::SERVICE_UNAVAILABLE,
         "Sign-in is unavailable",
@@ -194,7 +132,7 @@ pub(super) fn unavailable() -> Response {
     )
 }
 
-pub(super) async fn who(state: &AppState, headers: &HeaderMap) -> Who {
+pub(crate) async fn who(state: &AppState, headers: &HeaderMap) -> Who {
     if let Some(hub) = &state.passkeys {
         return match hub.who(headers).await {
             Ok(Some(subject)) => Who::Person(subject),
@@ -209,7 +147,7 @@ pub(super) async fn who(state: &AppState, headers: &HeaderMap) -> Who {
 }
 
 /// Whether this request carries a live session, without asking any other service.
-pub(super) async fn signed_in(state: &AppState, headers: &HeaderMap) -> bool {
+pub(crate) async fn signed_in(state: &AppState, headers: &HeaderMap) -> bool {
     match (&state.passkeys, &state.web) {
         (Some(hub), _) => hub.signed_in(headers).await,
         (None, Some(web)) => web.signed_in(headers).await,
@@ -329,7 +267,11 @@ async fn login(
         return not_set_up();
     };
     let (login_state, url) = web.begin(query.return_to.as_deref().unwrap_or("/account"));
-    let cookie = web.cookie(web.login_cookie(), &login_state, super::LOGIN_TTL.as_secs());
+    let cookie = web.cookie(
+        web.login_cookie(),
+        &login_state,
+        crate::identity::web::nomen::LOGIN_TTL.as_secs(),
+    );
     see_other(&url, &[cookie])
 }
 
@@ -488,7 +430,7 @@ async fn account(State(state): State<AppState>, headers: HeaderMap) -> Response 
 
 async fn logout(State(state): State<AppState>, headers: HeaderMap) -> Response {
     // Another site cannot sign you out, here or in your browser.
-    if !super::approvals::same_origin(&headers, &state.hub.config.public_url) {
+    if !crate::agenthub::web::approvals::same_origin(&headers, &state.hub.config.public_url) {
         return pages::message(
             StatusCode::FORBIDDEN,
             "Sign out from this hub's own page",
@@ -621,7 +563,7 @@ async fn set_password(
     let Some(hub) = state.passkeys.clone() else {
         return not_set_up();
     };
-    if !super::approvals::same_origin(&headers, &state.hub.config.public_url) {
+    if !crate::agenthub::web::approvals::same_origin(&headers, &state.hub.config.public_url) {
         return pages::message(
             StatusCode::FORBIDDEN,
             "Not from this hub",

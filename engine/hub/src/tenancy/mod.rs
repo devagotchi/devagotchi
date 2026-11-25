@@ -18,7 +18,7 @@
 //!   invites.
 //! - The gate every MCP tool passes on a hosted hub: a waiting tenant is answered, a plan
 //!   caps what a tenant holds (`gate`, `machines`).
-//! - `/operator`: tenants, early access and plans (`operator`, `crate::web::operator`).
+//! - `/operator`: tenants, early access and plans (`operator`, `crate::tenancy::web::operator`).
 //!
 //! # Settings
 //!
@@ -35,6 +35,7 @@ pub mod gate;
 pub mod machines;
 pub mod operator;
 pub mod orgs;
+pub(crate) mod web;
 
 #[cfg(test)]
 pub(crate) mod tests;

@@ -125,7 +125,7 @@ pub struct Links {
     updates: Mutex<HashMap<String, Update>>,
     update_changed: tokio::sync::Notify,
     /// Each machine's last [`RECENT_JOBS`] operations routed through its link, newest first,
-    /// in memory only (the phone app's machine page, `web/app/machine.rs`).
+    /// in memory only (the phone app's machine page, `machines/web/machine.rs`).
     jobs: Mutex<HashMap<String, VecDeque<Job>>>,
     /// When each machine's link last went away, since this hub started, and which time
     /// that was (a number no other drop has).

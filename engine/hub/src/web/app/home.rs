@@ -31,13 +31,13 @@ pub async fn home(State(state): State<AppState>, headers: HeaderMap) -> Response
         Ok(subject) => subject,
         Err(response) => return response,
     };
-    let access_count = match super::access::attention(&state, &subject).await {
+    let access_count = match crate::machines::web::access::attention(&state, &subject).await {
         Ok(count) => count,
         Err(_) => return crate::web::routes::unavailable(),
     };
     let machines = state.hub.machine_status(&subject).await;
     let approvals = if state.hub.may_approve(&subject) {
-        match super::super::approvals::pending(&state, &subject).await {
+        match crate::agenthub::web::approvals::pending(&state, &subject).await {
             Ok(approvals) => approvals,
             Err(error) => {
                 eprintln!("devagotchi hub: home approvals: {error}");
@@ -113,12 +113,12 @@ pub async fn home(State(state): State<AppState>, headers: HeaderMap) -> Response
             .as_deref()
             .is_some_and(|u| u.starts_with("failed"))
     });
-    let me = super::me::identity(&state, &subject).await;
+    let me = crate::identity::web::me::identity(&state, &subject).await;
     let body = format!(
         "{}{}{}{}{}{}",
         hello(&me, needs.len(), trouble),
         review(approvals.len()),
-        super::access::attention_link(access_count),
+        crate::machines::web::access::attention_link(access_count),
         card("needs-you", &copy.needs_you, &needs, &copy.needs_you_empty),
         machines_card(&machines),
         boards_card(&boards),
@@ -164,7 +164,7 @@ pub async fn boards(State(state): State<AppState>, headers: HeaderMap) -> Respon
     } else {
         String::new()
     };
-    // The organisations a person's boards come from, and where they make one (`web/orgs.rs`);
+    // The organisations a person's boards come from, and where they make one (`tenancy/web/orgs.rs`);
     // a one-user hub has none to link to (`web/one_user`).
     let orgs = if state.hub.config.multi_tenant() && state.hub.boards.orgs().is_some() {
         format!(
@@ -283,7 +283,7 @@ async fn summaries(
 }
 
 /// A machine's status as the app says it.
-pub(super) fn status_word(status: &str) -> String {
+pub(crate) fn status_word(status: &str) -> String {
     let site = words();
     let copy = &site.messages.app;
     match status {

@@ -90,7 +90,7 @@ async fn a_terminal_signs_in_to_a_new_account_with_one_approve() {
         .http
         .post(format!("{}/oauth/token", hub.url))
         .form(&[
-            ("grant_type", crate::web::oauth::DEVICE_GRANT),
+            ("grant_type", crate::identity::web::oauth::DEVICE_GRANT),
             ("device_code", started["device_code"].as_str().unwrap()),
             ("client_id", "devagotchi-cli"),
         ])

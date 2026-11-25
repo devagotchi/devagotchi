@@ -11,6 +11,7 @@ use std::{sync::Arc, time::Duration};
 pub(crate) mod catalog;
 mod mcp;
 pub mod stored;
+pub(crate) mod web;
 
 use catalog::Service;
 use devagotchi_contracts::BridgeError;

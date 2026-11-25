@@ -23,6 +23,7 @@ mod notify;
 mod offers;
 mod ops;
 mod serve;
+mod settings;
 mod site;
 mod store;
 mod tenancy;
@@ -45,9 +46,9 @@ struct AppState {
     hub: Hub,
     issue_store: Arc<agenthub::issue_lifecycle::IssueLifecycleStore>,
     /// Browser sign-in through Nomen, when the config has a `web` section.
-    web: Option<Arc<web::WebLogin>>,
+    web: Option<Arc<identity::web::nomen::WebLogin>>,
     /// Browser sign-in with the hub's own accounts and passkeys (`auth.mode hub`).
-    passkeys: Option<Arc<web::HubSignIn>>,
+    passkeys: Option<Arc<identity::web::passkeys::HubSignIn>>,
 }
 
 /// The hub's command line: `serve …`, `enroll …`, `revoke …`, `devices …`, `board …`, or

@@ -1,7 +1,13 @@
-//! People's view of the hub in a browser: sign in, and see who you are signed in as and
-//! the machines you can reach, each online or offline. A hub in `auth.mode hub` signs
-//! people in itself with passkeys (`passkeys.rs`); in `auth.mode nomen` with a `web`
-//! section, through Nomen as below.
+//! The shell of the hub's pages in a browser: the router that merges each domain's pages
+//! (`routes.rs`; every domain keeps its own in its `web/`, such as `crate::identity::web`),
+//! the page kit (`pages`), the phone app's frame and home (`app/`), the shared scripts and
+//! styles (`assets/`, `style/`, `hub.css`), the bar every page wears and the checks every
+//! page shares (`from_this_hub`, `safe_return_to`).
+//!
+//! People sign in, and see who they are signed in as and the machines they can reach, each
+//! online or offline. A hub in `auth.mode hub` signs people in itself with passkeys
+//! (`crate::identity::web::passkeys`); in `auth.mode nomen` with a `web` section, through
+//! Nomen as below (`crate::identity::web::nomen`).
 //!
 //! Nomen sign-in is the OAuth 2.0 authorization code flow with PKCE (RFC 7636) against Nomen, as
 //! a public client: no secret ships with the hub for it. The access token Nomen returns is
@@ -9,12 +15,12 @@
 //! exact account ID), so a browser session is never weaker than an MCP call.
 //!
 //! - The browser holds only a random session id; the hub keeps that id's SHA-256 and,
-//!   sealed on disk, Nomen's tokens (`sessions.rs`), so a restart signs nobody out.
+//!   sealed on disk, Nomen's tokens (`crate::identity::web::sessions`), so a restart signs nobody out.
 //! - The hub asks for `offline_access`. With a refresh token from Nomen, the session lasts
 //!   up to 90 days and ends after 30 days unused. The hub renews the access token through
 //!   Nomen as it runs out, one refresh at a time, keeping the rotated refresh token.
 //!   Nomen refusing a refresh ends the session. Without a refresh token, a session never
-//!   outlives its access token or [`NO_REFRESH_MAX`].
+//!   outlives its access token or [`crate::identity::web::nomen::NO_REFRESH_MAX`].
 //! - Every page re-checks the access token (Nomen's answer is reused for up to a minute),
 //!   so an account disabled in Nomen loses its page within a minute.
 //! - Signing out removes the session and revokes its refresh token at Nomen.
@@ -24,108 +30,21 @@
 //!   (plain names without `Secure` only when the hub runs on loopback http, for tests).
 //! - Redirects are not followed when talking to Nomen.
 
-mod analytics;
-#[cfg(test)]
-mod analytics_tests;
-mod app;
-mod approvals;
-mod audit_live;
-mod claim;
-#[cfg(test)]
-mod claim_tests;
-mod connectors;
-pub(crate) mod counted;
-mod device;
-mod discovery;
-#[cfg(test)]
-mod discovery_tests;
-mod email;
-mod hosted;
-mod hub_audit;
-mod hub_settings;
-mod hub_settings_live;
-#[cfg(test)]
-mod hub_settings_live_tests;
-mod hub_settings_mail;
-#[cfg(test)]
-mod hub_settings_mail_tests;
-mod hub_settings_owner;
-mod hub_settings_sinks;
-#[cfg(test)]
-mod hub_settings_sinks_tests;
-#[cfg(test)]
-mod hub_settings_tests;
-mod landing;
-#[cfg(test)]
-mod landing_tests;
-mod machines;
-mod mail_cell;
-mod media;
-#[cfg(test)]
-mod media_tests;
-#[cfg(test)]
-mod naming_tests;
-mod nomen_login;
-mod notify;
-pub mod oauth;
-mod offers;
-mod operator;
-#[cfg(test)]
-pub(crate) mod operator_tests;
-mod provider_apply;
-#[cfg(test)]
-mod shippin_tests;
-mod sign_in_cards;
+pub(crate) mod app;
+mod one_user;
+pub(crate) mod pages;
+pub(crate) mod routes;
 pub(crate) mod style;
 #[cfg(test)]
-mod walkthrough_tests;
-#[cfg(test)]
-pub(crate) use operator_tests as operator_tests_support;
-mod one_user;
-mod orgs;
-mod pages;
-#[cfg(test)]
-mod passkey_tests;
-mod passkeys;
-mod people;
-mod providers;
-mod public;
-mod routes;
-mod session;
-mod sessions;
-mod sign_in;
-#[cfg(test)]
-mod site_tests;
-#[cfg(test)]
-mod tests;
-mod workflow;
-
-use std::{
-    collections::HashMap,
-    sync::Mutex,
-    time::{Duration, Instant},
-};
+pub(crate) mod tests;
 
 use axum::http::{HeaderMap, header};
-use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
-use devagotchi_contracts::{BridgeError, BridgeResult};
-use serde::Deserialize;
-use sha2::{Digest, Sha256};
 
 /// Unix seconds as `YYYY-MM-DD HH:MM UTC`, as the hub's pages and log show times.
 pub(crate) fn utc(secs: u64) -> String {
     pages::utc(secs)
 }
 
-pub use email::Mailer;
-pub(crate) use email::announce_admissions;
-pub use hub_settings_mail::apply_saved as apply_saved_mail;
-pub use hub_settings_sinks::start_saved as start_saved_sinks;
-pub(crate) use landing::render as landing_for;
-use nomen_login::LOGIN_TTL;
-pub use nomen_login::{Exchange, SessionToken, WebLogin};
-pub use passkeys::HubSignIn;
-pub use providers::Providers;
 pub use routes::router;
 
 /// The person signed in on this browser, for routes outside the web pages (`orgs::api`).
@@ -141,7 +60,7 @@ pub(crate) async fn session_subject(
 
 /// A browser change must name this hub's exact origin; fetch metadata cannot override it.
 pub(crate) fn from_this_hub(headers: &axum::http::HeaderMap, public_url: &str) -> bool {
-    let origin = passkeys::origin_of(public_url);
+    let origin = crate::identity::web::passkeys::origin_of(public_url);
     origin.is_some()
         && headers.get(header::ORIGIN).and_then(|v| v.to_str().ok()) == origin.as_deref()
         && headers
@@ -190,7 +109,9 @@ pub async fn bar(
     let named = path != "/app/offline" && path != "/app/attention";
     let me = if framed && named && signed_in.is_some() {
         match routes::who(&state, request.headers()).await {
-            routes::Who::Person(subject) => Some(app::me::identity(&state, &subject).await),
+            routes::Who::Person(subject) => {
+                Some(crate::identity::web::me::identity(&state, &subject).await)
+            }
             _ => None,
         }
     } else {
@@ -230,13 +151,13 @@ pub fn safe_return_to(path: &str) -> &str {
     if ok { path } else { "/account" }
 }
 
-fn cookie_value(headers: &HeaderMap, name: &str) -> Option<String> {
+pub(crate) fn cookie_value(headers: &HeaderMap, name: &str) -> Option<String> {
     cookie_value_up_to(headers, name, 128)
 }
 
 /// A cookie's value when it is at most `max` bytes (a sealed sign-in's state is longer
 /// than a session id).
-fn cookie_value_up_to(headers: &HeaderMap, name: &str, max: usize) -> Option<String> {
+pub(crate) fn cookie_value_up_to(headers: &HeaderMap, name: &str, max: usize) -> Option<String> {
     headers
         .get_all(header::COOKIE)
         .iter()
@@ -249,7 +170,7 @@ fn cookie_value_up_to(headers: &HeaderMap, name: &str, max: usize) -> Option<Str
 }
 
 /// Percent-encode a query value (RFC 3986 unreserved characters pass through).
-fn encode(value: &str) -> String {
+pub(crate) fn encode(value: &str) -> String {
     let mut out = String::with_capacity(value.len());
     for byte in value.bytes() {
         if byte.is_ascii_alphanumeric() || b"-_.~".contains(&byte) {

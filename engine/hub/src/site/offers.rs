@@ -39,7 +39,7 @@ pub struct Offers {
     pub question: String,
     /// What the MCP instructions add while offers are on: when to offer, and how.
     pub instructions: String,
-    /// The page the one-tap link opens (`web/offers.rs`).
+    /// The page the one-tap link opens (`offers/web.rs`).
     pub link: LinkPage,
     pub items: Vec<Offering>,
 }

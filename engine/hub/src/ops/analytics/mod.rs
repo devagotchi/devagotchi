@@ -4,7 +4,7 @@
 //! (`HubConfig::counts_visits`); its operator page is the one place the numbers are read.
 //!
 //! - **Visits** (`visit.rs`): each `GET` of a public page that the hub answered `200`, as
-//!   the web router serves it (`web/counted.rs`). Kept: the UTC day and hour, the path, the
+//!   the web router serves it (`ops/web/counted.rs`). Kept: the UTC day and hour, the path, the
 //!   link's `utm_source`, `utm_medium` and `utm_campaign`, the referring site's host (never
 //!   this hub's own), the device class, and the visitor: an HMAC of the client's address
 //!   (`tenancy.trusted_proxies` decides which) and User-Agent under a key that lives only in

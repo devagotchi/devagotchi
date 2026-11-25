@@ -11,7 +11,14 @@ use std::{
 };
 
 /// Folders under the workspace root that hold the workspace's Rust.
-pub const ROOTS: [&str; 6] = ["platform", "engine", "interfaces", "runtime", "agenthub", "apps"];
+pub const ROOTS: [&str; 6] = [
+    "platform",
+    "engine",
+    "interfaces",
+    "runtime",
+    "agenthub",
+    "apps",
+];
 /// Folder names never walked: build output and other people's code.
 pub const SKIPPED: [&str; 2] = ["target", "node_modules"];
 

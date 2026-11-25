@@ -8,8 +8,8 @@ use std::{net::SocketAddr, sync::Arc};
 use axum::http::header;
 use serde_json::{Value, json};
 
-use crate::identity::{self, accounts::oauth::s256, auth::Verifier};
-use crate::{AppState, agenthub, config::HubConfig, machines, mcp::Hub, ops, serve, store, web};
+use crate::identity::{self, accounts::oauth::s256, auth::Verifier, web};
+use crate::{AppState, agenthub, config::HubConfig, machines, mcp::Hub, ops, serve, store};
 
 pub(crate) struct Hosted {
     pub(crate) url: String,
@@ -87,7 +87,7 @@ pub(crate) async fn hosted_with_ingress(
     // As `run` wires them, with what the owner saved on /admin over the file.
     let store = store::open(&store_url).await.unwrap();
     let accounts = Arc::new(identity::configured_accounts(store, &config).await.unwrap());
-    ops::hub_settings::apply_saved(&config, &accounts)
+    crate::settings::store::apply_saved(&config, &accounts)
         .await
         .unwrap();
     // As `run` wires it: a hosted hub counts unless its config says not to.
@@ -152,8 +152,8 @@ pub(crate) async fn hosted_with_ingress(
         },
         issue_store: Arc::new(ingress),
         web: None,
-        passkeys: web::HubSignIn::new(config.clone(), accounts.clone())
-            .map(|hub| hub.with_providers(web::Providers::from_config(&config).unwrap()))
+        passkeys: web::passkeys::HubSignIn::new(config.clone(), accounts.clone())
+            .map(|hub| hub.with_providers(web::providers::Providers::from_config(&config).unwrap()))
             .map(Arc::new),
     };
     let hub = state.hub.clone();
