@@ -177,13 +177,19 @@ impl Scope<'_> {
             }
             current = current.child(name).map_err(|e| io_error(path, e))?;
         }
-        self.check()?;
+        // The directories exist now: no authority check after them.
         Ok((current.path, !missing.is_empty()))
     }
 
     pub(crate) fn mkdir(&self, input: DirectoryInput) -> BridgeResult<FileInfo> {
         let (path, made) = self.make_dirs(&input.path)?;
-        let mut info = self.describe(&path)?;
+        // Once something was made, describing it never refuses; when nothing was, the
+        // caller's authority still applies (a refusal then is true: nothing changed).
+        let mut info = if made {
+            self.committed().describe(&path)?
+        } else {
+            self.describe(&path)?
+        };
         info.made = Some(made);
         Ok(info)
     }
@@ -325,7 +331,7 @@ impl Scope<'_> {
                         .handle
                         .remove_file(&source_entry.name)
                         .map_err(|e| io_error(&shown, e))?;
-                    let mut info = self.describe(&destination)?;
+                    let mut info = self.committed().describe(&destination)?;
                     info.replaced = Some(false);
                     return Ok(info);
                 } else if existing.is_dir() {
@@ -369,7 +375,7 @@ impl Scope<'_> {
                 io_error(&shown, error)
             }
         })?;
-        let mut info = self.describe(&destination)?;
+        let mut info = self.committed().describe(&destination)?;
         info.replaced = Some(replaced);
         Ok(info)
     }

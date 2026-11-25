@@ -285,10 +285,20 @@ impl Journal {
         Ok(())
     }
 
+    /// Room for one more admission. A `pending` row is a mutation that may still be doing
+    /// its IO: it is retired only once the journal's opening marked it abandoned
+    /// (`expires_at` 0), never because its authority's time ran out mid-change. Retiring a
+    /// live one would leave its `finish_file` with no row, a fault that stops the broker.
     pub(crate) fn retire_files(&mut self, keep: usize, now: i64) -> BridgeResult<()> {
-        let active: usize = self.connection.query_row(
-            "SELECT COUNT(*) FROM file_admissions WHERE state IN ('reading','pending') AND expires_at>?1",
-            [now], |row| row.get(0)).map_err(persistence)?;
+        let active: usize = self
+            .connection
+            .query_row(
+                "SELECT COUNT(*) FROM file_admissions
+            WHERE (state='reading' AND expires_at>?1) OR (state='pending' AND expires_at<>0)",
+                [now],
+                |row| row.get(0),
+            )
+            .map_err(persistence)?;
         if active > keep {
             return Err(BridgeError::new(
                 "file_capacity",
@@ -300,7 +310,8 @@ impl Journal {
             .execute(
                 "UPDATE file_admissions SET state='retired',call_json=NULL,outcome_json=NULL
             WHERE operation_key IN (SELECT operation_key FROM file_admissions
-                WHERE state='finished' OR (state IN ('reading','pending') AND expires_at<=?1)
+                WHERE state='finished' OR (state='reading' AND expires_at<=?1)
+                    OR (state='pending' AND expires_at=0)
                 ORDER BY rowid DESC LIMIT -1 OFFSET ?2)",
                 params![now, keep],
             )
@@ -308,3 +319,6 @@ impl Journal {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests;

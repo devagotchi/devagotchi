@@ -116,7 +116,13 @@ fn account_mutations_need_explicit_content_or_absence_guards() {
         serde_json::from_value(json!({"source":"/a","destination":"/b"})).unwrap();
     assert!(FileOperation::Move(moved.clone()).require_guard().is_err());
     moved.expected_sha256 = Some("b".repeat(64));
-    FileOperation::Move(moved).require_guard().unwrap();
+    FileOperation::Move(moved.clone()).require_guard().unwrap();
+    // Overwriting would replace a destination nobody guarded (review of #291, finding 4).
+    moved.overwrite = true;
+    assert_eq!(
+        FileOperation::Move(moved).require_guard().unwrap_err().code,
+        "file_guard_required"
+    );
     assert!(
         FileOperation::Delete(FileDeleteInput {
             path: "/a".into(),

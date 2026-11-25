@@ -283,8 +283,12 @@ impl Broker {
                     .journal
                     .note_file_error(&authority.binding, code)?;
             }
-            // Never disclose bytes or a receipt through an authority that ended during IO.
-            permit(None)?;
+            // Never disclose read bytes through an authority that ended during IO. A
+            // mutation's outcome is already journaled and holds no file content: refusing
+            // its reply now would report a change that happened as one that did not.
+            if !mutation {
+                permit(None)?;
+            }
             Ok(RemoteReply::FileExecuted {
                 operation_id: id,
                 outcome,

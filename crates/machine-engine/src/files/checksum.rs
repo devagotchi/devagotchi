@@ -16,6 +16,18 @@ pub(super) fn bytes(bytes: &[u8]) -> String {
 }
 
 pub(super) fn file(scope: &Scope<'_>, file: &mut File, shown: &str) -> BridgeResult<String> {
+    let (digest, _) = hasher(scope, file, shown)?;
+    Ok(hex::encode(digest.finalize()))
+}
+
+/// The running digest of a held regular file's whole content and its length, for a caller
+/// that goes on to extend it (an append's receipt adds the appended bytes after its commit
+/// point, without reading the file again).
+pub(super) fn hasher(
+    scope: &Scope<'_>,
+    file: &mut File,
+    shown: &str,
+) -> BridgeResult<(Sha256, u64)> {
     let before = file.metadata().map_err(|e| io_error(shown, e))?;
     if !before.is_file() {
         return Err(BridgeError::new(
@@ -55,7 +67,12 @@ pub(super) fn file(scope: &Scope<'_>, file: &mut File, shown: &str) -> BridgeRes
         return Err(changed());
     }
     scope.check()?;
-    Ok(hex::encode(digest.finalize()))
+    Ok((digest, count))
+}
+
+/// A finished digest as the receipts carry it.
+pub(super) fn finish(digest: Sha256) -> String {
+    hex::encode(digest.finalize())
 }
 
 pub(super) fn changed() -> BridgeError {

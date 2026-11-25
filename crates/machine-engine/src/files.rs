@@ -95,6 +95,17 @@ pub(crate) fn text_prefix(bytes: &[u8]) -> Option<usize> {
 }
 
 impl Scope<'_> {
+    /// This scope without the caller's authority, for what runs after a change's commit
+    /// point (a rename, a remove, a made directory): describing what now exists must not
+    /// turn a change that happened into a refusal. Never used before the commit point.
+    fn committed(&self) -> Scope<'_> {
+        Scope {
+            workspace: self.workspace,
+            policy: self.policy,
+            authority: None,
+        }
+    }
+
     pub(super) fn check(&self) -> BridgeResult<()> {
         match self.authority {
             Some(check) => check(None),

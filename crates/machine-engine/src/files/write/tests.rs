@@ -46,6 +46,59 @@ fn writes_create_overwrite_and_append_with_a_checksum() {
     assert_eq!(fs::read_dir(&workspace).unwrap().count(), 1);
 }
 
+/// The caller's authority may end at any check a write makes. Whichever it is, the answer
+/// tells the truth about the file: a refusal leaves it as it was, and a receipt matches the
+/// bytes on disk. Past the commit point nothing refuses (review of #291, finding 1).
+#[test]
+fn an_authority_ending_at_any_check_never_misreports_the_write() {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    for mode in [WriteMode::Overwrite, WriteMode::Append, WriteMode::Create] {
+        let run = |refuse_from: usize| {
+            let directory = tempfile::tempdir().unwrap();
+            let workspace = dunce::canonicalize(directory.path()).unwrap();
+            let file = workspace.join("a.txt");
+            if mode != WriteMode::Create {
+                fs::write(&file, "old\n").unwrap();
+            }
+            let before = fs::read(&file).ok();
+            let calls = AtomicUsize::new(0);
+            let authority = |_: Option<&Path>| {
+                if calls.fetch_add(1, Ordering::SeqCst) >= refuse_from {
+                    Err(BridgeError::new("authority_expired", "ended"))
+                } else {
+                    Ok(())
+                }
+            };
+            let scope = Scope {
+                workspace: &workspace,
+                policy: ExecPolicy::Account,
+                authority: Some(&authority),
+            };
+            let answer = scope.write(input(&file, "new\n", mode));
+            let after = fs::read(&file).ok();
+            match answer {
+                Err(error) => assert_eq!(
+                    after, before,
+                    "{mode:?}: refused at check {refuse_from} ({}) but the file changed",
+                    error.code
+                ),
+                Ok(written) => {
+                    let after = after.expect("a reported write leaves a file");
+                    assert_ne!(Some(&after), before.as_ref(), "{mode:?}: nothing changed");
+                    assert_eq!(written.sha256, checksum::bytes(&after), "{mode:?}");
+                    assert_eq!(written.size, after.len() as u64, "{mode:?}");
+                }
+            }
+            calls.into_inner()
+        };
+        let checks = run(usize::MAX);
+        assert!(checks > 0, "{mode:?} makes authority checks");
+        for refuse_from in 0..checks {
+            run(refuse_from);
+        }
+    }
+}
+
 #[test]
 fn edits_replace_exact_text_only_at_the_expected_count() {
     let directory = tempfile::tempdir().unwrap();

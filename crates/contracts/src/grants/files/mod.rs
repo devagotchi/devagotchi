@@ -89,7 +89,9 @@ impl FileOperation {
                 Some(sha) => whole_sha(sha),
                 None => v.mode == WriteMode::Create,
             },
-            Self::Move(v) => v.expected_sha256.as_deref().is_some_and(whole_sha),
+            // A move that overwrites would replace a destination nobody guarded: under an
+            // account grant, delete the destination with its own sha256 first, then move.
+            Self::Move(v) => !v.overwrite && v.expected_sha256.as_deref().is_some_and(whole_sha),
             Self::Delete(v) => whole_sha(&v.expected_sha256),
             Self::Edit(v) => !v.old_text.is_empty() && v.expected_replacements > 0,
             Self::Read(_) | Self::List(_) | Self::Info(_) | Self::Search(_) | Self::Mkdir(_) => {
@@ -99,7 +101,7 @@ impl FileOperation {
         if !guarded {
             return Err(BridgeError::new(
                 "file_guard_required",
-                "get_file_info with sha256=true supplies a whole-file guard; create uses mode=create, and an edit needs nonempty exact text and a positive replacement count",
+                "get_file_info with sha256=true supplies a whole-file guard; create uses mode=create, an edit needs nonempty exact text and a positive replacement count, and a move never overwrites (delete the destination with its sha256 first)",
             ));
         }
         Ok(())

@@ -5,7 +5,7 @@
 //!
 //! # Mutation ordering
 //!
-//! `write_file`, `edit_file`, `create_directory` and `move_file` take one gate per broker
+//! `write_file`, `edit_file`, `create_directory`, `move_file` and `delete_file` take one gate per broker
 //! ([`MutationGate`]) for the whole of their work: path resolution, the preconditions
 //! (`expected_sha256`, `mode: create`, the count of `old_text`, an existing move destination),
 //! the change and the answer. Two writes guarded by the same SHA-256 cannot both succeed: the
@@ -48,9 +48,13 @@
 //!
 //! **Limits.** This orders file tools within one broker. It is not a filesystem-wide
 //! compare-and-swap: external editors, commands the broker runs and a second broker do not take
-//! the gate and can still race. Reads can see a move or append half way. There is no journal,
-//! retry identity or rollback for file changes; whole-file replacement is still by rename;
-//! shutdown and persistence faults treat file tools as before.
+//! the gate and can still race. Reads can see a move or append half way. A file change made
+//! through a hub's grant has a retry identity and a receipt in the machine journal
+//! (`journal/files`), so a retry returns the first answer instead of changing the file again;
+//! a local change through `devagotchi mcp` has neither. There is no rollback; whole-file
+//! replacement is by rename, and a create where the filesystem has no hard links writes the
+//! new file in place. Past a change's commit point nothing refuses: its receipt comes from what
+//! is already known (`files/write`, `Scope::committed`).
 
 use super::*;
 use crate::files::Scope;

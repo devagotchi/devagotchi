@@ -62,20 +62,21 @@ fn replace(
         scope.check()?;
         entry.parent.verify().map_err(|e| io_error(&shown, e))?;
         if create {
-            entry
+            match entry
                 .parent
                 .handle
                 .hard_link(&temporary, &entry.parent.handle, &entry.name)
-                .map_err(|e| {
-                    if e.kind() == std::io::ErrorKind::AlreadyExists {
-                        BridgeError::new(
-                            "already_exists",
-                            "destination appeared before create; it was not replaced",
-                        )
-                    } else {
-                        io_error(&shown, e)
-                    }
-                })?;
+            {
+                Ok(()) => {}
+                Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => {
+                    return Err(appeared());
+                }
+                // FAT32, exFAT, some SMB and FUSE mounts and Android storage have no hard
+                // links: create the file itself, exclusively, so an existing one is still
+                // never replaced. A reader there can see it before its last byte lands.
+                Err(e) if links_unsupported(&e) => create_exclusive(entry, bytes, &shown)?,
+                Err(e) => return Err(io_error(&shown, e)),
+            }
             entry
                 .parent
                 .handle
@@ -95,6 +96,49 @@ fn replace(
     }
     written?;
     Ok(file)
+}
+
+fn appeared() -> BridgeError {
+    BridgeError::new(
+        "already_exists",
+        "destination appeared before create; it was not replaced",
+    )
+}
+
+/// The OS said this filesystem makes no hard links (rather than that the name exists).
+fn links_unsupported(error: &std::io::Error) -> bool {
+    // Linux: EPERM, EOPNOTSUPP. Windows: ERROR_INVALID_FUNCTION, ERROR_NOT_SUPPORTED.
+    #[cfg(unix)]
+    const CODES: [i32; 2] = [1, 95];
+    #[cfg(windows)]
+    const CODES: [i32; 2] = [1, 50];
+    error.kind() == std::io::ErrorKind::Unsupported
+        || error
+            .raw_os_error()
+            .is_some_and(|code| CODES.contains(&code))
+}
+
+/// Create for a filesystem with no hard links: the target opened with `create_new`, so a
+/// file that exists or appears is refused, never replaced; a failed write removes it.
+fn create_exclusive(entry: &checked::Entry, bytes: &[u8], shown: &str) -> BridgeResult<()> {
+    let mut file = entry
+        .parent
+        .file(&entry.name, OpenOptions::new().write(true).create_new(true))
+        .map_err(|e| {
+            if e.kind() == std::io::ErrorKind::AlreadyExists {
+                appeared()
+            } else {
+                io_error(shown, e)
+            }
+        })?;
+    let written = file
+        .write_all(bytes)
+        .and_then(|()| file.sync_all())
+        .map_err(|e| io_error(shown, e));
+    if written.is_err() {
+        let _ = entry.parent.handle.remove_file(&entry.name);
+    }
+    written
 }
 
 impl Scope<'_> {
@@ -194,9 +238,13 @@ impl Scope<'_> {
         }
         let entry = checked::Entry::at(&target).map_err(|e| io_error(&shown, e))?;
         self.check()?;
-        let mut file = match input.mode {
+        // Past the commit point (the rename, the link or the append) nothing may fail the
+        // call: the receipt comes from what is already known, never from another read under
+        // the caller's authority, so a change that happened is never reported as not made.
+        let (digest, size) = match input.mode {
             WriteMode::Overwrite | WriteMode::Create => {
-                replace(self, &entry, &bytes, input.mode == WriteMode::Create)?
+                replace(self, &entry, &bytes, input.mode == WriteMode::Create)?;
+                (checksum::bytes(&bytes), bytes.len() as u64)
             }
             WriteMode::Append => {
                 let mut file = entry
@@ -206,14 +254,17 @@ impl Scope<'_> {
                         OpenOptions::new().read(true).append(true).create(true),
                     )
                     .map_err(|e| io_error(&shown, e))?;
+                // The content so far, hashed before the commit point: a refusal here changes
+                // nothing. Another process appending in between shows up as
+                // `changed_since_read` on the next guarded write, which is the file's truth.
+                let (mut digest, before) = checksum::hasher(self, &mut file, &shown)?;
                 self.check()?;
                 file.write_all(&bytes).map_err(|e| io_error(&shown, e))?;
                 file.sync_all().map_err(|e| io_error(&shown, e))?;
-                file
+                sha2::Digest::update(&mut digest, &bytes);
+                (checksum::finish(digest), before + bytes.len() as u64)
             }
         };
-        let digest = checksum::file(self, &mut file, &shown)?;
-        let size = file.metadata().map_err(|e| io_error(&shown, e))?.len();
         Ok(FileWritten {
             path: shown,
             size,
