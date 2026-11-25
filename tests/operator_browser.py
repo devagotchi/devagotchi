@@ -180,7 +180,7 @@ class Person:
 
 def site(work: Path) -> Path:
     """The built-in site with early access on and two plans."""
-    value = json.loads((ROOT / "crates/hub/site/default/site.json").read_text())
+    value = json.loads((ROOT / "engine/hub/site/default/site.json").read_text())
     value["early_access"] = {"mode": "early_access"}
     value["plans"] = [
         {"id": "free", "name": "Free", "price": "Free", "default": True,

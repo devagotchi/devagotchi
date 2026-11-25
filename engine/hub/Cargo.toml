@@ -1,0 +1,75 @@
+[package]
+name = "devagotchi-hub"
+description = "The bastion: authenticates every AI through the identity provider and routes typed operations to the broker that owns the target machine; it never admits a job itself"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[lib]
+name = "devagotchi_hub"
+path = "src/lib.rs"
+
+[dependencies]
+devagotchi-contracts = { workspace = true }
+devagotchi-connectors = { workspace = true }
+devagotchi-ipc = { workspace = true }
+# The lexicon and the dictionary it hosts (`engine/kernel`, `src/kernel/`).
+devagotchi-kernel = { workspace = true }
+# The shared database (`platform/store`) and AgentHub, the board (`agenthub`).
+devagotchi-store = { workspace = true }
+devagotchi-agenthub = { workspace = true }
+# The tool surface shared with the local adapter (`run`'s composition); no network in it.
+devagotchi-mcp = { path = "../../interfaces/mcp" }
+rmcp = { workspace = true, features = ["transport-streamable-http-server"] }
+schemars = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true, features = ["fs", "io-util"] }
+sqlx = { workspace = true }
+percent-encoding = "2"
+sha2 = { workspace = true }
+hex = { workspace = true }
+axum = { version = "0.8", default-features = false, features = ["form", "http1", "json", "query", "tokio", "ws"] }
+# aws_lc_rs: the signature backend. Without one, jsonwebtoken 10 panics on the first real token.
+jsonwebtoken = { version = "12", features = ["aws_lc_rs"] }
+# Web Push (RFC 8291 encryption, RFC 8292 VAPID): the same aws-lc-rs jsonwebtoken already uses.
+aws-lc-rs = "1"
+hmac = "0.13"
+form_urlencoded = "1"
+http = "1"
+tower-service = "0.3"
+reqwest = { version = "0.13", default-features = false, features = ["rustls", "json", "form"] }
+# The email sign-in link's SMTP client (`notify/mail.rs`): the same rustls, aws-lc-rs and platform
+# verifier reqwest already brings, so no new TLS stack.
+rustls = { version = "0.23", default-features = false, features = ["aws_lc_rs", "std", "tls12"] }
+tokio-rustls = { version = "0.26", default-features = false }
+rustls-platform-verifier = "0.7"
+# The machine link: verify device keys, mint nonces and enrollment codes.
+ed25519-dalek = { version = "2", default-features = false, features = ["std"] }
+getrandom = "0.4"
+# Browser sign-in: PKCE challenge, state and session ids are base64url.
+base64 = { workspace = true }
+futures-util = { version = "0.3", default-features = false, features = ["std", "sink"] }
+# A workflow's link as a QR code on its page (`web/workflow.rs`), drawn as inline SVG: pure
+# Rust, no image crates, nothing at runtime but the link it encodes.
+qrcode = { version = "0.15", default-features = false, features = ["svg"] }
+# Password sign-in (`identity/accounts/passwords/mod.rs`): argon2id, RustCrypto. The salt comes from the
+# hub's own random bytes, so no `rand` feature.
+argon2 = { version = "0.6", default-features = false, features = ["alloc", "password-hash"] }
+jsonschema = { version = "0.61.2", default-features = false }
+
+[dev-dependencies]
+devagotchi-store = { workspace = true, features = ["testing"] }
+tempfile = { workspace = true }
+# Tests mint a fresh RSA key per run and stand up a fake Nomen.
+aws-lc-rs = "1"
+axum = { version = "0.8", default-features = false, features = ["form"] }
+# The link socket test plays a machine against the real `/link` route (`machines/link/tests/socket.rs`),
+# with the client the link itself uses.
+tokio-tungstenite = { version = "0.30", default-features = false, features = ["connect"] }

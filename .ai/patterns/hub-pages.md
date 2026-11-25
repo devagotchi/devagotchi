@@ -1,7 +1,7 @@
 # Pattern: a hub page and its form
 
 This is how a page of the hub's web UI is routed, guarded, drawn, worded and tested. It covers
-`crates/hub/src/web`: the phone app (`app/`), `/admin` (`hub_settings*`), sign-in, approvals,
+`engine/hub/src/web`: the phone app (`app/`), `/admin` (`hub_settings*`), sign-in, approvals,
 machines, the landing page, organisations and the operator page. Follow it for every new page
 or form, and for every change to one.
 
@@ -11,9 +11,9 @@ it names it (for example [G4](../patterns/README.md)) instead of repeating it.
 
 ## Exemplar
 
-`crates/hub/src/web/app/machine.rs`: the page `page` and its *Update now* POST `update`. Its
+`engine/hub/src/web/app/machine.rs`: the page `page` and its *Update now* POST `update`. Its
 test is `a_machines_page_shows_its_state_and_jobs_and_updates_from_here_only` in
-`crates/hub/src/web/app/tests.rs:362-488`.
+`engine/hub/src/web/app/tests.rs:362-488`.
 
 The page (`page`, `machine.rs:32-144`):
 - takes the person through the shared guard, with the return path percent-encoded (38-42);
@@ -42,7 +42,7 @@ Supporting exemplars:
 - `web/app/mod.rs:65-81` (`person`): the page guard.
 - `web/orgs.rs:75-90` (`changer`): a change guard (origin, person, waiting).
 - `web/pages/head.rs` (`render`): the one render path.
-- `crates/hub/src/tenancy/orgs/api/mod.rs` (`bearer_or_session`): an origin check run as a layer.
+- `engine/hub/src/tenancy/orgs/api/mod.rs` (`bearer_or_session`): an origin check run as a layer.
 - `web/notify.rs:85-90`: every `Who` arm matched for a JSON endpoint (401, 404, 503).
 
 ## The shape
@@ -80,7 +80,7 @@ pub async fn act(State(state): State<AppState>, headers: HeaderMap,
 `change` is the area's one guard for a change. It runs, in order:
 1. **Who** (`app::person`). Signed out goes to `/auth/login?return_to=<here>`. A hub with no
    sign-in is the not-set-up 404. The store being unavailable is a 503 ([G4](../patterns/README.md)).
-2. **Let in**: `Hub::waiting_refusal`, for the changes `crates/hub/src/tenancy/gate.rs:4-6`
+2. **Let in**: `Hub::waiting_refusal`, for the changes `engine/hub/src/tenancy/gate.rs:4-6`
    names (MCP tools, adding or enrolling a machine, deciding on a board), unless the domain
    method already refuses them (`Hub::add_own_machine`).
 
@@ -93,10 +93,10 @@ area needs next.
 1. **A module owns its routes.**
    - A page module has `fn routes() -> Router<AppState>` that registers only its own handlers.
    - `web/routes.rs` merges these routers and keeps only the shell's routes.
-   - `with_state` is called once, in `crates/hub/src/serve/mod.rs`.
+   - `with_state` is called once, in `engine/hub/src/serve/mod.rs`.
    - A mode that hides an area decides whether its router is merged, in one place
      (`web/one_user/mod.rs`, `orgs`), not in each handler.
-   - Exemplars: `web/app/mod.rs:30-63`, `crates/hub/src/machines/routes.rs:17-21`.
+   - Exemplars: `web/app/mod.rs:30-63`, `engine/hub/src/machines/routes.rs:17-21`.
    - *Check:* every `.route(` in `routes.rs` names a handler of `routes.rs`, and no `routes()`
      names a sibling module's handler.
 
@@ -162,13 +162,13 @@ area needs next.
 7. **Every word is the site's.**
    - Titles, labels, buttons and refusals come from `pages::site().messages.<section>`, and
      values are filled through `Ctx`.
-   - A section's default words live in `crates/hub/site/default/content/messages.json`. Its
-     struct in `crates/hub/src/site/model.rs` has no Rust `Default` and no `#[serde(default)]`,
+   - A section's default words live in `engine/hub/site/default/content/messages.json`. Its
+     struct in `engine/hub/src/site/model.rs` has no Rust `Default` and no `#[serde(default)]`,
      on the struct or on any field. `AppCopy` is the model for this, except its `delegate`
      field (see the known violations). Closed inputs follow [G2](../patterns/README.md).
-   - A site's JSON merges over the built-in one (`crates/hub/src/site.rs`, `merge_json`), so
+   - A site's JSON merges over the built-in one (`engine/hub/src/site.rs`, `merge_json`), so
      a site needs no Rust defaults.
-   - No brand appears in the code (`crates/hub/src/site/brand_tests.rs`).
+   - No brand appears in the code (`engine/hub/src/site/brand_tests.rs`).
 
 8. **The phone frame is one thing.**
    - A phone page renders with `pages::app_page`, or with `pages::app` when it turns push on,
@@ -192,7 +192,7 @@ area needs next.
    - A GET never changes what a person asked for. `SameSite=Lax` does not stop a cross-site
      GET (OWASP). The one exception is a workflow's link: `GET /go/<token>` and
      `/go/<token>/status` record the steps the hub already sees done, and complete the
-     workflow when all are (`Hub::look_at_workflow`, `crates/hub/src/workflows/mod.rs`). That
+     workflow when all are (`Hub::look_at_workflow`, `engine/hub/src/workflows/mod.rs`). That
      write only records what already happened, the token is the credential, and a repeat
      changes nothing. The header of `web/workflow.rs` says such a GET writes nothing, which is
      not true (G11).
@@ -204,7 +204,7 @@ area needs next.
 - **Tests:** as [G10](../patterns/README.md) says. The `*_tests.rs` files already in `web/`
   move once, with S8, and not before (C15 in the rewrite plan). Do not add new ones.
 - **Assets:** scripts are `web/assets/<name>.js`, compiled in and served from this origin. CSS
-  is `web/hub.css` and `web/landing.css` (`crates/hub/src/site/style.rs`). Copy is
+  is `web/hub.css` and `web/landing.css` (`engine/hub/src/site/style.rs`). Copy is
   `messages.json` plus its struct in `site/model.rs`.
 - **After the S8 ruling** ([structure-cleanup S8](../dev/plans/structure-cleanup.md)): a
   domain's pages and their tests move to `<domain>/web/` unchanged, and the `routes()` they
@@ -214,7 +214,7 @@ area needs next.
 ## The canonical test
 
 Rust, with the whole router served over HTTP on the test Postgres:
-- Use `Hosted` (`crates/hub/src/tenancy/tests/tenants.rs`; its `form()` sends the hub's
+- Use `Hosted` (`engine/hub/src/tenancy/tests/tenants.rs`; its `form()` sends the hub's
   `Origin`) or `World` (`web/passkey_tests.rs`). This is axum's real-server style
   (`the_real_deal`): `bar`, `counted`, cookies, `Origin` and redirects only exist as served.
 - Store fixtures follow [G13](../patterns/README.md). Without `DEVAGOTCHI_TEST_POSTGRES_URL`,
@@ -260,7 +260,7 @@ None of these checks exists at main 2b3feec. Each lands green together with the 
 guards ([G12](../patterns/README.md)). Single-crate source scans share the walker lifted from
 `site/brand_tests.rs` (G12).
 
-1. **Rules 2 and 3: `crates/hub/src/web/tests/forms.rs`,
+1. **Rules 2 and 3: `engine/hub/src/web/tests/forms.rs`,
    `every_post_route_refuses_another_site`.**
    - Collect every route path whose method chain contains `post(` from `routes.rs` and every
      `routes()` it merges, with a small parser over multi-line `.route(` calls.
@@ -284,20 +284,20 @@ guards ([G12](../patterns/README.md)). Single-crate source scans share the walke
    - Fail on a `match` over `Who` with a `_ =>` arm.
    - Behaviour: `Hosted` with its store pool closed; `/admin` as owner, `/app/focus` and
      `/account` each answer 503.
-4. **Rule 7: the copy ratchet, `crates/hub/src/web/tests/copy.rs` with its baseline file
+4. **Rule 7: the copy ratchet, `engine/hub/src/web/tests/copy.rs` with its baseline file
    beside it.**
    - Count each web file's non-test literals of two or more English words outside markup,
      with the `brand_tests` scanner.
    - A listed file may shrink but never grow; an unlisted file must be at 0.
      `DEVAGOTCHI_WRITE_COPY=1` only lowers counts.
-   - In `crates/hub/src/site/tests.rs`: the built-in `messages.json` parses, and no section
+   - In `engine/hub/src/site/tests.rs`: the built-in `messages.json` parses, and no section
      of `Messages`, and no field of a section, carries `#[serde(default)]`.
 5. **Rule 8: `web/app/tests.rs`, `every_app_framed_page_wears_the_persons_theme`.**
    - A `Hosted` person saves `theme=dark` on `/app/me`.
    - `/app`, `/approvals`, `/admin` (as owner) and `/orgs` each contain `data-theme="dark"` and
      `id="me-link"`. It fails today on `/admin` and `/orgs`.
 
-Already in place and kept: `site/brand_tests.rs`; `crates/devagotchi/tests/layout.rs` (the
+Already in place and kept: `site/brand_tests.rs`; `runtime/devagotchi/tests/layout.rs` (the
 500-line ratchet); the per-flow `Hosted` tests; the browser suite's sideways-scroll checks in
 CI `e2e`.
 
@@ -323,7 +323,7 @@ CI `e2e`.
 
 ## Known violations
 
-All re-checked at main 2b3feec. Paths are under `crates/hub/src/` unless they say otherwise.
+All re-checked at main 2b3feec. Paths are under `engine/hub/src/` unless they say otherwise.
 
 ### Rule 1 (a module owns its routes)
 
@@ -475,7 +475,7 @@ All re-checked at main 2b3feec. Paths are under `crates/hub/src/` unless they sa
 
 - `web/machines.rs` (`add`, `add_json`, `revoke`): `add` and `add_json` map `device_store` to
   503, but nothing produces that code. A store failure arrives as `account_store`
-  (`devagotchi_store::store_error`, `crates/store/src/lib.rs`), so all three answer it 409.
+  (`devagotchi_store::store_error`, `platform/store/src/lib.rs`), so all three answer it 409.
   `revoke` also answers its `not_found` 409. `web/workflow.rs` (`command`) has the same dead
   `device_store` arm. -> Map `account_store` to 503 and `not_found` to 404, and keep the rest.
 - `web/app/keys.rs:274, 296` (`revoke`, `rotate`): `not_found` answers 400 through `refused`.
@@ -485,7 +485,7 @@ All re-checked at main 2b3feec. Paths are under `crates/hub/src/` unless they sa
 
 - `web/pages.rs` with `web/pages/`, and `web/landing.rs` with `web/landing/`: each area has two
   homes. -> `pages` is shell and stays: `git mv pages.rs pages/mod.rs` now and move its
-  `crates/devagotchi/tests/layout/oversize.txt` entry. `landing` moves in S8 to `site/web/landing/mod.rs`
+  `runtime/devagotchi/tests/layout/oversize.txt` entry. `landing` moves in S8 to `site/web/landing/mod.rs`
   (`.ai/dev/plans/structure-cleanup-map.md:223`).
 - `web/{analytics,claim,discovery,hub_settings,hub_settings_live,hub_settings_mail,hub_settings_sinks,landing,media,naming,operator,passkey,shippin,site,walkthrough}_tests.rs`,
   `web/app/approval_tests.rs`, `web/app/agenthub/ticket_tests.rs`: 17 `*_tests.rs` files beside

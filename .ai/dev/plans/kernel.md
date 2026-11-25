@@ -9,11 +9,11 @@
 - PR: none (the operator, Nov 16: no PR ceremony; land on main as each stage works)
 - Branch / baseline: `increment-178/kernel` from `main` at `5104f35`; K1 carried onto
   `increment-179/desktop-commander-parity` and main after Desktop Commander parity P9
-- Objective: `crates/kernel` is the one home for Devagotchi's AI code, one domain per folder; the
+- Objective: `engine/kernel` is the one home for Devagotchi's AI code, one domain per folder; the
   lexicon and dictionary work end to end (resolve, propose, confirm, dismiss, retire, revisions,
   events), stored in the hub; the Devagotchi half of the Clyffy handoff (export, merge, authority
   with fencing, restore) is built and tested against a bundle Clyffy can produce.
-- Non-goals: changes in Clyffy, RRFlow or AgentHub (`crates/agenthub` is owned by another
+- Non-goals: changes in Clyffy, RRFlow or AgentHub (`agenthub` is owned by another
   session); running a model; copying LFG's question bank.
 - Canonical architecture / related plan: [layout pattern](../../patterns/layout.md),
   [AI development capture](ai-development-capture.md), [structure cleanup](structure-cleanup.md)
@@ -22,7 +22,7 @@
 ## Layout
 
 ```
-crates/kernel/src/
+engine/kernel/src/
   lib.rs          wiring only
   capture/        `devagotchi ai`: policy, harness hooks, capture journal, delivery status
   dictionary/     concepts: canonical label, aliases, informal and retired names, terms,
@@ -42,7 +42,7 @@ same trait on its own database. That keeps the kernel public and host-neutral.
 
 | Milestone | Task | Dependencies | Acceptance evidence | State |
 |---|---|---|---|---|
-| K1 | Move machine-engine `src/ai/` to `crates/kernel/src/capture/`; `devagotchi ai` unchanged; ratchet entries move with their files | none | `git diff -M` renames; kernel 18 tests, `ai_workflow`, `one_binary`, `layout` green | done |
+| K1 | Move machine-engine `src/ai/` to `engine/kernel/src/capture/`; `devagotchi ai` unchanged; ratchet entries move with their files | none | `git diff -M` renames; kernel 18 tests, `ai_workflow`, `one_binary`, `layout` green | done |
 | K2 | `dictionary` and `lexicon` domains: model, scopes, states (proposed, confirmed, dismissed, retired, inconclusive), CAS revisions, events, resolver, shipped seed; in-memory `Store` | K1 | resolver tests on the seed and the disambiguation rows | done |
 | K3 | Hub hosting: `kernel_` tables, Postgres `Store`, MCP tools `lexicon_resolve`, `lexicon_propose`, `lexicon_review`, `dictionary_get` | K2 | store tests on Postgres; tool tests | done |
 | K4 | `handoff`: `LexiconBundleV1`, merge engine, authority (devagotchi, handing_over, clyffy, restoring) with an epoch fence, restore from the mirror | K2 | property tests: merge order-independent for non-conflicts; confirmed-vs-confirmed differences become conflicts; an old epoch's write is refused | done |
@@ -133,7 +133,7 @@ same trait on its own database. That keeps the kernel public and host-neutral.
 - Single writer for the Clyffy handoff (one owner at a time, epoch-fenced, Devagotchi keeps a
   read-only mirror while Clyffy owns it): the operator asked for "one clear source of truth".
 - Open PR #227 plans to split machine-engine's `ai/mod.rs` in S10; K1 moves it instead. The
-  ratchet numbers are unchanged, so S10 becomes a split inside `crates/kernel/src/capture/`.
+  ratchet numbers are unchanged, so S10 becomes a split inside `engine/kernel/src/capture/`.
 - The lexicon holds a person's own words: entries are theirs to edit and delete, and capture
   stays under DG-CAPTURE-1.
 

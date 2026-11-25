@@ -20,7 +20,7 @@
 
 ## What is already true (checked 2026-11-14)
 
-- Push: Web Push with the hub's own VAPID key (`crates/hub/src/notify/push/`), no third-party
+- Push: Web Push with the hub's own VAPID key (`engine/hub/src/notify/push/`), no third-party
   account. It fires for an approval waiting, a machine going offline or coming back, and a
   machine joining. **Notify this phone** and **Send me a test approval** are on `/approvals`
   and the You page; the test pushes to the person's own phones only. On iPhone the hub must be

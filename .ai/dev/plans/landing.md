@@ -21,7 +21,7 @@
   screenshots go stale); claims about features that are not built (they stay under "coming").
 - Canonical architecture / related plan: [layout pattern](../../patterns/layout.md),
   [vibe coder](vibe-coder.md), [browser experience](browser-experience.md),
-  [mobile experience](mobile-experience.md), the site model (`crates/hub/src/site/`).
+  [mobile experience](mobile-experience.md), the site model (`engine/hub/src/site/`).
 
 ## What went wrong in the first attempt (PR #221), so this plan avoids it
 
@@ -64,7 +64,7 @@
 ## A scene's home (hypermodular, colocated)
 
 ```
-crates/hub/src/web/landing/scenes/
+engine/hub/src/web/landing/scenes/
   mod.rs                  the scene contract, the registry site.json names scenes from, the
                           shared player (beats, pause, reduced motion, no-script fallback)
   player.js               the one script every scene shares (one file, its budget below)

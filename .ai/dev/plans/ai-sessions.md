@@ -14,8 +14,8 @@
 - Non-goals: reading any session without the machine owner's opt-in; a chat client of our own
   for the AI (the session keeps running in the tool that made it).
 - Canonical architecture / related plan: [roadmap](roadmap.md), [mobile experience](mobile-experience.md),
-  [factory](agenthub-factory.md) F11 (live activity). Code: the machine side in `crates/link`
-  and `crates/broker`, the hub in `crates/hub/src/web/app/`.
+  [factory](agenthub-factory.md) F11 (live activity). Code: the machine side in `runtime/link`
+  and `crates/broker`, the hub in `engine/hub/src/web/app/`.
 
 ## Where the sessions are (verified 2026-11-12 on the clients' own docs before each milestone)
 
@@ -25,7 +25,7 @@
 | Codex CLI | `~/.codex/sessions/YYYY/MM/DD/rollout-*.jsonl` | `codex exec resume <id> "<text>"` | to verify per version |
 | "Claude duet", "Codex dot" | not yet known: the operator names the product and version | unknown | needs the operator |
 
-Each reader is a small, versioned adapter (like `crates/connectors`), so a format change breaks
+Each reader is a small, versioned adapter (like `engine/connectors`), so a format change breaks
 one adapter's tests, not the app.
 
 ## Consent (DG-CAPTURE-1 holds)

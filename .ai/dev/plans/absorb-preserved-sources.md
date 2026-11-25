@@ -1,5 +1,7 @@
 # Complete preserved-source absorption before the self-hosted prerelease
 
+> **Order and layout replaced** by [the program](program.md) (2026-11-25). This page keeps its detail and history.
+
 ## Current delivery, 2026-11-23
 
 PR280 merged into main `18d3ee2`; PR/main CI and security passed. Release 45053944830

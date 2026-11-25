@@ -1840,24 +1840,24 @@
       "packet": "A04",
       "status": "partial",
       "target_paths": [
-        "crates/contracts/src/grants/remote.rs",
-        "crates/machine-engine/src/broker/remote/observation.rs",
-        "crates/hub/src/machines/access/operation_read.rs",
-        "crates/hub/src/mcp/callers/read.rs",
-        "crates/hub/src/machines/run.rs",
-        "crates/agenthub/src/hosted/access.rs",
-        "crates/contracts/src/grants/control.rs",
-        "crates/hub/src/machines/access/continuation.rs",
-        "crates/hub/src/mcp/callers/control.rs",
-        "crates/machine-engine/src/broker/control.rs",
-        "crates/machine-engine/src/broker/remote/control.rs",
-        "crates/machine-engine/src/execution/input.rs",
-        "crates/hub/src/mcp/callers/heartbeat.rs",
-        "crates/hub/src/machines/access/heartbeat_tests.rs",
-        "crates/hub/src/machines/operations/mod.rs",
-        "crates/hub/src/agenthub/http/tests/access_heartbeat/mod.rs",
-        "crates/hub/src/agenthub/http/tests/access_heartbeat/fixture.rs",
-        "crates/contracts/src/interactive.rs"
+        "platform/contracts/src/grants/remote.rs",
+        "engine/machine-engine/src/broker/remote/observation.rs",
+        "engine/hub/src/machines/access/operation_read.rs",
+        "engine/hub/src/mcp/callers/read.rs",
+        "engine/hub/src/machines/run.rs",
+        "agenthub/src/hosted/access.rs",
+        "platform/contracts/src/grants/control.rs",
+        "engine/hub/src/machines/access/continuation.rs",
+        "engine/hub/src/mcp/callers/control.rs",
+        "engine/machine-engine/src/broker/control.rs",
+        "engine/machine-engine/src/broker/remote/control.rs",
+        "engine/machine-engine/src/execution/input.rs",
+        "engine/hub/src/mcp/callers/heartbeat.rs",
+        "engine/hub/src/machines/access/heartbeat_tests.rs",
+        "engine/hub/src/machines/operations/mod.rs",
+        "engine/hub/src/agenthub/http/tests/access_heartbeat/mod.rs",
+        "engine/hub/src/agenthub/http/tests/access_heartbeat/fixture.rs",
+        "platform/contracts/src/interactive.rs"
       ],
       "evidence": [
         ".ai/dev/plans/absorption/a04-access.md",
@@ -1972,8 +1972,8 @@
       "packet": "A04",
       "status": "partial",
       "target_paths": [
-        "crates/contracts/src/grants/matching.rs",
-        "crates/contracts/src/grants/risk.rs"
+        "platform/contracts/src/grants/matching.rs",
+        "platform/contracts/src/grants/risk.rs"
       ],
       "evidence": [
         "Partial access foundation: typed scope/narrowing/risk checks and catalog snapshots; current identity, task lease and machine generation seams. 26 contracts, 3 AgentHub PostgreSQL binding and 28 hub focused tests passed. See .ai/dev/plans/absorption/a04-access.md. Durable request/grant/admission storage, all adapters and native enforcement remain open; no source closure or main delivery."
@@ -1988,8 +1988,8 @@
       "packet": "A04",
       "status": "partial",
       "target_paths": [
-        "crates/contracts/src/grants/narrow.rs",
-        "crates/contracts/src/grants/item.rs"
+        "platform/contracts/src/grants/narrow.rs",
+        "platform/contracts/src/grants/item.rs"
       ],
       "evidence": [
         "Partial access foundation: typed scope/narrowing/risk checks and catalog snapshots; current identity, task lease and machine generation seams. 26 contracts, 3 AgentHub PostgreSQL binding and 28 hub focused tests passed. See .ai/dev/plans/absorption/a04-access.md. Durable request/grant/admission storage, all adapters and native enforcement remain open; no source closure or main delivery."
@@ -2004,8 +2004,8 @@
       "packet": "A04",
       "status": "partial",
       "target_paths": [
-        "crates/contracts/src/grants/selector.rs",
-        "crates/contracts/src/grants/mod.rs"
+        "platform/contracts/src/grants/selector.rs",
+        "platform/contracts/src/grants/mod.rs"
       ],
       "evidence": [
         "Partial access foundation: typed scope/narrowing/risk checks and catalog snapshots; current identity, task lease and machine generation seams. 26 contracts, 3 AgentHub PostgreSQL binding and 28 hub focused tests passed. See .ai/dev/plans/absorption/a04-access.md. Durable request/grant/admission storage, all adapters and native enforcement remain open; no source closure or main delivery."
@@ -2020,7 +2020,7 @@
       "packet": "A04",
       "status": "partial",
       "target_paths": [
-        "crates/contracts/src/grants/tests.rs"
+        "platform/contracts/src/grants/tests.rs"
       ],
       "evidence": [
         "Partial access foundation: typed scope/narrowing/risk checks and catalog snapshots; current identity, task lease and machine generation seams. 26 contracts, 3 AgentHub PostgreSQL binding and 28 hub focused tests passed. See .ai/dev/plans/absorption/a04-access.md. Durable request/grant/admission storage, all adapters and native enforcement remain open; no source closure or main delivery."
@@ -3377,9 +3377,9 @@
       "packet": "A03",
       "status": "partial",
       "target_paths": [
-        "crates/agenthub/src/cli/remote.rs",
-        "crates/hub/src/mcp/schema.rs",
-        "crates/hub/src/agenthub/tests/cli_retries.rs"
+        "agenthub/src/cli/remote.rs",
+        "engine/hub/src/mcp/schema.rs",
+        "engine/hub/src/agenthub/tests/cli_retries.rs"
       ],
       "evidence": [
         "Pinned source retry/key and cached-fence behavior compared; local CLI preparation and PostgreSQL/MCP retry adapters authored. Evidence and remaining source parity are in .ai/dev/plans/absorption/a03-review.md and a03-cli-retries.md. No main delivery or source closure."
@@ -3394,8 +3394,8 @@
       "packet": "A03",
       "status": "partial",
       "target_paths": [
-        "crates/agenthub/src/cli/args.rs",
-        "crates/agenthub/src/cli/requests/mod.rs"
+        "agenthub/src/cli/args.rs",
+        "agenthub/src/cli/requests/mod.rs"
       ],
       "evidence": [
         "Pinned source retry/key and cached-fence behavior compared; local CLI preparation and PostgreSQL/MCP retry adapters authored. Evidence and remaining source parity are in .ai/dev/plans/absorption/a03-review.md and a03-cli-retries.md. No main delivery or source closure."
@@ -3421,9 +3421,9 @@
       "packet": "A03",
       "status": "partial",
       "target_paths": [
-        "crates/agenthub/src/cli/mod.rs",
-        "crates/agenthub/src/cli/commands/leases.rs",
-        "crates/agenthub/src/cli/tests/retries.rs"
+        "agenthub/src/cli/mod.rs",
+        "agenthub/src/cli/commands/leases.rs",
+        "agenthub/src/cli/tests/retries.rs"
       ],
       "evidence": [
         "Pinned source retry/key and cached-fence behavior compared; local CLI preparation and PostgreSQL/MCP retry adapters authored. Evidence and remaining source parity are in .ai/dev/plans/absorption/a03-review.md and a03-cli-retries.md. No main delivery or source closure."
@@ -3438,9 +3438,9 @@
       "packet": "A03",
       "status": "partial",
       "target_paths": [
-        "crates/agenthub/src/cli/requests/mod.rs",
-        "crates/agenthub/src/cli/requests/tests.rs",
-        "crates/agenthub/src/cli/claims.rs"
+        "agenthub/src/cli/requests/mod.rs",
+        "agenthub/src/cli/requests/tests.rs",
+        "agenthub/src/cli/claims.rs"
       ],
       "evidence": [
         "Pinned source retry/key and cached-fence behavior compared; local CLI preparation and PostgreSQL/MCP retry adapters authored. Evidence and remaining source parity are in .ai/dev/plans/absorption/a03-review.md and a03-cli-retries.md. No main delivery or source closure."
@@ -3620,9 +3620,9 @@
       "packet": "A02",
       "status": "partial",
       "target_paths": [
-        "crates/agenthub/src/tests/policy_enforcement.rs",
-        "crates/agenthub/src/tests/configuration_policy.rs",
-        "crates/hub/src/identity/accounts/agents/tests.rs"
+        "agenthub/src/tests/policy_enforcement.rs",
+        "agenthub/src/tests/configuration_policy.rs",
+        "engine/hub/src/identity/accounts/agents/tests.rs"
       ],
       "evidence": [
         "Pinned source read and partial implementation/tests: .ai/dev/plans/absorption/a02-review.md. Outstanding source-specific behavior and final acceptance are listed there; no main delivery or source closure."
@@ -3780,26 +3780,26 @@
       "packet": "A04",
       "status": "partial",
       "target_paths": [
-        "crates/agenthub/src/hosted/access.rs",
-        "crates/agenthub/src/tests/access_binding.rs",
-        "crates/hub/src/machines/devices/access.rs",
-        "crates/hub/src/identity/accounts/machine_access.rs",
-        "crates/hub/src/machines/access/admissions.rs",
-        "crates/hub/src/machines/access/admission_action.rs",
-        "crates/hub/src/machines/access/grant_record.rs",
-        "crates/hub/src/machines/access/admission_completion.rs",
-        "crates/hub/src/machines/access/admission_tests.rs",
-        "crates/hub/src/machines/access/broker/mod.rs",
-        "crates/hub/src/machines/access/broker_tests.rs",
-        "crates/hub/src/machines/link/remote.rs",
-        "crates/hub/src/machines/access/broker/selection/mod.rs",
-        "crates/hub/src/machines/access/broker/selection/tests.rs",
-        "crates/hub/src/mcp/callers/start.rs",
-        "crates/hub/src/agenthub/http/tests/access_execution.rs",
-        "crates/hub/src/machines/access/broker/selection/eligibility.rs",
-        "crates/hub/src/agenthub/http/tests/access_selection/mod.rs",
-        "crates/hub/src/agenthub/http/tests/access_selection/fixture.rs",
-        "crates/hub/src/mcp/tools/access_caller.rs"
+        "agenthub/src/hosted/access.rs",
+        "agenthub/src/tests/access_binding.rs",
+        "engine/hub/src/machines/devices/access.rs",
+        "engine/hub/src/identity/accounts/machine_access.rs",
+        "engine/hub/src/machines/access/admissions.rs",
+        "engine/hub/src/machines/access/admission_action.rs",
+        "engine/hub/src/machines/access/grant_record.rs",
+        "engine/hub/src/machines/access/admission_completion.rs",
+        "engine/hub/src/machines/access/admission_tests.rs",
+        "engine/hub/src/machines/access/broker/mod.rs",
+        "engine/hub/src/machines/access/broker_tests.rs",
+        "engine/hub/src/machines/link/remote.rs",
+        "engine/hub/src/machines/access/broker/selection/mod.rs",
+        "engine/hub/src/machines/access/broker/selection/tests.rs",
+        "engine/hub/src/mcp/callers/start.rs",
+        "engine/hub/src/agenthub/http/tests/access_execution.rs",
+        "engine/hub/src/machines/access/broker/selection/eligibility.rs",
+        "engine/hub/src/agenthub/http/tests/access_selection/mod.rs",
+        "engine/hub/src/agenthub/http/tests/access_selection/fixture.rs",
+        "engine/hub/src/mcp/tools/access_caller.rs"
       ],
       "evidence": [
         "Partial access foundation: typed scope/narrowing/risk checks and catalog snapshots; current identity, task lease and machine generation seams. 26 contracts, 3 AgentHub PostgreSQL binding and 28 hub focused tests passed. See .ai/dev/plans/absorption/a04-access.md. Durable request/grant/admission storage, all adapters and native enforcement remain open; no source closure or main delivery.",
@@ -3818,14 +3818,14 @@
       "packet": "A04",
       "status": "partial",
       "target_paths": [
-        "crates/hub/src/catalog/access/mod.rs",
-        "crates/hub/src/catalog/access/tests.rs",
-        "crates/hub/src/catalog/validate.rs",
-        "crates/hub/src/machines/access/requests.rs",
-        "crates/hub/src/machines/access/terms.rs",
-        "crates/hub/src/machines/access/terms_tests.rs",
-        "crates/hub/src/machines/access/observation.rs",
-        "crates/hub/src/machines/access/observation_tests.rs"
+        "engine/hub/src/catalog/access/mod.rs",
+        "engine/hub/src/catalog/access/tests.rs",
+        "engine/hub/src/catalog/validate.rs",
+        "engine/hub/src/machines/access/requests.rs",
+        "engine/hub/src/machines/access/terms.rs",
+        "engine/hub/src/machines/access/terms_tests.rs",
+        "engine/hub/src/machines/access/observation.rs",
+        "engine/hub/src/machines/access/observation_tests.rs"
       ],
       "evidence": [
         "Partial access foundation: typed scope/narrowing/risk checks and catalog snapshots; current identity, task lease and machine generation seams. 26 contracts, 3 AgentHub PostgreSQL binding and 28 hub focused tests passed. See .ai/dev/plans/absorption/a04-access.md. Durable request/grant/admission storage, all adapters and native enforcement remain open; no source closure or main delivery.",
@@ -3842,12 +3842,12 @@
       "packet": "A04",
       "status": "partial",
       "target_paths": [
-        "crates/hub/src/machines/access/decisions.rs",
-        "crates/hub/src/machines/access/records.rs",
-        "crates/hub/src/machines/access/terms.rs",
-        "crates/hub/src/machines/access/decision_tests.rs",
-        "crates/hub/src/agenthub/http/access_decisions.rs",
-        "crates/hub/src/agenthub/http/tests/access_decisions.rs"
+        "engine/hub/src/machines/access/decisions.rs",
+        "engine/hub/src/machines/access/records.rs",
+        "engine/hub/src/machines/access/terms.rs",
+        "engine/hub/src/machines/access/decision_tests.rs",
+        "engine/hub/src/agenthub/http/access_decisions.rs",
+        "engine/hub/src/agenthub/http/tests/access_decisions.rs"
       ],
       "evidence": [
         "Partial durable access unit: transactional request snapshots, human decisions, versioned policies/revocation, durable ending outbox, and admission identity/once continuation. Required-PostgreSQL local slices passed 22 lifecycle/notification and 26 expanded admission tests; exact commands/logs and remaining source obligations are in .ai/dev/plans/absorption/a04-access.md. Broker/native enforcement, remaining lifecycle, surface adapters and UI are still open; no source closure or main delivery.",
@@ -3863,14 +3863,14 @@
       "packet": "A04",
       "status": "partial",
       "target_paths": [
-        "crates/hub/src/catalog/mutations.rs",
-        "crates/hub/src/catalog/references.rs",
-        "crates/hub/src/machines/access/policies.rs",
-        "crates/hub/src/machines/access/default_tests.rs",
-        "crates/hub/src/agenthub/http/catalog.rs",
-        "crates/hub/src/agenthub/http/tests/catalog_defaults.rs",
-        "crates/hub/src/web/app/catalog/form.rs",
-        "crates/hub/src/web/app/catalog/render.rs"
+        "engine/hub/src/catalog/mutations.rs",
+        "engine/hub/src/catalog/references.rs",
+        "engine/hub/src/machines/access/policies.rs",
+        "engine/hub/src/machines/access/default_tests.rs",
+        "engine/hub/src/agenthub/http/catalog.rs",
+        "engine/hub/src/agenthub/http/tests/catalog_defaults.rs",
+        "engine/hub/src/web/app/catalog/form.rs",
+        "engine/hub/src/web/app/catalog/render.rs"
       ],
       "evidence": [
         "Source default selection is authored through the catalog owner with exact typed confirmation, live environment-wide policy and source preset.default authorization. Selected-default edits and receipt replay also check policy; actual unsafe items cannot bypass metadata. Required-PostgreSQL 12 catalog/API/browser and three access_default_ tests passed. See a04-access.md. Remaining catalog consumers, full integration and main delivery are open; no source closure."
@@ -3896,13 +3896,13 @@
       "packet": "A04",
       "status": "partial",
       "target_paths": [
-        "crates/hub/src/machines/access/reads.rs",
-        "crates/hub/src/machines/access/read_tests.rs",
-        "crates/hub/src/agenthub/http/access_reads.rs",
-        "crates/hub/src/agenthub/http/tests/access_reads.rs",
-        "crates/hub/src/identity/accounts/machine_access.rs",
-        "crates/hub/src/mcp/tools/access.rs",
-        "crates/hub/src/agenthub/http/tests/access_mcp.rs"
+        "engine/hub/src/machines/access/reads.rs",
+        "engine/hub/src/machines/access/read_tests.rs",
+        "engine/hub/src/agenthub/http/access_reads.rs",
+        "engine/hub/src/agenthub/http/tests/access_reads.rs",
+        "engine/hub/src/identity/accounts/machine_access.rs",
+        "engine/hub/src/mcp/tools/access.rs",
+        "engine/hub/src/agenthub/http/tests/access_mcp.rs"
       ],
       "evidence": [
         "Partial access surface unit: scoped paginated request/grant history and group lookup; long polls reverify credentials; human HTTP policy/revoke/resume/control adapters compose domain CAS and receipts. Machine generation preconditions refuse replacement enrollments; key machine/account/principal limits are preserved. Final required-PostgreSQL access_ slice: 66 passed, zero failed/ignored, target/absorption-access-surfaces.log. See a04-access.md for source display enrichment, request/decision adapters, MCP/browser, configured/shared-machine and broker/native obligations still open. No source closure or main delivery.",
@@ -3918,13 +3918,13 @@
       "packet": "A04",
       "status": "partial",
       "target_paths": [
-        "crates/hub/src/machines/access/reaper.rs",
-        "crates/hub/src/machines/access/reaper_tests.rs",
-        "crates/agenthub/src/hosted/access.rs",
-        "crates/hub/src/machines/access/task_tests.rs",
-        "crates/hub/src/machines/access/runtime.rs",
-        "crates/hub/src/machines/access/runtime_tests.rs",
-        "crates/hub/src/machines/access/delivery.rs"
+        "engine/hub/src/machines/access/reaper.rs",
+        "engine/hub/src/machines/access/reaper_tests.rs",
+        "agenthub/src/hosted/access.rs",
+        "engine/hub/src/machines/access/task_tests.rs",
+        "engine/hub/src/machines/access/runtime.rs",
+        "engine/hub/src/machines/access/runtime_tests.rs",
+        "engine/hub/src/machines/access/delivery.rs"
       ],
       "evidence": [
         "Bounded pending expiry and grant reaping use current identity, original task lease and enrollment, live policy, durable ending outbox, and completion-aware once exhaustion. Six AgentHub and 45 hub focused tests passed in target/absorption-access-reaping.log. Runtime scheduling, broker delivery, guide reaping and native lifecycle integration remain open; no source closure.",
@@ -3940,14 +3940,14 @@
       "packet": "A04",
       "status": "partial",
       "target_paths": [
-        "crates/hub/src/catalog/access/mod.rs",
-        "crates/hub/src/catalog/access/tests.rs",
-        "crates/hub/src/machines/access/requests.rs",
-        "crates/hub/src/machines/access/request_tests.rs",
-        "crates/hub/src/machines/access/task_tests.rs",
-        "crates/hub/src/machines/access/discovery.rs",
-        "crates/hub/src/agenthub/http/access_requests.rs",
-        "crates/hub/src/agenthub/http/tests/access_requests.rs"
+        "engine/hub/src/catalog/access/mod.rs",
+        "engine/hub/src/catalog/access/tests.rs",
+        "engine/hub/src/machines/access/requests.rs",
+        "engine/hub/src/machines/access/request_tests.rs",
+        "engine/hub/src/machines/access/task_tests.rs",
+        "engine/hub/src/machines/access/discovery.rs",
+        "engine/hub/src/agenthub/http/access_requests.rs",
+        "engine/hub/src/agenthub/http/tests/access_requests.rs"
       ],
       "evidence": [
         "Partial access foundation: typed scope/narrowing/risk checks and catalog snapshots; current identity, task lease and machine generation seams. 26 contracts, 3 AgentHub PostgreSQL binding and 28 hub focused tests passed. See .ai/dev/plans/absorption/a04-access.md. Durable request/grant/admission storage, all adapters and native enforcement remain open; no source closure or main delivery.",
@@ -3964,11 +3964,11 @@
       "packet": "A04",
       "status": "partial",
       "target_paths": [
-        "crates/hub/src/machines/access/resume.rs",
-        "crates/hub/src/machines/access/resume_agent.rs",
-        "crates/hub/src/machines/access/resume_tests.rs",
-        "crates/hub/migrations/0043_access_resume_interval.sql",
-        "crates/hub/src/agenthub/http/access_admin.rs"
+        "engine/hub/src/machines/access/resume.rs",
+        "engine/hub/src/machines/access/resume_agent.rs",
+        "engine/hub/src/machines/access/resume_tests.rs",
+        "engine/hub/migrations/0043_access_resume_interval.sql",
+        "engine/hub/src/agenthub/http/access_admin.rs"
       ],
       "evidence": [
         "Partial control/resume/observation domain: pause and GUI stop atomically interrupt admission identities; live risky-grant alerts and continue/revoke/pause acknowledgments; current observation companionship at request and admission. Required-PostgreSQL local slices passed 83 machine and 56 expanded access tests. See .ai/dev/plans/absorption/a04-access.md for logs and remaining browser/runtime/broker/native integration. No source closure or main delivery.",
@@ -3984,9 +3984,9 @@
       "packet": "A04",
       "status": "partial",
       "target_paths": [
-        "crates/hub/src/machines/access/resume_ack.rs",
-        "crates/hub/src/machines/access/resume_tests.rs",
-        "crates/hub/src/agenthub/http/access_admin.rs"
+        "engine/hub/src/machines/access/resume_ack.rs",
+        "engine/hub/src/machines/access/resume_tests.rs",
+        "engine/hub/src/agenthub/http/access_admin.rs"
       ],
       "evidence": [
         "Partial control/resume/observation domain: pause and GUI stop atomically interrupt admission identities; live risky-grant alerts and continue/revoke/pause acknowledgments; current observation companionship at request and admission. Required-PostgreSQL local slices passed 83 machine and 56 expanded access tests. See .ai/dev/plans/absorption/a04-access.md for logs and remaining browser/runtime/broker/native integration. No source closure or main delivery.",
@@ -4002,10 +4002,10 @@
       "packet": "A04",
       "status": "partial",
       "target_paths": [
-        "crates/hub/src/machines/access/grants.rs",
-        "crates/hub/src/machines/access/grant_tests.rs",
-        "crates/hub/src/machines/access/notifications.rs",
-        "crates/hub/src/machines/access/notification_tests.rs"
+        "engine/hub/src/machines/access/grants.rs",
+        "engine/hub/src/machines/access/grant_tests.rs",
+        "engine/hub/src/machines/access/notifications.rs",
+        "engine/hub/src/machines/access/notification_tests.rs"
       ],
       "evidence": [
         "Partial durable access unit: transactional request snapshots, human decisions, versioned policies/revocation, durable ending outbox, and admission identity/once continuation. Required-PostgreSQL local slices passed 22 lifecycle/notification and 26 expanded admission tests; exact commands/logs and remaining source obligations are in .ai/dev/plans/absorption/a04-access.md. Broker/native enforcement, remaining lifecycle, surface adapters and UI are still open; no source closure or main delivery."
@@ -4020,10 +4020,10 @@
       "packet": "A04",
       "status": "partial",
       "target_paths": [
-        "crates/hub/src/machines/access/policies.rs",
-        "crates/hub/src/machines/access/policy_tests.rs",
-        "crates/hub/src/machines/access/administration.rs",
-        "crates/hub/src/agenthub/http/access_admin.rs"
+        "engine/hub/src/machines/access/policies.rs",
+        "engine/hub/src/machines/access/policy_tests.rs",
+        "engine/hub/src/machines/access/administration.rs",
+        "engine/hub/src/agenthub/http/access_admin.rs"
       ],
       "evidence": [
         "Partial durable access unit: transactional request snapshots, human decisions, versioned policies/revocation, durable ending outbox, and admission identity/once continuation. Required-PostgreSQL local slices passed 22 lifecycle/notification and 26 expanded admission tests; exact commands/logs and remaining source obligations are in .ai/dev/plans/absorption/a04-access.md. Broker/native enforcement, remaining lifecycle, surface adapters and UI are still open; no source closure or main delivery.",
@@ -4281,10 +4281,10 @@
       "packet": "A05",
       "status": "unverified",
       "target_paths": [
-        "crates/hub/src/catalog/mutations.rs",
-        "crates/hub/src/catalog/references.rs",
-        "crates/hub/src/catalog/stored.rs",
-        "crates/hub/src/catalog/tests.rs"
+        "engine/hub/src/catalog/mutations.rs",
+        "engine/hub/src/catalog/references.rs",
+        "engine/hub/src/catalog/stored.rs",
+        "engine/hub/src/catalog/tests.rs"
       ],
       "evidence": [
         "Partial A05 catalog storage/API/browser mapping; see .ai/dev/plans/absorption/a05-catalog.md. Consumer references, unsandboxed-default policy/confirmation, provider integration and main delivery remain open."
@@ -4299,9 +4299,9 @@
       "packet": "A05",
       "status": "unverified",
       "target_paths": [
-        "crates/hub/src/catalog/kinds.rs",
-        "crates/hub/src/catalog/types/mod.rs",
-        "crates/hub/migrations/0039_catalogs.sql"
+        "engine/hub/src/catalog/kinds.rs",
+        "engine/hub/src/catalog/types/mod.rs",
+        "engine/hub/migrations/0039_catalogs.sql"
       ],
       "evidence": [
         "Partial A05 catalog storage/API/browser mapping; see .ai/dev/plans/absorption/a05-catalog.md. Consumer references, unsandboxed-default policy/confirmation, provider integration and main delivery remain open."
@@ -4316,8 +4316,8 @@
       "packet": "A05",
       "status": "unverified",
       "target_paths": [
-        "crates/hub/src/catalog/seed.rs",
-        "crates/hub/src/catalog/tests.rs"
+        "engine/hub/src/catalog/seed.rs",
+        "engine/hub/src/catalog/tests.rs"
       ],
       "evidence": [
         "Partial A05 catalog storage/API/browser mapping; see .ai/dev/plans/absorption/a05-catalog.md. Consumer references, unsandboxed-default policy/confirmation, provider integration and main delivery remain open."
@@ -4332,10 +4332,10 @@
       "packet": "A05",
       "status": "unverified",
       "target_paths": [
-        "crates/hub/src/catalog/validate.rs",
-        "crates/hub/src/catalog/types/capabilities.rs",
-        "crates/hub/src/catalog/types/presets.rs",
-        "crates/hub/src/catalog/types/connections.rs"
+        "engine/hub/src/catalog/validate.rs",
+        "engine/hub/src/catalog/types/capabilities.rs",
+        "engine/hub/src/catalog/types/presets.rs",
+        "engine/hub/src/catalog/types/connections.rs"
       ],
       "evidence": [
         "Partial A05 catalog storage/API/browser mapping; see .ai/dev/plans/absorption/a05-catalog.md. Consumer references, unsandboxed-default policy/confirmation, provider integration and main delivery remain open."
@@ -4493,8 +4493,8 @@
       "packet": "A00",
       "status": "unverified",
       "target_paths": [
-        "crates/hub/migrations/0039_catalogs.sql",
-        "crates/hub/src/catalog/tests.rs"
+        "engine/hub/migrations/0039_catalogs.sql",
+        "engine/hub/src/catalog/tests.rs"
       ],
       "evidence": [
         "Partial A05 catalog storage/API/browser mapping; see .ai/dev/plans/absorption/a05-catalog.md. Consumer references, unsandboxed-default policy/confirmation, provider integration and main delivery remain open."
@@ -4509,8 +4509,8 @@
       "packet": "A00",
       "status": "partial",
       "target_paths": [
-        "crates/hub/migrations/0041_machine_access.sql",
-        "crates/hub/src/machines/access/schema_tests.rs"
+        "engine/hub/migrations/0041_machine_access.sql",
+        "engine/hub/src/machines/access/schema_tests.rs"
       ],
       "evidence": [
         "Partial: seven forced-RLS access coordination tables plus machine enrollment generation. Actual restricted-role RLS and foreign environment/account FK checks passed. Request/decision/admission operations, process/GUI integration and source/main closure remain open. See a04-access.md."
@@ -4580,13 +4580,13 @@
       "packet": "A04",
       "status": "partial",
       "target_paths": [
-        "crates/hub/src/agenthub/http/access_reads.rs",
-        "crates/hub/src/agenthub/http/access_admin.rs",
-        "crates/hub/src/agenthub/http/tests/access_reads.rs",
-        "crates/hub/src/agenthub/http/tests/access_admin.rs",
-        "crates/hub/src/agenthub/http/access_requests.rs",
-        "crates/hub/src/agenthub/http/access_decisions.rs",
-        "crates/hub/src/agenthub/http/tests/access_requests.rs"
+        "engine/hub/src/agenthub/http/access_reads.rs",
+        "engine/hub/src/agenthub/http/access_admin.rs",
+        "engine/hub/src/agenthub/http/tests/access_reads.rs",
+        "engine/hub/src/agenthub/http/tests/access_admin.rs",
+        "engine/hub/src/agenthub/http/access_requests.rs",
+        "engine/hub/src/agenthub/http/access_decisions.rs",
+        "engine/hub/src/agenthub/http/tests/access_requests.rs"
       ],
       "evidence": [
         "Partial access surface unit: scoped paginated request/grant history and group lookup; long polls reverify credentials; human HTTP policy/revoke/resume/control adapters compose domain CAS and receipts. Machine generation preconditions refuse replacement enrollments; key machine/account/principal limits are preserved. Final required-PostgreSQL access_ slice: 66 passed, zero failed/ignored, target/absorption-access-surfaces.log. See a04-access.md for source display enrichment, request/decision adapters, MCP/browser, configured/shared-machine and broker/native obligations still open. No source closure or main delivery.",
@@ -4646,9 +4646,9 @@
       "packet": "A05",
       "status": "unverified",
       "target_paths": [
-        "crates/hub/src/agenthub/http/catalog.rs",
-        "crates/hub/src/agenthub/http/tests/catalog.rs",
-        "crates/hub/src/agenthub/http/tests/catalog_access.rs"
+        "engine/hub/src/agenthub/http/catalog.rs",
+        "engine/hub/src/agenthub/http/tests/catalog.rs",
+        "engine/hub/src/agenthub/http/tests/catalog_access.rs"
       ],
       "evidence": [
         "Partial A05 catalog storage/API/browser mapping; see .ai/dev/plans/absorption/a05-catalog.md. Consumer references, unsandboxed-default policy/confirmation, provider integration and main delivery remain open."
@@ -4707,11 +4707,11 @@
       "packet": "A04",
       "status": "partial",
       "target_paths": [
-        "crates/hub/src/mcp/tools/access.rs",
-        "crates/hub/src/mcp/tools/access_caller.rs",
-        "crates/hub/src/catalog/discovery.rs",
-        "crates/hub/src/machines/access/discovery.rs",
-        "crates/hub/src/agenthub/http/tests/access_mcp.rs"
+        "engine/hub/src/mcp/tools/access.rs",
+        "engine/hub/src/mcp/tools/access_caller.rs",
+        "engine/hub/src/catalog/discovery.rs",
+        "engine/hub/src/machines/access/discovery.rs",
+        "engine/hub/src/agenthub/http/tests/access_mcp.rs"
       ],
       "evidence": [
         "2026-11-21 adapter integration: authenticated broker facts, request/decision HTTP and five MCP access tools are authored; required-PostgreSQL access regression passed 84 tests with zero failed/ignored. Broker authority/outbox checkpoint 498a06f and remaining obligations/evidence are detailed in .ai/dev/plans/absorption/a04-access.md. Ordinary machine dispatch, native sandbox levels, browser surfaces, shared/configured/guide authority and source role_route remain open where applicable; no source closure, push or main delivery."
@@ -4748,15 +4748,15 @@
       "packet": "A04",
       "status": "partial",
       "target_paths": [
-        "crates/hub/src/machines/access/broker/mod.rs",
-        "crates/hub/src/machines/access/broker/selection/mod.rs",
-        "crates/hub/src/machines/access/broker/selection/tests.rs",
-        "crates/hub/src/mcp/callers/start.rs",
-        "crates/hub/src/agenthub/http/tests/access_execution.rs",
-        "crates/hub/src/machines/access/broker/selection/eligibility.rs",
-        "crates/hub/src/agenthub/http/tests/access_selection/mod.rs",
-        "crates/hub/src/agenthub/http/tests/access_selection/fixture.rs",
-        "crates/hub/src/mcp/tools/access_caller.rs"
+        "engine/hub/src/machines/access/broker/mod.rs",
+        "engine/hub/src/machines/access/broker/selection/mod.rs",
+        "engine/hub/src/machines/access/broker/selection/tests.rs",
+        "engine/hub/src/mcp/callers/start.rs",
+        "engine/hub/src/agenthub/http/tests/access_execution.rs",
+        "engine/hub/src/machines/access/broker/selection/eligibility.rs",
+        "engine/hub/src/agenthub/http/tests/access_selection/mod.rs",
+        "engine/hub/src/agenthub/http/tests/access_selection/fixture.rs",
+        "engine/hub/src/mcp/tools/access_caller.rs"
       ],
       "evidence": [
         "2026-11-21 ordinary MCP operation_start partial port: canonical preparation, ordered/paged grant selection, original retry affinity and post-wait credential refresh before durable admission. Six new focused tests and 106 existing access regressions passed with required PostgreSQL; exact logs, layout correction and remaining run/file/process/native gaps are recorded in .ai/dev/plans/absorption/a04-access.md. No complete source closure or main delivery.",
@@ -4783,24 +4783,24 @@
       "packet": "A04",
       "status": "partial",
       "target_paths": [
-        "crates/contracts/src/grants/remote.rs",
-        "crates/machine-engine/src/broker/remote/observation.rs",
-        "crates/hub/src/machines/access/operation_read.rs",
-        "crates/hub/src/mcp/callers/read.rs",
-        "crates/hub/src/machines/run.rs",
-        "crates/agenthub/src/hosted/access.rs",
-        "crates/contracts/src/grants/control.rs",
-        "crates/hub/src/machines/access/continuation.rs",
-        "crates/hub/src/mcp/callers/control.rs",
-        "crates/machine-engine/src/broker/control.rs",
-        "crates/machine-engine/src/broker/remote/control.rs",
-        "crates/machine-engine/src/execution/input.rs",
-        "crates/hub/src/mcp/callers/heartbeat.rs",
-        "crates/hub/src/machines/access/heartbeat_tests.rs",
-        "crates/hub/src/machines/operations/mod.rs",
-        "crates/hub/src/agenthub/http/tests/access_heartbeat/mod.rs",
-        "crates/hub/src/agenthub/http/tests/access_heartbeat/fixture.rs",
-        "crates/contracts/src/interactive.rs"
+        "platform/contracts/src/grants/remote.rs",
+        "engine/machine-engine/src/broker/remote/observation.rs",
+        "engine/hub/src/machines/access/operation_read.rs",
+        "engine/hub/src/mcp/callers/read.rs",
+        "engine/hub/src/machines/run.rs",
+        "agenthub/src/hosted/access.rs",
+        "platform/contracts/src/grants/control.rs",
+        "engine/hub/src/machines/access/continuation.rs",
+        "engine/hub/src/mcp/callers/control.rs",
+        "engine/machine-engine/src/broker/control.rs",
+        "engine/machine-engine/src/broker/remote/control.rs",
+        "engine/machine-engine/src/execution/input.rs",
+        "engine/hub/src/mcp/callers/heartbeat.rs",
+        "engine/hub/src/machines/access/heartbeat_tests.rs",
+        "engine/hub/src/machines/operations/mod.rs",
+        "engine/hub/src/agenthub/http/tests/access_heartbeat/mod.rs",
+        "engine/hub/src/agenthub/http/tests/access_heartbeat/fixture.rs",
+        "platform/contracts/src/interactive.rs"
       ],
       "evidence": [
         ".ai/dev/plans/absorption/a04-access.md",
@@ -5069,21 +5069,21 @@
       "packet": "A03",
       "status": "partial",
       "target_paths": [
-        "crates/hub/src/agenthub/http/principals/mod.rs",
-        "crates/hub/src/agenthub/http/principals/configuration.rs",
-        "crates/hub/src/agenthub/http/principals/tokens.rs",
-        "crates/hub/src/agenthub/http/tests/principals.rs",
-        "crates/hub/src/agenthub/http/configuration/mod.rs",
-        "crates/hub/src/agenthub/http/configuration/workflows.rs",
-        "crates/hub/src/agenthub/http/configuration/local.rs",
-        "crates/hub/src/agenthub/http/tests/configuration.rs",
-        "crates/hub/src/agenthub/http/projects.rs",
-        "crates/hub/src/agenthub/mcp/projects.rs",
-        "crates/hub/src/agenthub/http/tests/projects.rs",
-        "crates/hub/src/web/app/agenthub/projects/mod.rs",
-        "crates/hub/src/agenthub/http/configuration/aggregate.rs",
-        "crates/hub/src/agenthub/http/tests/aggregate.rs",
-        "crates/hub/src/agenthub/http/tests/project_races.rs"
+        "engine/hub/src/agenthub/http/principals/mod.rs",
+        "engine/hub/src/agenthub/http/principals/configuration.rs",
+        "engine/hub/src/agenthub/http/principals/tokens.rs",
+        "engine/hub/src/agenthub/http/tests/principals.rs",
+        "engine/hub/src/agenthub/http/configuration/mod.rs",
+        "engine/hub/src/agenthub/http/configuration/workflows.rs",
+        "engine/hub/src/agenthub/http/configuration/local.rs",
+        "engine/hub/src/agenthub/http/tests/configuration.rs",
+        "engine/hub/src/agenthub/http/projects.rs",
+        "engine/hub/src/agenthub/mcp/projects.rs",
+        "engine/hub/src/agenthub/http/tests/projects.rs",
+        "engine/hub/src/web/app/agenthub/projects/mod.rs",
+        "engine/hub/src/agenthub/http/configuration/aggregate.rs",
+        "engine/hub/src/agenthub/http/tests/aggregate.rs",
+        "engine/hub/src/agenthub/http/tests/project_races.rs"
       ],
       "evidence": [
         "Additional local principal/credential/roster and policy HTTP authoring: .ai/dev/plans/absorption/a03-principals.md. Remaining behaviors and main delivery stay open.",
@@ -5101,10 +5101,10 @@
       "packet": "A03",
       "status": "partial",
       "target_paths": [
-        "crates/hub/src/agenthub/http/events.rs",
-        "crates/hub/src/agenthub/http/tests/events.rs",
-        "crates/hub/src/agenthub/http/stream.rs",
-        "crates/hub/src/agenthub/http/tests/stream.rs"
+        "engine/hub/src/agenthub/http/events.rs",
+        "engine/hub/src/agenthub/http/tests/events.rs",
+        "engine/hub/src/agenthub/http/stream.rs",
+        "engine/hub/src/agenthub/http/tests/stream.rs"
       ],
       "evidence": [
         "Pinned source read; authenticated task/lease HTTP adapters and board-scoped event pages/verification authored, with six focused real HTTP checks. Source mapping, migration details and remaining administrative/SSE/protocol work: .ai/dev/plans/absorption/a03-http.md, a03-review.md and docs/agenthub-http.md. No main delivery or source closure.",
@@ -5153,9 +5153,9 @@
       "packet": "A03",
       "status": "partial",
       "target_paths": [
-        "crates/hub/src/agenthub/http/protocol.rs",
-        "crates/connectors/src/lib.rs",
-        "crates/hub/src/agenthub/http/tests/protocol.rs"
+        "engine/hub/src/agenthub/http/protocol.rs",
+        "engine/connectors/src/lib.rs",
+        "engine/hub/src/agenthub/http/tests/protocol.rs"
       ],
       "evidence": [
         "2026-11-21: A03 reconnect/protocol unit; a03-review.md records 11 real-PostgreSQL HTTP tests, including 102-event resume/live, key/session/profile revocation and current connector output. Remaining stream acceptance and delivery keep this row open."
@@ -5170,10 +5170,10 @@
       "packet": "A03",
       "status": "partial",
       "target_paths": [
-        "crates/hub/src/agenthub/http/access.rs",
-        "crates/hub/src/agenthub/http/input.rs",
-        "crates/hub/src/agenthub/http/response.rs",
-        "crates/hub/src/serve/mod.rs"
+        "engine/hub/src/agenthub/http/access.rs",
+        "engine/hub/src/agenthub/http/input.rs",
+        "engine/hub/src/agenthub/http/response.rs",
+        "engine/hub/src/serve/mod.rs"
       ],
       "evidence": [
         "Pinned source read; authenticated task/lease HTTP adapters and board-scoped event pages/verification authored, with six focused real HTTP checks. Source mapping, migration details and remaining administrative/SSE/protocol work: .ai/dev/plans/absorption/a03-http.md, a03-review.md and docs/agenthub-http.md. No main delivery or source closure."
@@ -5221,11 +5221,11 @@
       "packet": "A03",
       "status": "partial",
       "target_paths": [
-        "crates/hub/src/agenthub/http/tickets.rs",
-        "crates/hub/src/agenthub/http/leases.rs",
-        "crates/hub/src/agenthub/http/reads.rs",
-        "crates/hub/src/agenthub/http/tests/mod.rs",
-        "crates/hub/src/agenthub/http/tests/workflow.rs"
+        "engine/hub/src/agenthub/http/tickets.rs",
+        "engine/hub/src/agenthub/http/leases.rs",
+        "engine/hub/src/agenthub/http/reads.rs",
+        "engine/hub/src/agenthub/http/tests/mod.rs",
+        "engine/hub/src/agenthub/http/tests/workflow.rs"
       ],
       "evidence": [
         "Pinned source read; authenticated task/lease HTTP adapters and board-scoped event pages/verification authored, with six focused real HTTP checks. Source mapping, migration details and remaining administrative/SSE/protocol work: .ai/dev/plans/absorption/a03-http.md, a03-review.md and docs/agenthub-http.md. No main delivery or source closure."
@@ -5262,15 +5262,15 @@
       "packet": "A04",
       "status": "partial",
       "target_paths": [
-        "crates/hub/src/machines/access/broker/mod.rs",
-        "crates/hub/src/machines/access/broker/selection/mod.rs",
-        "crates/hub/src/machines/access/broker/selection/tests.rs",
-        "crates/hub/src/mcp/callers/start.rs",
-        "crates/hub/src/agenthub/http/tests/access_execution.rs",
-        "crates/hub/src/machines/access/broker/selection/eligibility.rs",
-        "crates/hub/src/agenthub/http/tests/access_selection/mod.rs",
-        "crates/hub/src/agenthub/http/tests/access_selection/fixture.rs",
-        "crates/hub/src/mcp/tools/access_caller.rs"
+        "engine/hub/src/machines/access/broker/mod.rs",
+        "engine/hub/src/machines/access/broker/selection/mod.rs",
+        "engine/hub/src/machines/access/broker/selection/tests.rs",
+        "engine/hub/src/mcp/callers/start.rs",
+        "engine/hub/src/agenthub/http/tests/access_execution.rs",
+        "engine/hub/src/machines/access/broker/selection/eligibility.rs",
+        "engine/hub/src/agenthub/http/tests/access_selection/mod.rs",
+        "engine/hub/src/agenthub/http/tests/access_selection/fixture.rs",
+        "engine/hub/src/mcp/tools/access_caller.rs"
       ],
       "evidence": [
         "2026-11-21 ordinary MCP operation_start partial port: canonical preparation, ordered/paged grant selection, original retry affinity and post-wait credential refresh before durable admission. Six new focused tests and 106 existing access regressions passed with required PostgreSQL; exact logs, layout correction and remaining run/file/process/native gaps are recorded in .ai/dev/plans/absorption/a04-access.md. No complete source closure or main delivery.",
@@ -5286,24 +5286,24 @@
       "packet": "A04",
       "status": "partial",
       "target_paths": [
-        "crates/contracts/src/grants/remote.rs",
-        "crates/machine-engine/src/broker/remote/observation.rs",
-        "crates/hub/src/machines/access/operation_read.rs",
-        "crates/hub/src/mcp/callers/read.rs",
-        "crates/hub/src/machines/run.rs",
-        "crates/agenthub/src/hosted/access.rs",
-        "crates/contracts/src/grants/control.rs",
-        "crates/hub/src/machines/access/continuation.rs",
-        "crates/hub/src/mcp/callers/control.rs",
-        "crates/machine-engine/src/broker/control.rs",
-        "crates/machine-engine/src/broker/remote/control.rs",
-        "crates/machine-engine/src/execution/input.rs",
-        "crates/hub/src/mcp/callers/heartbeat.rs",
-        "crates/hub/src/machines/access/heartbeat_tests.rs",
-        "crates/hub/src/machines/operations/mod.rs",
-        "crates/hub/src/agenthub/http/tests/access_heartbeat/mod.rs",
-        "crates/hub/src/agenthub/http/tests/access_heartbeat/fixture.rs",
-        "crates/contracts/src/interactive.rs"
+        "platform/contracts/src/grants/remote.rs",
+        "engine/machine-engine/src/broker/remote/observation.rs",
+        "engine/hub/src/machines/access/operation_read.rs",
+        "engine/hub/src/mcp/callers/read.rs",
+        "engine/hub/src/machines/run.rs",
+        "agenthub/src/hosted/access.rs",
+        "platform/contracts/src/grants/control.rs",
+        "engine/hub/src/machines/access/continuation.rs",
+        "engine/hub/src/mcp/callers/control.rs",
+        "engine/machine-engine/src/broker/control.rs",
+        "engine/machine-engine/src/broker/remote/control.rs",
+        "engine/machine-engine/src/execution/input.rs",
+        "engine/hub/src/mcp/callers/heartbeat.rs",
+        "engine/hub/src/machines/access/heartbeat_tests.rs",
+        "engine/hub/src/machines/operations/mod.rs",
+        "engine/hub/src/agenthub/http/tests/access_heartbeat/mod.rs",
+        "engine/hub/src/agenthub/http/tests/access_heartbeat/fixture.rs",
+        "platform/contracts/src/interactive.rs"
       ],
       "evidence": [
         ".ai/dev/plans/absorption/a04-access.md",
@@ -5319,13 +5319,13 @@
       "packet": "A04",
       "status": "partial",
       "target_paths": [
-        "crates/hub/src/machines/access/control.rs",
-        "crates/hub/src/machines/access/control_tests.rs",
-        "crates/hub/src/machines/devices/control.rs",
-        "crates/hub/migrations/0042_machine_control.sql",
-        "crates/hub/src/machines/access/administration.rs",
-        "crates/hub/src/agenthub/http/access_admin.rs",
-        "crates/hub/src/machines/devices/access.rs"
+        "engine/hub/src/machines/access/control.rs",
+        "engine/hub/src/machines/access/control_tests.rs",
+        "engine/hub/src/machines/devices/control.rs",
+        "engine/hub/migrations/0042_machine_control.sql",
+        "engine/hub/src/machines/access/administration.rs",
+        "engine/hub/src/agenthub/http/access_admin.rs",
+        "engine/hub/src/machines/devices/access.rs"
       ],
       "evidence": [
         "Partial control/resume/observation domain: pause and GUI stop atomically interrupt admission identities; live risky-grant alerts and continue/revoke/pause acknowledgments; current observation companionship at request and admission. Required-PostgreSQL local slices passed 83 machine and 56 expanded access tests. See .ai/dev/plans/absorption/a04-access.md for logs and remaining browser/runtime/broker/native integration. No source closure or main delivery.",
@@ -5374,12 +5374,12 @@
       "packet": "A03",
       "status": "partial",
       "target_paths": [
-        "crates/hub/src/agenthub/mcp/mutations.rs",
-        "crates/hub/src/agenthub/mcp/tools/tickets.rs",
-        "crates/hub/src/agenthub/mcp/create_input.rs",
-        "crates/hub/src/agenthub/mcp/schema.rs",
-        "crates/hub/src/agenthub/mcp/tests/mutation_receipts.rs",
-        "crates/agenthub/src/hosted/updates.rs"
+        "engine/hub/src/agenthub/mcp/mutations.rs",
+        "engine/hub/src/agenthub/mcp/tools/tickets.rs",
+        "engine/hub/src/agenthub/mcp/create_input.rs",
+        "engine/hub/src/agenthub/mcp/schema.rs",
+        "engine/hub/src/agenthub/mcp/tests/mutation_receipts.rs",
+        "agenthub/src/hosted/updates.rs"
       ],
       "evidence": [
         "Pinned source read; PostgreSQL receipt engine and initial board/MCP adapters authored. Focused evidence and outstanding operations are in .ai/dev/plans/absorption/a03-review.md. No main delivery or source closure."
@@ -5449,8 +5449,8 @@
       "packet": "A02",
       "status": "authored",
       "target_paths": [
-        "crates/agenthub/src/policy/mod.rs",
-        "crates/agenthub/src/policy/tests.rs"
+        "agenthub/src/policy/mod.rs",
+        "agenthub/src/policy/tests.rs"
       ],
       "evidence": [
         "Complete pure evaluator port and local policy tests: .ai/dev/plans/absorption/a02-review.md. Stable rule-id explanations replace editable-name explanations; selectors, wildcard actions, default deny and tied deny are tested. Not merged; broader source-operation integration remains open."
@@ -5465,8 +5465,8 @@
       "packet": "A02",
       "status": "authored",
       "target_paths": [
-        "crates/agenthub/src/policy/tests.rs",
-        "crates/agenthub/src/tests/policy_enforcement.rs"
+        "agenthub/src/policy/tests.rs",
+        "agenthub/src/tests/policy_enforcement.rs"
       ],
       "evidence": [
         "Complete pure evaluator port and local policy tests: .ai/dev/plans/absorption/a02-review.md. Stable rule-id explanations replace editable-name explanations; selectors, wildcard actions, default deny and tied deny are tested. Not merged; broader source-operation integration remains open."
@@ -5613,8 +5613,8 @@
       "packet": "A05",
       "status": "partial",
       "target_paths": [
-        "crates/agenthub/src/settings.rs",
-        "crates/agenthub/src/workflow.rs"
+        "agenthub/src/settings.rs",
+        "agenthub/src/workflow.rs"
       ],
       "evidence": [
         "Local comparison and source-backed changes: .ai/dev/plans/absorption/a01-review.md. Not source closure; policy, replay, identity and other file behaviors remain open."
@@ -5640,7 +5640,7 @@
       "packet": "A04",
       "status": "unverified",
       "target_paths": [
-        "crates/hub/src/catalog/presets/capabilities.json"
+        "engine/hub/src/catalog/presets/capabilities.json"
       ],
       "evidence": [
         "Pinned S1 file copied byte-for-byte; all rows loaded through PostgreSQL catalog validation. Per-file marks preserve ordinary reopen edits/deletions; downstream consumers still open. See a05-catalog.md."
@@ -5655,7 +5655,7 @@
       "packet": "A04",
       "status": "unverified",
       "target_paths": [
-        "crates/hub/src/catalog/presets/capability-risks.json"
+        "engine/hub/src/catalog/presets/capability-risks.json"
       ],
       "evidence": [
         "Pinned S1 file copied byte-for-byte; all rows loaded through PostgreSQL catalog validation. Per-file marks preserve ordinary reopen edits/deletions; downstream consumers still open. See a05-catalog.md."
@@ -5670,7 +5670,7 @@
       "packet": "A06",
       "status": "unverified",
       "target_paths": [
-        "crates/hub/src/catalog/presets/chat-apps.json"
+        "engine/hub/src/catalog/presets/chat-apps.json"
       ],
       "evidence": [
         "Pinned S1 file copied byte-for-byte; all rows loaded through PostgreSQL catalog validation. Per-file marks preserve ordinary reopen edits/deletions; downstream consumers still open. See a05-catalog.md."
@@ -5685,7 +5685,7 @@
       "packet": "A04",
       "status": "unverified",
       "target_paths": [
-        "crates/hub/src/catalog/presets/grant-presets.json"
+        "engine/hub/src/catalog/presets/grant-presets.json"
       ],
       "evidence": [
         "Pinned S1 file copied byte-for-byte; all rows loaded through PostgreSQL catalog validation. Per-file marks preserve ordinary reopen edits/deletions; downstream consumers still open. See a05-catalog.md."
@@ -5700,10 +5700,10 @@
       "packet": "A05",
       "status": "partial",
       "target_paths": [
-        "crates/agenthub/src/policy/catalog/access-presets.json",
-        "crates/agenthub/src/policy/catalog/access_seed.rs",
-        "crates/agenthub/src/policy/catalog/access_seed_tests.rs",
-        "crates/agenthub/migrations/0008_policy_seed_marks.sql"
+        "agenthub/src/policy/catalog/access-presets.json",
+        "agenthub/src/policy/catalog/access_seed.rs",
+        "agenthub/src/policy/catalog/access_seed_tests.rs",
+        "agenthub/migrations/0008_policy_seed_marks.sql"
       ],
       "evidence": [
         "Pinned 27-policy/two-role access family seeded once with edit/deletion preservation; byte equality verified. 18 AgentHub and 20 hub focused policy/identity/catalog checks passed. Later consumers and source/main closure remain open; see a04-access.md."
@@ -5740,7 +5740,7 @@
       "packet": "A04",
       "status": "unverified",
       "target_paths": [
-        "crates/hub/src/catalog/presets/risks.json"
+        "engine/hub/src/catalog/presets/risks.json"
       ],
       "evidence": [
         "Pinned S1 file copied byte-for-byte; all rows loaded through PostgreSQL catalog validation. Per-file marks preserve ordinary reopen edits/deletions; downstream consumers still open. See a05-catalog.md."
@@ -5755,7 +5755,7 @@
       "packet": "A06",
       "status": "unverified",
       "target_paths": [
-        "crates/hub/src/catalog/presets/routers.json"
+        "engine/hub/src/catalog/presets/routers.json"
       ],
       "evidence": [
         "Pinned S1 file copied byte-for-byte; all rows loaded through PostgreSQL catalog validation. Per-file marks preserve ordinary reopen edits/deletions; downstream consumers still open. See a05-catalog.md."
@@ -5770,7 +5770,7 @@
       "packet": "A05",
       "status": "unverified",
       "target_paths": [
-        "crates/hub/src/catalog/presets/runtimes.json"
+        "engine/hub/src/catalog/presets/runtimes.json"
       ],
       "evidence": [
         "Pinned S1 file copied byte-for-byte; all rows loaded through PostgreSQL catalog validation. Per-file marks preserve ordinary reopen edits/deletions; downstream consumers still open. See a05-catalog.md."
@@ -5785,10 +5785,10 @@
       "packet": "A05",
       "status": "partial",
       "target_paths": [
-        "crates/hub/src/machines/access/settings.rs",
-        "crates/hub/src/machines/access/settings_tests.rs",
-        "crates/hub/src/agenthub/http/machine_access.rs",
-        "crates/hub/src/agenthub/http/tests/machine_access.rs"
+        "engine/hub/src/machines/access/settings.rs",
+        "engine/hub/src/machines/access/settings_tests.rs",
+        "engine/hub/src/agenthub/http/machine_access.rs",
+        "engine/hub/src/agenthub/http/tests/machine_access.rs"
       ],
       "evidence": [
         "Partial: expiry/cooldown/duration/risk settings and bounded authority TTL persisted with owner API, version/receipt/audit and reference checks. Focused domain and HTTP refusal/replay checks passed; browser access interface and other source settings remain open. See a04-access.md."
@@ -5803,7 +5803,7 @@
       "packet": "A05",
       "status": "unverified",
       "target_paths": [
-        "crates/hub/src/catalog/presets/shell-profiles.json"
+        "engine/hub/src/catalog/presets/shell-profiles.json"
       ],
       "evidence": [
         "Pinned S1 file copied byte-for-byte; all rows loaded through PostgreSQL catalog validation. Per-file marks preserve ordinary reopen edits/deletions; downstream consumers still open. See a05-catalog.md."
@@ -6148,8 +6148,8 @@
       "packet": "A05",
       "status": "unverified",
       "target_paths": [
-        "crates/hub/src/catalog/schema.rs",
-        "crates/hub/src/agenthub/http/tests/catalog.rs"
+        "engine/hub/src/catalog/schema.rs",
+        "engine/hub/src/agenthub/http/tests/catalog.rs"
       ],
       "evidence": [
         "Partial A05 catalog storage/API/browser mapping; see .ai/dev/plans/absorption/a05-catalog.md. Consumer references, unsandboxed-default policy/confirmation, provider integration and main delivery remain open."
@@ -6186,19 +6186,19 @@
       "packet": "A01",
       "status": "partial",
       "target_paths": [
-        "crates/agenthub/src/policy/catalog/mod.rs",
-        "crates/agenthub/src/policy/catalog/mutations.rs",
-        "crates/hub/src/identity/accounts/agents/configuration.rs",
-        "crates/hub/src/identity/accounts/receipts.rs",
-        "crates/agenthub/src/hosted/shared_workflows/mutations.rs",
-        "crates/hub/src/web/app/agenthub/configuration/mod.rs",
-        "crates/hub/src/agenthub/http/principals/configuration.rs",
-        "crates/agenthub/src/board/shared_workflows.rs",
-        "crates/hub/src/agenthub/http/configuration/workflows.rs",
-        "crates/agenthub/src/hosted/projects/mutations.rs",
-        "crates/agenthub/src/hosted/projects/initialize.rs",
-        "crates/agenthub/src/hosted/shared_workflows/project.rs",
-        "crates/agenthub/migrations/0007_project_lifecycle.sql"
+        "agenthub/src/policy/catalog/mod.rs",
+        "agenthub/src/policy/catalog/mutations.rs",
+        "engine/hub/src/identity/accounts/agents/configuration.rs",
+        "engine/hub/src/identity/accounts/receipts.rs",
+        "agenthub/src/hosted/shared_workflows/mutations.rs",
+        "engine/hub/src/web/app/agenthub/configuration/mod.rs",
+        "engine/hub/src/agenthub/http/principals/configuration.rs",
+        "agenthub/src/board/shared_workflows.rs",
+        "engine/hub/src/agenthub/http/configuration/workflows.rs",
+        "agenthub/src/hosted/projects/mutations.rs",
+        "agenthub/src/hosted/projects/initialize.rs",
+        "agenthub/src/hosted/shared_workflows/project.rs",
+        "agenthub/migrations/0007_project_lifecycle.sql"
       ],
       "evidence": [
         "Source comparison and partial authoring: .ai/dev/plans/absorption/a02-review.md. Whole-file replay, human administration, surface and concurrency requirements remain open; no main delivery.",
@@ -6217,19 +6217,19 @@
       "packet": "A01",
       "status": "partial",
       "target_paths": [
-        "crates/agenthub/src/settings.rs",
-        "crates/agenthub/src/hosted/settings.rs",
-        "crates/hub/src/web/app/agenthub/configuration/form.rs",
-        "crates/hub/src/identity/accounts/agents/configuration.rs",
-        "crates/agenthub/src/hosted/shared_workflows/mutations.rs",
-        "crates/hub/src/agenthub/http/principals/configuration.rs",
-        "crates/hub/src/agenthub/http/configuration/workflows.rs",
-        "crates/hub/src/agenthub/http/configuration/local.rs",
-        "crates/agenthub/src/hosted/projects/mutations.rs",
-        "crates/agenthub/src/hosted/projects/resolve.rs",
-        "crates/agenthub/src/hosted/projects/history.rs",
-        "crates/hub/src/identity/accounts/agents/directory.rs",
-        "crates/hub/src/agenthub/mcp/boards.rs"
+        "agenthub/src/settings.rs",
+        "agenthub/src/hosted/settings.rs",
+        "engine/hub/src/web/app/agenthub/configuration/form.rs",
+        "engine/hub/src/identity/accounts/agents/configuration.rs",
+        "agenthub/src/hosted/shared_workflows/mutations.rs",
+        "engine/hub/src/agenthub/http/principals/configuration.rs",
+        "engine/hub/src/agenthub/http/configuration/workflows.rs",
+        "engine/hub/src/agenthub/http/configuration/local.rs",
+        "agenthub/src/hosted/projects/mutations.rs",
+        "agenthub/src/hosted/projects/resolve.rs",
+        "agenthub/src/hosted/projects/history.rs",
+        "engine/hub/src/identity/accounts/agents/directory.rs",
+        "engine/hub/src/agenthub/mcp/boards.rs"
       ],
       "evidence": [
         "Local comparison and source-backed changes: .ai/dev/plans/absorption/a01-review.md. Not source closure; policy, replay, identity and other file behaviors remain open.",
@@ -6248,13 +6248,13 @@
       "packet": "A02",
       "status": "partial",
       "target_paths": [
-        "crates/hub/src/identity/accounts/agents/mod.rs",
-        "crates/hub/src/identity/accounts/agents/mutations.rs",
-        "crates/hub/src/identity/accounts/agents/bindings.rs",
-        "crates/hub/src/identity/accounts/api_keys/mod.rs",
-        "crates/hub/src/identity/accounts/oauth/access.rs",
-        "crates/hub/src/identity/accounts/api_keys/managed.rs",
-        "crates/hub/src/agenthub/http/principals/mod.rs"
+        "engine/hub/src/identity/accounts/agents/mod.rs",
+        "engine/hub/src/identity/accounts/agents/mutations.rs",
+        "engine/hub/src/identity/accounts/agents/bindings.rs",
+        "engine/hub/src/identity/accounts/api_keys/mod.rs",
+        "engine/hub/src/identity/accounts/oauth/access.rs",
+        "engine/hub/src/identity/accounts/api_keys/managed.rs",
+        "engine/hub/src/agenthub/http/principals/mod.rs"
       ],
       "evidence": [
         "Source comparison and partial authoring: .ai/dev/plans/absorption/a02-review.md. Whole-file replay, human administration, surface and concurrency requirements remain open; no main delivery.",
@@ -6270,17 +6270,17 @@
       "packet": "A01",
       "status": "partial",
       "target_paths": [
-        "crates/agenthub/src/hosted/claims.rs",
-        "crates/agenthub/src/hosted/reads.rs",
-        "crates/agenthub/src/lease.rs",
-        "crates/agenthub/src/tests/selection.rs",
-        "crates/agenthub/src/cli/commands/leases.rs",
-        "crates/agenthub/src/cli/remote.rs",
-        "crates/agenthub/src/cli/tests/selection.rs",
-        "crates/hub/src/agenthub/mcp/lease_input.rs",
-        "crates/hub/src/agenthub/mcp/tools/leases.rs",
-        "crates/hub/src/agenthub/http/leases.rs",
-        "crates/hub/src/agenthub/http/tests/selection.rs"
+        "agenthub/src/hosted/claims.rs",
+        "agenthub/src/hosted/reads.rs",
+        "agenthub/src/lease.rs",
+        "agenthub/src/tests/selection.rs",
+        "agenthub/src/cli/commands/leases.rs",
+        "agenthub/src/cli/remote.rs",
+        "agenthub/src/cli/tests/selection.rs",
+        "engine/hub/src/agenthub/mcp/lease_input.rs",
+        "engine/hub/src/agenthub/mcp/tools/leases.rs",
+        "engine/hub/src/agenthub/http/leases.rs",
+        "engine/hub/src/agenthub/http/tests/selection.rs"
       ],
       "evidence": [
         "Additional source-backed authoring and local PostgreSQL evidence: .ai/dev/plans/absorption/a01-selection.md. Full source review and main delivery remain open."
@@ -6295,8 +6295,8 @@
       "packet": "A01",
       "status": "partial",
       "target_paths": [
-        "crates/agenthub/src/policy/catalog/mod.rs",
-        "crates/agenthub/src/hosted/policy.rs"
+        "agenthub/src/policy/catalog/mod.rs",
+        "agenthub/src/hosted/policy.rs"
       ],
       "evidence": [
         "Source comparison and partial authoring: .ai/dev/plans/absorption/a02-review.md. Whole-file replay, human administration, surface and concurrency requirements remain open; no main delivery."
@@ -6322,10 +6322,10 @@
       "packet": "A01",
       "status": "partial",
       "target_paths": [
-        "crates/agenthub/src/hosted/edits.rs",
-        "crates/agenthub/src/hosted/tickets.rs",
-        "crates/agenthub/src/tests/held_updates.rs",
-        "crates/hub/src/agenthub/mcp/tests/held_updates.rs"
+        "agenthub/src/hosted/edits.rs",
+        "agenthub/src/hosted/tickets.rs",
+        "agenthub/src/tests/held_updates.rs",
+        "engine/hub/src/agenthub/mcp/tests/held_updates.rs"
       ],
       "evidence": [
         "Local comparison and source-backed changes: .ai/dev/plans/absorption/a01-review.md. Not source closure; policy, replay, identity and other file behaviors remain open."
@@ -6373,10 +6373,10 @@
       "packet": "A01",
       "status": "partial",
       "target_paths": [
-        "crates/agenthub/src/settings.rs",
-        "crates/agenthub/src/hosted/leases.rs",
-        "crates/agenthub/src/board/prime.rs",
-        "crates/agenthub/src/tests/runtime_settings.rs"
+        "agenthub/src/settings.rs",
+        "agenthub/src/hosted/leases.rs",
+        "agenthub/src/board/prime.rs",
+        "agenthub/src/tests/runtime_settings.rs"
       ],
       "evidence": [
         "Local comparison and source-backed changes: .ai/dev/plans/absorption/a01-review.md. Not source closure; policy, replay, identity and other file behaviors remain open."
@@ -6402,10 +6402,10 @@
       "packet": "A01",
       "status": "partial",
       "target_paths": [
-        "crates/agenthub/src/hosted/notes.rs",
-        "crates/agenthub/src/settings.rs",
-        "crates/agenthub/src/tests/held_updates.rs",
-        "crates/agenthub/src/tests/runtime_settings.rs"
+        "agenthub/src/hosted/notes.rs",
+        "agenthub/src/settings.rs",
+        "agenthub/src/tests/held_updates.rs",
+        "agenthub/src/tests/runtime_settings.rs"
       ],
       "evidence": [
         "Local comparison and source-backed changes: .ai/dev/plans/absorption/a01-review.md. Not source closure; policy, replay, identity and other file behaviors remain open."
@@ -6420,12 +6420,12 @@
       "packet": "A01",
       "status": "partial",
       "target_paths": [
-        "crates/agenthub/src/hosted/leases.rs",
-        "crates/agenthub/src/lease.rs",
-        "crates/agenthub/src/tests/lease_absorption.rs",
-        "crates/agenthub/src/tests/lease_receipts.rs",
-        "crates/hub/src/agenthub/mcp/tests/lease_receipts.rs",
-        "crates/hub/src/agenthub/mcp/tools/leases.rs"
+        "agenthub/src/hosted/leases.rs",
+        "agenthub/src/lease.rs",
+        "agenthub/src/tests/lease_absorption.rs",
+        "agenthub/src/tests/lease_receipts.rs",
+        "engine/hub/src/agenthub/mcp/tests/lease_receipts.rs",
+        "engine/hub/src/agenthub/mcp/tools/leases.rs"
       ],
       "evidence": [
         "Local comparison and source-backed changes: .ai/dev/plans/absorption/a01-review.md. Not source closure; policy, replay, identity and other file behaviors remain open.",
@@ -6441,13 +6441,13 @@
       "packet": "A02",
       "status": "partial",
       "target_paths": [
-        "crates/hub/src/identity/accounts/agents/mod.rs",
-        "crates/hub/src/identity/accounts/api_keys/mod.rs",
-        "crates/hub/src/web/app/agents/render.rs",
-        "crates/hub/src/identity/accounts/api_keys/revocation.rs",
-        "crates/hub/src/identity/accounts/agents/mutations.rs",
-        "crates/hub/src/identity/accounts/agents/roster.rs",
-        "crates/hub/src/identity/accounts/api_keys/managed.rs"
+        "engine/hub/src/identity/accounts/agents/mod.rs",
+        "engine/hub/src/identity/accounts/api_keys/mod.rs",
+        "engine/hub/src/web/app/agents/render.rs",
+        "engine/hub/src/identity/accounts/api_keys/revocation.rs",
+        "engine/hub/src/identity/accounts/agents/mutations.rs",
+        "engine/hub/src/identity/accounts/agents/roster.rs",
+        "engine/hub/src/identity/accounts/api_keys/managed.rs"
       ],
       "evidence": [
         "Pinned source read and partial implementation/tests: .ai/dev/plans/absorption/a02-review.md. Outstanding source-specific behavior and final acceptance are listed there; no main delivery or source closure.",
@@ -6464,12 +6464,12 @@
       "packet": "A01",
       "status": "partial",
       "target_paths": [
-        "crates/agenthub/src/hosted/leases.rs",
-        "crates/agenthub/src/hosted/lease_expiry.rs",
-        "crates/hub/src/agenthub/registry.rs",
-        "crates/hub/src/agenthub/mcp/boards.rs",
-        "crates/hub/src/agenthub/tests/hosted.rs",
-        "crates/hub/src/agenthub/mcp/tests/mod.rs"
+        "agenthub/src/hosted/leases.rs",
+        "agenthub/src/hosted/lease_expiry.rs",
+        "engine/hub/src/agenthub/registry.rs",
+        "engine/hub/src/agenthub/mcp/boards.rs",
+        "engine/hub/src/agenthub/tests/hosted.rs",
+        "engine/hub/src/agenthub/mcp/tests/mod.rs"
       ],
       "evidence": [
         "Additional source-backed authoring and local PostgreSQL evidence: .ai/dev/plans/absorption/a01-selection.md. Full source review and main delivery remain open."
@@ -6506,11 +6506,11 @@
       "packet": "A03",
       "status": "partial",
       "target_paths": [
-        "crates/store/src/receipts/mod.rs",
-        "crates/store/src/receipts/request.rs",
-        "crates/store/migrations/0001_request_receipts.sql",
-        "crates/agenthub/src/hosted/receipts.rs",
-        "crates/agenthub/src/tests/mutation_receipts.rs"
+        "platform/store/src/receipts/mod.rs",
+        "platform/store/src/receipts/request.rs",
+        "platform/store/migrations/0001_request_receipts.sql",
+        "agenthub/src/hosted/receipts.rs",
+        "agenthub/src/tests/mutation_receipts.rs"
       ],
       "evidence": [
         "Pinned source read; PostgreSQL receipt engine and initial board/MCP adapters authored. Focused evidence and outstanding operations are in .ai/dev/plans/absorption/a03-review.md. No main delivery or source closure."
@@ -6525,9 +6525,9 @@
       "packet": "A01",
       "status": "partial",
       "target_paths": [
-        "crates/agenthub/src/hosted/reads.rs",
-        "crates/agenthub/src/tests/selection.rs",
-        "crates/agenthub/src/tests/search.rs"
+        "agenthub/src/hosted/reads.rs",
+        "agenthub/src/tests/selection.rs",
+        "agenthub/src/tests/search.rs"
       ],
       "evidence": [
         "Additional source-backed authoring and local PostgreSQL evidence: .ai/dev/plans/absorption/a01-selection.md. Full source review and main delivery remain open."
@@ -6553,8 +6553,8 @@
       "packet": "A01",
       "status": "partial",
       "target_paths": [
-        "crates/agenthub/src/ticket.rs",
-        "crates/agenthub/src/lease.rs"
+        "agenthub/src/ticket.rs",
+        "agenthub/src/lease.rs"
       ],
       "evidence": [
         "Local comparison and source-backed changes: .ai/dev/plans/absorption/a01-review.md. Not source closure; policy, replay, identity and other file behaviors remain open."
@@ -6602,9 +6602,9 @@
       "packet": "A03",
       "status": "partial",
       "target_paths": [
-        "crates/agenthub/src/board/mod.rs",
-        "crates/hub/src/agenthub/http/stream.rs",
-        "crates/hub/src/agenthub/http/tests/stream.rs"
+        "agenthub/src/board/mod.rs",
+        "engine/hub/src/agenthub/http/stream.rs",
+        "engine/hub/src/agenthub/http/tests/stream.rs"
       ],
       "evidence": [
         "2026-11-21: A03 reconnect/protocol unit; a03-review.md records 11 real-PostgreSQL HTTP tests, including 102-event resume/live, key/session/profile revocation and current connector output. Remaining stream acceptance and delivery keep this row open."
@@ -8269,8 +8269,8 @@
       "packet": "A02",
       "status": "partial",
       "target_paths": [
-        "crates/hub/src/web/app/agents/form.rs",
-        "crates/hub/src/web/app/agents/render.rs"
+        "engine/hub/src/web/app/agents/form.rs",
+        "engine/hub/src/web/app/agents/render.rs"
       ],
       "evidence": [
         "Pinned source read and partial implementation/tests: .ai/dev/plans/absorption/a02-review.md. Outstanding source-specific behavior and final acceptance are listed there; no main delivery or source closure."
@@ -8285,8 +8285,8 @@
       "packet": "A02",
       "status": "partial",
       "target_paths": [
-        "crates/hub/src/web/app/agents/render.rs",
-        "crates/hub/src/web/app/agents/acceptance_tests.rs"
+        "engine/hub/src/web/app/agents/render.rs",
+        "engine/hub/src/web/app/agents/acceptance_tests.rs"
       ],
       "evidence": [
         "Pinned source read and partial implementation/tests: .ai/dev/plans/absorption/a02-review.md. Outstanding source-specific behavior and final acceptance are listed there; no main delivery or source closure."
@@ -8411,7 +8411,7 @@
       "packet": "A02",
       "status": "partial",
       "target_paths": [
-        "crates/hub/src/web/app/agents/configuration.rs"
+        "engine/hub/src/web/app/agents/configuration.rs"
       ],
       "evidence": [
         "Pinned source read and partial implementation/tests: .ai/dev/plans/absorption/a02-review.md. Outstanding source-specific behavior and final acceptance are listed there; no main delivery or source closure."
@@ -8459,7 +8459,7 @@
       "packet": "A02",
       "status": "partial",
       "target_paths": [
-        "crates/hub/src/web/app/agents/configuration.rs"
+        "engine/hub/src/web/app/agents/configuration.rs"
       ],
       "evidence": [
         "Pinned source read and partial implementation/tests: .ai/dev/plans/absorption/a02-review.md. Outstanding source-specific behavior and final acceptance are listed there; no main delivery or source closure."
@@ -8529,8 +8529,8 @@
       "packet": "A02",
       "status": "partial",
       "target_paths": [
-        "crates/hub/src/web/app/keys.rs",
-        "crates/hub/src/web/app/key_tests.rs"
+        "engine/hub/src/web/app/keys.rs",
+        "engine/hub/src/web/app/key_tests.rs"
       ],
       "evidence": [
         "Pinned source read and partial implementation/tests: .ai/dev/plans/absorption/a02-review.md. Outstanding source-specific behavior and final acceptance are listed there; no main delivery or source closure."
@@ -8567,13 +8567,13 @@
       "packet": "A04",
       "status": "partial",
       "target_paths": [
-        "crates/hub/src/web/app/access/mod.rs",
-        "crates/hub/src/web/app/access/render.rs",
-        "crates/hub/src/web/app/access/form.rs",
-        "crates/hub/src/machines/access/review.rs",
-        "crates/hub/src/machines/access/reads.rs",
-        "crates/hub/src/agenthub/http/tests/access_browser.rs",
-        "crates/hub/src/web/app/access/form_tests.rs"
+        "engine/hub/src/web/app/access/mod.rs",
+        "engine/hub/src/web/app/access/render.rs",
+        "engine/hub/src/web/app/access/form.rs",
+        "engine/hub/src/machines/access/review.rs",
+        "engine/hub/src/machines/access/reads.rs",
+        "engine/hub/src/agenthub/http/tests/access_browser.rs",
+        "engine/hub/src/web/app/access/form_tests.rs"
       ],
       "evidence": [
         "Pinned S1 browser comparison and implementation recorded in a04-access.md; owner review/narrow/deny/revoke and actual granted history share PostgreSQL domain authority. Five browser tests plus ended-pagination regression passed within the required-PostgreSQL 90-test access suite. Remaining policy/resume controls, native execution integration and actual-main Docker acceptance remain open; no source closure or deletion."
@@ -8599,8 +8599,8 @@
       "packet": "A05",
       "status": "unverified",
       "target_paths": [
-        "crates/hub/src/web/app/catalog/mod.rs",
-        "crates/hub/src/web/app/catalog/render.rs"
+        "engine/hub/src/web/app/catalog/mod.rs",
+        "engine/hub/src/web/app/catalog/render.rs"
       ],
       "evidence": [
         "Partial A05 catalog storage/API/browser mapping; see .ai/dev/plans/absorption/a05-catalog.md. Consumer references, unsandboxed-default policy/confirmation, provider integration and main delivery remain open."
@@ -8615,9 +8615,9 @@
       "packet": "A05",
       "status": "unverified",
       "target_paths": [
-        "crates/hub/src/web/app/catalog/form.rs",
-        "crates/hub/src/web/app/catalog/render.rs",
-        "crates/hub/src/agenthub/http/tests/catalog_access.rs"
+        "engine/hub/src/web/app/catalog/form.rs",
+        "engine/hub/src/web/app/catalog/render.rs",
+        "engine/hub/src/agenthub/http/tests/catalog_access.rs"
       ],
       "evidence": [
         "Partial A05 catalog storage/API/browser mapping; see .ai/dev/plans/absorption/a05-catalog.md. Consumer references, unsandboxed-default policy/confirmation, provider integration and main delivery remain open."
@@ -8632,13 +8632,13 @@
       "packet": "A04",
       "status": "partial",
       "target_paths": [
-        "crates/hub/src/web/app/access/mod.rs",
-        "crates/hub/src/web/app/access/render.rs",
-        "crates/hub/src/web/app/access/form.rs",
-        "crates/hub/src/machines/access/review.rs",
-        "crates/hub/src/machines/access/reads.rs",
-        "crates/hub/src/agenthub/http/tests/access_browser.rs",
-        "crates/hub/src/web/app/access/form_tests.rs"
+        "engine/hub/src/web/app/access/mod.rs",
+        "engine/hub/src/web/app/access/render.rs",
+        "engine/hub/src/web/app/access/form.rs",
+        "engine/hub/src/machines/access/review.rs",
+        "engine/hub/src/machines/access/reads.rs",
+        "engine/hub/src/agenthub/http/tests/access_browser.rs",
+        "engine/hub/src/web/app/access/form_tests.rs"
       ],
       "evidence": [
         "Pinned S1 browser comparison and implementation recorded in a04-access.md; owner review/narrow/deny/revoke and actual granted history share PostgreSQL domain authority. Five browser tests plus ended-pagination regression passed within the required-PostgreSQL 90-test access suite. Remaining policy/resume controls, native execution integration and actual-main Docker acceptance remain open; no source closure or deletion."
@@ -8785,13 +8785,13 @@
       "packet": "A04",
       "status": "partial",
       "target_paths": [
-        "crates/hub/src/web/app/access/mod.rs",
-        "crates/hub/src/web/app/access/render.rs",
-        "crates/hub/src/web/app/access/form.rs",
-        "crates/hub/src/machines/access/review.rs",
-        "crates/hub/src/machines/access/reads.rs",
-        "crates/hub/src/agenthub/http/tests/access_browser.rs",
-        "crates/hub/src/web/app/access/form_tests.rs"
+        "engine/hub/src/web/app/access/mod.rs",
+        "engine/hub/src/web/app/access/render.rs",
+        "engine/hub/src/web/app/access/form.rs",
+        "engine/hub/src/machines/access/review.rs",
+        "engine/hub/src/machines/access/reads.rs",
+        "engine/hub/src/agenthub/http/tests/access_browser.rs",
+        "engine/hub/src/web/app/access/form_tests.rs"
       ],
       "evidence": [
         "Pinned S1 browser comparison and implementation recorded in a04-access.md; owner review/narrow/deny/revoke and actual granted history share PostgreSQL domain authority. Five browser tests plus ended-pagination regression passed within the required-PostgreSQL 90-test access suite. Remaining policy/resume controls, native execution integration and actual-main Docker acceptance remain open; no source closure or deletion."
@@ -8861,9 +8861,9 @@
       "packet": "A05",
       "status": "unverified",
       "target_paths": [
-        "crates/hub/src/catalog/kinds.rs",
-        "crates/hub/src/site/catalog_copy.rs",
-        "crates/hub/site/default/content/messages.json"
+        "engine/hub/src/catalog/kinds.rs",
+        "engine/hub/src/site/catalog_copy.rs",
+        "engine/hub/site/default/content/messages.json"
       ],
       "evidence": [
         "Partial A05 catalog storage/API/browser mapping; see .ai/dev/plans/absorption/a05-catalog.md. Consumer references, unsandboxed-default policy/confirmation, provider integration and main delivery remain open."
@@ -8966,13 +8966,13 @@
       "packet": "A11",
       "status": "partial",
       "target_paths": [
-        "crates/hub/src/web/app/access/mod.rs",
-        "crates/hub/src/web/app/access/render.rs",
-        "crates/hub/src/web/app/access/form.rs",
-        "crates/hub/src/machines/access/review.rs",
-        "crates/hub/src/machines/access/reads.rs",
-        "crates/hub/src/agenthub/http/tests/access_browser.rs",
-        "crates/hub/src/web/app/access/form_tests.rs"
+        "engine/hub/src/web/app/access/mod.rs",
+        "engine/hub/src/web/app/access/render.rs",
+        "engine/hub/src/web/app/access/form.rs",
+        "engine/hub/src/machines/access/review.rs",
+        "engine/hub/src/machines/access/reads.rs",
+        "engine/hub/src/agenthub/http/tests/access_browser.rs",
+        "engine/hub/src/web/app/access/form_tests.rs"
       ],
       "evidence": [
         "Pinned S1 browser comparison and implementation recorded in a04-access.md; owner review/narrow/deny/revoke and actual granted history share PostgreSQL domain authority. Five browser tests plus ended-pagination regression passed within the required-PostgreSQL 90-test access suite. Remaining policy/resume controls, native execution integration and actual-main Docker acceptance remain open; no source closure or deletion."

@@ -31,7 +31,7 @@
 # secrets as KEY=VALUE lines; it is pushed into the container 0600 for install.sh and
 # removed once it ran. install.sh keeps them in the stack's .env (0600).
 #
-# The hub's site (its name, copy, colours, pictures: crates/hub/README.md, "The site") is a
+# The hub's site (its name, copy, colours, pictures: engine/hub/README.md, "The site") is a
 # directory on this host: --site DIR pushes it into the container, where install.sh checks
 # it with the hub image and puts it in place. To change the site of a hub this script set
 # up, edit DIR and push it alone; nothing else is touched, and the hub serves it in seconds:
@@ -63,7 +63,7 @@ A hosted hub, who runs it, and how people sign in (passed to install.sh; see its
                      --nomen is an OpenID Connect issuer (https://id.example.com)
   --analytics on|off  --analytics-retention-days N
   --env-file FILE    on this host: the providers' ids and secrets (KEY=VALUE lines)
-The hub's site (crates/hub/README.md, "The site"):
+The hub's site (engine/hub/README.md, "The site"):
   --site DIR         a site directory on this host, checked and put in place in the container
   --site-only        with --site: push the site to the hub already there, and nothing else
                      (no --domain, no snapshot, no reinstall)

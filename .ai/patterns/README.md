@@ -18,7 +18,7 @@ where the repo follows it, and where the repo departs from it the pattern says w
 | 3 | [mcp-tools.md](mcp-tools.md) | Every MCP tool on both surfaces: names, titles, hints, closed inputs, `Json<T>` answers, coded refusals, one audit line, one description. |
 | 4 | [machine-capability.md](machine-capability.md) | One thing an AI can do on a machine, end to end: contract, broker, local tool, hub tool, probes. Exemplar `broker_capabilities` / `machine_inspect`. |
 | 5 | [link.md](link.md) | The machine-to-hub WebSocket: frames in contracts, additive protocol 1, gated hub frames, bounded loops, join templates. |
-| 6 | [board-operations.md](board-operations.md) | An AgentHub operation: one `HostedBoard` transaction, one chain event, one refusal code, one call from every surface. Exemplar `HostedBoard::handoff` (`crates/agenthub/src/hosted/operations.rs`). |
+| 6 | [board-operations.md](board-operations.md) | An AgentHub operation: one `HostedBoard` transaction, one chain event, one refusal code, one call from every surface. Exemplar `HostedBoard::handoff` (`agenthub/src/hosted/operations.rs`). |
 | 7 | [persistence.md](persistence.md) | Postgres through `devagotchi-store`: migrations, prefixes, forced RLS, `transaction!`, `scope`, store fixtures. |
 | 8 | [identity-and-config.md](identity-and-config.md) | Settings (file vs `/admin`), sign-in providers as data, cookies, sessions, origin, the hub's OAuth server. |
 | 9 | [hub-pages.md](hub-pages.md) | An axum page and its form: owned routes, one guard per caller, POST-303-GET, one render path, the site's words, the phone frame. |
@@ -41,13 +41,13 @@ and adds nothing:
 
 | Decision | Owner |
 |---|---|
-| What runs or changes on a machine | the broker (`crates/machine-engine`) |
-| What a board does | `HostedBoard` (`crates/agenthub/src/hosted.rs` and `crates/agenthub/src/hosted/`) |
-| SQL, transactions, tenant scope | `Store` (`crates/store`) |
-| Wire shapes, bounds, defaults, compared words | `crates/contracts` |
-| A tool's description | `crates/contracts/src/describe.rs` |
-| A client's connect steps | the connector renderer (`Connector::render`, `crates/connectors/src/lib.rs`) |
-| A setting's range and precedence | the `SETTINGS` catalog (`crates/hub/src/config/live/catalog.rs`) |
+| What runs or changes on a machine | the broker (`engine/machine-engine`) |
+| What a board does | `HostedBoard` (`agenthub/src/hosted.rs` and `agenthub/src/hosted/`) |
+| SQL, transactions, tenant scope | `Store` (`platform/store`) |
+| Wire shapes, bounds, defaults, compared words | `platform/contracts` |
+| A tool's description | `platform/contracts/src/describe.rs` |
+| A client's connect steps | the connector renderer (`Connector::render`, `engine/connectors/src/lib.rs`) |
+| A setting's range and precedence | the `SETTINGS` catalog (`engine/hub/src/config/live/catalog.rs`) |
 
 A surface (local MCP, hub MCP, CLI, page, REST, hook) makes exactly one call per user intent.
 Two writes for one intent means a missing operation in the owner.
@@ -66,18 +66,18 @@ Two writes for one intent means a missing operation in the owner.
 **G3. A value two places compare is defined once.** Bounds are `pub const MAX_*`. Defaults
 are `pub const DEFAULT_*`, returned by a `pub fn default_*` that serde names. Words both sides
 compare are `pub const`, and rules both sides apply are `pub fn`. They live in
-`crates/contracts` when they cross crates, and in the owning module otherwise. A literal that
+`platform/contracts` when they cross crates, and in the owning module otherwise. A literal that
 restates one is a defect. That covers `unwrap_or(200)`, a range in a message or description,
 and `"container"` written on both sides.
 
 **G4. Refusals are coded and honest.**
-- A refusal is `{code, message}` (`BridgeError` in `crates/contracts/src/lib.rs`, or
-  `BoardError` with `ticket` and `next` in `crates/hub/src/agenthub/mcp/refusals.rs`). The code
+- A refusal is `{code, message}` (`BridgeError` in `platform/contracts/src/lib.rs`, or
+  `BoardError` with `ticket` and `next` in `engine/hub/src/agenthub/mcp/refusals.rs`). The code
   is stable snake_case. The message names what to do next.
 - A store or service failure is never a "no", an empty list, "signed out" or a 404. It is 503
   `unavailable` on pages, `issuer_unavailable` on JSON, and a coded tool error over MCP.
 - No success-shaped fallbacks: no `.ok()` or `unwrap_or_default()` on stored data that is shown
-  or decided on. Use `decode` (`crates/agenthub/src/hosted.rs`), which refuses with
+  or decided on. Use `decode` (`agenthub/src/hosted.rs`), which refuses with
   `board_damaged`.
 - An MCP tool returns refusals as a tool execution error (`isError: true` with
   `structuredContent.code`). That includes refusals made around the tools (API-key limits,
@@ -103,9 +103,9 @@ fails to compile until each table decides. A decoder that expects one kind keeps
 - Every hub tool call and every surface write writes exactly one audit line. It holds the
   subject, the tool, the place (machine or project, else `""`), the target, and the outcome
   `ok`, `running` or the returned error's code. Detail goes in the target.
-- Write the line through `Hub::call` (`crates/hub/src/mcp/hub.rs`), `board_call` /
-  `board_call_scoped` (`crates/hub/src/agenthub/mcp/calls.rs`), or `Hub::recorded` (a
-  `Result` in, the line written, `Json` out; B1 adds it to `crates/hub/src/ops/audit.rs`,
+- Write the line through `Hub::call` (`engine/hub/src/mcp/hub.rs`), `board_call` /
+  `board_call_scoped` (`engine/hub/src/agenthub/mcp/calls.rs`), or `Hub::recorded` (a
+  `Result` in, the line written, `Json` out; B1 adds it to `engine/hub/src/ops/audit.rs`,
   where the free `fn recorded` today is a row decoder, not this). There is no `?` or
   `return Err` before it, except on taking the subject.
 - Before the effect, a failed audit write refuses the call (`audit_write`). After a committed
@@ -141,11 +141,11 @@ fails to compile until each table decides. A decoder that expects one kind keeps
   (https://doc.rust-lang.org/book/ch11-03-test-organization.html), while file plus tests stay
   under 500 lines. A front door, or a file that would cross the cap, moves its tests out. No
   `<x>_tests.rs` beside code.
-- *Contracts.* `crates/contracts` is the one crate whose `lib.rs` may re-export its family
+- *Contracts.* `platform/contracts` is the one crate whose `lib.rs` may re-export its family
   modules flat (`devagotchi_contracts::FileSearchInput`, from `search.rs`). The wire's public
   paths are its API, and the exporter and every crate import them. This is the only exception
-  layout rule 5 allows. Other `lib.rs` files that re-export today (AgentHub's, `crates/store`,
-  `crates/ipc`, `crates/mcp`) are not covered by it.
+  layout rule 5 allows. Other `lib.rs` files that re-export today (AgentHub's, `platform/store`,
+  `platform/ipc`, `interfaces/mcp`) are not covered by it.
 - A domain's tools, pages and SQL live in that domain. Front doors carry Owns / Serves /
   Settings / Depends on.
 
@@ -160,14 +160,14 @@ name a domain or a plan, never a file path.
 - An allow-list or baseline file only shrinks. Its `DEVAGOTCHI_WRITE_<X>` mode only lowers or
   drops entries, never adds them. CI never sets a write variable.
 - A check lands green together with the fix it guards, never red on `main`.
-- Workspace-wide source scans live in `crates/devagotchi/tests/` and share one walker with
-  `crates/devagotchi/tests/layout.rs`. Single-crate scans live in that crate's tests and share
-  the walker lifted from `crates/hub/src/site/brand_tests.rs`.
+- Workspace-wide source scans live in `runtime/devagotchi/tests/` and share one walker with
+  `runtime/devagotchi/tests/layout.rs`. Single-crate scans live in that crate's tests and share
+  the walker lifted from `engine/hub/src/site/brand_tests.rs`.
 
 **G13. A test proves one claim or fails.**
 - Its name is a falsifiable sentence.
 - A store fixture is `async fn <name>() -> Option<T>`, taken with
-  `let f = or_skip!(<name>());` (`crates/store/src/testing.rs`).
+  `let f = or_skip!(<name>());` (`platform/store/src/testing.rs`).
 - `or_skip!` prints `SKIPPED: no DEVAGOTCHI_TEST_POSTGRES_URL`. In CI,
   `DEVAGOTCHI_TEST_REQUIRE_POSTGRES=1` (and `DEVAGOTCHI_TEST_REQUIRE_CLICKHOUSE=1`, which B0
   adds) turns any missing URL into a failure.
@@ -195,26 +195,26 @@ review.
 
 | Check | Holds | Lives in | Status |
 |---|---|---|---|
-| Size ratchet | layout 6 | `crates/devagotchi/tests/layout.rs` | in place |
-| One home per module: no `<x>.rs` beside `<x>/` | layout 2 | `crates/devagotchi/tests/layout.rs` (`layout/beside.txt`, shrink-only) | in place (B3) |
-| Test shape: names, skip shapes, scripts run by CI, workflow pins and timeouts | G13, tests-and-ci | `crates/devagotchi/tests/test_shape.rs` | planned (B6) |
-| Link wire scan: dispatch wildcards, compared literals, personal paths | G5, G3, link 11 | `crates/devagotchi/tests/link_protocol.rs` | in place (B2) |
-| SQL scan: qualified tables, `AssertSqlSafe`, `QueryBuilder`, `tenant_id` ratchet | persistence 12-18 | `crates/devagotchi/tests/sql.rs` | planned (B6) |
-| Link wire golden (append-only) | G2 | `crates/contracts/src/link/tests.rs` (`SEEN`) | in place (B2) |
-| `describe::BROKER_TOOLS` covers `REQUEST_METHODS` | machine-capability 7 | `crates/contracts/src/system/tests.rs` | in place (B1) |
-| Every tool's form, through shared `check_tools` | mcp-tools N1, T1, A1, A2, I1, I2, O1, O4, O5, D1, D3 | `crates/mcp/src/pattern.rs`, called by `crates/mcp/src/adapter/tests.rs` and `crates/hub/src/mcp/tests/tools.rs` | in place (B1; O4 and O5 in B3); no allow-list since B4: every hub tool passes |
-| Hub audit and uniqueness scan | G7, N1 | `crates/hub/src/mcp/tests/scan.rs` | in place (B1); no allow-list since B4 |
-| Local/hub parity | G1, G3, machine-capability 8, 14-16 | `crates/hub/src/machines/tests/parity.rs` | in place (B1) |
-| Board contract: viewer tools match hints; every code has a `next`; wait bounds | board-operations 9, 11 | `crates/hub/src/agenthub/mcp/tests/contract.rs`; the CLI side in `crates/agenthub/src/cli/tests/output.rs` | in place (B3) |
-| Board actions, no-op silence, atomic operations | board-operations 6, 7, 1 | `crates/agenthub/src/tests/actions.rs`, `crates/agenthub/src/tests/operations.rs` | in place (B3) |
-| RLS, grants and lookup-function locks from the catalog | G8, persistence 8-10 | `crates/hub/src/store/tests.rs` | planned (B6); replaces `TENANT_TABLES` in `crates/hub/src/identity/accounts/tenants/tests.rs` |
-| Table prefixes | layout 8 | `crates/hub/src/store/tests.rs` (`every_table_in_the_hub_schema_carries_its_domain_prefix`) | in place |
-| Migration names and checksums ratchet | persistence 2, 3 | `crates/hub/src/store/tests.rs`, `crates/agenthub/src/migrations/tests.rs` | planned (B6); both files exist |
-| Every POST refuses another site; one origin helper | G4, hub-pages 2 | `crates/hub/src/web/tests/forms.rs` | planned (B5) |
-| Cookies, provider names, env reads | G8, identity P3/K1/C1 | `crates/hub/src/identity/tests/conventions.rs` | planned (B5) |
-| Copy ratchet | hub-pages 7 | `crates/hub/src/web/tests/copy.rs` | planned (B5) |
+| Size ratchet | layout 6 | `runtime/devagotchi/tests/layout.rs` | in place |
+| One home per module: no `<x>.rs` beside `<x>/` | layout 2 | `runtime/devagotchi/tests/layout.rs` (`layout/beside.txt`, shrink-only) | in place (B3) |
+| Test shape: names, skip shapes, scripts run by CI, workflow pins and timeouts | G13, tests-and-ci | `runtime/devagotchi/tests/test_shape.rs` | planned (B6) |
+| Link wire scan: dispatch wildcards, compared literals, personal paths | G5, G3, link 11 | `runtime/devagotchi/tests/link_protocol.rs` | in place (B2) |
+| SQL scan: qualified tables, `AssertSqlSafe`, `QueryBuilder`, `tenant_id` ratchet | persistence 12-18 | `runtime/devagotchi/tests/sql.rs` | planned (B6) |
+| Link wire golden (append-only) | G2 | `platform/contracts/src/link/tests.rs` (`SEEN`) | in place (B2) |
+| `describe::BROKER_TOOLS` covers `REQUEST_METHODS` | machine-capability 7 | `platform/contracts/src/system/tests.rs` | in place (B1) |
+| Every tool's form, through shared `check_tools` | mcp-tools N1, T1, A1, A2, I1, I2, O1, O4, O5, D1, D3 | `interfaces/mcp/src/pattern.rs`, called by `interfaces/mcp/src/adapter/tests.rs` and `engine/hub/src/mcp/tests/tools.rs` | in place (B1; O4 and O5 in B3); no allow-list since B4: every hub tool passes |
+| Hub audit and uniqueness scan | G7, N1 | `engine/hub/src/mcp/tests/scan.rs` | in place (B1); no allow-list since B4 |
+| Local/hub parity | G1, G3, machine-capability 8, 14-16 | `engine/hub/src/machines/tests/parity.rs` | in place (B1) |
+| Board contract: viewer tools match hints; every code has a `next`; wait bounds | board-operations 9, 11 | `engine/hub/src/agenthub/mcp/tests/contract.rs`; the CLI side in `agenthub/src/cli/tests/output.rs` | in place (B3) |
+| Board actions, no-op silence, atomic operations | board-operations 6, 7, 1 | `agenthub/src/tests/actions.rs`, `agenthub/src/tests/operations.rs` | in place (B3) |
+| RLS, grants and lookup-function locks from the catalog | G8, persistence 8-10 | `engine/hub/src/store/tests.rs` | planned (B6); replaces `TENANT_TABLES` in `engine/hub/src/identity/accounts/tenants/tests.rs` |
+| Table prefixes | layout 8 | `engine/hub/src/store/tests.rs` (`every_table_in_the_hub_schema_carries_its_domain_prefix`) | in place |
+| Migration names and checksums ratchet | persistence 2, 3 | `engine/hub/src/store/tests.rs`, `agenthub/src/migrations/tests.rs` | planned (B6); both files exist |
+| Every POST refuses another site; one origin helper | G4, hub-pages 2 | `engine/hub/src/web/tests/forms.rs` | planned (B5) |
+| Cookies, provider names, env reads | G8, identity P3/K1/C1 | `engine/hub/src/identity/tests/conventions.rs` | planned (B5) |
+| Copy ratchet | hub-pages 7 | `engine/hub/src/web/tests/copy.rs` | planned (B5) |
 | Generated contracts current (`node scripts/generate-contracts.cjs --check`); `devagotchi ai check` | machine-capability 9 | a new `static` job in `.github/workflows/ci.yml` (no CI job runs either today) | planned (B1) |
-| Store tests cannot skip in CI | G13 | `.github/workflows/ci.yml` `hub-postgres`, `crates/store/src/testing.rs` (`server_url`) | in place for Postgres (f13b8e1); ClickHouse flag planned (B0) |
+| Store tests cannot skip in CI | G13 | `.github/workflows/ci.yml` `hub-postgres`, `platform/store/src/testing.rs` (`server_url`) | in place for Postgres (f13b8e1); ClickHouse flag planned (B0) |
 
 ## Upstream ground
 

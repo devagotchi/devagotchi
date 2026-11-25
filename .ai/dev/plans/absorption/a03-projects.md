@@ -14,7 +14,7 @@ projects. This realizes the lifecycle decisions already recorded in implementati
 
 ## Authored owners and adapters
 
-- `crates/agenthub/src/hosted/projects/`: one serializable transaction creates metadata,
+- `agenthub/src/hosted/projects/`: one serializable transaction creates metadata,
   defaults, optional workflow binding, event and receipt. Edits use metadata versions;
   workflow changes invalidate those versions. Empty project removal preserves immutable
   history and refuses all tasks and catalog definitions anchored there. Every mutation

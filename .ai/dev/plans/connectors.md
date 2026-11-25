@@ -16,7 +16,7 @@
 
 | Decision | Choice | Why |
 |---|---|---|
-| Source of truth | One JSON file per client, `crates/connectors/catalog/<vendor>/<id>.json` | Adding a client is a one-file review; no code path per client |
+| Source of truth | One JSON file per client, `engine/connectors/catalog/<vendor>/<id>.json` | Adding a client is a one-file review; no code path per client |
 | Contract | Rust types, generating `schemas/connector.v1.schema.json` | The repository's rule: schemas come from canonical types and a test holds them equal |
 | Boundary | New `devagotchi-connectors` crate: data, types, renderer; no network or disk | Hub, CLI and tests share one reader without depending on each other |
 | Distribution | Compiled into the binary | A hub and its catalog can never disagree; nothing to fetch at runtime |
@@ -24,15 +24,15 @@
 | Promotion | `docs` becomes `ci` only when a real client connects in a named test | Reading documentation is not proof that it works |
 
 ```text
-crates/connectors/
+engine/connectors/
   README.md                how to add a client
   src/lib.rs               types, catalog access, renderer
   src/catalog.rs           the compiled-in list, checked against the folder
   src/tests.rs             the catalog's rules, run as tests
   catalog/<vendor>/<id>.json
 schemas/connector.v1.schema.json
-crates/hub/src/web/connectors.rs   /connect and GET /api/v1/connectors
-crates/mcp/src/connect.rs          devagotchi connect --list, ID --print
+engine/hub/src/web/connectors.rs   /connect and GET /api/v1/connectors
+interfaces/mcp/src/connect.rs          devagotchi connect --list, ID --print
 ```
 
 ## Milestones and tasks

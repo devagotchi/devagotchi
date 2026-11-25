@@ -17,13 +17,13 @@ This file is the design the implementation follows. It is grounded in the tree a
 
 The product that already works is the broker, the link, and the board. None of that knows who Nomen is.
 
-- One binary, broker owns jobs, hub only routes (`crates/hub/src/lib.rs:1-6`, `crates/hub/src/hub.rs:239-317`). A routed call is an audited IPC or link request. The broker never sees a Nomen token.
-- Machine enrollment, owner-scoped devices, one-time codes (`crates/hub/src/devices.rs:172-194`, `crates/hub/src/hub.rs:226-230`).
-- `/join` and the downloads directory (`crates/hub/src/join.rs`, `crates/hub/src/downloads.rs`, `crates/hub/src/lib.rs:342-360`).
-- Boards, org directories, seats, free limit, approvals (`crates/hub/src/board/mcp.rs:161-168`, `crates/hub/src/board/mcp.rs:202-213`).
-- Hash-chained audit (`crates/hub/src/audit.rs:40-88`). `/healthz` already refuses a broken chain (`crates/hub/src/lib.rs:668-688`).
-- Session sealing (AES-256-GCM, `__Host-` cookies) (`crates/hub/src/web/sessions.rs:1-27`). The crypto is worth keeping. What is sealed today is a Nomen token (`sessions.rs:28-35`), so the *contents* change.
-- Web Push (`crates/hub/src/push.rs`).
+- One binary, broker owns jobs, hub only routes (`engine/hub/src/lib.rs:1-6`, `engine/hub/src/hub.rs:239-317`). A routed call is an audited IPC or link request. The broker never sees a Nomen token.
+- Machine enrollment, owner-scoped devices, one-time codes (`engine/hub/src/devices.rs:172-194`, `engine/hub/src/hub.rs:226-230`).
+- `/join` and the downloads directory (`engine/hub/src/join.rs`, `engine/hub/src/downloads.rs`, `engine/hub/src/lib.rs:342-360`).
+- Boards, org directories, seats, free limit, approvals (`engine/hub/src/board/mcp.rs:161-168`, `engine/hub/src/board/mcp.rs:202-213`).
+- Hash-chained audit (`engine/hub/src/audit.rs:40-88`). `/healthz` already refuses a broken chain (`engine/hub/src/lib.rs:668-688`).
+- Session sealing (AES-256-GCM, `__Host-` cookies) (`engine/hub/src/web/sessions.rs:1-27`). The crypto is worth keeping. What is sealed today is a Nomen token (`sessions.rs:28-35`), so the *contents* change.
+- Web Push (`engine/hub/src/push.rs`).
 - CI: locked build, nextest on six OS targets, `tests/e2e.py`, host install, `cargo deny`, cargo-dist archives attested on `main` (`.github/workflows/ci.yml`, `.github/workflows/release.yml:41-49`).
 - Installer and rollback by re-running with the previous `--version` (`deploy/linux/README.md:26`, `deploy/linux/install-devagotchi.sh:433-451`).
 
@@ -31,7 +31,7 @@ That is the Desktop Commander-class product: a program runs on the person's mach
 
 ### Coupled to Nomen
 
-The hub is not an account system. `Subject.id` is the identity provider's `sub` (`crates/hub/src/auth.rs:21-36`). The README states the consequence: "The hub keeps no copy of who owns what; it asks Nomen on every new token" (`crates/hub/README.md:143`).
+The hub is not an account system. `Subject.id` is the identity provider's `sub` (`engine/hub/src/auth.rs:21-36`). The README states the consequence: "The hub keeps no copy of who owns what; it asks Nomen on every new token" (`engine/hub/README.md:143`).
 
 Every authorization decision compares that `sub` to strings in `hub.json`:
 
@@ -61,7 +61,7 @@ The resource server points clients at Nomen, not at itself:
 
 ### Code quality and coverage
 
-The Nomen resource-server code is careful: fail-closed config (`config.rs` `deny_unknown_fields`), no token in logs, hashed sign-in cache, owner-only key file, tests that stand up a fake Nomen (`crates/hub/src/nomen/tests.rs`, `tests/fake_nomen.py`, `tests/nomen_probe.py`). Keep that discipline.
+The Nomen resource-server code is careful: fail-closed config (`config.rs` `deny_unknown_fields`), no token in logs, hashed sign-in cache, owner-only key file, tests that stand up a fake Nomen (`engine/hub/src/nomen/tests.rs`, `tests/fake_nomen.py`, `tests/nomen_probe.py`). Keep that discipline.
 
 Coverage of a Devagotchi user is zero, because the type does not exist. `email_verified` is not parsed (`account.rs:234-241` has `email` and no verified flag; `nomen.rs:91-110` has no email at all). Two people with the same verified address cannot be linked, and an unverified address cannot be refused, because neither is stored.
 
@@ -71,7 +71,7 @@ Coverage of a Devagotchi user is zero, because the type does not exist. `email_v
 
 | Option | What it actually is | Why |
 |---|---|---|
-| **Salvage (this work)** | New store and OAuth server in `crates/hub`, re-key the edges that store a `sub`, point metadata at the hub, change `login`'s default. Broker, link, board, audit, join, push crypto, CI, and the installer stay. | The machine plane is the product and it is already tested on real OSes. Replacing it to get accounts would throw away increments 13 through 33. |
+| **Salvage (this work)** | New store and OAuth server in `engine/hub`, re-key the edges that store a `sub`, point metadata at the hub, change `login`'s default. Broker, link, board, audit, join, push crypto, CI, and the installer stay. | The machine plane is the product and it is already tested on real OSes. Replacing it to get accounts would throw away increments 13 through 33. |
 | Partial rewrite of Nomen mode in place | Make `auth.mode: nomen` secretly create Devagotchi users and keep requiring `key_file` and project ids. | Preserves the hard dependency. Existing probes keep passing and the product is still a Nomen app. Rejected as the end state. Nomen mode stays as a legacy verifier so those probes keep passing while `devagotchi` mode is the one that serves. |
 | Restart | New broker, new board, new link, new installer, then accounts. | No identity benefit. The unsolved part is the edge, and it is a few modules, not the workspace. |
 
@@ -230,9 +230,9 @@ Desktop Commander local is the OS user: stdio to a process on that machine, no a
 
 Each phase is one commit, tests green before the next. Nomen-mode tests stay green throughout.
 
-1. `crates/hub/src/identity.rs` — store, resolution, events, unlink. Unit tests: new account, existing `(issuer, sub)`, verified-email link, unverified does not link, second issuer same email links, existing link wins over a conflicting email, unlink of the last way in fails, concurrent creators collapse to one account.
+1. `engine/hub/src/identity.rs` — store, resolution, events, unlink. Unit tests: new account, existing `(issuer, sub)`, verified-email link, unverified does not link, second issuer same email links, existing link wins over a conflicting email, unlink of the last way in fails, concurrent creators collapse to one account.
 2. Re-key. `AuthConfig::Devagotchi`. Startup map for `owner` and grants. Devices, push subscriptions, board directories. Tests with a fixture `sub` and a `dg_` owner.
-3. `crates/hub/src/oauth.rs` — keys, DCR, authorize (session required), consent, token, refresh rotation, revoke, JWKS, metadata, local JWT check on `/mcp`. Tests cover PKCE failure, redirect mismatch, refresh reuse, and a JWT admitted while introspection is not configured.
+3. `engine/hub/src/oauth.rs` — keys, DCR, authorize (session required), consent, token, refresh rotation, revoke, JWKS, metadata, local JWT check on `/mcp`. Tests cover PKCE failure, redirect mismatch, refresh reuse, and a JWT admitted while introspection is not configured.
 4. Upstream OIDC list and magic link. Account page: list, link, unlink. Fake upstream in tests. Loopback outbox for the link.
 5. `devagotchi login` device flow against the hub by default. `account.json` shape unchanged (`Account` already has issuer, client id, subject, email, tokens). `connect-nomen` still uses `Issuer`.
 6. Website helper and `devagotchi_account_id` column. `docs/auth.md` describes the site bridge. No live call to a hub from the website test suite.

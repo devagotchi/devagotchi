@@ -383,7 +383,7 @@ No remote push, CI run, merge, branch deletion or Docker development-image updat
 
 ## Request, decision and admission authoring
 
-The next code unit is authored under `crates/hub/src/machines/access/`, with current
+The next code unit is authored under `engine/hub/src/machines/access/`, with current
 identity reconstruction in `identity/accounts/machine_access.rs` and current task project/
 labels in AgentHub's `hosted/access.rs`. No HTTP/MCP/browser adapter exposes these new
 operations yet. They do not claim native confinement or successful broker execution.

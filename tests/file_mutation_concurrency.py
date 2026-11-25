@@ -7,7 +7,7 @@ when every check holds and every scenario overlapped at least once across the ro
 many pairs overlapped is a measurement, not the criterion. --expect-race is a diagnostic for a
 binary without the broker's mutation gate: it must observe two same-SHA writes both succeed,
 and is never a passing product gate. No OS-wide CAS, external-writer exclusion, durability, or
-retry-idempotency claim is made (crates/machine-engine/src/broker/files.rs).
+retry-idempotency claim is made (engine/machine-engine/src/broker/files.rs).
 """
 import argparse
 from concurrent.futures import ThreadPoolExecutor

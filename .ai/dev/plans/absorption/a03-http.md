@@ -13,7 +13,7 @@ refuse. Existing /api/v1/me stays with identity. Rust IDs are the existing strin
 IDs; never reinterpret them as source integers. Require an explicit project, including
 reads: a global source task list cannot bypass the current board access boundary.
 
-Own HTTP adapters under crates/hub/src/agenthub/http/. Mount behind the existing
+Own HTTP adapters under engine/hub/src/agenthub/http/. Mount behind the existing
 bearer_or_session middleware (live bearer verification or browser session plus origin
 check). Capture Subject and KeyLimits from request extensions, never JSON. Check key scope
 and project with the equivalent MCP operation, waiting state and valid seat. Reuse the

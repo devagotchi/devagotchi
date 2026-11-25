@@ -69,7 +69,7 @@ locally; its tests and fixtures must nevertheless be authored in the owning batc
 | `store` project/config removal; HTTP `admin.go` dynamically registers roles, policies, workflows, projects, settings | Existing AgentHub `hosted/registry.rs`, `hosted/settings.rs`, `hosted/shared_workflows/` and hub `agenthub/registry.rs`, `agenthub/mcp/boards.rs`: locate each actual owner, add missing guarded deletion there. In-use workflows/states/roles refuse; deleting a project cannot orphan tasks/history. Add new `agenthub/http/configuration/` adapters after those domain rules. Settings dispatch by owning domain, never table-name SQL from a request. | Used/deleted/recreated IDs, stale versions, dependent rows, concurrent delete/create, foreign account and replay after deletion; all surfaces see the same result. |
 | `store/principals.go`, `admin_people.go`, human tokens, role membership; existing `identity/accounts/agents/{mod,configuration,bindings,mutations,directory}.rs` | Complete environment roster and members through existing account/profile owners; add new `agenthub/http/principals/` and corresponding MCP administration using live manager checks. Tokens map to existing API keys: issue once, metadata only thereafter, revoke through existing receipt-aware operation. An agent cannot become a person by editing its kind. Source human token login maps explicitly to current password/passkey/provider browser login; do not introduce shared human bearer login. | Disabled account/profile and revoked key/OAuth binding refuse reads and writes; member changes take effect without restart. Test owner, ordinary person, bound agent, foreign account and stale role/policy snapshots. |
 | `httpapi/events.go`, `stream/broker.go`; existing `agenthub/http/events.rs`, `Board::changes`, `Hub::run_scoped` | New `agenthub/http/stream.rs` plus small stream-state/auth modules as needed. GET `/api/v1/stream` requires project. Subscribe before history catch-up, cursor from `Last-Event-ID` or query, reject conflicting/invalid cursors, batch at most 100, emit committed event sequence as SSE id. Reuse identity bearer/session verification on every bounded read/emission, not only handshake. Recheck idle authority; close on revocation, changed identity, inaccessible board or store failure. No unbounded channel or detached per-client task. | Real HTTP stream: backlog and live events in order, resume without gaps, no cross-board events, no synthetic receipt-replay events, key/project/profile/session/grant revocation while open, malformed cursor, slow-reader/drop cleanup. |
-| `httpapi/protocol.go`, client instructions and current connector ownership | New `agenthub/http/protocol.rs` delegates connection configuration to `crates/connectors`, the owner already used by `web/connectors.rs`. `identity/connect` is Nomen bootstrap, not client snippets. Use current operation names, explicit project/fence/version/retry rules; derive origin from configured public origin, never arbitrary Host input. No token interpolation or stored-secret return. | Output references existing commands/tools and valid origin; caller display names never enter shell/config syntax. Test structured connector output against the existing catalog and its parsed-snippet fixtures. |
+| `httpapi/protocol.go`, client instructions and current connector ownership | New `agenthub/http/protocol.rs` delegates connection configuration to `engine/connectors`, the owner already used by `web/connectors.rs`. `identity/connect` is Nomen bootstrap, not client snippets. Use current operation names, explicit project/fence/version/retry rules; derive origin from configured public origin, never arbitrary Host input. No token interpolation or stored-secret return. | Output references existing commands/tools and valid origin; caller display names never enter shell/config syntax. Test structured connector output against the existing catalog and its parsed-snippet fixtures. |
 | Source operation filters, dependency readiness, defaults/reaper behavior, browser pages | Extend A01's operation mapping and A02's roster/policy mapping with exact target and tests; preserve authored receipt/CLI/HTTP implementations. Reconcile source defaults against current policy/workflow versions; seed only missing definitions. Existing `web/app/home.rs` and AgentHub pages expose the completed operations. | Complete source operation matrix plus real PostgreSQL edge cases; no duplicate effect or lost newer lease. Roster/configuration operations are reachable by an owner in the browser. |
 
 Further source comparison: `store/admin_misc.go::DeleteConfig` refuses a project with
@@ -384,8 +384,8 @@ Source: `server/internal/store/` task, dependency, note, lease, settings and wor
 implementations; `server/internal/presets/`; corresponding source HTTP/MCP/CLI tests and
 `web/src/pages/Board.tsx`, `NewTask.tsx`. Principals are A02; replay is A03.
 
-Existing owners: `crates/agenthub/src/hosted/`, its transaction/graph owners and tests;
-`crates/hub/src/agenthub/`; `crates/hub/src/web/app/agenthub/` and `home.rs`.
+Existing owners: `agenthub/src/hosted/`, its transaction/graph owners and tests;
+`engine/hub/src/agenthub/`; `engine/hub/src/web/app/agenthub/` and `home.rs`.
 
 1. Compare each source task field, filter, transition, dependency mutation, comment and
    lease operation with the current API and serialized contract. Produce a per-operation
@@ -466,7 +466,7 @@ cover deny precedence, selectors, concurrent label changes and role deletion. Br
 Source: `store/store.go` receipt semantics, `httpapi/`, `mcptools/`, `stream/`, CLI and
 protocol tests. Source request keys are principal-scoped across operations, not per board.
 
-1. Add one reusable receipt facility under `crates/store/src/receipts/`, with its own
+1. Add one reusable receipt facility under `platform/store/src/receipts/`, with its own
    migration history and `store_request_receipts` prefix. Update the store's ownership
    documentation and prefix test explicitly. Run this additive migrator after caller
    migrations so the hub role exists when present; standalone AgentHub also installs it.
@@ -498,8 +498,8 @@ cross-account data or a fabricated success response.
 Source: `access/`, `changepolicy/`, `policyrules/`, `policygate/`, `machineops/`, machine
 and bridge grant/sandbox code, and `devapi/build.go` wiring.
 
-Owners: hub `machines/` and existing approvals; `crates/link`, typed `crates/contracts`
-and `crates/machine-engine` execution/service. Extend those owners, not a second runner.
+Owners: hub `machines/` and existing approvals; `runtime/link`, typed `platform/contracts`
+and `engine/machine-engine` execution/service. Extend those owners, not a second runner.
 
 1. Port access requests, grant presets and versioned grants with principal/machine/tool/
    path/network scope, expiry, revocation and human decision evidence. Persist PostgreSQL
@@ -625,7 +625,7 @@ across live and archived rows; ordinary-user denial and bounded output capture.
 ## A09 — file, document, search and process parity
 
 Source: bridge tool dispatch, file/search/process/document implementations and tests.
-Targets: `crates/contracts`, `crates/machine-engine`, broker service and existing MCP/CLI
+Targets: `platform/contracts`, `engine/machine-engine`, broker service and existing MCP/CLI
 adapters. Consult `.ai/docs/desktop-commander-parity.md` but verify each row against code.
 
 1. Expand the original tool registry and map every operation/schema to current contracts.

@@ -27,7 +27,7 @@ Each item of the rewrite plan's B3 section, and where it went.
 | M3 the chain | `chain::actions` (23 names, the five D7 renames); handoff records `assignee`; no-ops write nothing (`add_dep`, `set_project`, `put_settings`, `put_workflow`, `set_wake` of nothing, `revoke_own` of nothing); `put_settings` names its changed keys | `tests/actions.rs` | done |
 | M4 refusals | `decode` for cursors and wakes (`board_damaged`); `invalid()` in handoff; MCP `next_for` and CLI `next_for` lines for every reachable code; `parent_closed` and `request_conflict` are conflicts | `contract.rs` scan; `cli/tests/output.rs` scan | done |
 | M5 issue tools | `Board::issue_context`, `issue_source`, `write_issue_context(&Actor)` in `board/issues.rs`; tools to `mcp/tools/issues.rs` with titles; the REST checkpoint takes an `Actor` | hub suite | done |
-| M6 hub without board SQL | `hosted::registry::{names, boards, has_board, lease_delays}`; the hub registry and the board signal sink use them and `events_page` | no `board_*` SQL left in `crates/hub/src` outside tests (grep) | done |
+| M6 hub without board SQL | `hosted::registry::{names, boards, has_board, lease_delays}`; the hub registry and the board signal sink use them and `events_page` | no `board_*` SQL left in `engine/hub/src` outside tests (grep) | done |
 | M7 tool form | `deny_unknown_fields` on the 22 inputs; 46 field docs, the issue inputs' docs; T1 titles; `board_claim` not idempotent; `board_settings` destructive; `READ_ONLY_TOOLS`, `PER_CALLER_WRITES`, `viewer_may_call`; every board tool's return type spelled out so it declares an output schema; list answers as objects; wait bounds as consts; host names out of tool docs | `tools-not-yet.txt` holds no board tool; new rule O4 | done |
 | M8 audit (G7, D1) | `board_call_scoped` audits after the call, refusals included (the seat, a missing fence, a dep kind, a webhook URL); `board_wait`, `approval_wait`, `board_bind` and an unmapped issue repository audited once; outcomes `ok` with status or `created` in the target; approvals page, ticket actions, `stop_own` and the REST checkpoint write one line each through `record_completion` | `audit-not-yet.txt` holds no board tool | done |
 | M9 docs | `docs/agent-board.md` codes and tools; `plugins/README.md`; `agenthub/tests/ahead.rs`; `agenthub/mcp/mod.rs`; AgentHub's README; the patterns (board-operations rewritten, mcp-tools O4 and B3 items marked, layout rule 2's check, README table); CHANGELOG | review | done |
@@ -60,7 +60,7 @@ Also in this batch, found on the way:
 
 ## Verification receipts
 
-2026-11-19, Windows 11, devagotchi at this branch with `crates/agenthub` at `f4af7f9`:
+2026-11-19, Windows 11, devagotchi at this branch with `agenthub` at `f4af7f9`:
 
 - `cargo fmt --all -- --check`: clean. `cargo build --locked --bins`: ok.
 - `cargo test --workspace --features devagotchi-store/testing` with

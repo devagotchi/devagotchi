@@ -53,7 +53,7 @@ Desktop Commander tool:
 - `get_recent_tool_calls` and `get_usage_stats`;
 - `machine_inspect`.
 
-Their routers are `crates/hub/src/mcp/tools/mod.rs` and `crates/hub/src/machines/mod.rs:54-62`,
+Their routers are `engine/hub/src/mcp/tools/mod.rs` and `engine/hub/src/machines/mod.rs:54-62`,
 and `tests/hub_probe.py` asserts the list. The shorter list seen in claude.ai is a tool list it
 cached between 2026-11-03 and 2026-11-14. The cached `list_directory` has no `cursor`, and
 there is no `connection_call`.
@@ -83,18 +83,18 @@ there is no `connection_call`.
 - **The app's update notice (241) stays in M4**, but its banner on Home is the same text as
   270's line, so the browser, the phone and the plugins say one thing.
 
-Based on `main` f1b48e8, which is also what the live hub runs (`/healthz` downloads.version `main-f1b48e8`). I read `.ai/README.md`, `.ai/docs/editions.md`, `.ai/patterns/layout.md` and `crates/devagotchi/tests/layout/oversize.txt`. The six verified maps are the evidence base. I checked the phase 0 blockers again myself; my findings are below.
+Based on `main` f1b48e8, which is also what the live hub runs (`/healthz` downloads.version `main-f1b48e8`). I read `.ai/README.md`, `.ai/docs/editions.md`, `.ai/patterns/layout.md` and `runtime/devagotchi/tests/layout/oversize.txt`. The six verified maps are the evidence base. I checked the phase 0 blockers again myself; my findings are below.
 
 ## Phase 0 blockers, checked again
 
 | Blocker | Evidence |
 |---|---|
-| Docker join leaves nothing running | `crates/hub/src/machines/join/mod.rs:224-247`: the compose file is one `enroll` service on `debian:stable-slim` that runs `apt-get install -y curl ca-certificates` and then `join.sh`. `join.sh:13` exits unless `xz` **and `systemctl`** exist. A slim Debian container has neither, so it fails at `xz` first. Even if it got past that, it is a one-shot service with no broker or link left running. The join line is `docker compose -f compose.yml up -d` (`crates/hub/src/mcp/machines.rs:160-162`). |
-| `/dist/` returns 404 while the instructions point there | curl today: `/dist/` 404, `/dist` 404, `/dist/SHA256SUMS` 200. The pointer is at `crates/hub/src/mcp/tools/machines.rs:133` ("Download the archive and SHA256SUMS from {hub}/dist/") and `docs/identity.md:162`. |
-| Manual join never starts the broker or the link | `crates/hub/src/mcp/tools/machines.rs:133` ends at `devagotchi link enroll … --broker <broker-endpoint>`. It never says `devagotchi start` / `broker run` or `link run`. `crates/link/src/lib.rs:22` (USAGE) says enroll "then exits" and `run` must be started. |
+| Docker join leaves nothing running | `engine/hub/src/machines/join/mod.rs:224-247`: the compose file is one `enroll` service on `debian:stable-slim` that runs `apt-get install -y curl ca-certificates` and then `join.sh`. `join.sh:13` exits unless `xz` **and `systemctl`** exist. A slim Debian container has neither, so it fails at `xz` first. Even if it got past that, it is a one-shot service with no broker or link left running. The join line is `docker compose -f compose.yml up -d` (`engine/hub/src/mcp/machines.rs:160-162`). |
+| `/dist/` returns 404 while the instructions point there | curl today: `/dist/` 404, `/dist` 404, `/dist/SHA256SUMS` 200. The pointer is at `engine/hub/src/mcp/tools/machines.rs:133` ("Download the archive and SHA256SUMS from {hub}/dist/") and `docs/identity.md:162`. |
+| Manual join never starts the broker or the link | `engine/hub/src/mcp/tools/machines.rs:133` ends at `devagotchi link enroll … --broker <broker-endpoint>`. It never says `devagotchi start` / `broker run` or `link run`. `runtime/link/src/lib.rs:22` (USAGE) says enroll "then exits" and `run` must be started. |
 | Plugin hub URL is the placeholder; Codex cannot set the hub | Plugins map: `plugins/devagotchi/.mcp.json:5`, `plugins/devagotchi/.codex-plugin/plugin.json:1-20` (no userConfig), `plugins/devagotchi/.claude-plugin/plugin.json:28-30`. |
-| False README lines | `README.md:133` says the store is "Postgres … or SQLite". The hub refuses `sqlite:` URLs (`crates/hub/src/store/tests.rs:19-20`) and ADR 0005 is Postgres everywhere (`editions.md`). `README.md:5` says "Windows, macOS, and Linux are required targets", but the build targets are Linux and Windows on x86_64 and aarch64 (`dist-workspace.toml:13`), and `path.md:157` (8.2) already flags README:5, 7 and 117 as wrong. |
-| `read_file` / `read_multiple_files` rejected by claude.ai | Desktop Commander parity map: closed `FileContent` (`crates/contracts/src/files.rs:40-67`) plus a stale claude.ai schema snapshot. |
+| False README lines | `README.md:133` says the store is "Postgres … or SQLite". The hub refuses `sqlite:` URLs (`engine/hub/src/store/tests.rs:19-20`) and ADR 0005 is Postgres everywhere (`editions.md`). `README.md:5` says "Windows, macOS, and Linux are required targets", but the build targets are Linux and Windows on x86_64 and aarch64 (`dist-workspace.toml:13`), and `path.md:157` (8.2) already flags README:5, 7 and 117 as wrong. |
+| `read_file` / `read_multiple_files` rejected by claude.ai | Desktop Commander parity map: closed `FileContent` (`platform/contracts/src/files.rs:40-67`) plus a stale claude.ai schema snapshot. |
 
 Three more constraints shape the program:
 - **No shell in the hub image.** It is distroless (`deploy/compose/Dockerfile:7-8`, `ENTRYPOINT ["/usr/local/bin/devagotchi"]`). A Docker machine therefore has to pass its join code through `DEVAGOTCHI_ENROLL_CODE` (`link/src/lib.rs:22`), not through a pipe.
@@ -118,7 +118,7 @@ Three more constraints shape the program:
 
 ### 208: Open every tool output schema and prove it with a real broker (S)
 - **Delivered as (2026-11-18, this branch):** the advertised output schemas are opened where
-  the tools are listed. `crates/mcp/src/outputs.rs` is applied to the hub's router and the
+  the tools are listed. `interfaces/mcp/src/outputs.rs` is applied to the hub's router and the
   adapter's router. The Rust types and the broker wire stay closed: a wire answer is
   version-gated, and an advertised answer may grow.
   - Tests: `no_output_schema_refuses_a_field_added_later` (hub) and
@@ -129,11 +129,11 @@ Three more constraints shape the program:
 - **Scope:**
   - Remove `deny_unknown_fields` from the output types only: FileContent, FileEntry, FileListing, FileWritten, FileInfo, OperationSummary, OperationsPage, OperationView, StartOutput, OutputFrame, OutputPage, BridgeError, InteractiveView, InputSent, SearchMatch, SearchPage, BrokerCapabilities, ConfigView, ProcessInfo, ProcessPage, ProcessKilled, UrlContent, ToolCall, RecentCalls, Tally, UsageStats.
   - Input types and the wire enums (RequestBody, ResponseBody, WireResponse, HubFrame, LinkFrame) keep it.
-  - Rule written into `crates/contracts/src/lib.rs` module docs: output types only gain optional fields.
+  - Rule written into `platform/contracts/src/lib.rs` module docs: output types only gain optional fields.
   - Refusals become text-only `CallToolResult::error`, the precedent at `mcp/handler.rs:39-42` and `tenancy/gate.rs:56-60`.
   - Regenerate the schema and the desktop TS types.
   - After deploy, the operator refreshes the claude.ai connector (no `tools.listChanged`, `handler.rs:85-112`) and records the results.
-- **Files:** `crates/contracts/src/{files,lib,interactive,search,system,web,history}.rs`, `schemas/broker-contracts.schema.json`, `apps/desktop/src/generated/contracts.ts`, `crates/hub/src/mcp/tests/schema.rs`, `crates/hub/src/machines/tests/` (new `output_schemas.rs`), `crates/mcp/src/adapter/tests.rs`, `tests/hub_probe.py`, `.ai/docs/desktop-commander-parity.md`.
+- **Files:** `platform/contracts/src/{files,lib,interactive,search,system,web,history}.rs`, `schemas/broker-contracts.schema.json`, `apps/desktop/src/generated/contracts.ts`, `engine/hub/src/mcp/tests/schema.rs`, `engine/hub/src/machines/tests/` (new `output_schemas.rs`), `interfaces/mcp/src/adapter/tests.rs`, `tests/hub_probe.py`, `.ai/docs/desktop-commander-parity.md`.
 - **Acceptance:**
   - `node scripts/generate-contracts.cjs --check` passes.
   - New test `every_output_schema_is_open` walks `Hub::router().list_all()` and the adapter router and fails on any `additionalProperties:false`, `$defs` included.
@@ -143,7 +143,7 @@ Three more constraints shape the program:
 
 ### 209: Docker machine join that leaves a running machine (M)
 - **Delivered as (2026-11-18, branch `increment-209/docker-join`):** the compose file is
-  `crates/hub/src/machines/join/compose.yml`, served by `join/compose.rs`. Where it
+  `engine/hub/src/machines/join/compose.yml`, served by `join/compose.rs`. Where it
   departs from the scope, and why:
   - The broker cannot run on the hub's image as is: it is distroless, so `run` would have no
     shell. The broker service builds `FROM` the hub's image onto `debian:stable-slim`
@@ -175,7 +175,7 @@ Three more constraints shape the program:
   - `broker run` writes its default config on first run, as `start` does.
   - The link refuses `HubFrame::Update` on a container (`DEVAGOTCHI_MACHINE_KIND=container`) with reason "container: re-run the join line or `docker compose pull && up -d`". Auto-update skips such machines; the hello reports the kind, and the hub learns it first.
   - Move the template out of `join/mod.rs` (492 lines) into `join/compose.yml` with `include_str!`.
-- **Files:** `crates/hub/src/machines/join/mod.rs`, `crates/hub/src/machines/join/compose.yml` (new), `crates/link/src/lib.rs`, `crates/link/src/session/mod.rs`, `crates/machine-engine/src/service.rs` (or wherever `broker run` reads its config), `crates/hub/src/machines/link/updates.rs`, `tests/compose_join.py`, `.github/workflows/image.yml`, `docs/identity.md`.
+- **Files:** `engine/hub/src/machines/join/mod.rs`, `engine/hub/src/machines/join/compose.yml` (new), `runtime/link/src/lib.rs`, `runtime/link/src/session/mod.rs`, `engine/machine-engine/src/service.rs` (or wherever `broker run` reads its config), `engine/hub/src/machines/link/updates.rs`, `tests/compose_join.py`, `.github/workflows/image.yml`, `docs/identity.md`.
 - **Acceptance:**
   - Hub unit test: the compose file names `:sha-<sha7>` for a `main-<sha7>` build and holds the code only in `environment`.
   - Link unit test: re-enroll with an existing key exits 0 without a network call.
@@ -188,7 +188,7 @@ Three more constraints shape the program:
   - `GET /dist/` (and `/dist`) answers a `text/plain` index: VERSION, then the `SHA256SUMS` lines with full URLs.
   - The `manual` text in `machine_add` names the exact archive URL per OS and architecture, the checksum, `devagotchi start --background` (broker), `link enroll` with the code on stdin, then `devagotchi link run --state-dir …`. For Windows it names the zip and `.exe` steps.
   - Route both `/dist` paths through a `join::dist_routes()` merged in `routes.rs`, replacing its existing `/dist/{name}` line so the net change is 0.
-- **Files:** `crates/hub/src/mcp/tools/machines.rs`, `crates/hub/src/machines/join/mod.rs` (only `dist_routes`; the template moved out in 209), `crates/hub/src/web/routes.rs` (net 0), `crates/hub/src/web/tests/machines.rs`, `docs/identity.md`, `tests/compose_join.py`.
+- **Files:** `engine/hub/src/mcp/tools/machines.rs`, `engine/hub/src/machines/join/mod.rs` (only `dist_routes`; the template moved out in 209), `engine/hub/src/web/routes.rs` (net 0), `engine/hub/src/web/tests/machines.rs`, `docs/identity.md`, `tests/compose_join.py`.
 - **Acceptance:**
   - Hub test: `/dist/` lists every `SHA256SUMS` file as a URL under the hub. `machine_add.manual` contains `link run` and `start`, and no URL ending in `/dist/`.
   - `compose_join.py` follows the manual text on the runner (download, `sha256sum -c`, start, enroll, run) and the machine comes online.
@@ -197,15 +197,15 @@ Three more constraints shape the program:
 ### 211: Plugins point at the person's hub; Codex can set it; README tells the truth (S)
 - **Why:** The plugin and Codex sign in to `hub.example.com`; the README claims SQLite and macOS.
 - **Scope:** Plugins map P0.
-  - README rewrite: `plugins/README.md:38,49-51`; `.ai/dev/plans/plugins.md:20,37,95-99,118-126`; CLI help (`crates/devagotchi/src/main.rs:32,214`); `crates/mcp/src/connect.rs:3,265`, text only with net 0 lines since it is at its 802 ratchet.
+  - README rewrite: `plugins/README.md:38,49-51`; `.ai/dev/plans/plugins.md:20,37,95-99,118-126`; CLI help (`runtime/devagotchi/src/main.rs:32,214`); `interfaces/mcp/src/connect.rs:3,265`, text only with net 0 lines since it is at its 802 ratchet.
   - Codex hub: `devagotchi connect codex --hub URL` is the documented path.
   - Skills: one line telling the person to run `/plugin configure devagotchi@devagotchi` when `whoami` fails against `hub.example.com`.
   - Remove `app.devagotchi.com` from the userConfig description (G15).
   - `README.md:133`: Postgres only. `README.md:5,7`: the platform statement becomes "hub on Linux (x86_64/arm64); machines on Linux and Windows (x86_64/arm64)", from `dist-workspace.toml:13`.
-- **Files:** `plugins/README.md`, `plugins/devagotchi/.claude-plugin/plugin.json`, `plugins/devagotchi/skills/{machines,agenthub}/SKILL.md`, `crates/devagotchi/src/main.rs`, `crates/mcp/src/connect.rs`, `crates/hub/src/mcp/tests/plugins.rs`, `README.md`, `.ai/dev/plans/plugins.md`, `.ai/dev/plans/path.md` (8.2).
+- **Files:** `plugins/README.md`, `plugins/devagotchi/.claude-plugin/plugin.json`, `plugins/devagotchi/skills/{machines,agenthub}/SKILL.md`, `runtime/devagotchi/src/main.rs`, `interfaces/mcp/src/connect.rs`, `engine/hub/src/mcp/tests/plugins.rs`, `README.md`, `.ai/dev/plans/plugins.md`, `.ai/dev/plans/path.md` (8.2).
 - **Acceptance:**
   - `cargo test -p devagotchi-hub --lib mcp::tests::plugins` passes, with new asserts that the README contains neither "uses the hosted hub" nor "plugin_tests.rs".
-  - A new `crates/devagotchi/tests/readme_truth.rs` asserts that README.md has no `SQLite` and no `macOS … required`, and that every target in `dist-workspace.toml` is named.
+  - A new `runtime/devagotchi/tests/readme_truth.rs` asserts that README.md has no `SQLite` and no `macOS … required`, and that every target in `dist-workspace.toml` is named.
   - `claude plugin validate plugins/devagotchi` passes.
   - With a throwaway `CODEX_HOME`, `devagotchi connect codex --hub https://app.devagotchi.com --no-check` followed by `codex mcp list` shows that hub.
 - **Depends on:** nothing.
@@ -217,10 +217,10 @@ Three more constraints shape the program:
 ### 212: Wire-contract split before new frames (S, refactor only)
 - **Why:** `contracts/src/lib.rs` is at 490 lines and `machine-engine/src/broker.rs` is at its 1153 ratchet. Every later frame or variant would push them over.
 - **Scope:**
-  - Move RequestBody, ResponseBody, WireResponse, HubFrame and LinkFrame from `lib.rs:292-442` to `crates/contracts/src/wire.rs`, re-exported from `lib.rs`.
+  - Move RequestBody, ResponseBody, WireResponse, HubFrame and LinkFrame from `lib.rs:292-442` to `platform/contracts/src/wire.rs`, re-exported from `lib.rs`.
   - Add `RequestBody::domain() -> Domain {Operations, Files, System}`, so the broker dispatch at `broker.rs:293-306` matches on the domain and new variants add no line to `broker.rs`.
   - No behaviour change.
-- **Files:** `crates/contracts/src/{lib,wire}.rs`, `crates/machine-engine/src/broker.rs`, `crates/devagotchi/tests/layout/oversize.txt` (lower the `broker.rs` number).
+- **Files:** `platform/contracts/src/{lib,wire}.rs`, `engine/machine-engine/src/broker.rs`, `runtime/devagotchi/tests/layout/oversize.txt` (lower the `broker.rs` number).
 - **Acceptance:** `cargo test -p devagotchi-contracts -p devagotchi-machine-engine`; `node scripts/generate-contracts.cjs --check` unchanged; layout test passes with the `broker.rs` entry lowered.
 - **Depends on:** 208.
 
@@ -229,8 +229,8 @@ Three more constraints shape the program:
   - `operation_*` accept `machine`; `broker` stays an alias, refused when both are given and differ.
   - `machine` becomes optional on every machine tool when exactly one machine is online; otherwise the refusal lists the names.
   - Update the tool descriptions and the site's MCP instructions.
-- **Files:** `crates/hub/src/mcp/{schema,hub}.rs`, `crates/hub/src/mcp/tools/{operations,machines}.rs`, `crates/hub/src/mcp/callers/mod.rs`, `crates/hub/src/machines/{files,run,search,system}.rs`, `tests/hub_probe.py`.
-- **Acceptance:** Hub tests in new `crates/hub/src/machines/tests/addressing.rs`:
+- **Files:** `engine/hub/src/mcp/{schema,hub}.rs`, `engine/hub/src/mcp/tools/{operations,machines}.rs`, `engine/hub/src/mcp/callers/mod.rs`, `engine/hub/src/machines/{files,run,search,system}.rs`, `tests/hub_probe.py`.
+- **Acceptance:** Hub tests in new `engine/hub/src/machines/tests/addressing.rs`:
   - one machine online: `read_file` without `machine` works;
   - two online: refused, naming both;
   - `operation_start` works with `{machine}` and with `{broker}`;
@@ -243,7 +243,7 @@ Three more constraints shape the program:
   - **Default chosen: in memory, not in Postgres.** A bounded per-owner table (1,000 entries, 15-minute expiry) in the hub. A hub restart drops every link anyway, so durable rows buy nothing and would deepen the Postgres dependency.
   - A call past its synchronous budget answers `{call_id, state: running}`. For `run` and `operation_start` the call_id is the operation_id.
   - The adapter keeps the same table locally.
-- **Files:** `crates/hub/src/machines/calls.rs` (new), `crates/hub/src/machines/history.rs`, `crates/hub/src/mcp/hub.rs`, `crates/mcp/src/adapter/history.rs`, `crates/contracts/src/history.rs`.
+- **Files:** `engine/hub/src/machines/calls.rs` (new), `engine/hub/src/machines/history.rs`, `engine/hub/src/mcp/hub.rs`, `interfaces/mcp/src/adapter/history.rs`, `platform/contracts/src/history.rs`.
 - **Acceptance:** Hub test with a stub link that answers after the budget:
   - `write_file` returns a call_id;
   - `get_tool_result` later returns its `FileWritten` and `list_remote_tool_calls` lists it;
@@ -255,7 +255,7 @@ Three more constraints shape the program:
 - **Scope:** Map I3.
   - A bounded in-memory session in the broker (cap 8 per broker, 10-minute idle expiry) over `files/search.rs`.
   - New RequestBody variants, gated on `machine_inspect.supported_requests`. An older link refuses with `machine_update` named instead of dropping its session (`link/session.rs:181`).
-- **Files:** `crates/contracts/src/{search,wire}.rs`, `crates/machine-engine/src/files/search.rs`, `crates/machine-engine/src/broker/search_sessions.rs` (new), `crates/mcp/src/adapter/file_tools.rs`, `crates/hub/src/machines/search.rs`, `tests/hub_probe.py`, `tests/adapter_probe.py`.
+- **Files:** `platform/contracts/src/{search,wire}.rs`, `engine/machine-engine/src/files/search.rs`, `engine/machine-engine/src/broker/search_sessions.rs` (new), `interfaces/mcp/src/adapter/file_tools.rs`, `engine/hub/src/machines/search.rs`, `tests/hub_probe.py`, `tests/adapter_probe.py`.
 - **Acceptance:**
   - Broker tests: the cap, the expiry, pages in order with no repeats.
   - Through `e2e.py`, locally and through the hub: an id comes back at once; `stop_search` ends the session and `list_searches` shows it stopped; a link built before this change (the previous build in `--update-builds`) is refused naming `machine_update`.
@@ -263,7 +263,7 @@ Three more constraints shape the program:
 
 ### 216: `interact_with_process` waits for output; sessions say when they are blocked (M)
 - **Scope:** Map I4. `operation_input` gains `wait_ms` and returns the output written after the input. `OperationSummary` and `OperationView` gain a heuristic `waiting_for_input`. These are optional output fields, legal after 208.
-- **Files:** `crates/contracts/src/interactive.rs`, `crates/contracts/src/lib.rs` (only the OperationView field), `crates/machine-engine/src/broker/{input,output}.rs`, `crates/mcp/src/adapter/terminal.rs`, `crates/hub/src/mcp/callers/mod.rs`.
+- **Files:** `platform/contracts/src/interactive.rs`, `platform/contracts/src/lib.rs` (only the OperationView field), `engine/machine-engine/src/broker/{input,output}.rs`, `interfaces/mcp/src/adapter/terminal.rs`, `engine/hub/src/mcp/callers/mod.rs`.
 - **Acceptance:** Broker test on Linux and Windows CI: a Python REPL gets `print(6*7)` plus enter with `wait_ms=2000` and returns `42` in one call; `operation_list` shows `waiting_for_input=true` at the `>>>` prompt. The same flow runs through the hub in `hub_probe.py`.
 - **Depends on:** 212.
 
@@ -273,19 +273,19 @@ Three more constraints shape the program:
   - Widening (a new allowed directory, removing a blocked command) needs an approved `approval_request` id.
   - A granted broker still refuses.
   - Saved to `broker.json`.
-- **Files:** `crates/contracts/src/system.rs`, `crates/machine-engine/src/broker/settings.rs`, `crates/mcp/src/adapter/system_tools.rs`, `crates/hub/src/machines/system.rs`.
+- **Files:** `platform/contracts/src/system.rs`, `engine/machine-engine/src/broker/settings.rs`, `interfaces/mcp/src/adapter/system_tools.rs`, `engine/hub/src/machines/system.rs`.
 - **Acceptance:** Broker and hub tests: a blocked command is refused with its reason; a newly allowed directory can be read; settings survive a broker restart; widening without an approval id is refused.
 - **Depends on:** 212.
 
 ### 218: `edit_block` parity for text: near-miss report and line ranges (S)
 - **Scope:** Map I8. When `old_text` is not found, report the closest match with its line. Add a line-range form guarded by `expected_sha256`. Both go through the mutation gate.
-- **Files:** `crates/machine-engine/src/files.rs`, `crates/machine-engine/src/broker/files.rs`, `crates/contracts/src/files.rs`, `crates/mcp/src/adapter/file_tools.rs`, `crates/hub/src/machines/files.rs`.
+- **Files:** `engine/machine-engine/src/files.rs`, `engine/machine-engine/src/broker/files.rs`, `platform/contracts/src/files.rs`, `interfaces/mcp/src/adapter/file_tools.rs`, `engine/hub/src/machines/files.rs`.
 - **Acceptance:** Broker tests: a near miss reports the line; a range edit with a stale sha is refused. `python tests/file_mutation_concurrency.py --devagotchi target/debug/devagotchi --work-root target --source-commit $(git rev-parse HEAD)` passes.
 - **Depends on:** 212.
 
 ### 219: `read_file` conveniences (`is_url`, image pointer) (S)
 - **Scope:** Map I12. `is_url:true` routes to `read_url`; an image path answers with a pointer to `read_image`.
-- **Files:** `crates/mcp/src/adapter/file_tools.rs`, `crates/hub/src/machines/files.rs`.
+- **Files:** `interfaces/mcp/src/adapter/file_tools.rs`, `engine/hub/src/machines/files.rs`.
 - **Acceptance:** Adapter and hub tests: both results validate against the open schema (208's test helper).
 - **Depends on:** 218 (same files).
 
@@ -293,7 +293,7 @@ Three more constraints shape the program:
 - **Scope:** Map I6.
   - `machine_disconnect {machine, revoke?}`: a stop frame over the link marks the machine offline. `revoke=true` needs an approved approval and then calls `Hub::revoke_own_machine` (`tenancy/machines.rs:200`), then `Links::revoke_owned`.
   - `review_call`: creates an approval card. On Run it executes through `Hub::call` as the person and stores the result under a call_id from 214; on Cancel it executes nothing.
-- **Files:** `crates/contracts/src/wire.rs`, `crates/link/src/session/mod.rs`, `crates/hub/src/machines/link/{serve,registry}.rs`, `crates/hub/src/mcp/tools/machines.rs`, `crates/hub/src/machines/review.rs` (new), `crates/hub/src/web/approval_page.rs` (from 256, as the Run/Cancel surface).
+- **Files:** `platform/contracts/src/wire.rs`, `runtime/link/src/session/mod.rs`, `engine/hub/src/machines/link/{serve,registry}.rs`, `engine/hub/src/mcp/tools/machines.rs`, `engine/hub/src/machines/review.rs` (new), `engine/hub/src/web/approval_page.rs` (from 256, as the Run/Cancel surface).
 - **Acceptance:**
   - `e2e.py` leg: `machine_disconnect` and `machines` shows the machine offline; `link run` again brings it back; `revoke=true` without an approval is refused.
   - Hub test: `review_call` shows a card; Run executes and `get_tool_result` returns the answer; Cancel runs nothing; both are in the audit.
@@ -301,7 +301,7 @@ Three more constraints shape the program:
 
 ### 221: Read PDF, DOCX and XLSX in `read_file`, `get_file_info` and `read_multiple_files` (L)
 - **Scope:** Map I9. Broker side, behind a `documents` cargo feature that is on in release builds. Pages stay under 24 KiB and under the 1 MiB link frame. Every candidate crate must pass `cargo deny`; BSD-2-Clause and OFL are not allowed (`deny.toml:41-60`).
-- **Files:** `crates/machine-engine/src/files/documents/` (new: `mod.rs`, `pdf.rs`, `xlsx.rs`, `docx.rs`), `crates/machine-engine/Cargo.toml`, `crates/contracts/src/files.rs` (FileReadInput gains `sheet`, `range`, `page`), `crates/mcp/src/adapter/file_tools.rs`, `crates/hub/src/machines/files.rs`, `deny.toml` (only if a new licence passes review), `tests/fixtures/documents/`, `tests/hub_probe.py`.
+- **Files:** `engine/machine-engine/src/files/documents/` (new: `mod.rs`, `pdf.rs`, `xlsx.rs`, `docx.rs`), `engine/machine-engine/Cargo.toml`, `platform/contracts/src/files.rs` (FileReadInput gains `sheet`, `range`, `page`), `interfaces/mcp/src/adapter/file_tools.rs`, `engine/hub/src/machines/files.rs`, `deny.toml` (only if a new licence passes review), `tests/fixtures/documents/`, `tests/hub_probe.py`.
 - **Acceptance:**
   - Locally and through the hub on Windows and Linux CI: PDF page 2 text; `Sheet2!B2:C3`; the DOCX outline.
   - `get_file_info` lists the sheets and the page count.
@@ -310,7 +310,7 @@ Three more constraints shape the program:
 
 ### 222: Office writes (DOCX from markdown, XLSX range writes, DOCX XML edits) (M)
 - **Scope:** Map I11. All through the mutation gate.
-- **Files:** `crates/machine-engine/src/files/documents/`, `crates/contracts/src/files.rs`, `crates/mcp/src/adapter/file_tools.rs`, `crates/hub/src/machines/files.rs`.
+- **Files:** `engine/machine-engine/src/files/documents/`, `platform/contracts/src/files.rs`, `interfaces/mcp/src/adapter/file_tools.rs`, `engine/hub/src/machines/files.rs`.
 - **Acceptance:** Round-trip tests on Windows and Linux:
   - a DOCX written from markdown reads back through 221;
   - an XLSX range write reads back exactly;
@@ -319,7 +319,7 @@ Three more constraints shape the program:
 
 ### 223: `write_pdf` (P10) (L)
 - **Scope:** Markdown to PDF, plus modify mode (insert and delete pages), with the renderer from Operator decision 2.
-- **Files:** `crates/machine-engine/src/files/documents/pdf_write.rs` (new), `crates/machine-engine/Cargo.toml`, `crates/contracts/src/{files,wire}.rs`, `crates/mcp/src/adapter/file_tools.rs`, `crates/hub/src/machines/files.rs`, `deny.toml`, `.ai/dev/plans/desktop-commander-parity.md`, `.ai/docs/desktop-commander-parity.md`.
+- **Files:** `engine/machine-engine/src/files/documents/pdf_write.rs` (new), `engine/machine-engine/Cargo.toml`, `platform/contracts/src/{files,wire}.rs`, `interfaces/mcp/src/adapter/file_tools.rs`, `engine/hub/src/machines/files.rs`, `deny.toml`, `.ai/dev/plans/desktop-commander-parity.md`, `.ai/docs/desktop-commander-parity.md`.
 - **Acceptance:**
   - On Windows, Linux x86_64 and Linux arm64, locally and through the hub: markdown becomes a 2-page PDF whose text `read_file` (221) pages; delete and insert give the expected page order; an existing output is refused without `overwrite`.
   - `cargo deny` passes, and every target in `dist-workspace.toml` cross-builds.
@@ -353,7 +353,7 @@ Three more constraints shape the program:
   - drop the Organisations card from You;
   - `/orgs*`, `/invite` and `/assets/invite.js` get the unknown-path 404. Gate this where the orgs router is merged in `routes.rs` (net 0), not inside `orgs.rs` (1082 lines, at its ratchet).
   - Replace the literal "17 clients" with `devagotchi_connectors::all().len()`.
-- **Files:** `crates/hub/src/web/hub_settings.rs`, `crates/hub/src/web/app/me.rs`, `crates/hub/src/web/routes.rs` (net 0), `crates/hub/src/web/one_user/tests.rs` (new, under a `web/one_user/` module).
+- **Files:** `engine/hub/src/web/hub_settings.rs`, `engine/hub/src/web/app/me.rs`, `engine/hub/src/web/routes.rs` (net 0), `engine/hub/src/web/one_user/tests.rs` (new, under a `web/one_user/` module).
 - **Acceptance:**
   - New Postgres test on a single-tenancy hub: `/admin` has no `id="people"` and no `tenancy.` inputs; `/orgs` and `/invite` return 404; `/app/me` has no `id="orgs"`.
   - `web::shippin_tests` and the operator tests still pass on a multi-tenant hub.
@@ -365,7 +365,7 @@ Three more constraints shape the program:
   - A single-tenancy web fixture with the stand-in Nomen (`tests/fake_nomen.py` or the in-process stand-in).
   - The confirm-to-link page applies to every provider: change the `== "google"` check, net 0 lines in `providers.rs`.
   - An `operators` `email:` entry keeps working only for providers whose email is verified, as today, and is documented on the Shippin card.
-- **Files:** `crates/hub/src/web/providers.rs` (net 0), `crates/hub/src/identity/accounts/identities.rs`, `crates/hub/src/identity/tests/providers_single.rs` (new).
+- **Files:** `engine/hub/src/web/providers.rs` (net 0), `engine/hub/src/identity/accounts/identities.rs`, `engine/hub/src/identity/tests/providers_single.rs` (new).
 - **Acceptance:** New Postgres tests:
   - the owner links Shippin from `/account`, then signs in with it;
   - an unknown subject gets 403 `no_account`;
@@ -378,7 +378,7 @@ Three more constraints shape the program:
   - Discovery's authorization and token endpoints must be on the issuer's origin. Loopback stand-ins are allowed as today; Google is exempt.
   - Check `azp` and `iat`.
   - `OidcVerifier` uses `redirect(Policy::none())`, and `jwks_uri` must be on the issuer's origin.
-- **Files:** `crates/hub/src/identity/id_token.rs` (new), `crates/hub/src/identity/tests/id_token.rs` (new), `crates/hub/src/web/providers.rs` and `crates/hub/src/identity/auth.rs` (call sites only, net 0 or less).
+- **Files:** `engine/hub/src/identity/id_token.rs` (new), `engine/hub/src/identity/tests/id_token.rs` (new), `engine/hub/src/web/providers.rs` and `engine/hub/src/identity/auth.rs` (call sites only, net 0 or less).
 - **Acceptance:** The D1b list (`free-edition.md:174`) as tests:
   - two audiences without `azp` refused; a foreign `azp` refused; `iat` before the sign-in refused;
   - a cross-origin token endpoint refused; Google accepted; a loopback stand-in accepted;
@@ -388,13 +388,13 @@ Three more constraints shape the program:
 ### 228: `connect-nomen` keeps the hub in hub mode (M)
 - **Why:** `connect-nomen` rewrites the config to `auth.mode nomen`, which takes away `/admin`, passkeys and keys (`identity/connect/mod.rs:206-214`). Yet the `/admin` Shippin card tells the owner to use it (`sign_in_cards.rs:75`).
 - **Scope:** Save the Shippin web app as the `nomen` sign-in setting (issuer, client id, enabled) and set `auth.nomen` inside `auth.mode hub` for `/mcp` bearer tokens. Never write `auth.mode nomen` or a `web` section. Retiring `nomen_login` waits until its phone-session test (`web/tests/nomen_login.rs:344`) moves to hub-mode sessions; not in this increment.
-- **Files:** `crates/hub/src/identity/connect/mod.rs`, `crates/hub/src/identity/connect/tests.rs`.
+- **Files:** `engine/hub/src/identity/connect/mod.rs`, `engine/hub/src/identity/connect/tests.rs`.
 - **Acceptance:** A `connect-nomen` test against the stand-in: the config keeps `auth.mode hub`; after start, `/admin` opens for the owner, the Shippin card shows on with the client id, `/auth/login` shows "Continue with Shippin", and a Nomen bearer token is accepted at `/mcp`.
 - **Depends on:** 226.
 
 ### 229: `/admin` → Shippin: Check and status (S)
 - **Scope:** A Check button runs discovery with no redirects, checks the issuer matches, shows the exact redirect URI `<public_url>/auth/provider/nomen/callback`, and shows when Shippin last signed someone in.
-- **Files:** `crates/hub/src/web/hub_settings_shippin.rs` (new), `crates/hub/src/web/hub_settings_shippin_tests.rs` (new), `crates/hub/src/web/sign_in_cards.rs`.
+- **Files:** `engine/hub/src/web/hub_settings_shippin.rs` (new), `engine/hub/src/web/hub_settings_shippin_tests.rs` (new), `engine/hub/src/web/sign_in_cards.rs`.
 - **Acceptance:** With the stand-in: OK for a matching issuer, "names itself X" for a mismatch, a 302 refused; a non-owner gets 404.
 - **Depends on:** 227.
 
@@ -403,7 +403,7 @@ Three more constraints shape the program:
   - "Connect this hub to Shippin" runs the `connect-nomen` device flow in process and shows the user code to approve on the phone.
   - `shippin.api` and `organization_id` move to the page, with the token sealed in Postgres.
   - The offers switch moves from `site.json` to the live catalog.
-- **Files:** `crates/hub/src/web/hub_settings_shippin.rs`, `crates/hub/src/identity/connect/mod.rs`, `crates/hub/src/config/shippin.rs`, `crates/hub/src/config/live/catalog.rs`.
+- **Files:** `engine/hub/src/web/hub_settings_shippin.rs`, `engine/hub/src/identity/connect/mod.rs`, `engine/hub/src/config/shippin.rs`, `engine/hub/src/config/live/catalog.rs`.
 - **Acceptance:**
   - Stand-in tests: Connect shows a code; approving it saves the provider, and `/auth/login` shows the button with no file edited; the token is stored sealed and never shown again.
   - Operator receipt: a fresh self-hosted hub signs in through the real Shippin issuer (see Operator decision 3).
@@ -415,7 +415,7 @@ Three more constraints shape the program:
   - List linked sign-ins and unlink one (a new store function).
   - Never remove the last way in.
   - "Sign out everywhere else" through `end_sessions`, keeping this session.
-- **Files:** `crates/hub/src/web/account_security.rs` (new), `crates/hub/src/web/account_security_tests.rs` (new), `crates/hub/src/identity/accounts/identities.rs`, `crates/hub/src/web/pages.rs` (one link, net 0).
+- **Files:** `engine/hub/src/web/account_security.rs` (new), `engine/hub/src/web/account_security_tests.rs` (new), `engine/hub/src/identity/accounts/identities.rs`, `engine/hub/src/web/pages.rs` (one link, net 0).
 - **Acceptance:** Tests:
   - a removed passkey no longer signs in;
   - an unlinked Shippin identity no longer reaches the account;
@@ -425,19 +425,19 @@ Three more constraints shape the program:
 
 ### 232: You → AI apps: see and disconnect connected AI clients (M)
 - **Scope:** List the OAuth clients that hold tokens for this account, with family and last use. Disconnect one (a new revoke by client) or all (`revoke_connections`, `oauth/mod.rs:519`, which has no product caller today).
-- **Files:** `crates/hub/src/web/app/ai_clients.rs` (new), `crates/hub/src/identity/accounts/oauth/mod.rs` (at its 647 ratchet: the new function goes in `oauth/revoke.rs`), `crates/hub/src/web/app/me.rs` (one link).
+- **Files:** `engine/hub/src/web/app/ai_clients.rs` (new), `engine/hub/src/identity/accounts/oauth/mod.rs` (at its 647 ratchet: the new function goes in `oauth/revoke.rs`), `engine/hub/src/web/app/me.rs` (one link).
 - **Acceptance:** Hub test: two clients are listed; disconnecting one makes its next `/mcp` call 401 while the other still works; "disconnect all" ends both.
 - **Depends on:** 225.
 
 ### 233: `/admin` → Activity (M)
 - **Scope:** A paged view of the audit chain over `Audit::after` and `calls_of` (`ops/audit.rs:125,144`). Filters by machine and client, a chain-verified badge (`verify`, :227), phone layout.
-- **Files:** `crates/hub/src/web/hub_settings_activity.rs` (new), `crates/hub/src/web/hub_settings_activity_tests.rs` (new).
+- **Files:** `engine/hub/src/web/hub_settings_activity.rs` (new), `engine/hub/src/web/hub_settings_activity_tests.rs` (new).
 - **Acceptance:** Hub test: a `run` call appears with its machine and client; the machine filter narrows the list; a tampered row shows the chain broken; a non-owner gets 404.
 - **Depends on:** 225.
 
 ### 234: Token lifetimes and AI client limits on `/admin` (S)
 - **Scope:** Move `auth.tokens` (access_secs, refresh_secs, code_secs, max_clients, claim_secs) into the live catalog under "AI connections". A value set in the file pins the setting.
-- **Files:** `crates/hub/src/config/live/catalog.rs`, `crates/hub/src/config/live.rs`, `crates/hub/src/config/auth.rs`.
+- **Files:** `engine/hub/src/config/live/catalog.rs`, `engine/hub/src/config/live.rs`, `engine/hub/src/config/auth.rs`.
 - **Acceptance:** `config::live::tests` key coverage passes; a `refresh_secs` change applies to the next token; a pinned value is read-only on the page.
 - **Depends on:** 225.
 
@@ -447,7 +447,7 @@ Three more constraints shape the program:
   - It edits the limits and the 217 settings through the `set_config_value` path, with a same-origin check, owner only and audited. Widening triggers the 217 approval inline.
   - Exec policy and workspace stay read-only, with the `broker.json` lines to change.
   - Rename is excluded: the name is the routing and enroll key.
-- **Files:** `crates/hub/src/web/app/machine_settings.rs` (new), `crates/hub/src/web/app/machine.rs` (one card call), `crates/hub/src/web/app/machine_settings_tests.rs` (new).
+- **Files:** `engine/hub/src/web/app/machine_settings.rs` (new), `engine/hub/src/web/app/machine.rs` (one card call), `engine/hub/src/web/app/machine_settings_tests.rs` (new).
 - **Acceptance:** Hub test with a real broker: the card shows the limits; saving `max_concurrent=2` changes `get_config` and `broker.json`; an out-of-range value shows the broker's refusal; the change is in the audit.
 - **Depends on:** 217, 225.
 
@@ -457,12 +457,12 @@ Three more constraints shape the program:
 
 ### 236: The hub knows and shows its build, commit and channel (S)
 - **Scope:** Update map U-H1.
-  - `image.yml` and `release.yml` pass `DEVAGOTCHI_REVISION=${{ github.sha }}`; `crates/devagotchi/build.rs` exports it; `main.rs` hands build and revision to `hub serve` through its options.
+  - `image.yml` and `release.yml` pass `DEVAGOTCHI_REVISION=${{ github.sha }}`; `runtime/devagotchi/build.rs` exports it; `main.rs` hands build and revision to `hub serve` through its options.
   - `compose.yaml` passes `DEVAGOTCHI_CHANNEL` and `DEVAGOTCHI_TRACK`, which `install.sh` already writes (`install.sh:374-375`).
   - `/healthz` gains `build`, `revision` and `channel`. This is public, like `downloads.version` already is.
   - MCP `serverInfo.version` becomes the build. `site.rs:605-608` is at its ratchet, so the change is one expression.
   - A Hub card on `/admin` in a new file shows build, linked commit, channel, the build offered to machines, and an "alpha, pre-release" badge (path.md 6.4).
-- **Files:** `crates/devagotchi/{build.rs,src/main.rs}`, `.github/workflows/{image,release}.yml`, `deploy/compose/compose.yaml`, `crates/hub/src/serve/options.rs` (or the existing options struct), `crates/hub/src/ops/health.rs`, `crates/hub/src/site.rs` (net 0), `crates/hub/src/web/hub_settings.rs` (one chip and one call), `crates/hub/src/web/hub_settings_hub.rs` (new), `crates/hub/src/web/hub_settings_hub_tests.rs` (new), `crates/hub/site/default/content/messages.json`.
+- **Files:** `runtime/devagotchi/{build.rs,src/main.rs}`, `.github/workflows/{image,release}.yml`, `deploy/compose/compose.yaml`, `engine/hub/src/serve/options.rs` (or the existing options struct), `engine/hub/src/ops/health.rs`, `engine/hub/src/site.rs` (net 0), `engine/hub/src/web/hub_settings.rs` (one chip and one call), `engine/hub/src/web/hub_settings_hub.rs` (new), `engine/hub/src/web/hub_settings_hub_tests.rs` (new), `engine/hub/site/default/content/messages.json`.
 - **Acceptance:**
   - Hub tests: `/healthz` build and revision equal the values passed at start; `/admin` has `id="hub"` showing them; MCP `initialize` reports `serverInfo.version` equal to the build.
   - After deploy, `curl https://app.devagotchi.com/healthz` gives a revision equal to the GHCR `:main` revision label.
@@ -471,7 +471,7 @@ Three more constraints shape the program:
 ### 237: Graceful shutdown and a compose healthcheck (H1) (S)
 - **Why:** Every hub update restarts the hub. Today SIGTERM kills it abruptly (`serve/mod.rs:346-347` only handles Ctrl-C), with no close frame to links, and compose has no hub healthcheck.
 - **Scope:** Handle SIGTERM and Ctrl-C the same way: drain HTTP, send links a close, then exit. Add `/readyz`. Add a compose `healthcheck` on the hub (the hub binary answers `devagotchi hub health`, since there is no curl in distroless).
-- **Files:** `crates/hub/src/serve/shutdown.rs` (new; `serve/mod.rs` gets one line), `crates/hub/src/cli/mod.rs`, `deploy/compose/compose.yaml`.
+- **Files:** `engine/hub/src/serve/shutdown.rs` (new; `serve/mod.rs` gets one line), `engine/hub/src/cli/mod.rs`, `deploy/compose/compose.yaml`.
 - **Acceptance:**
   - Hub test: SIGTERM on a test server closes a connected stub link with a close frame inside 5 s.
   - `tests/deploy_scripts.sh`: `docker compose up --wait` waits on the hub's health.
@@ -485,7 +485,7 @@ Three more constraints shape the program:
   - A root `devagotchi-hub-update.path` unit watches for `request.json` and runs `update.sh --apply <digest>`. That deploys only the digest the track points at after a fresh pull, and only if it is not on the bad list.
   - The hub gets no `docker.sock`; `cap_drop ALL` stays.
   - Defaults: see Operator decision 1 and the defaults section (new installs `ask`, existing hosts `auto`).
-- **Files:** `deploy/compose/{update.sh,install.sh,compose.yaml,README.md}`, `deploy/proxmox/hub-up.sh`, `crates/hub/src/config/live/catalog.rs`, `crates/hub/src/ops/update_status.rs` (new), `tests/deploy_scripts.sh`.
+- **Files:** `deploy/compose/{update.sh,install.sh,compose.yaml,README.md}`, `deploy/proxmox/hub-up.sh`, `engine/hub/src/config/live/catalog.rs`, `engine/hub/src/ops/update_status.rs` (new), `tests/deploy_scripts.sh`.
 - **Acceptance:** New cases in `sudo bash tests/deploy_scripts.sh devagotchi-hub:ci`:
   - (a) ask mode: a new digest is not deployed and status says `available`;
   - (b) a request for the track's digest deploys it, and status says `deployed` with the backup path;
@@ -507,7 +507,7 @@ Three more constraints shape the program:
   - Release channel: GitHub `releases/latest`, resolved to a commit. Main channel: the anonymous GHCR `:main` manifest's revision label.
   - Compare commits, never names. "Available" means a different commit that the compare API says is ahead. `status.json` from 238 wins when present.
   - The repository comes from config; no hostname in code.
-- **Files:** `crates/hub/src/ops/release_check.rs` (new), `crates/hub/src/ops/mod.rs`, `crates/hub/src/serve/mod.rs` (one spawn line), `crates/hub/src/config/live/catalog.rs`, `crates/hub/src/config/live.rs`.
+- **Files:** `engine/hub/src/ops/release_check.rs` (new), `engine/hub/src/ops/mod.rs`, `engine/hub/src/serve/mod.rs` (one spawn line), `engine/hub/src/config/live/catalog.rs`, `engine/hub/src/config/live.rs`.
 - **Acceptance:** Unit tests against a local stub HTTP server:
   - a commit ahead gives available;
   - the same commit under a new tag gives none;
@@ -525,7 +525,7 @@ Three more constraints shape the program:
   - With no host updater (a plain binary), the card shows the command instead of the button.
   - The route lives in `web/hub_update.rs`, merged into the admin router, not `routes.rs`.
   - Layout: one column, 44 px targets, readable at 360 px.
-- **Files:** `crates/hub/src/web/hub_update.rs` (new), `crates/hub/src/web/hub_update_tests.rs` (new), `crates/hub/src/web/hub_settings_hub.rs`, `crates/hub/src/web/app/home.rs` (one call), `crates/hub/src/notify/push/update.rs` (new; `push/mod.rs` is at 477), `crates/hub/src/ops/audit.rs` (action name only), `crates/hub/site/default/content/messages.json`, `crates/hub/src/web/hub.css`.
+- **Files:** `engine/hub/src/web/hub_update.rs` (new), `engine/hub/src/web/hub_update_tests.rs` (new), `engine/hub/src/web/hub_settings_hub.rs`, `engine/hub/src/web/app/home.rs` (one call), `engine/hub/src/notify/push/update.rs` (new; `push/mod.rs` is at 477), `engine/hub/src/ops/audit.rs` (action name only), `engine/hub/site/default/content/messages.json`, `engine/hub/src/web/hub.css`.
 - **Acceptance:**
   - Hub tests: with a release available, Home shows the notice and `/admin` the button; a cross-origin POST gets 403 and writes nothing; a non-owner is refused; the owner's POST writes `request.json` naming the digest and one `hub.update` audit row.
   - Unit test: two checks of the same commit queue one push (dedupe state).
@@ -539,7 +539,7 @@ Three more constraints shape the program:
   - The hub update card says how many machines will follow and how many are offline.
   - No new frames.
   - The link's `/dist` client uses `redirect(Policy::none())` (D2b).
-- **Files:** `crates/hub/src/web/app/machine.rs`, `crates/hub/src/web/app/machines_update.rs` (new), `crates/hub/src/web/app/home.rs`, `crates/hub/src/machines/link/updates.rs`, `crates/link/src/update/mod.rs`, `crates/link/src/update/tests.rs`.
+- **Files:** `engine/hub/src/web/app/machine.rs`, `engine/hub/src/web/app/machines_update.rs` (new), `engine/hub/src/web/app/home.rs`, `engine/hub/src/machines/link/updates.rs`, `runtime/link/src/update/mod.rs`, `runtime/link/src/update/tests.rs`.
 - **Acceptance:**
   - Hub test (new file): an out-of-date machine shows both builds and "Update to <v>"; a current one shows no button; Update all sends `HubFrame::Update` only to out-of-date machines, with one audit row each.
   - Link test: a 302 on `/dist/SHA256SUMS` fails the update and leaves nothing under `updates/`.
@@ -625,7 +625,7 @@ Three more constraints shape the program:
   - Add `icon-192.png`, `icon-512.png`, a full-bleed `icon-maskable-512.png` and a monochrome `badge-96.png`, emitted with sizes measured by `png_size` (`site/discovery.rs:294`).
   - On `/auth/login` (and the manifest also on `/`): manifest link, `theme-color` and icon, with `manifest-src 'self'` and `img-src 'self'` added to the Kind::Plain CSP for those pages.
   - `background_color` comes from the `--bg` token.
-- **Files:** `crates/hub/src/site.rs` → `crates/hub/src/site/pwa.rs` (new), `crates/hub/src/site/{model,assets}.rs`, `crates/hub/site/default/{site.json,tokens.json,assets/}`, `crates/hub/src/web/pages.rs` → `crates/hub/src/web/pages/head.rs` (new), `crates/hub/src/web/{sign_in,landing}.rs`, `crates/hub/src/web/app/tests.rs` (extend :247), `tests/fixtures/neutral-site/site.json`, `crates/devagotchi/tests/layout/oversize.txt` (numbers only go down).
+- **Files:** `engine/hub/src/site.rs` → `engine/hub/src/site/pwa.rs` (new), `engine/hub/src/site/{model,assets}.rs`, `engine/hub/site/default/{site.json,tokens.json,assets/}`, `engine/hub/src/web/pages.rs` → `engine/hub/src/web/pages/head.rs` (new), `engine/hub/src/web/{sign_in,landing}.rs`, `engine/hub/src/web/app/tests.rs` (extend :247), `tests/fixtures/neutral-site/site.json`, `runtime/devagotchi/tests/layout/oversize.txt` (numbers only go down).
 - **Acceptance:**
   - `the_app_installs_at_app_and_opens_offline` asserts 192 and 512 `image/png` icons with measured sizes and a separate maskable PNG.
   - A new test: `/auth/login` has `<link rel=manifest>` and a CSP with `manifest-src 'self'`.
@@ -637,7 +637,7 @@ Three more constraints shape the program:
   - The sign-in switch stops using class `tabs` (`sign_in.rs:80`); scope the tab-bar CSS to `body.app > nav.tabs`.
   - Drop the bar's "Sign in" link that points back at the sign-in page.
   - Provider buttons, Shippin included, become full-width rows of at least 48 px.
-- **Files:** `crates/hub/src/web/{sign_in,sign_in_cards}.rs`, `crates/hub/src/web/pages/head.rs` or `pages.rs` (net 0), `crates/hub/src/web/hub.css`, `crates/hub/src/web/tests/sign_in_phone.rs` (new), `tests/android_browser.py`.
+- **Files:** `engine/hub/src/web/{sign_in,sign_in_cards}.rs`, `engine/hub/src/web/pages/head.rs` or `pages.rs` (net 0), `engine/hub/src/web/hub.css`, `engine/hub/src/web/tests/sign_in_phone.rs` (new), `tests/android_browser.py`.
 - **Acceptance:** Unit test: `/auth/login` has no `class="tabs"` and no bar link to `/auth/login`. `android_browser.py`: every `a` and `button` on `/auth/login` is at least 44×44 and the switch text is at least 15 px.
 - **Depends on:** 246.
 
@@ -646,13 +646,13 @@ Three more constraints shape the program:
   - `hub.css`, `app.js`, `reveal.js` and `push.js` are referenced as `?v=<content hash>`.
   - The service worker's cache name derives from the same hash.
   - This defeats Cloudflare's `max-age=14400`, which was observed live.
-- **Files:** `crates/hub/src/web/pages/head.rs`, `crates/hub/src/web/{routes,notify}.rs` (net 0), `crates/hub/src/web/app/mod.rs`, `crates/hub/src/site/pwa.rs`, `crates/hub/src/web/assets/sw.js`, `crates/hub/src/web/tests/assets.rs` (new), `tests/app_browser.py`.
+- **Files:** `engine/hub/src/web/pages/head.rs`, `engine/hub/src/web/{routes,notify}.rs` (net 0), `engine/hub/src/web/app/mod.rs`, `engine/hub/src/site/pwa.rs`, `engine/hub/src/web/assets/sw.js`, `engine/hub/src/web/tests/assets.rs` (new), `tests/app_browser.py`.
 - **Acceptance:** Rust test: the HTML references `/assets/hub.css?v=<hash>`, the hash changes with the file, and `/sw.js` carries the same hash. 245's offline wait still passes.
 - **Depends on:** 246.
 
 ### 249: 48 dp tap targets and touch feel (S)
 - **Scope:** Map A4. Row links on Overview, Machines and Boards become block links of at least 48 px; sheet rows at least 48 px; chips at least 40 px with a 48 px hit area; the Install and top-bar buttons at least 44 px. `:active` states and no tap highlight. The page still works without JS.
-- **Files:** `crates/hub/src/web/hub.css`, `crates/hub/src/web/app/home.rs`, `crates/hub/src/web/pages.rs` (net 0), `tests/android_browser.py`.
+- **Files:** `engine/hub/src/web/hub.css`, `engine/hub/src/web/app/home.rs`, `engine/hub/src/web/pages.rs` (net 0), `tests/android_browser.py`.
 - **Acceptance:** `android_browser.py` visits `/app`, `/app/machines`, `/app/boards`, a board, a ticket, `/approvals` and `/app/me`, and asserts every visible `a`, `button` and `summary` is at least 44×44, listing any failures, with no sideways scroll.
 - **Depends on:** 246.
 
@@ -665,7 +665,7 @@ Three more constraints shape the program:
   - A glow on status dots and a pulse while updating; `prefers-reduced-motion` honoured.
   - Dark `theme-color` metas (two `media`-scoped metas).
   - Tricks only: CSS, SVG, transforms and opacity. No web fonts, no images, no JS animation.
-- **Files:** `crates/hub/site/default/tokens.json`, `crates/hub/src/site/style.rs`, `crates/hub/src/web/hub.css`, `crates/hub/src/web/app/home.rs`, `crates/hub/src/web/pages/head.rs`, `tests/android_browser.py`, `tests/requirements-browser.txt` (axe).
+- **Files:** `engine/hub/site/default/tokens.json`, `engine/hub/src/site/style.rs`, `engine/hub/src/web/hub.css`, `engine/hub/src/web/app/home.rs`, `engine/hub/src/web/pages/head.rs`, `tests/android_browser.py`, `tests/requirements-browser.txt` (axe).
 - **Acceptance:**
   - axe colour contrast: 0 violations on `/app`, `/approvals` and `/app/me`, light and dark, on a Pixel 7; 249's audit still passes.
   - Pixel 7 screenshots of `/app`, `/approvals`, a machine and the Go-to sheet, light and dark, attached to the PR for the operator to judge on the phone in 253.
@@ -673,7 +673,7 @@ Three more constraints shape the program:
 
 ### 251: Manifest extras: shortcuts, screenshots, monochrome icon (S)
 - **Scope:** Map A8. Shortcuts (Approvals, Machines, Overview), narrow screenshots, a monochrome icon.
-- **Files:** `crates/hub/src/site/pwa.rs`, `crates/hub/site/default/{assets/,site.json}`, `crates/hub/src/web/app/tests.rs`.
+- **Files:** `engine/hub/src/site/pwa.rs`, `engine/hub/site/default/{assets/,site.json}`, `engine/hub/src/web/app/tests.rs`.
 - **Acceptance:** The test asserts shortcuts to `/approvals` and `/app/machines`, and a narrow screenshot whose `png_size` matches its declared size. In 253, a long-press on the installed icon shows the shortcuts.
 - **Depends on:** 246, 250.
 
@@ -702,7 +702,7 @@ Three more constraints shape the program:
   - A "Run a command" sheet on the machine page. `POST /app/machines/{name}/run` goes through the **same hub function** as MCP `run` and `operation_start`: same audit, same approval policy, same-origin check.
   - Job page `/app/machines/{name}/jobs/{op}` pages `operation_read` output and offers Cancel.
   - Recent jobs link to their job pages.
-- **Files:** `crates/hub/src/web/app/job.rs` (new), `crates/hub/src/web/app/job_tests.rs` (new), `crates/hub/src/web/app/{machine,mod}.rs`, `crates/hub/src/web/hub.css`, `crates/hub/site/default/content/messages.json`, `tests/android_browser.py`.
+- **Files:** `engine/hub/src/web/app/job.rs` (new), `engine/hub/src/web/app/job_tests.rs` (new), `engine/hub/src/web/app/{machine,mod}.rs`, `engine/hub/src/web/hub.css`, `engine/hub/site/default/content/messages.json`, `tests/android_browser.py`.
 - **Acceptance:**
   - Rust: a run is audited as the person, its output shows, it can be cancelled; another account's machine gives 404; a cross-origin POST gives 403.
   - `android_browser.py`: `echo hi` shows `hi` and exit 0 with no sideways scroll.
@@ -710,7 +710,7 @@ Three more constraints shape the program:
 
 ### 255: Live counts and machine state over SSE; job output once 254 exists (M)
 - **Scope:** Map A10. `GET /app/events`: SSE, same-origin, signed in. `app.js` updates the badge and status dots in place, falls back to the existing refetch on visibility change, and stops while the page is hidden.
-- **Files:** `crates/hub/src/web/app/events.rs` (new), `crates/hub/src/web/app/mod.rs`, `crates/hub/src/web/assets/app.js`, `crates/hub/src/web/pages/head.rs`.
+- **Files:** `engine/hub/src/web/app/events.rs` (new), `engine/hub/src/web/app/mod.rs`, `engine/hub/src/web/assets/app.js`, `engine/hub/src/web/pages/head.rs`.
 - **Acceptance:** Rust: a subscriber gets the count change after `approval_request`, and never another account's events. `android_browser.py`: the badge goes from 0 to 1 without a reload.
 - **Depends on:** 248 (254 only for job output).
 
@@ -723,7 +723,7 @@ Three more constraints shape the program:
   - `GET /approvals/<project>/<id>` in a new file with its own router, merged with one line in `routes.rs` at net 0. It shows the card and posts to the existing `/approvals/decide`. A signed-out visitor goes to `return_to=` that same path; today the `#fragment` is lost.
   - Push and `approval_request` URLs switch to this path.
   - Fix the "approve it from the notification" copy (`approvals.rs:565`, net 0 or less).
-- **Files:** `crates/hub/src/web/approval_page.rs` (new), `crates/hub/src/web/approval_page_tests.rs` (new), `crates/hub/src/web/routes.rs` (net 0), `crates/hub/src/agenthub/mcp/approvals.rs`, `crates/hub/src/web/approvals.rs` (copy only), `tests/android_browser.py`.
+- **Files:** `engine/hub/src/web/approval_page.rs` (new), `engine/hub/src/web/approval_page_tests.rs` (new), `engine/hub/src/web/routes.rs` (net 0), `engine/hub/src/agenthub/mcp/approvals.rs`, `engine/hub/src/web/approvals.rs` (copy only), `tests/android_browser.py`.
 - **Acceptance:**
   - Tests: signed out, the page redirects with `return_to` set to the exact path and lands there after sign-in; a decided or unknown approval refuses and changes nothing; another account's approval gives "Not yours to decide"; the `approval_request` url is the new path.
   - `android_browser.py` decides an approval at 412 px.
@@ -736,7 +736,7 @@ Three more constraints shape the program:
   - `notificationclick` focuses and navigates an open client before opening a new window (`sw.js:69-74`).
   - The approvals, `push.js` and push-title wording moves into `messages.json`.
   - **No approving from the notification shade.** See the defaults section.
-- **Files:** `crates/hub/src/web/assets/{sw.js,push.js}`, `crates/hub/src/site/pwa.rs`, `crates/hub/src/agenthub/mcp/approvals.rs`, `crates/hub/site/default/content/messages.json`, `crates/hub/src/web/tests/push_payload.rs` (new).
+- **Files:** `engine/hub/src/web/assets/{sw.js,push.js}`, `engine/hub/src/site/pwa.rs`, `engine/hub/src/agenthub/mcp/approvals.rs`, `engine/hub/site/default/content/messages.json`, `engine/hub/src/web/tests/push_payload.rs` (new).
 - **Acceptance:**
   - Hub test: `/sw.js` names PNG icon and badge URLs that answer 200 `image/png`; the approval payload carries `actions` and the 256 URL.
   - Browser: `notificationclick` with an open client leaves the client count unchanged.
@@ -749,7 +749,7 @@ Three more constraints shape the program:
   - A Notifications card in a new file shows the verified address, or "Verify an address" or "Sign in with Shippin" to get one, and says when mail is not set.
   - It lists this account's push subscriptions with Remove (scoped to the subject).
   - "Notify this phone" becomes "Notify this device", which also covers desktop Chrome and Edge.
-- **Files:** `crates/hub/src/identity/preferences/{mod,tests}.rs`, `crates/hub/src/web/app/notifications.rs` (new), `crates/hub/src/web/app/mod.rs`, `crates/hub/src/notify/push/subscriptions.rs`, `crates/hub/src/web/approvals.rs` (label, net 0 or less), `crates/hub/site/default/content/messages.json`.
+- **Files:** `engine/hub/src/identity/preferences/{mod,tests}.rs`, `engine/hub/src/web/app/notifications.rs` (new), `engine/hub/src/web/app/mod.rs`, `engine/hub/src/notify/push/subscriptions.rs`, `engine/hub/src/web/approvals.rs` (label, net 0 or less), `engine/hub/site/default/content/messages.json`.
 - **Acceptance:**
   - Preference tests: an old row upgrades to the default; an unknown field survives a round trip.
   - Removing a device stops pushes to it (fake push service), and one account cannot remove another's.
@@ -764,7 +764,7 @@ Three more constraints shape the program:
   - Limit 20 per address per hour, then one digest.
   - Each outcome goes to `ops::audit` without the address. `approval_request` gains `emailed`.
   - The template goes in `site/approval_mail.rs`, since `site.rs` is at its ratchet.
-- **Files:** `crates/hub/src/notify/approvals.rs` (new), `crates/hub/src/notify/approvals_tests.rs` (new), `crates/hub/src/mcp/hub.rs`, `crates/hub/src/serve/mod.rs` (one line), `crates/hub/src/web/email.rs` (visibility only), `crates/hub/src/agenthub/mcp/{approvals,schema}.rs`, `crates/hub/src/site/approval_mail.rs` (new), `crates/hub/site/default/content/messages.json`.
+- **Files:** `engine/hub/src/notify/approvals.rs` (new), `engine/hub/src/notify/approvals_tests.rs` (new), `engine/hub/src/mcp/hub.rs`, `engine/hub/src/serve/mod.rs` (one line), `engine/hub/src/web/email.rs` (visibility only), `engine/hub/src/agenthub/mcp/{approvals,schema}.rs`, `engine/hub/src/site/approval_mail.rs` (new), `engine/hub/site/default/content/messages.json`.
 - **Acceptance:** Hub tests with a stub SMTP server:
   - "email only when no device" with no device sends exactly one mail, with the title and the 256 link, no What text, and no injected header;
   - opening the link and deciding wakes `approval_wait`;
@@ -783,7 +783,7 @@ Three more constraints shape the program:
 
 ### 261: Guided plugin install on the hub (G2) (M)
 - **Scope:** Plugins P4. `/connect` and the `ai_client` workflow step show each client's plugin commands with this hub's `public_url` filled in: Claude Code `/plugin` plus the configure value, and `devagotchi connect codex --hub`. The VS Code and companion downloads are added when 263 and 268 land.
-- **Files:** `crates/hub/src/web/connectors.rs`, `crates/connectors/src/lib.rs`, `crates/connectors/catalog/anthropic/claude-code.json`, `crates/hub/src/workflows/mod.rs` (at its 541 ratchet: net 0, or move into `workflows/ai_client.rs`).
+- **Files:** `engine/hub/src/web/connectors.rs`, `engine/connectors/src/lib.rs`, `engine/connectors/catalog/anthropic/claude-code.json`, `engine/hub/src/workflows/mod.rs` (at its 541 ratchet: net 0, or move into `workflows/ai_client.rs`).
 - **Acceptance:** Web and workflow tests: the commands contain `public_url` and never `hub.example.com`. After deploy, `curl https://app.devagotchi.com/connect` contains "plugin install".
 - **Depends on:** 211.
 
@@ -793,7 +793,7 @@ Three more constraints shape the program:
   - Output: one NDJSON line per event (`approval.requested`, `approval.decided`, `note.to_me`, `ticket.changed`, `machine.offline`, `op.finished{executable,args,exit_code}`).
   - One process fans out to every local surface.
   - **This lands in the `devagotchi/agenthub` repository first, then the submodule is bumped** (memory: AgentHub is its own repo).
-- **Files:** `crates/agenthub/src/cli/commands/{mod,watch}.rs` (new `watch.rs`), `crates/agenthub/src/cli/remote.rs`, `crates/devagotchi/src/main.rs`, `crates/devagotchi/tests/board.rs`.
+- **Files:** `agenthub/src/cli/commands/{mod,watch}.rs` (new `watch.rs`), `agenthub/src/cli/remote.rs`, `runtime/devagotchi/src/main.rs`, `runtime/devagotchi/tests/board.rs`.
 - **Acceptance:** `cargo nextest run -p devagotchi --test board` on a Postgres test hub:
   - `approval.requested` arrives within 2 s, and `approval.decided` after a cookie decide;
   - a finished broker operation emits `op.finished` with its exit code;
@@ -816,7 +816,7 @@ Three more constraints shape the program:
 
 ### 264: Claude Code live surfaces: Notification hook and plugin monitor (M)
 - **Scope:** Plugins P7. Add Notification (and Stop as the "finished" cue) to the hooks plugin. It forwards to the companion over local IPC, with an OS toast fallback. A plugin monitor runs `devagotchi watch --as auto`. `plugin_hooks()` and `hooks.json` change together, and the `--as auto --if-board` suffix assert (`plugins.rs:43`) is relaxed for the new command.
-- **Files:** `crates/agenthub/src/cli/hooks/install.rs` (agenthub repository first), `plugins/devagotchi-agenthub/{hooks/hooks.json,.claude-plugin/plugin.json}`, `crates/hub/src/mcp/tests/plugins.rs`.
+- **Files:** `agenthub/src/cli/hooks/install.rs` (agenthub repository first), `plugins/devagotchi-agenthub/{hooks/hooks.json,.claude-plugin/plugin.json}`, `engine/hub/src/mcp/tests/plugins.rs`.
 - **Acceptance:** `claude plugin validate plugins/devagotchi-agenthub` passes; the plugins tests pass. Receipt: a real Claude Code session on the PC raises the popup when Claude asks for permission.
 - **Depends on:** 262, 263.
 
@@ -826,7 +826,7 @@ Three more constraints shape the program:
   - Serve `ui://devagotchi/{approval,board,ticket}` as `text/html;profile=mcp-app`: self-contained, layered-shadow elevation, system fonts.
   - Set `_meta.ui.resourceUri` on `approval_request`, `board_prime` and `board_get`. Add `openai/outputTemplate` only if ChatGPT's current docs require it.
   - The approval view opens the 256 page through the host's open-link request; deciding stays in the browser session. Text answers stay complete.
-- **Files:** `crates/hub/src/mcp/handler.rs`, `crates/hub/src/mcp/views/{mod.rs,approval.html,board.html,ticket.html}` (new), `crates/hub/src/agenthub/mcp/tools/{messages,read}.rs`, `crates/hub/src/mcp/tests/views.rs` (new).
+- **Files:** `engine/hub/src/mcp/handler.rs`, `engine/hub/src/mcp/views/{mod.rs,approval.html,board.html,ticket.html}` (new), `engine/hub/src/agenthub/mcp/tools/{messages,read}.rs`, `engine/hub/src/mcp/tests/views.rs` (new).
 - **Acceptance:**
   - MCP tests: `initialize` advertises the ui extension; `resources/list` has the three URIs; `resources/read` returns the mcp-app MIME type; `tools/list` shows `_meta.ui.resourceUri` on the three tools.
   - Receipt in `plugins.md`: claude.ai or Claude Desktop renders the approval card against app.devagotchi.com.
@@ -837,13 +837,13 @@ Three more constraints shape the program:
   - `op.finished` from a test runner gives a pass/fail cue with duration; the same failure repeated gives "same failure N times".
   - Factoids are local JSONL, sent to the hub only as a board note.
   - Hook-sourced cues run only when capture is `content`; with capture off, nothing runs.
-- **Files:** `crates/kernel/src/cues/mod.rs` (new), `crates/kernel/src/capture/mod.rs` (at its 1017 ratchet: net 0), `crates/agenthub/src/cli/commands/watch.rs`, `apps/desktop/src/popup/`.
+- **Files:** `engine/kernel/src/cues/mod.rs` (new), `engine/kernel/src/capture/mod.rs` (at its 1017 ratchet: net 0), `agenthub/src/cli/commands/watch.rs`, `apps/desktop/src/popup/`.
 - **Acceptance:** A unit test per rule proves no model call; a recorded failing `cargo test` operation raises its factoid; with `devagotchi ai policy set --capture off` the same hook input stores nothing.
 - **Depends on:** 262.
 
 ### 267: Codex parity: seat, hooks plugin, notify (M)
 - **Scope:** Plugins P9. After the G5 seat work: add a `.codex-plugin` and hooks to `devagotchi-agenthub`, list it in the Codex marketplace, and wire Codex `notify` through `devagotchi connect codex`. Check every step against the Codex docs first.
-- **Files:** `plugins/devagotchi-agenthub/.codex-plugin/plugin.json` (new), `.agents/plugins/marketplace.json`, `crates/mcp/src/connect.rs` (net 0; new logic in `crates/mcp/src/connect/codex.rs`), `crates/hub/src/mcp/tests/plugins.rs`, `.ai/dev/plans/plugins.md`.
+- **Files:** `plugins/devagotchi-agenthub/.codex-plugin/plugin.json` (new), `.agents/plugins/marketplace.json`, `interfaces/mcp/src/connect.rs` (net 0; new logic in `interfaces/mcp/src/connect/codex.rs`), `engine/hub/src/mcp/tests/plugins.rs`, `.ai/dev/plans/plugins.md`.
 - **Acceptance:** With a throwaway `CODEX_HOME`, `codex mcp list` shows the person's hub. Receipt: a signed-in Codex session calls `whoami` and the hooks fire.
 - **Depends on:** 211, 264.
 
@@ -853,7 +853,7 @@ Three more constraints shape the program:
   - A status-bar item (machines online, approvals waiting) and notifications fed by `devagotchi watch --json`.
   - A webview that reuses the 265 view bundle.
   - Check the API names against the VS Code docs first.
-- **Files:** `plugins/vscode/{package.json,src/extension.ts,src/watch.ts}` (new), `crates/connectors/catalog/microsoft/vscode-copilot.json`, `.github/workflows/ci.yml`.
+- **Files:** `plugins/vscode/{package.json,src/extension.ts,src/watch.ts}` (new), `engine/connectors/catalog/microsoft/vscode-copilot.json`, `.github/workflows/ci.yml`.
 - **Acceptance:** `npx @vscode/vsce package` produces a `.vsix` in CI. A `@vscode/test-electron` test: the extension activates, the status item shows a fake feed's counts, and a fake approval raises "Open to decide". Plus an operator install receipt.
 - **Depends on:** 262, 265.
 
@@ -862,7 +862,7 @@ Three more constraints shape the program:
   - A `.mcpb` that wraps `devagotchi mcp` for the no-hub path (path 5.4).
   - ChatGPT Desktop: first establish from OpenAI's docs whether any local extension surface exists. Until then it gets the hub connector, the 265 views and the 263 companion cues.
   - Record both in the G11 table with sources and dates.
-- **Files:** `plugins/claude-desktop/manifest.json` (new), `crates/connectors/catalog/{openai/chatgpt.json,anthropic/claude-desktop.json}`, `.ai/dev/plans/plugins.md`.
+- **Files:** `plugins/claude-desktop/manifest.json` (new), `engine/connectors/catalog/{openai/chatgpt.json,anthropic/claude-desktop.json}`, `.ai/dev/plans/plugins.md`.
 - **Acceptance:** `mcpb validate` and pack succeed; Claude Desktop on Windows installs it and runs a command with no hub. A ChatGPT connector receipt against app.devagotchi.com is recorded, and `chatgpt.json` is promoted beyond docs level only with a named test.
 - **Depends on:** 265.
 
@@ -884,13 +884,13 @@ Each lane is its own worktree with its **own `CARGO_TARGET_DIR`** (memory: a sha
 
 | Lane | Increments, in order | Files it owns |
 |---|---|---|
-| L1 machine surface | 208 → 212 → 213 → 214, 215, 216, 217, 218 (serial; all touch contracts) → 219 → 221 → 222 → 223 → 224 | `crates/contracts`, `crates/machine-engine`, `crates/mcp/src/adapter`, `crates/hub/src/machines/{files,search,system,history,calls}`, `crates/hub/src/mcp/{schema,callers,tools/operations}`, `tests/{hub,adapter}_probe.py` |
-| L2 join | 209 → 210; then 220 when 214 and 256 are in | `crates/hub/src/machines/join/`, `crates/link/src/lib.rs`, `tests/compose_join.py`, image.yml join leg |
-| L3 plugins and docs | 211 → 260 → 261 → (after 262) 264 → 267 → 268 → 269 | `plugins/`, `README.md`, `crates/mcp/src/connect*`, `crates/connectors`, `apps/desktop` (263 stays with L7) |
+| L1 machine surface | 208 → 212 → 213 → 214, 215, 216, 217, 218 (serial; all touch contracts) → 219 → 221 → 222 → 223 → 224 | `platform/contracts`, `engine/machine-engine`, `interfaces/mcp/src/adapter`, `engine/hub/src/machines/{files,search,system,history,calls}`, `engine/hub/src/mcp/{schema,callers,tools/operations}`, `tests/{hub,adapter}_probe.py` |
+| L2 join | 209 → 210; then 220 when 214 and 256 are in | `engine/hub/src/machines/join/`, `runtime/link/src/lib.rs`, `tests/compose_join.py`, image.yml join leg |
+| L3 plugins and docs | 211 → 260 → 261 → (after 262) 264 → 267 → 268 → 269 | `plugins/`, `README.md`, `interfaces/mcp/src/connect*`, `engine/connectors`, `apps/desktop` (263 stays with L7) |
 | L4 identity and admin | 225 → 226 → 227 → 228 → 229 → 230; 231, 232, 233, 234 in any order after 225; 235 after 217 | `web/providers.rs`, `identity/`, `web/hub_settings_{shippin,activity}.rs`, `web/account_security.rs`, `web/app/{ai_clients,machine_settings}.rs`, `web/one_user/` |
-| L5 update | 236 → 237 → 238 → 239 → 240 → 241 → 242 → 243 → 244 | `deploy/compose/`, `deploy/linux/`, `crates/devagotchi/build.rs`, `ops/{release_check,update_status,health}.rs`, `serve/shutdown.rs`, `web/hub_settings_hub.rs`, `web/hub_update.rs`, `web/app/machines_update.rs`, `crates/link/src/update/mod.rs` |
+| L5 update | 236 → 237 → 238 → 239 → 240 → 241 → 242 → 243 → 244 | `deploy/compose/`, `deploy/linux/`, `runtime/devagotchi/build.rs`, `ops/{release_check,update_status,health}.rs`, `serve/shutdown.rs`, `web/hub_settings_hub.rs`, `web/hub_update.rs`, `web/app/machines_update.rs`, `runtime/link/src/update/mod.rs` |
 | L6 phone | 245 → 246 (merge fast: it splits `site.rs` and `pages.rs`) → 247, 248, 249 → 250 → 251 → 252 → 253; 254 after 213 and 242; 255 after 248 | `web/hub.css`, `web/pages/head.rs`, `site/pwa.rs`, `site/style.rs`, `tokens.json`, `web/assets/{app.js,sw.js}`, `web/sign_in*.rs`, `web/app/{job,events}.rs`, `tests/android_browser.py`, `tests/android_device.py` |
-| L7 notifications | 256 → 258 → 259; 257 after 246 and 248; 262 (agenthub repository) → 263 → 265 → 266 | `web/approval_page.rs`, `notify/approvals.rs`, `notify/push/subscriptions.rs`, `identity/preferences/`, `web/app/notifications.rs`, `crates/agenthub/src/cli/`, `crates/kernel/src/cues/`, `mcp/views/` |
+| L7 notifications | 256 → 258 → 259; 257 after 246 and 248; 262 (agenthub repository) → 263 → 265 → 266 | `web/approval_page.rs`, `notify/approvals.rs`, `notify/push/subscriptions.rs`, `identity/preferences/`, `web/app/notifications.rs`, `agenthub/src/cli/`, `engine/kernel/src/cues/`, `mcp/views/` |
 
 **Can start on day one with no file conflict:** 208 (L1), 209 (L2), 211 (L3), 225 (L4), 236 (L5), 245 (L6), 256 and 260 (L7 and L3; 260 is in `apps/desktop`, untouched by 211).
 
@@ -904,8 +904,8 @@ Each lane is its own worktree with its **own `CARGO_TARGET_DIR`** (memory: a sha
 - `routes.rs` (680): 210, 225, 256 each change one line, net 0. Expect a rebase conflict only.
 - `web/assets/sw.js`: 248, then 257.
 - `mcp/tools/machines.rs`: 210 → 213 → 220.
-- `crates/hub/site/default/content/messages.json` and `.github/workflows/ci.yml`: everyone appends. Rebase, do not reorder keys.
-- `crates/devagotchi/tests/layout/oversize.txt`: numbers only go down (212, 246). Run `DEVAGOTCHI_WRITE_LAYOUT=1 cargo test -p devagotchi --test layout` after moves.
+- `engine/hub/site/default/content/messages.json` and `.github/workflows/ci.yml`: everyone appends. Rebase, do not reorder keys.
+- `runtime/devagotchi/tests/layout/oversize.txt`: numbers only go down (212, 246). Run `DEVAGOTCHI_WRITE_LAYOUT=1 cargo test -p devagotchi --test layout` after moves.
 
 ## Defaults I chose
 
@@ -933,7 +933,7 @@ Each lane is its own worktree with its **own `CARGO_TARGET_DIR`** (memory: a sha
 3. **How a self-hosted hub gets a Shippin client before S0** (Client ID Metadata Documents is a Nomen-side change and has not landed).
    - Proposed: after 228, the owner runs `connect-nomen` (or 230's browser button) once, which registers one client per hub in your Nomen project. You decide whether that Nomen project is open to any self-hoster or invite-only.
 4. **Where the durable approval notifier lives (259).**
-   - Proposed: the hub's existing `signal_cursors` stream (no new store, no submodule change). That contradicts F18's "outbox in crates/agenthub" (`agenthub-factory.md:220`), whose only stated reason is the `approvals.rs` ratchet. Confirm, and I will record F18 as split into 256 and 259.
+   - Proposed: the hub's existing `signal_cursors` stream (no new store, no submodule change). That contradicts F18's "outbox in agenthub" (`agenthub-factory.md:220`), whose only stated reason is the `approvals.rs` ratchet. Confirm, and I will record F18 as split into 256 and 259.
 
 ## Operator actions, not decisions
 

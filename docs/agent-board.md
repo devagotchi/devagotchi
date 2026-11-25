@@ -1,7 +1,7 @@
 # Devagotchi agent board: tickets any subscription can claim, work, annotate and hand off
 
 Revision: **2026-11-20 UTC**. Status: **every board is in Postgres: hosted CLI/MCP/web, and standalone boards since 2026-11-17 (ADR 0005); offline queue pending**.
-Owner: `crates/hub/src/agenthub/`. This document owns the board contract; the
+Owner: `engine/hub/src/agenthub/`. This document owns the board contract; the
 [architecture master](product-and-platform-plan.md) owns product decisions and sequencing; the
 [task-graph contract](task-graph-and-mesh-contract.md) owns execution graphs, which are a different thing.
 
@@ -89,12 +89,12 @@ protocol adds comes from what works elsewhere (§7).
 | Question | Answer |
 |---|---|
 | Responsibility it owns | Tickets, dependencies, claims/leases, notes, handoffs, the board's event chain, per project. |
-| Existing owner inspected | `crates/hub` (bastion: subjects, audit chain, MCP surface, web); `crates/core/journal` (operations). The Go `agent-hub` store (`server/internal/store`, `docs/spec.md`). |
+| Existing owner inspected | `engine/hub` (bastion: subjects, audit chain, MCP surface, web); `crates/core/journal` (operations). The Go `agent-hub` store (`server/internal/store`, `docs/spec.md`). |
 | Why extension is adequate | The hub already authenticates actors, owns account/tenant storage and RLS, keeps audit history and serves MCP/web. Board transactions extend that Postgres owner; no second task service. ClickHouse is the explicitly selected analytics dependency, never a coordination authority. |
 | What it replaces | The Go hub's tasks/notes/deps/leases/events, ported not run beside; the Go hub freezes behind a superseded banner once parity tests pass (increment 11). |
 | Authoritative state | Hosted boards: tenant/project-scoped Postgres tables in the existing hub `Store` (ADR 0001). Standalone boards: the same tables in the Postgres `DEVAGOTCHI_BOARD_STORAGE_URL` names (or `storage` in `.devagotchi/config.json`), under one fixed local tenant (ADR 0005). A bound client's future offline cache holds cache/pending operations only (ADR 0002). `board.jsonl` is an export, never authority. |
 | Dependencies and failure | SQLx Postgres storage for every board's transactions. No silent local fallback when the hub/database is down; a standalone board with no Postgres named is refused (`no_storage`). Durable outbox to required ClickHouse exposes export lag/backpressure. Broken chains are reported, never silently repaired. |
-| Acceptance | `crates/hub/src/agenthub/tests.rs`: lanes, fencing after expiry, reaper → attention, readiness through `blocks`, assignee priority, WIP, handoff, force-release, version conflicts, transitions, filters, append-only triggers, chain tampering, workflow replacement, discovered work. |
+| Acceptance | `engine/hub/src/agenthub/tests.rs`: lanes, fencing after expiry, reaper → attention, readiness through `blocks`, assignee priority, WIP, handoff, force-release, version conflicts, transitions, filters, append-only triggers, chain tampering, workflow replacement, discovered work. |
 
 Rejected: a board per machine (tickets outlive machines), Dolt or another versioned database.
 The original rejection of centralized hosted board storage is superseded by ADR 0001;
@@ -164,7 +164,7 @@ webhooks and the issue route `delivery_conflict`, `wake_failed`; and `no_done_st
 workflow has none. The hub adds `not_owner`, `read_only`, `not_granted` and `unknown_board`; the
 command line `no_board`, `no_storage` and `invalid_storage`. Every code an agent can act on has a
 `next` of its own on MCP and the command line: the source of this list is the scan in
-`crates/hub/src/agenthub/mcp/tests/contract.rs` and `crates/agenthub/src/cli/tests/output.rs`.
+`engine/hub/src/agenthub/mcp/tests/contract.rs` and `agenthub/src/cli/tests/output.rs`.
 
 ## 5. Where the board lives and how an agent starts it (increment 8)
 
@@ -222,7 +222,7 @@ it is a person only when its grant says `human` or it is the owner (`whoami` rep
 hub does not serve: `unknown_board`.
 
 The tools, each taking `project`, by what they do (the hub serves them from
-`crates/hub/src/agenthub/mcp/tools/`; `crate::mcp::tool_names()` lists them, and the contract
+`engine/hub/src/agenthub/mcp/tools/`; `crate::mcp::tool_names()` lists them, and the contract
 test holds their hints): reading (`read.rs`), working tickets (`tickets.rs`), messages and
 approvals (`messages.rs`), settings and binding (`settings.rs`), and GitHub issues (`issues.rs`:
 `board_attach`, `board_issue_context`, `board_issue_checkpoint`). They are `board_prime` (start here), `board_ready`, `board_list`,
@@ -422,7 +422,7 @@ user-authorized direct-recording exception, limited to hosted storage and offlin
 
 | Increment | Scope | Exit |
 |---|---|---|
-| 7 (this one) | `crates/hub/src/agenthub/`: schema, ids, workflow, store, leases, reaper, chain; this document | `cargo nextest run -p devagotchi-hub` green; §2 acceptance list |
+| 7 (this one) | `engine/hub/src/agenthub/`: schema, ids, workflow, store, leases, reaper, chain; this document | `cargo nextest run -p devagotchi-hub` green; §2 acceptance list |
 | 8a (built) | `devagotchi board` CLI (`devagotchi-hub board` until 13b): `init` (+ AGENTS.md block), `prime`, `onboard`, `agent`, `ready`, `ls`, `show`, `new`, `claim`, `beat`, `note`, `done`, `handoff`, `release`, `force`, `set`, `dep`, `reap`, `verify`, `export`; JSON off a pipe, `--quiet`, exit codes by class, `next` on every error, claim cache | five CLI tests: init idempotence, the loop from a subdirectory with a cached fence, exit codes and hints, `prime` ≤ 50 lines, export + verify |
 | 8b (in) | MCP tools on `/mcp` (one board per `project`; **built**, §6: `boards` config, grants with `boards`/`human`, 17 tools, fence memory, audit, reaper, `tests/board_probe.py`); the hook pack (`board hooks`, **built**); the skill with the MCP snippet per CLI (**built**, agent-skills); still open: project registration with the hub, `request_id` | `tests/e2e.py` works a board over MCP as a person and two agents (**green**); the hook scripts exercised against the CLI (stop refused once while holding, beat throttled) in the CLI tests and by hand; on Claude Code and Codex themselves: open |
 | 9 | Broker liveness (B05), attempts link, message tickets, path reservations, per-state WIP, budgets | A lease survives an agent that never heartbeats while its operation runs; two agents cannot edit one reserved path |
@@ -477,7 +477,7 @@ Concurrent importers of one origin make one ticket: the losers collide on the un
 their transaction runs again (`devagotchi-store`'s retry on 23505/40001) and returns the
 winner's ticket. The row is append-only (`board_append_only()` refuses UPDATE, DELETE and so
 INSERT … ON CONFLICT DO UPDATE). `board_get`, `board show` and `board export` carry it as
-`provenance`. Tests: `crates/agenthub/src/tests/sources.rs`,
-`crates/agenthub/src/cli/tests/sources.rs`, `crates/hub/src/agenthub/tests/sourced.rs`, and six
+`provenance`. Tests: `agenthub/src/tests/sources.rs`,
+`agenthub/src/cli/tests/sources.rs`, `engine/hub/src/agenthub/tests/sourced.rs`, and six
 concurrent processes, then the lifecycle a process per step, in
-`crates/devagotchi/tests/board.rs`.
+`runtime/devagotchi/tests/board.rs`.

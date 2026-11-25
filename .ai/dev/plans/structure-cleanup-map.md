@@ -12,7 +12,7 @@ Part of [structure-cleanup](structure-cleanup.md). Every Rust file in `crates/` 
 | `src-tauri/src/lib.rs` |  |  | 351 | A small native inspector. The independently running broker owns every job. |
 | `src-tauri/src/main.rs` |  |  | 28 | (no module doc) |
 
-## crates/connectors
+## engine/connectors
 
 | Now | Goes to | Step | Lines | Job, and what is split out |
 |---|---|---|---|---|
@@ -20,7 +20,7 @@ Part of [structure-cleanup](structure-cleanup.md). Every Rust file in `crates/` 
 | `lib.rs` |  |  | 287 | How each AI client connects to a Devagotchi hub, as data. |
 | `tests.rs` |  |  | 175 | The catalog is checked as code: every file on disk is compiled in, reads against the |
 
-## crates/contracts
+## platform/contracts
 
 | Now | Goes to | Step | Lines | Job, and what is split out |
 |---|---|---|---|---|
@@ -31,7 +31,7 @@ Part of [structure-cleanup](structure-cleanup.md). Every Rust file in `crates/` 
 | `lib.rs` |  |  | 468 | Canonical wire types. Serde rejects unknown fields; broker validation enforces bounds. |
 | `link_frame_tests.rs` | `link/tests.rs` | S10 | 61 | done in B1: the link frames are in `link/mod.rs`, re-exported flat |
 
-## crates/devagotchi
+## runtime/devagotchi
 
 | Now | Goes to | Step | Lines | Job, and what is split out |
 |---|---|---|---|---|
@@ -43,7 +43,7 @@ Part of [structure-cleanup](structure-cleanup.md). Every Rust file in `crates/` 
 | `tests/layout.rs` |  |  | 261 | The size ratchet from `.ai/patterns/layout.md`: no new Rust file over the cap, and no |
 | `tests/one_binary.rs` |  |  | 1148 | The one binary, driven as a person would: `devagotchi start` with nothing but an |
 
-## crates/hub
+## engine/hub
 
 | Now | Goes to | Step | Lines | Job, and what is split out |
 |---|---|---|---|---|
@@ -174,7 +174,7 @@ Part of [structure-cleanup](structure-cleanup.md). Every Rust file in `crates/` 
 | `site/text.rs` |  |  | 448 | The markup a line of the site's copy may carry, and the placeholders it may name. |
 | `site/watch.rs` |  |  | 113 | The running hub follows its site directory: a change to it is read and checked, and |
 | `site/workflows.rs` |  |  | 574 | `content/workflows.json`: the step-by-step setups an AI can start for its person and hand |
-| `store.rs` | `store/mod.rs` | S5 | 94 | The hub's store: the Postgres engine `devagotchi-store` (`crates/store`), re-exported so the |
+| `store.rs` | `store/mod.rs` | S5 | 94 | The hub's store: the Postgres engine `devagotchi-store` (`platform/store`), re-exported so the |
 | `store/tests.rs` |  |  | 269 | (no module doc) |
 | `tenancy/access/mod.rs` |  |  | 403 | Who is let in, and on which plan (increment 63). A hosted hub (`tenancy.mode multi`) |
 | `tenancy/access/plans.rs` |  |  | 123 | What a tenant's plan lets it hold: setting a tenant's plan (the operator), the room left on |
@@ -257,7 +257,7 @@ Part of [structure-cleanup](structure-cleanup.md). Every Rust file in `crates/` 
 | `workflows/stored/tests.rs` |  |  | 55 | (no module doc) |
 | `workflows/tests.rs` | `workflows/tests/mod.rs` | S9 | 1766 | Workflows end to end over HTTP, the whole router as it serves (increment 68,; over 800 lines: a `tests/` folder, a file per subject (rule 6) |
 
-## crates/ipc
+## platform/ipc
 
 | Now | Goes to | Step | Lines | Job, and what is split out |
 |---|---|---|---|---|
@@ -266,7 +266,7 @@ Part of [structure-cleanup](structure-cleanup.md). Every Rust file in `crates/` 
 | `windows.rs` | `windows/mod.rs` | S10 | 415 | Windows local IPC: a protected state directory private to the operator's |
 | `windows/security.rs` | `windows/security/mod.rs` | S10 | 516 | Win32 identity and security-descriptor checks for private broker state.; split: `sid.rs` (Sid, Operator, token_*, process_user), `descriptor.rs` (SecurityDescriptor, Ace, ObjectSecurity, object_security), `private.rs` (create_private_*, open_entry, Entry, private_entry_defect) |
 
-## crates/link
+## runtime/link
 
 | Now | Goes to | Step | Lines | Job, and what is split out |
 |---|---|---|---|---|
@@ -279,7 +279,7 @@ Part of [structure-cleanup](structure-cleanup.md). Every Rust file in `crates/` 
 | `update.rs` | `update/mod.rs` | S10 | 235 | The link updates its machine to the hub's build (docs/spec-machine-update.md, U3): wait |
 | `update_tests.rs` | `update/tests.rs` | S10 | 122 | The updater's own logic: the idle wait against a fake broker, the hub's checksum list, |
 
-## crates/machine-engine
+## engine/machine-engine
 
 | Now | Goes to | Step | Lines | Job, and what is split out |
 |---|---|---|---|---|
@@ -318,7 +318,7 @@ Part of [structure-cleanup](structure-cleanup.md). Every Rust file in `crates/` 
 | `service/background.rs` |  |  | 349 | This user's broker in the background, so an AI client's whole setup is `devagotchi mcp` |
 | `service/mod.rs` |  |  | 218 | The broker runs independently from the MCP client process. This library is its |
 
-## crates/mcp
+## interfaces/mcp
 
 | Now | Goes to | Step | Lines | Job, and what is split out |
 |---|---|---|---|---|
@@ -333,7 +333,7 @@ Part of [structure-cleanup](structure-cleanup.md). Every Rust file in `crates/` 
 | `run.rs` | `run/mod.rs` | S10 | 207 | `run`: one call that starts a command, waits a bounded time for it, and returns its |
 | `run/tests.rs` |  |  | 319 | (no module doc) |
 
-## crates/store
+## platform/store
 
 | Now | Goes to | Step | Lines | Job, and what is split out |
 |---|---|---|---|---|

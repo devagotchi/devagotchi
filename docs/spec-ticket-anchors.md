@@ -2,7 +2,7 @@
 
 Status: APPROVED by Jesse 2026-11-06. Plan: `docs/plan-phone-and-signals.md` (P2). Ruled
 2026-11-06: every ticket is tied to its machine/system, project + repo, environment, and
-agent + session. Paths relative to `crates/hub/`; names are anchors, lines are hints.
+agent + session. Paths relative to `engine/hub/`; names are anchors, lines are hints.
 
 ## What changes for a person and an AI
 - Every ticket shows where it belongs: `machine`, `repo`, `environment`, `agent`, `session`
@@ -35,7 +35,7 @@ agent + session. Paths relative to `crates/hub/`; names are anchors, lines are h
 - `agenthub/mcp.rs` `CreateIn` (~574), the update and list inputs: the five anchors + `fingerprint`;
   descriptions say each is optional and filled when the hub knows it.
 - `agenthub/cli.rs`: `--machine --repo --env --agent --session --fingerprint` on create/update/list.
-- If the board types are exported in `crates/contracts` (check `schemas/`), change them there
+- If the board types are exported in `platform/contracts` (check `schemas/`), change them there
   and regenerate (`node scripts/generate-contracts.cjs`); never hand-edit `schemas/`.
 - Tests: the MCP tools' output schemas validate with anchors present and absent
   (`output_schema.rs` validator); CLI JSON output includes them.

@@ -24,7 +24,7 @@
 # command line, which other users can read) and writes it into hub.json (0600) as
 # "storage.url"; a re-run keeps what hub.json holds. Postgres itself is yours to run.
 # --auth-config is a JSON file with the hub's "auth" object (mode nomen or oidc; see
-# crates/hub/README.md) and, for nomen, "owner"; --person/--agent are then account IDs, let
+# engine/hub/README.md) and, for nomen, "owner"; --person/--agent are then account IDs, let
 # in by grant. Without it the hub runs on dev tokens, minted for each --person/--agent and
 # printed once — for tests only, so --public-url must be loopback http (plan D21).
 # The one-time enrollment code (from `devagotchi hub enroll --device NAME`) is read from stdin,

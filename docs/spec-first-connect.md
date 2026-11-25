@@ -3,7 +3,7 @@
 Status: APPROVED by Jesse 2026-11-04. One agent executes it in order.
 Target flow: `docs/desktop-commander-teardown.md` §8. Rule: effortless first; nothing visible
 is added for security. Anything not written here is out of scope. Paths are relative to
-`crates/hub/` unless they start with `crates/`, `deploy/` or `tests/`. Line numbers are from
+`engine/hub/` unless they start with `crates/`, `deploy/` or `tests/`. Line numbers are from
 `main` at 2026-11-03 and are hints only; the function names are the anchors.
 
 ## The whole flow a person gets
@@ -34,7 +34,7 @@ Fails the spec: any extra screen, prompt or nag in 1–5.
 | `crates/core/src/execution/platform/windows.rs` `shell_command` | changed | clean PowerShell output | — |
 
 No new crate, process or service. One new dependency: `argon2` (RustCrypto, MIT/Apache-2.0)
-in `crates/hub/Cargo.toml`; `cargo deny --all-features check` must pass.
+in `engine/hub/Cargo.toml`; `cargo deny --all-features check` must pass.
 
 ## PR C1 — `offers` works in Claude (branch `increment-78/offers-schema`, exists)
 - Already pushed: `src/output_schema.rs`, `src/site/offers.rs`, `src/web/landing/network.rs`,

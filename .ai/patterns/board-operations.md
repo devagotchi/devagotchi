@@ -21,7 +21,7 @@ Related documents:
   [tests-and-ci.md](tests-and-ci.md).
 
 References below name a file and a function, not a line: lines move, names are checked by the
-compiler. Paths under `crates/agenthub` are in the AgentHub submodule (its own repository,
+compiler. Paths under `agenthub` are in the AgentHub submodule (its own repository,
 `devagotchi/agenthub`).
 
 ## Purpose
@@ -35,23 +35,23 @@ gets the same answer. `HostedBoard` decides (G1). Every other layer forwards.
 
 | Layer | Home | Shape |
 |---|---|---|
-| Store (decides) | `crates/agenthub/src/hosted/<subject>.rs` | `impl HostedBoard { pub async fn op(&self, actor: &Actor<'_>, ...) -> BridgeResult<T> }` |
-| Sync face | `crates/agenthub/src/board/<subject>.rs`, `lease.rs` for lease verbs, `approval.rs` and `wake.rs` for theirs | one line: `self.hosted_call(self.hosted.op(...))` |
-| CLI face | `crates/agenthub/src/face.rs` and `cli/remote.rs` | a `Face` method; `Board` forwards; `Remote` makes one `board_<tool>` call |
-| CLI command | `crates/agenthub/src/cli/commands/<group>.rs`, dispatched in `commands/mod.rs` | parse, `fence_for`, `with_id(id, board.op(...))`, claim cache, `output.value` |
-| MCP tool | `crates/hub/src/agenthub/mcp/tools/<group>.rs`; input in `mcp/schema.rs` | `#[tool]`, then `board_call(tool, project, ticket, ctx, move \|board, actor\| board.op(...))` |
-| Page or REST | `crates/hub/src/web/app/agenthub/`, `web/approvals/`, `crates/hub/src/agenthub/issue_lifecycle/` | a page: `spawn_blocking` and one `board.op`; an async REST route: one awaited `HostedBoard` method; either way one audit line |
-| Hook | `crates/agenthub/src/cli/hooks/`, shipped as `plugins/devagotchi-agenthub/hooks/hooks.json` | `plugin_hooks()` prints it; the plugin ships exactly that |
+| Store (decides) | `agenthub/src/hosted/<subject>.rs` | `impl HostedBoard { pub async fn op(&self, actor: &Actor<'_>, ...) -> BridgeResult<T> }` |
+| Sync face | `agenthub/src/board/<subject>.rs`, `lease.rs` for lease verbs, `approval.rs` and `wake.rs` for theirs | one line: `self.hosted_call(self.hosted.op(...))` |
+| CLI face | `agenthub/src/face.rs` and `cli/remote.rs` | a `Face` method; `Board` forwards; `Remote` makes one `board_<tool>` call |
+| CLI command | `agenthub/src/cli/commands/<group>.rs`, dispatched in `commands/mod.rs` | parse, `fence_for`, `with_id(id, board.op(...))`, claim cache, `output.value` |
+| MCP tool | `engine/hub/src/agenthub/mcp/tools/<group>.rs`; input in `mcp/schema.rs` | `#[tool]`, then `board_call(tool, project, ticket, ctx, move \|board, actor\| board.op(...))` |
+| Page or REST | `engine/hub/src/web/app/agenthub/`, `web/approvals/`, `engine/hub/src/agenthub/issue_lifecycle/` | a page: `spawn_blocking` and one `board.op`; an async REST route: one awaited `HostedBoard` method; either way one audit line |
+| Hook | `agenthub/src/cli/hooks/`, shipped as `plugins/devagotchi-agenthub/hooks/hooks.json` | `plugin_hooks()` prints it; the plugin ships exactly that |
 
 ## Exemplars
 
-1. **`HostedBoard::handoff`** (`crates/agenthub/src/hosted/leases.rs`), end to end. It touches
+1. **`HostedBoard::handoff`** (`agenthub/src/hosted/leases.rs`), end to end. It touches
    every concern: a pure check, the fence guard, a multi-row write, one event, refusal codes,
    the CLI claim cache and the hub's fence memory. `docs/agent-board.md` §4 item 5 makes
    "handoff note + release + assignee, one transaction" its contract.
    - `scope` (`hosted/mod.rs`) takes the tenant scope, locks the board row `FOR UPDATE` and
      returns the database clock.
-   - The fence guard is `lease::check_held` (`crates/agenthub/src/lease.rs`).
+   - The fence guard is `lease::check_held` (`agenthub/src/lease.rs`).
    - `clear_lease` (`hosted/leases.rs`) writes the one event through `event`
      (`hosted/mod.rs`): `board_events`, `board_outbox` and `pg_notify` in the same
      transaction. `clear_lease` owns `data.from` and `data.to`; the recipient goes under
@@ -80,7 +80,7 @@ Idempotency models, for an operation a caller may retry:
 ## Canonical shape
 
 ```rust
-// crates/agenthub/src/hosted/leases.rs
+// agenthub/src/hosted/leases.rs
 impl HostedBoard {
     /// What it does and the rule it keeps, in one or two lines.
     pub async fn handoff(&self, actor: &Actor<'_>, id: &str, fence: i64, note: &str,
@@ -105,14 +105,14 @@ impl HostedBoard {
     }
 }
 
-// crates/agenthub/src/lease.rs
+// agenthub/src/lease.rs
 impl Board {
     /// A handoff note, a release, and an assignee, in one transaction.
     pub fn handoff(&self, actor: &Actor<'_>, id: &str, fence: i64, note: &str, to: Option<&str>)
         -> BridgeResult<Ticket> { self.hosted_call(self.hosted.handoff(actor, id, fence, note, to)) }
 }
 
-// crates/hub/src/agenthub/mcp/tools/tickets.rs
+// engine/hub/src/agenthub/mcp/tools/tickets.rs
 #[tool(name = "board_handoff", title = "Hand off a ticket", description = "...",
        annotations(title = "Hand off a ticket", read_only_hint = false, destructive_hint = false,
                    idempotent_hint = false, open_world_hint = false))]
@@ -132,7 +132,7 @@ async fn board_handoff(&self, Parameters(input): Parameters<HandoffIn>,
 
 ## Rules
 
-1. **One decider (G1).** Only `HostedBoard` (`crates/agenthub/src/hosted/`) runs SQL on
+1. **One decider (G1).** Only `HostedBoard` (`agenthub/src/hosted/`) runs SQL on
    `board_*` tables. The hub asks `hosted::registry` (`names`, `boards`, `has_board`,
    `lease_delays`) and `HostedBoard::events_page` for what it needs across boards.
    - `Board`, `Face`, `Remote`, MCP tools, CLI commands, pages and REST routes each make exactly
@@ -199,15 +199,15 @@ async fn board_handoff(&self, Parameters(input): Parameters<HandoffIn>,
    - The store refuses with `fail("snake_code", message)`, or `invalid(message)` for bad input.
      Stored data that does not decode is `board_damaged`, never read as empty (`decode`).
    - Every code the store can return gets a `next` of its own from the MCP `refuse`
-     (`crates/hub/src/agenthub/mcp/refusals.rs`): a line in `next_for`, or one of the cases
+     (`engine/hub/src/agenthub/mcp/refusals.rs`): a line in `next_for`, or one of the cases
      `refuse` builds from the message (`invalid_settings`, `unknown_environment`).
    - Every code a CLI command can reach has a line in the CLI `next_for` and a deliberate class
-     in `exit_code_for` (`crates/agenthub/src/cli/errors.rs`). A refusal against current state
+     in `exit_code_for` (`agenthub/src/cli/errors.rs`). A refusal against current state
      is `EXIT_CONFLICT`.
    - Every code is listed in `docs/agent-board.md` §4.
 10. **Transaction bodies can be re-run.**
     - `transaction!` runs SERIALIZABLE and re-runs the body on 40001, 40P01 or 23505
-      (`crates/store/src/lib.rs`, `collided`).
+      (`platform/store/src/lib.rs`, `collided`).
     - Fence memory and wakes run at the surface after the call returns Ok (`board_note` then
       `wake_recipient`, `tools/tickets.rs`). G9 covers everything else outside the store.
     - A closure passed into an operation is `Fn`, not `FnOnce` (`revoke_in`'s `which`,
@@ -218,7 +218,7 @@ async fn board_handoff(&self, Parameters(input): Parameters<HandoffIn>,
     (`check_tools`). On top of it:
     - The name is `board_<verb>` or `approval_<verb>`.
     - `read_only_hint = true` exactly for the tools in `READ_ONLY_TOOLS`
-      (`crates/hub/src/agenthub/mcp/mod.rs`). A viewer may call those and the
+      (`engine/hub/src/agenthub/mcp/mod.rs`). A viewer may call those and the
       `PER_CALLER_WRITES`, whose only write is the caller's own read state (`board_inbox`):
       `viewer_may_call`.
     - `idempotent_hint = true` only when the same arguments twice append no event (rule 6).
@@ -253,12 +253,12 @@ async fn board_handoff(&self, Parameters(input): Parameters<HandoffIn>,
       `HostedBoard` method directly.
     - The CLI command uses `fence_for`, the claim cache, and `with_id` for errors.
 14. **The plugin is generated.** `plugins/devagotchi-agenthub/hooks/hooks.json` equals
-    `cli::plugin_hooks()` (`crates/agenthub/src/cli/hooks/install.rs`), and every tool a skill
+    `cli::plugin_hooks()` (`agenthub/src/cli/hooks/install.rs`), and every tool a skill
     names is one the hub serves.
 
 ## Where files go
 
-Store: `crates/agenthub/src/hosted/` by subject, each file at most 500 lines (layout rule 6):
+Store: `agenthub/src/hosted/` by subject, each file at most 500 lines (layout rule 6):
 
 - `mod.rs`: `HostedBoard`, `new`, `for_owner`, `blocking`, `initialize`, `scope`,
   `configuration`, `fresh_id`, `ticket`, `get`, `event`, `events_page`, `decode`, `server_now`.
@@ -278,27 +278,27 @@ Store: `crates/agenthub/src/hosted/` by subject, each file at most 500 lines (la
 
 Other locations:
 
-- Action names: `pub mod actions` in `crates/agenthub/src/chain.rs`, beside `GENESIS` and
+- Action names: `pub mod actions` in `agenthub/src/chain.rs`, beside `GENESIS` and
   `event_hash`.
-- The sync face mirrors the store's subjects in `crates/agenthub/src/board/`. Lease verbs stay
+- The sync face mirrors the store's subjects in `agenthub/src/board/`. Lease verbs stay
   in `lease.rs`, approvals in `approval.rs`, wakes in `wake.rs`. Issue reads and writes are in
   `board/issues.rs`.
-- Tables: only new numbered files in `crates/agenthub/migrations/`, shaped like
+- Tables: only new numbered files in `agenthub/migrations/`, shaped like
   `0002_board_sources.sql`: the `board_` prefix, the `(tenant_id, board_id, ...)` key, FORCE
   RLS with `tenant_only`, the `devagotchi_hub` grant, and the `board_append_only()` trigger
   when rows never change (persistence.md).
-- MCP: `crates/hub/src/agenthub/mcp/tools/{read,tickets,messages,settings,issues}.rs` by what
+- MCP: `engine/hub/src/agenthub/mcp/tools/{read,tickets,messages,settings,issues}.rs` by what
   the tool does. A tool that writes never lives in `read.rs`.
 - Tests: G10.
 
 ## How it is tested
 
-The canonical store tests are `crates/agenthub/src/tests/actions.rs` (the chain's names and
-no-op silence) and `crates/agenthub/src/tests/operations.rs` (each multi-row operation, with
+The canonical store tests are `agenthub/src/tests/actions.rs` (the chain's names and
+no-op silence) and `agenthub/src/tests/operations.rs` (each multi-row operation, with
 its atomicity shown by a refused outbox row). Fixture and skip shape are G13
 (`or_skip!(fixture())`, or `or_skip!(postgres())` for a test that opens its own board).
 
-1. **Store test** in `crates/agenthub/src/tests/<topic>.rs`, with
+1. **Store test** in `agenthub/src/tests/<topic>.rs`, with
    `#[tokio::test(flavor = "multi_thread")]` (`hosted::blocking` needs a multi-thread runtime).
    It asserts:
    - the happy-path record, field by field;
@@ -313,16 +313,16 @@ its atomicity shown by a refused outbox row). Fixture and skip shape are G13
      `tests/operations.rs`, or `tests/hosted.rs`
      `outbox_failure_rolls_back_ticket_lease_event_and_fence`.
 2. **Hub test** over HTTP-MCP when identity, seat or tenancy matters:
-   `crates/hub/src/agenthub/tests/` with `serving::{hub_with, tool}`. Model: `tests/sourced.rs`
+   `engine/hub/src/agenthub/tests/` with `serving::{hub_with, tool}`. Model: `tests/sourced.rs`
    `each_account_imports_its_own_and_a_repeat_from_another_session_is_the_same`, which checks
    `isError`, `structuredContent.code` and `next`, events unchanged by refusals, and
    cross-account `not_found`.
-3. **Page test** for a page action: `crates/hub/src/web/app/agenthub/ticket_tests.rs`, covering
+3. **Page test** for a page action: `engine/hub/src/web/app/agenthub/ticket_tests.rs`, covering
    the chain and the audit line.
-4. **CLI test** for the exit class and `next`: `crates/agenthub/src/cli/tests/output.rs`
+4. **CLI test** for the exit class and `next`: `agenthub/src/cli/tests/output.rs`
    (`every_code_a_command_can_reach_names_its_next_step`,
    `a_refusal_against_the_boards_state_is_a_conflict`).
-5. **Plugin test**: `crates/hub/src/mcp/tests/plugins.rs`
+5. **Plugin test**: `engine/hub/src/mcp/tests/plugins.rs`
    (`the_agenthub_plugin_ships_exactly_the_hooks_the_handler_prints`,
    `every_tool_a_skill_names_is_one_the_hub_serves`).
 
@@ -350,31 +350,31 @@ its atomicity shown by a refused outbox row). Fixture and skip shape are G13
 
 Each landed with the fix it guards (G12), in B3.
 
-1. **`crates/hub/src/agenthub/mcp/tests/contract.rs`** (rules 9 and 11):
+1. **`engine/hub/src/agenthub/mcp/tests/contract.rs`** (rules 9 and 11):
    `a_viewer_may_call_exactly_the_board_tools_that_change_nothing_but_its_read_state` holds
    `READ_ONLY_TOOLS`, `PER_CALLER_WRITES` and `viewer_may_call` to the tools' hints;
    `every_code_the_store_refuses_with_names_the_next_call` scans the files where the store
    decides for `fail("` and `BridgeError::new("` and asks `refuse` for each. Titles, hints,
    closed and documented inputs and object outputs are `check_tools`
-   (`crates/mcp/src/pattern.rs`: N1 to D3, with O4 for object answers and O5 for no boolean schemas), run by `crates/hub/src/mcp/tests/tools.rs`
+   (`interfaces/mcp/src/pattern.rs`: N1 to D3, with O4 for object answers and O5 for no boolean schemas), run by `engine/hub/src/mcp/tests/tools.rs`
    against `tools-not-yet.txt`, which holds no board tool.
-2. **`crates/agenthub/src/cli/tests/output.rs`** (rule 9, CLI side): the same scan against the
+2. **`agenthub/src/cli/tests/output.rs`** (rule 9, CLI side): the same scan against the
    CLI `next_for`, and the conflict class.
-3. **`crates/agenthub/src/tests/actions.rs`** (rules 6 and 7): the form of every name in
+3. **`agenthub/src/tests/actions.rs`** (rules 6 and 7): the form of every name in
    `chain::actions::ALL`; no `"word.word"` literal passed to `event` or `clear_lease` in
    `hosted/` or `approval.rs` (with a check that the scan sees what it looks for); every no-op
    above leaves the chain and the listener quiet; the handoff event's `assignee`, `from` and
    `to`; `board.settings_replaced` naming its changed keys.
-4. **`crates/devagotchi/tests/layout.rs`** (layout rule 2):
+4. **`runtime/devagotchi/tests/layout.rs`** (layout rule 2):
    `no_module_is_both_a_file_and_a_folder_beyond_those_listed`, against `layout/beside.txt`,
    which only shrinks and lists nothing in AgentHub.
-5. **`crates/hub/src/mcp/tests/scan.rs`**: every tool body reaches its audit owner, against
+5. **`engine/hub/src/mcp/tests/scan.rs`**: every tool body reaches its audit owner, against
    `audit-not-yet.txt`, which holds no board tool.
 
 Held by review until a test lands:
 
-- Rule 1: the SQL scan (`crates/devagotchi/tests/sql.rs`, planned in B6, persistence.md)
-  refuses `board_` tables outside `crates/agenthub`, except in hub tests.
+- Rule 1: the SQL scan (`runtime/devagotchi/tests/sql.rs`, planned in B6, persistence.md)
+  refuses `board_` tables outside `agenthub`, except in hub tests.
 - Rules 2, 10 and 12: review. For any new multi-row operation, ask for the atomicity test shape
   (`Refuse` in `tests/operations.rs`).
 
@@ -403,7 +403,7 @@ None open. B3 closed every entry this file listed at main 2b3feec (the B3 plan,
 
 Kept, and why:
 
-- `crates/agenthub/src/tests/lanes.rs` `open_seeds_metadata_settings_and_workflow_once` opens
+- `agenthub/src/tests/lanes.rs` `open_seeds_metadata_settings_and_workflow_once` opens
   its board itself (`or_skip!(postgres())`): opening twice is what it tests.
-- `crates/hub/src/notify/signals/mod.rs` reads events through `HostedBoard::events_page`, which
+- `engine/hub/src/notify/signals/mod.rs` reads events through `HostedBoard::events_page`, which
   takes the board row lock like every board read (`scope`).

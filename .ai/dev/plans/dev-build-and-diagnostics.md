@@ -11,15 +11,15 @@ stats, and export everything in one step, in a form an AI agent can process. Wri
 
 | Need | Today | Where |
 |---|---|---|
-| The phone app | The hub's installable web app (PWA): manifest, icons, service worker, web push. Installable on Android since increments 245 and 246. No native app, no APK, no Android build target | `crates/hub/src/site/pwa.rs`, `crates/hub/src/notify/push/`, `CHANGELOG.md` |
+| The phone app | The hub's installable web app (PWA): manifest, icons, service worker, web push. Installable on Android since increments 245 and 246. No native app, no APK, no Android build target | `engine/hub/src/site/pwa.rs`, `engine/hub/src/notify/push/`, `CHANGELOG.md` |
 | Phone tests | Playwright emulating a Pixel 7 against a one-user hub, in CI | `tests/android_browser.py`, `.github/workflows/ci.yml` |
 | Real-device test | Planned only (increment 253: adb forward, connect over CDP, check the WebAPK) | `.ai/dev/plans/one-user-edition.md` (phase 4, milestone M1) |
-| A dev build | Builds are named `main-<sha7>` or `ci-<sha7>`, `dev` locally (`devagotchi version`). A hub can follow `--channel main`. `scripts/fetch-main-build.sh` installs a verified main build on a machine | `crates/devagotchi/build.rs`, `deploy/compose/install.sh`, `release.yml` |
+| A dev build | Builds are named `main-<sha7>` or `ci-<sha7>`, `dev` locally (`devagotchi version`). A hub can follow `--channel main`. `scripts/fetch-main-build.sh` installs a verified main build on a machine | `runtime/devagotchi/build.rs`, `deploy/compose/install.sh`, `release.yml` |
 | Build shown in the app | Planned (increment 236: build and channel in the UI and `/healthz`) | `one-user-edition.md` |
-| Tracing | No `tracing` crate. Logging is `eprintln!`. The broker writes one plain line per operation to `broker.log` when in the background, with no rotation and no request id | `crates/machine-engine/src/trace.rs`, `service/background.rs` |
-| Stats | Recent tool calls and usage: in memory (last 1,000) for local `devagotchi mcp`; the Postgres audit table through a hub | `crates/mcp/src/adapter/history.rs`, `crates/hub/src/machines/history.rs`, `ops/audit.rs` |
+| Tracing | No `tracing` crate. Logging is `eprintln!`. The broker writes one plain line per operation to `broker.log` when in the background, with no rotation and no request id | `engine/machine-engine/src/trace.rs`, `service/background.rs` |
+| Stats | Recent tool calls and usage: in memory (last 1,000) for local `devagotchi mcp`; the Postgres audit table through a hub | `interfaces/mcp/src/adapter/history.rs`, `engine/hub/src/machines/history.rs`, `ops/audit.rs` |
 | Dev mode | None, in the UI or in config | |
-| Export | None. The nearest is `devagotchi ai capture export` (AI-session JSONL, off by default, no redaction) | `crates/kernel/src/capture/mod.rs` |
+| Export | None. The nearest is `devagotchi ai capture export` (AI-session JSONL, off by default, no redaction) | `engine/kernel/src/capture/mod.rs` |
 | Android as a machine (a broker on the phone) | No plan; an open operator question | `.ai/dev/plans/path.md` |
 
 So the phone half mostly exists (the PWA), and the diagnostics half does not exist at all.
@@ -104,7 +104,7 @@ Redaction runs on everything before it is written:
 The full AgentHub build is the main chat's task and is not built here. Where this spec
 touches it:
 - The hub depends on `devagotchi-agenthub` already, with no feature gate
-  (`crates/hub/Cargo.toml`), and 10 hub files import it.
+  (`engine/hub/Cargo.toml`), and 10 hub files import it.
 - The export takes AgentHub's workflow and run logs through one small trait,
   `DiagnosticsSource`, that AgentHub implements on its side. Until it does, the bundle has
   no AgentHub file and the manifest says so.

@@ -148,7 +148,7 @@ The Postgres migration foundation and native live-board cutover are implemented:
   Cold native opens do not hold the cache mutex across database work, and concurrent binds
   preserve cached waiters and report one actual creator.
 
-Operator procedure and limitations are in [the hub README](../crates/hub/README.md#hosted-boards).
+Operator procedure and limitations are in [the hub README](../engine/hub/README.md#hosted-boards).
 No production board was moved and no CI run or push was triggered. Imported staging rows
 are not automatically owner-bound; use fresh boards for this pre-release. The paired SQLite
 migrations are storage-contract fixtures, not the chosen hosted-board architecture.
@@ -175,7 +175,7 @@ that same authority and reject same-name personal-board impersonation. The exist
 page shows the source link/state, revision/epoch and honest pending finalization.
 Compose accepts configured shared boards, grants, repository mappings and the webhook
 secret. `board bind --shared` attaches the existing shared board without creating another.
-See the [hub contract](../crates/hub/README.md#issue-context) and
+See the [hub contract](../engine/hub/README.md#issue-context) and
 [Compose walkthrough](../deploy/compose/README.md#connect-a-github-issue-repository-to-the-shared-board).
 
 Focused real-Postgres HTTP tests passed for concurrent delivery/context replay, ordering,
@@ -405,7 +405,7 @@ Mail is already one owner in the hub and stays one; nothing here adds a crate, a
 second sender. The boundaries it sits inside:
 
 - **Only the hub speaks to the network** (CLAUDE.md). The SMTP client is
-  `crates/hub/src/mail.rs`; the one sender is `web/email.rs` (`Mailer`). `core`, `mcp`, the
+  `engine/hub/src/mail.rs`; the one sender is `web/email.rs` (`Mailer`). `core`, `mcp`, the
   broker and the link never mail, and `deny.toml` keeps it so.
 - **It is optional** (master decision 8; product boundary, §1). A hub starts, is claimed,
   signs in with a local email and password and recovers through a replacement owner link with
@@ -427,7 +427,7 @@ Where an operator configures it, from the outside in. Each is the place its neig
 |---|---|---|
 | `deploy/compose/install.sh --email-from "Name <address>" --env-file FILE` (same flags in `deploy/proxmox/hub-up.sh`) | Writes `DEVAGOTCHI_HUB_EMAIL` into `.env` (0600) and keeps `DEVAGOTCHI_SMTP_URL` / `DEVAGOTCHI_SMTP_PASSWORD` from the env file; a re-run keeps values it is not given | built |
 | `.env` (`deploy/compose/.env.example`) | `DEVAGOTCHI_HUB_EMAIL` as `auth.email` JSON, `DEVAGOTCHI_SMTP_URL`, `DEVAGOTCHI_SMTP_PASSWORD` | built |
-| `hub.json` `auth.email` (`crates/hub/README.md`) | `smtp_url` or `smtp_url_env`; `password_env` or `password_file`; `from`; `per_address_per_hour` (1 to 100, default 5) | built; parsed at start, and a named variable that is unset stops the hub with its name |
+| `hub.json` `auth.email` (`engine/hub/README.md`) | `smtp_url` or `smtp_url_env`; `password_env` or `password_file`; `from`; `per_address_per_hour` (1 to 100, default 5) | built; parsed at start, and a named variable that is unset stops the hub with its name |
 | The site, `content/messages.json` `email` and `access.admitted_email` | Subject and body of the two emails, with `{product}`, `{link}`, `{account}` | built |
 | `/account` | A person links a verified address to their account (`POST /auth/email` with `link=1`); which channels notify them, in what order, is a per-user setting (B10) | linking built; channel settings not built |
 

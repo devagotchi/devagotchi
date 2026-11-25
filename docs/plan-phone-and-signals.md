@@ -17,10 +17,10 @@ Ruled 2026-11-06 (Jesse):
 
 | Piece | Where | State |
 |---|---|---|
-| Installable web app manifest, service worker, web push, push subscribe | `crates/hub/src/web/notify.rs`, `web/assets/push.js`, `crates/hub/src/push.rs` | **exists**: used for approvals |
+| Installable web app manifest, service worker, web push, push subscribe | `engine/hub/src/web/notify.rs`, `web/assets/push.js`, `engine/hub/src/push.rs` | **exists**: used for approvals |
 | Approvals inbox on the web | `web/approvals.rs` (`/approvals`) | **exists** |
 | Machines on the web | `web/machines.rs` (add, revoke only), `/account` | partial: no list page with status/build/update |
-| The board: tickets, claim/lease, handoff, deps, notes, event chain, one board per project | `crates/hub/src/board/` (`mod.rs` `Board::create/update/list/events`), `docs/agent-board.md` | **exists** |
+| The board: tickets, claim/lease, handoff, deps, notes, event chain, one board per project | `engine/hub/src/board/` (`mod.rs` `Board::create/update/list/events`), `docs/agent-board.md` | **exists** |
 | Board in MCP | `board/mcp.rs` (`board_*` tools) | **exists** |
 | Hook pack for Claude Code / Codex (session start → prime, tool use → beat, stop → guard) | `board/cli.rs` `HOOK_SCRIPTS` | **exists** |
 | Ticket fields | `board/mod.rs` `Ticket`: kind, title, labels, parent, assignee… | no machine / repo / environment / session fields |
@@ -38,7 +38,7 @@ source ──► Signal (one canonical envelope) ──► Rules (configurable) 
  (new: any)     links[], at }                      on recovery
 ```
 
-- **Signal** is the one canonical format (a contract in `crates/contracts`, schema generated
+- **Signal** is the one canonical format (a contract in `platform/contracts`, schema generated
   like every other). Its fields follow OpenTelemetry's resource/log attribute names where one
   exists (`service.name`, `host.name`, `deployment.environment`, `vcs.repository.url`,
   `error.type`), so anything that already speaks OTel maps in without translation.
@@ -47,7 +47,7 @@ source ──► Signal (one canonical envelope) ──► Rules (configurable) 
   Adding a source = adding a config row, not code, unless it needs a new adapter.
 - **Rules** live per project in the board's settings (`Board::put_settings`, already in the
   event chain, so every edit is recorded and undoable). Defaults ship in
-  `crates/hub/site/default/content/signal-rules.json`; a project overrides or adds. Editable
+  `engine/hub/site/default/content/signal-rules.json`; a project overrides or adds. Editable
   from MCP (`signal_rules_list/put/delete`), the CLI, and the phone app.
 - **Tickets** gain first-class anchors (machine, project, repo, environment, agent, session),
   filterable everywhere, and a `fingerprint` so one recurring failure is one ticket with a
@@ -76,7 +76,7 @@ closes a ticket from it.
 
 ### P3 — Signals and rules
 1. `Signal` contract; `POST /signals/<project>`; `devagotchi signal emit`; MCP `signal_emit`.
-2. Rule engine in `crates/hub/src/signals/` (new module beside `board/`): match on source,
+2. Rule engine in `engine/hub/src/signals/` (new module beside `board/`): match on source,
    kind, severity, anchors, text; actions open / update (bump count, add note) / reopen /
    close; dedupe by fingerprint; rate limit per source.
 3. Rules as board settings with defaults from the site directory; MCP + CLI to list, add,

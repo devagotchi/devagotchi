@@ -28,7 +28,7 @@ without its attestation, could never have accepted one.
 
 | Milestone | Task | Dependencies | Acceptance evidence | State |
 |---|---|---|---|---|
-| M1 | `plan` gains a `building` output (main or a tag); `build-local-artifacts` and its Attest step use it | none | `crates/devagotchi/tests/release_builds.rs` passes on the new file and fails on the old condition and five other ways main could stop building | done |
+| M1 | `plan` gains a `building` output (main or a tag); `build-local-artifacts` and its Attest step use it | none | `runtime/devagotchi/tests/release_builds.rs` passes on the new file and fails on the old condition and five other ways main could stop building | done |
 | M2 | Plans, status and changelog say what happened | M1 | this file, [rewrite](rewrite.md) status, CHANGELOG | done |
 | M3 | Validate and publish | M2 | `cargo test -p devagotchi --test release_builds`, fmt, PR checks green | done: 18 of 18 |
 | M4 | Merge, then the push to main builds | M3 | the release run on the merge commit shows `build-local-artifacts`, `custom-hub-image` and `custom-install-check` succeeded, and `ghcr.io/devagotchi/devagotchi:sha-<short>` exists | done: run 44657553081 |

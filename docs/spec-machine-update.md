@@ -12,7 +12,7 @@ the broker owns cannot outlive the broker it stops), and the first try failed an
 `0.1.0`) and no way to learn there is a newer one. Every user would hit this.
 
 ## The behaviour a person gets
-1. The hub serves a new build (its own commit, as today, `crates/hub/src/downloads.rs`).
+1. The hub serves a new build (its own commit, as today, `engine/hub/src/downloads.rs`).
 2. Within an hour, each online machine that is on another build and has **no running jobs**
    updates itself: download from the hub, sha256 checked against the hub's list, installer
    in upgrade mode, back online on the new build. If the new build does not come up, the
@@ -27,16 +27,16 @@ the broker owns cannot outlive the broker it stops), and the first try failed an
 ## Work items (each one PR, merged only on full green, in this order)
 
 ### U1 — every build knows its name (contracts + binary, no behaviour change)
-- `crates/devagotchi/build.rs` (new): `DEVAGOTCHI_BUILD` from the env at compile time
+- `runtime/devagotchi/build.rs` (new): `DEVAGOTCHI_BUILD` from the env at compile time
   (CI sets it to `main-<sha7>` / the release version, the same string the hub's downloads
   `VERSION` file holds), else `dev`. `devagotchi --version` prints `devagotchi 0.1.0 (<build>)`.
 - Set `DEVAGOTCHI_BUILD` in every workflow that builds release/download artifacts
   (`.github/workflows/release.yml`, `image.yml`, wherever `VERSION` is written today — the
   agent finds the one writer and uses the same value).
-- Test: `crates/devagotchi/tests/one_binary.rs` asserts the `--version` shape.
+- Test: `runtime/devagotchi/tests/one_binary.rs` asserts the `--version` shape.
 
 ### U2 — the link says its build; the hub can ask it to update (contracts)
-`crates/contracts/src/lib.rs` (only place contracts change; regenerate with
+`platform/contracts/src/lib.rs` (only place contracts change; regenerate with
 `node scripts/generate-contracts.cjs`):
 - `LinkFrame::Hello` gains `#[serde(default)] build: Option<String>`. Safe: hubs update first
   (they hand out the builds), and an old device simply omits it.
@@ -46,10 +46,10 @@ the broker owns cannot outlive the broker it stops), and the first try failed an
   `waiting_for_jobs | downloading | installing | done | failed`.
 - Tests: round-trip serde for the three; an old-shape hello (no `build`) still parses.
 
-### U3 — the link updates its machine (crates/link)
-- `crates/link/src/session.rs`: send `build` in the hello; on `HubFrame::Update`, start one
+### U3 — the link updates its machine (runtime/link)
+- `runtime/link/src/session.rs`: send `build` in the hello; on `HubFrame::Update`, start one
   update (a second one while running is answered with the current status).
-- `crates/link/src/update.rs` (new, ≤ 250 lines):
+- `runtime/link/src/update.rs` (new, ≤ 250 lines):
   1. **Wait for idle**: ask the local broker `OperationList` (the same broker connection the
      link already uses for calls) until no operation is `accepted`/`running`; re-check every
      30 s; give up after 6 h with `failed: busy` unless `force`.
@@ -73,21 +73,21 @@ the broker owns cannot outlive the broker it stops), and the first try failed an
      version when the new broker or link does not report ready within 60 s.
   5. The new link reconnects and its hello carries the new build; the hub compares and marks
      the update `done`, or `failed` with the log's last line if the build did not change.
-- Only code in `crates/link` and the platform files; `unsafe` only where CLAUDE.md allows
+- Only code in `runtime/link` and the platform files; `unsafe` only where CLAUDE.md allows
   (the Windows spawn flags belong in a small platform module the agent places per the rules).
 
-### U4 — the hub: auto-update and `machine_update` (crates/hub)
-- `crates/hub/src/link.rs`: keep each live session's `build` from its hello.
+### U4 — the hub: auto-update and `machine_update` (engine/hub)
+- `engine/hub/src/link.rs`: keep each live session's `build` from its hello.
 - Auto-update: once an hour, and when a device connects, for each live device with a `build`
   different from `downloads.version`, not updated in the last hour, and `machines.auto_update`
   on, send `Update { version, force: false }`. Limit to 20 machines at once per hub.
 - New MCP tool `machine_update { machine, force?: bool, wait_seconds? }` in the machines tool
-  router (`crates/hub/src/hub.rs` next to `machine_add`): sends `Update`, then waits up to
+  router (`engine/hub/src/hub.rs` next to `machine_add`): sends `Update`, then waits up to
   `wait_seconds` (default 50) for `done`/`failed`; returns state and build. Description:
   "Update one of the user's machines to the hub's current build now. Waits for its running
   jobs to finish unless force is true; the machine is offline for about a minute."
 - `machines` output gains `build` and `update` (state + detail) per machine.
-- Config: `machines.auto_update: bool` (default true) in `crates/hub/src/config/`.
+- Config: `machines.auto_update: bool` (default true) in `engine/hub/src/config/`.
 - Audit: each update request and its result go in the audit chain like other machine events.
 
 ### U5 — tests (in the PRs above, listed here so nothing is skipped)

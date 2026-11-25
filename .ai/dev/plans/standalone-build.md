@@ -1,5 +1,7 @@
 # The standalone build: what is left, in order, and where each piece lives
 
+> **Order and layout replaced** by [the program](program.md) (2026-11-25). This page keeps its detail and history.
+
 - Contract: DG-DELIVERY-1; stage: read [project.json](../../project.json) (alpha = pre-release)
 - Request: the operator, 2026-11-20: plan everything that is left so that it is built with
   consistent patterns and senior practice: folders nested where a domain needs them, proper
@@ -123,7 +125,7 @@ Two notes on this order:
 | N5 | No compound names where a folder says it. `hub_settings_mail.rs` becomes `notify/web/admin/mail.rs`, not `settings/web/settings_mail.rs`. A path never repeats its own domain | the same check: a file's stem may not start with its parent folder's name |
 | N6 | Tests are `<x>/tests.rs` or `<x>/tests/<subject>.rs`, never `<x>_tests.rs` (layout rule 3; 20 such files today) | `layout.rs`: no `*_tests.rs`, held by a shrink-only list that is empty and deleted at W1.10 |
 | N7 | `web/` holds no SQL. A page calls its domain's owner (G1), which calls `Store` | B6 `sql.rs`: no `sqlx` under any `web/` |
-| N8 | Contracts are family modules (`crates/contracts/src/<family>.rs`, re-exported from `lib.rs`). A new wire shape goes in its family, never in `lib.rs` | review; `lib.rs` at or under 431 lines |
+| N8 | Contracts are family modules (`platform/contracts/src/<family>.rs`, re-exported from `lib.rs`). A new wire shape goes in its family, never in `lib.rs` | review; `lib.rs` at or under 431 lines |
 | N9 | Styles: `@layer reset, tokens, base, components, pages`. Tokens come from `tokens.json`, as one fluid `clamp()` scale. A page's sheet holds only `@layer pages { [data-page="<page>"] … }` and never restyles another page's classes | `web/tests/styles.rs` (W2) parses every `page.css` |
 | N10 | Assets: each page's script and sheet sit beside its Rust. The shell's `web/assets.rs` lists every asset once, from its owner, under a content-hashed name (248) | `web/tests/assets.rs` |
 | N11 | New Python tests follow `tests/<area>_<kind>.py` (`probe`, `browser`, `device`). A suite with many cases gets a folder (`tests/conformance/`) | `test_shape.rs` (B6) |
@@ -135,7 +137,7 @@ Two notes on this order:
 same number (layout pattern).
 
 ```text
-crates/hub/src/
+engine/hub/src/
   lib.rs  extensions.rs  test_keys.rs           unchanged (wiring)
   tests/sources.rs                              ← source_tests.rs (cross-domain source scans)
 
@@ -211,12 +213,12 @@ crates/hub/src/
 ## 6. The other crates' target trees
 
 ```text
-crates/contracts/src/
+platform/contracts/src/
   wire.rs                                RequestBody, ResponseBody, WireResponse, RequestBody::domain() (212)
   interactive/{mod.rs, tests.rs}         system/{mod.rs, tests.rs}             (rule 2)
   calls.rs (214)   documents.rs (221 to 223; PDF and Office shapes stay out of files.rs)
 
-crates/machine-engine/src/
+engine/machine-engine/src/
   broker/mod.rs        ← broker.rs 1153: Broker, BrokerConfig, ExecPolicy, open, handle, shutdown
   broker/start.rs      ← normalize, start, with_launch
   broker/operations.rs ← wait, operations_changed, get, list, resize, cancel, validate_id, check_size
@@ -226,14 +228,14 @@ crates/machine-engine/src/
   files/{mod.rs, lines/mod.rs, manage/mod.rs, documents/{mod.rs, office.rs, pdf.rs}}
   journal/{mod.rs, tests.rs}
 
-crates/mcp/src/
+interfaces/mcp/src/
   adapter/mod.rs ← adapter.rs
   adapter/files/{mod.rs ← file_tools.rs, documents.rs}    adapter/system.rs ← system_tools.rs
   adapter/calls.rs (214)
   capabilities/mod.rs   image/mod.rs   run/mod.rs          (rule 2)
   connect/{mod.rs, …}   ← connect.rs 802 (split by client)
 
-crates/ipc/src/windows/mod.rs ← windows.rs
+platform/ipc/src/windows/mod.rs ← windows.rs
 
 crates/documents/                        NEW CRATE, proposed in place of P10's crates/pdf (§9 D9)
   src/lib.rs                             wiring only
@@ -257,15 +259,15 @@ request then adds no line to it.
 | Increment | New or changed files (the tree above) |
 |---|---|
 | 210 | `machines/join/dist.rs` (new: `dist_routes()`); the `machine_add` manual text (`machines/manage.rs`); `machines/web/tests.rs`; `tests/compose_join.py` |
-| 211 | `plugins/`, `README.md`, `crates/devagotchi/tests/readme_truth.rs` (new) |
+| 211 | `plugins/`, `README.md`, `runtime/devagotchi/tests/readme_truth.rs` (new) |
 | B5 | per [rewrite](rewrite.md) B5, on the paths of §5. Styles: `web/style/*.css` and each page's `page.css` |
 | 236 | `ops/health.rs` (build, commit, channel); the About section in `identity/web/me.rs` |
 | 247 to 251 | `identity/web/sign_in/page.css`; `web/assets.rs` (hashed names, 248); `web/style/components.css` (48 dp, 249; depth and type, 250); `site/pwa.rs` (251) |
 | 257 | `notify/push/` and `web/assets/sw.js` |
 | 260, 261 | `apps/desktop` (260); `identity/connect/web.rs` (261) |
-| 262 | AgentHub repository: `crates/agenthub/src/cli/watch/{mod.rs, feed.rs, tests.rs}` |
+| 262 | AgentHub repository: `agenthub/src/cli/watch/{mod.rs, feed.rs, tests.rs}` |
 | 264, 267 | `plugins/devagotchi-agenthub/{hooks,monitors}/`, `.codex-plugin/` |
-| 5.4 | `plugins/devagotchi-local/`; `crates/hub/src/mcp/tests/plugins.rs` holds it to the local tool list |
+| 5.4 | `plugins/devagotchi-local/`; `engine/hub/src/mcp/tests/plugins.rs` holds it to the local tool list |
 | 212 | `contracts/src/wire.rs`; `machine-engine/src/broker/mod.rs` |
 | D1, D2 | the request id in `contracts/src/wire.rs`; `tracing` in the broker, `devagotchi mcp`, the link and the hub; `machine-engine/src/trace.rs` becomes the subscriber's setup |
 | 214 | `contracts/src/calls.rs`; `machines/calls/{mod.rs, table.rs, tests.rs}`; `mcp/src/adapter/calls.rs` |
@@ -277,13 +279,13 @@ request then adds no line to it.
 | 256 | `agenthub/web/approvals/one.rs` |
 | 220 | `machines/review.rs`; `machines/link/` (the stop frame); `contracts/src/link/mod.rs` |
 | 5.8 | audit rows gain `duration_ms`, `error_code`, `bytes_in`, `bytes_out` and `client` (a migration under the B6 store pattern); `mcp/src/adapter/history.rs` keeps the same fields; the page is 233's `settings/web/activity.rs` |
-| 5.9 | `tests/conformance/{run.py, report.py, cases/<tool>.py}`; `crates/hub/src/mcp/tests/conformance.rs` fails on a tool with no case and on a Desktop Commander row with none |
+| 5.9 | `tests/conformance/{run.py, report.py, cases/<tool>.py}`; `engine/hub/src/mcp/tests/conformance.rs` fails on a tool with no case and on a Desktop Commander row with none |
 | 226 to 235 | `identity/web/providers/` (226 to 228); `settings/web/{shippin.rs, activity.rs, limits.rs}` (229, 230, 233, 234); `identity/web/{security.rs, ai_clients.rs}` (231, 232); `machines/web/settings.rs` (235) |
 | 237 to 244, 270 | `serve/shutdown.rs` (237); a NEW DOMAIN `updates/{mod.rs, release.rs (240), host.rs (238), provenance.rs (239), web/{mod.rs, hub.rs (241), machines.rs (242)}, tests/}`, whose table prefix `update_` is added to layout rule 8 when 238 stores; `deploy/compose/` (host side) |
 | 254, 255 | `machines/web/job/{mod.rs, page.css, page.js}` (254); `web/events.rs` (the shell's SSE) with each domain's source in its `web/mod.rs` (255) |
-| D3 to D7 | `site/pwa.rs` (the manifest by channel); `ops/diagnostics/{mod.rs, bundle.rs, redact.rs, tests.rs}`; the `diag` verbs in `crates/devagotchi` |
+| D3 to D7 | `site/pwa.rs` (the manifest by channel); `ops/diagnostics/{mod.rs, bundle.rs, redact.rs, tests.rs}`; the `diag` verbs in `runtime/devagotchi` |
 | 258, 259 | `notify/channels/`; `identity/preferences/`; `notify/approvals/` (the durable notifier on `signal_cursors`, one-user decision 4) |
-| 263, 265, 266, 268, 269 | `apps/desktop`; `crates/hub/src/mcp/views/`; `crates/kernel/src/cues/`; `apps/vscode/`; `plugins/` and the `.mcpb` package |
+| 263, 265, 266, 268, 269 | `apps/desktop`; `engine/hub/src/mcp/views/`; `engine/kernel/src/cues/`; `apps/vscode/`; `plugins/` and the `.mcpb` package |
 
 ## 8. Every PR, done properly
 
@@ -346,7 +348,7 @@ Phase 0 findings: none yet.
 
 This is a plan. It was read against `main` at `726af4e` on 2026-11-20:
 - `.ai/patterns/layout.md`, and `layout/oversize.txt` and `layout/beside.txt` as they are;
-- every file under `crates/hub/src/web/`, with its line count and module doc;
+- every file under `engine/hub/src/web/`, with its line count and module doc;
 - the outline of `broker.rs`;
 - the one-user edition's increments 208 to 270 and its lanes;
 - write-pdf §13, and dev-build-and-diagnostics §2 to §6;

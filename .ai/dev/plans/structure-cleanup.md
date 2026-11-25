@@ -1,5 +1,7 @@
 # Structure cleanup: one boundary, one home, one test convention
 
+> **Order and layout replaced** by [the program](program.md) (2026-11-25). This page keeps its detail and history.
+
 - Contract: DG-DELIVERY-1; stage: read [project.json](../../project.json)
 - Issue / request: operator, 2026-11-13: everything grouped, nested and consistent in file and
   folder structure regardless of boundary; configurable unless best practice says hardcode;
@@ -19,7 +21,7 @@
 
 ## Measured baseline (main d4166f8, 2026-11-13)
 
-- `crates/hub/src` top level: 49 `.rs` files; 13 of them `*_tests.rs` beside the code, while
+- `engine/hub/src` top level: 49 `.rs` files; 13 of them `*_tests.rs` beside the code, while
   26 other tests live as `<domain>/tests.rs`: two conventions.
 - Two homes with near-identical names for different domains: `account.rs` + `account/`
   (this machine's sign-in to a hub: `devagotchi login|logout|whoami`, client side) and
@@ -51,7 +53,7 @@
 The hub's top level, now and when S5 to S9 are done:
 
 ```text
-crates/hub/src (now)                     crates/hub/src (target)
+engine/hub/src (now)                     engine/hub/src (target)
 lib.rs        1942  CLI, serve, auth...  lib.rs           mod lines, cli(), board_cli(), serve_with()
 config.rs     1544  + config/            config/          mod.rs (HubConfig, load) + a file per section
 site.rs        717  + site/              site/            mod.rs, model/ split by JSON file, web/
@@ -89,7 +91,7 @@ trees. S8 waits for this ruling; S5 to S7 do not depend on it.
 
 ## Rulings this plan records (operator, 2026-11-13)
 
-1. Rename both directions: inbound AI clients (`crates/connectors`, `/connect`,
+1. Rename both directions: inbound AI clients (`engine/connectors`, `/connect`,
    `connector.v1` schema) become **clients**; outbound third-party services take the name
    **connectors**. Executed in its own plan after this one; recorded here so no step
    below creates new names that the rename would have to undo.
@@ -105,12 +107,12 @@ trees. S8 waits for this ruling; S5 to S7 do not depend on it.
 |---|---|---|---|---|
 | S0 | Write `.ai/patterns/layout.md`: crate per boundary; `src/<domain>/` per domain with `mod.rs` as the domain's front door; tests at `<domain>/tests.rs`; crate top level is wiring only; size cap 500 lines for new files. Add a ratchet test listing today's oversize files and their line counts: a listed file may shrink, never grow, and no new file may exceed the cap | none | pattern doc reviewed; ratchet test fails on a deliberately grown file, then passes | implemented in #185; awaiting operator review |
 | S1 | One test convention: move the 13 `*_tests.rs` to `<domain>/tests.rs` | S0 | `git diff -M` shows renames only; nextest count unchanged | done for the hub's top level in increment 157: each domain's tests sit in it (`agenthub/tests/` with ahead, hosted, notes, served and settings; `connections/tests.rs`, `offers/tests.rs`, `workflows/tests.rs`, `store/tests.rs`; the settings page's beside it in `web/`), and `account`, `offers`, `workflows` and `connect` (now `identity/connect/`) have `mod.rs` front doors. Increment 158: `mcp/` (`hub.rs` as `mcp/surface.rs`, its front door naming `Hub`, `Machine` and `MachineUpdate`; `output_schema.rs`; `plugin_tests.rs` as `mcp/tests.rs`), so the hub's top level is `lib.rs`, `config.rs`, `store.rs`, `site.rs`, `extensions.rs` and `test_keys.rs` beside the domain folders. Left: `site.rs` keeps its file (its `include_str!` paths are relative to it); `web/`'s own `*_tests.rs` |
-| S2 | Rename `account` → `login` (matches `devagotchi login`), leaving `accounts` as the hub's | S0 | renames only; e2e green | done in increment 159: `crates/hub/src/login/` (this machine's sign-in to a hub: `devagotchi login`, `logout`, `whoami`, and the client AgentHub's command line calls through); the hub's own accounts are `identity::accounts` |
+| S2 | Rename `account` → `login` (matches `devagotchi login`), leaving `accounts` as the hub's | S0 | renames only; e2e green | done in increment 159: `engine/hub/src/login/` (this machine's sign-in to a hub: `devagotchi login`, `logout`, `whoami`, and the client AgentHub's command line calls through); the hub's own accounts are `identity::accounts` |
 | S3a | Split `agenthub/mod.rs` by domain in place: `ticket/`, `deps/`, `notes/`, `settings/`, `store/` (SQLite), keeping public paths via `pub use` from `agenthub/mod.rs` only | S1 | no file over the ratchet; nextest green | pending |
 | S3b | Split `agenthub/mcp.rs` by tool group (claim/lease, tickets, notes, settings, approvals, inbox) | S3a | tool list from `tools/list` byte-identical before/after | pending |
-| S3c | Move the board domain to `crates/agenthub`; the hub keeps hosting (Postgres store, HTTP, MCP mount) and depends on it; `agenthub` depends on no hub module | S3a, S3b | `cargo tree` shows no hub → agenthub cycle; full pre-push suite | pending |
+| S3c | Move the board domain to `agenthub`; the hub keeps hosting (Postgres store, HTTP, MCP mount) and depends on it; `agenthub` depends on no hub module | S3a, S3b | `cargo tree` shows no hub → agenthub cycle; full pre-push suite | pending |
 | S4 | Group the remaining hub top-level files, one domain per PR: `identity/` (auth, oauth, identity, nomen, sealed), `machines/` (devices, link, machine_update, join, downloads, files, run), `tenancy/` (orgs, tenant_access, tenant_machines), `notify/` (push, mail, signals), `ops/` (analytics, audit, warehouse) | S1 | each PR renames only; top level ends with `lib.rs`, `hub.rs`, `web.rs`, `store.rs`, `config.rs` and `mod` lines | `machines/` done in increment 146 (devices, link, machine_update as `update`, join as `join/mod.rs` with its scripts, downloads, files, run; renames and paths only, 536 hub tests before and after). `ops/` done in increment 152 (#200: audit, analytics, warehouse); `notify/` in increment 153 (#201: push with the push subscriptions, mail, signals). Increment 154: `accounts/` sheds what is not identity, each into its domain as `<domain>/stored.rs` (the domain's rows, kept as methods of the account store): `analytics_settings` to `ops/`, `connections`, `offers` and `workflows` to theirs; Increment 155: `tenancy/` (orgs, `tenant_access` as `gate`, `tenant_machines` as `machines`, `accounts/access` with its plans split out, `accounts/operator`, and the tenant and org tests as `tenancy/tests/`), which R4 lifts into its own crate; `accounts/tenants` (the home tenant and the row-level security scope every hub has) stays with the accounts. Increment 156: `identity/` (`auth`, `nomen`, `sealed`, `preferences` and `accounts/` with identities, email, passwords, passkey, sessions, oauth, clients, api_keys, sign_in_settings, claim and tenants; the provider, key and person-page tests as `identity/tests/`), its front door naming `Subject`, `Sealer` and `PreferenceStore` for the rest of the hub; `access_tests` joined `tenancy/tests/`. Left at the top level: `account` (S2 renames it `login`), `connect`, `connections` (the connectors rename), `offers`, `workflows`, `site`, `extensions`, `output_schema`, and the `*_tests.rs` of agenthub, connections, offers, workflows, plugins, the store and the settings page (S1). Order changed by the operator's free-edition plan (2026-11-14): S4 goes domain by domain ahead of S1, and each domain's `*_tests.rs` moves with it |
-| S3a, S3b | As planned above, now inside the hub's hosting of AgentHub: `agenthub/mcp/mod.rs` (2,998 lines) splits by tool group | S5 | tool list byte-identical | S3c done by #184 (board in `crates/agenthub`, store in `crates/store`); S3a moves to AgentHub's repo (S11); S3b is in S9 |
+| S3a, S3b | As planned above, now inside the hub's hosting of AgentHub: `agenthub/mcp/mod.rs` (2,998 lines) splits by tool group | S5 | tool list byte-identical | S3c done by #184 (board in `agenthub`, store in `platform/store`); S3a moves to AgentHub's repo (S11); S3b is in S9 |
 | S5 | Rule 2 in the hub where no open PR reaches: `config`, `store`, `agenthub/issue_lifecycle`, `mcp/callers` and seven in `identity/accounts/` become their folder's `mod.rs` | S0 | renames only (`git diff -M` 100%), oversize paths moved with their numbers, hub tests unchanged | increment 177 |
 | S6 | The hub's `lib.rs` to wiring only: `cli/`, `serve/`, `identity/bearer.rs`, `machines/link/http.rs`, `ops/health.rs`, `operator_event` to `ops/audit.rs`, its tests with each (map row `lib.rs`) | S5 | `lib.rs` under 100 lines; `devagotchi hub --help` and `/healthz` byte-identical; nextest count unchanged | pending |
 | S7 | `config/mod.rs` split by section (auth, storage, site, boards, signals, web; brokers and grants into `machines.rs`), each section validating itself; `hub_tests.rs` and the inline tests to `config/tests/` | S5 | every config fixture parses and refuses as before; nextest count unchanged | pending |
@@ -136,8 +138,8 @@ trees. S8 waits for this ruling; S5 to S7 do not depend on it.
   (machine-engine `execution`; S10's machine-engine PR waits for it).
 - Open, for the operator: #184 (`increment-137/agenthub-crate`, plan
   [agenthub-crate](agenthub-crate.md)) merged to `main` at 332bf25 on 2026-11-13, while
-  S0 was in review. It did S3c ahead of S3a and S3b: the board is in `crates/agenthub` and
-  the store in `crates/store`. It also went against S1's convention twice
+  S0 was in review. It did S3c ahead of S3a and S3b: the board is in `agenthub` and
+  the store in `platform/store`. It also went against S1's convention twice
   (`agenthub/hosted/tests.rs` became `agenthub/hosted_tests.rs`, `store/tests.rs` became
   `store_tests.rs`), so the hub's top level now has 50 `.rs` files, 14 of them `*_tests.rs`.
   The baseline section above and the S1 and S3 rows describe d4166f8 and need reconciling
@@ -165,8 +167,8 @@ Run on candidate 22999dd, on `main` d4166f8:
 | `tests/security_boundary.py`, `tests/mcp_protocol.py`, `tests/mcp_smoke.py` | OK, exit 0, exit 0 |
 | `node scripts/generate-contracts.cjs --check` | current |
 | `devagotchi ai check` | contracts and capture schema agree |
-| Ratchet, one line appended to `crates/hub/src/agenthub/mcp.rs` | fails: "grew from 3714 to 3715 lines" |
-| Ratchet, new 501-line `crates/hub/src/zz_new.rs` | fails: "501 lines, over the cap of 500" |
+| Ratchet, one line appended to `engine/hub/src/agenthub/mcp.rs` | fails: "grew from 3714 to 3715 lines" |
+| Ratchet, new 501-line `engine/hub/src/zz_new.rs` | fails: "501 lines, over the cap of 500" |
 | Ratchet, both reverted | passes; `DEVAGOTCHI_WRITE_LAYOUT=1` changes nothing |
 | Diff | additions only: 4 new files and 2 index lines; no `.rs` file moved or edited |
 
@@ -174,8 +176,8 @@ After #184 merged, CI's `core` job failed on the merge with `main`: the ratchet 
 files, the ones #184 moved, added or grew. The fix merged `main` 332bf25 into the branch
 and re-measured the list there: 72 files over the cap (23 over 1,000) of 250. Against the
 d4166f8 list: 9 entries left (moved, or now under the cap), 8 arrived (7 in
-`crates/agenthub` and `crates/store`, and `hosted_tests.rs`), 5 are lower, and
-`crates/hub/src/lib.rs` went from 2,714 to 2,716, which #184 added before the rule existed. On the merged tree the `layout`
+`agenthub` and `platform/store`, and `hosted_tests.rs`), 5 are lower, and
+`engine/hub/src/lib.rs` went from 2,714 to 2,716, which #184 added before the rule existed. On the merged tree the `layout`
 tests pass (7 of 7); the rest of the suite on the merge is CI's run.
 
 Not run locally: the real-ClickHouse export test, Windows, the browser suites (CI). The

@@ -11,7 +11,7 @@ browser definitions before completing the corresponding implementation.
 
 ## Concrete owner and files
 
-- Add `crates/hub/src/catalog/` and register it in `lib.rs`. No table access from browser
+- Add `engine/hub/src/catalog/` and register it in `lib.rs`. No table access from browser
   or MCP handlers. Closed `Kind` enum maps eight URL kinds to fixed `catalog_` tables and
   fixed columns. Use typed record validation, not arbitrary table or column payloads.
 - Add `migrations/0039_catalogs.sql`: typed source columns, positive CAS version,

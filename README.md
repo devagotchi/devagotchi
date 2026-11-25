@@ -135,15 +135,15 @@ The desktop broker provides the file, search, edit and process tools in the tabl
 
 | Component | Source | Responsibility |
 |---|---|---|
-| Broker | `crates/machine-engine/src/broker.rs`, `crates/machine-engine/src/journal.rs`, `crates/machine-engine/src/service/` | Admission, operation lifecycle, output retention, cancellation, recovery |
-| Execution | `crates/machine-engine/src/execution.rs`, `crates/machine-engine/src/execution/platform/linux.rs`, `crates/machine-engine/src/execution/platform/windows.rs` | Process orchestration; spawning, observing, and terminating one root's owned process group or Job Object |
-| Local IPC | `crates/ipc/src/lib.rs`, `crates/ipc/src/unix.rs`, `crates/ipc/src/windows.rs`, `crates/ipc/src/windows/security.rs` | Private state directory, Unix socket or named pipe, peer UID or SID, instance lock, bounded framed requests |
-| MCP adapter | `crates/mcp` | Official `rmcp` 3.9.0 stdio transport and the tools in the table below |
+| Broker | `engine/machine-engine/src/broker.rs`, `engine/machine-engine/src/journal.rs`, `engine/machine-engine/src/service/` | Admission, operation lifecycle, output retention, cancellation, recovery |
+| Execution | `engine/machine-engine/src/execution.rs`, `engine/machine-engine/src/execution/platform/linux.rs`, `engine/machine-engine/src/execution/platform/windows.rs` | Process orchestration; spawning, observing, and terminating one root's owned process group or Job Object |
+| Local IPC | `platform/ipc/src/lib.rs`, `platform/ipc/src/unix.rs`, `platform/ipc/src/windows.rs`, `platform/ipc/src/windows/security.rs` | Private state directory, Unix socket or named pipe, peer UID or SID, instance lock, bounded framed requests |
+| MCP adapter | `interfaces/mcp` | Official `rmcp` 3.9.0 stdio transport and the tools in the table below |
 | Desktop app | `apps/desktop` | Tauri 2 native host and React/TypeScript inspector |
 | Website and public reference service | [`apps/website`](apps/website/README.md) | Product documentation, source download, and read-only HTTP/MCP reference routes |
-| AgentHub | [`crates/agenthub`](crates/agenthub/src/lib.rs) | The agents' board: tickets claimed under a lease, worked, noted and handed off, approvals, notes that reach agents; in Postgres (a hub's, or the one `DEVAGOTCHI_BOARD_STORAGE_URL` names for a project's own board), events exported to ClickHouse when there is one. The hub serves it (MCP tools, `board` command line, pages) from `crates/hub/src/agenthub/` |
-| Store | [`crates/store`](crates/store/src/lib.rs) | The database the hub and AgentHub share: Postgres in its own schema with tenant row-level security, or SQLite; retrying transactions; the migrations |
-| Contract authority | `crates/contracts/src/lib.rs` | Rust DTOs, strict decoding, generated JSON Schema and TypeScript |
+| AgentHub | [`agenthub`](agenthub/src/lib.rs) | The agents' board: tickets claimed under a lease, worked, noted and handed off, approvals, notes that reach agents; in Postgres (a hub's, or the one `DEVAGOTCHI_BOARD_STORAGE_URL` names for a project's own board), events exported to ClickHouse when there is one. The hub serves it (MCP tools, `board` command line, pages) from `engine/hub/src/agenthub/` |
+| Store | [`platform/store`](platform/store/src/lib.rs) | The database the hub and AgentHub share: Postgres in its own schema with tenant row-level security, or SQLite; retrying transactions; the migrations |
+| Contract authority | `platform/contracts/src/lib.rs` | Rust DTOs, strict decoding, generated JSON Schema and TypeScript |
 | Verification | `tests`, module tests, `verification` | Real process and protocol checks plus recorded evidence |
 
 The desktop process and MCP adapter both connect to the broker. Neither owns a job's lifetime or silently restarts a job after a lost connection.
@@ -152,7 +152,7 @@ As the product grows, graph scheduling extends this broker and journal. A step a
 
 ## Build the Linux core
 
-AgentHub is its own repository ([devagotchi/agenthub](https://github.com/devagotchi/agenthub)), pulled in as a submodule at `crates/agenthub`: clone with `git clone --recurse-submodules`, or run `git submodule update --init` in an existing checkout.
+AgentHub is its own repository ([devagotchi/agenthub](https://github.com/devagotchi/agenthub)), pulled in as a submodule at `agenthub`: clone with `git clone --recurse-submodules`, or run `git submodule update --init` in an existing checkout.
 
 Install the Rust toolchain specified in `rust-toolchain.toml`. Then, from this repository root:
 
@@ -177,7 +177,7 @@ The example config's paths are placeholders, deliberately not broad default gran
 
 ## Build and run on Windows
 
-AgentHub is its own repository ([devagotchi/agenthub](https://github.com/devagotchi/agenthub)), pulled in as a submodule at `crates/agenthub`: clone with `git clone --recurse-submodules`, or run `git submodule update --init` in an existing checkout.
+AgentHub is its own repository ([devagotchi/agenthub](https://github.com/devagotchi/agenthub)), pulled in as a submodule at `agenthub`: clone with `git clone --recurse-submodules`, or run `git submodule update --init` in an existing checkout.
 
 Install the toolchain from `rust-toolchain.toml` for the MSVC host and the Visual Studio C++ build tools, which compile the bundled SQLite. From the repository root in PowerShell:
 
