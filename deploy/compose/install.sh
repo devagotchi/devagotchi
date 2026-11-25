@@ -43,13 +43,13 @@ install.sh --domain NAME [options]
                        main), so compose.yaml always matches the image
   --print-ref          print that ref and exit, installing nothing
   --no-timer           do not install the update and backup timers
-The hub's site: its name, copy, colours and pictures (crates/hub/README.md, "The site"):
+The hub's site: its name, copy, colours and pictures (engine/hub/README.md, "The site"):
   --site DIR           check the site directory DIR with the hub image and put it in place
                        (DIR/../site under --dir); the running hub serves it within seconds.
                        A re-run without --site keeps the site in place
   --site-only          with --site: only that, on a hub this script installed (no --domain)
   --no-site            back to the hub's built-in site
-A hosted hub, who runs it, and how people sign in (see crates/hub/README.md):
+A hosted hub, who runs it, and how people sign in (see engine/hub/README.md):
   --tenancy single|multi
                        single on a first install: one owner's hub, claimed from its log when no
                        operator is set; multi: a hosted service, an account for everyone who

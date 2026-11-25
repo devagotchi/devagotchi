@@ -10,7 +10,7 @@
 - Non-goals: a second front end. The same server-rendered pages, the same routes, one
   stylesheet; the wide layout is CSS and a little script on top.
 - Canonical architecture / related plan: [mobile experience](mobile-experience.md) (the same
-  pages), [roadmap](roadmap.md). Code: `crates/hub/src/web/`.
+  pages), [roadmap](roadmap.md). Code: `engine/hub/src/web/`.
 
 ## Where it stands
 

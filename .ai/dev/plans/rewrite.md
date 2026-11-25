@@ -1,5 +1,7 @@
 # The rewrite: every major area on its golden pattern
 
+> **Order and layout replaced** by [the program](program.md) (2026-11-25). This page keeps its detail and history.
+
 - Contract: DG-DELIVERY-1; stage: read [project.json](../../project.json)
 - Request: the operator, 2026-11-19: "Get this actually planned out and fully implemented
   with clean patterns either already established or properly now getting implemented, and
@@ -34,7 +36,7 @@ files before it changes them.
 
 | # | Contradiction | Resolution (now in the README's G-rules and amended into each pattern in B0) |
 |---|---|---|
-| C1 | **Where a shared description lives.** machine-capability R8 says `contracts::describe` only. mcp-tools D2 also allows `devagotchi_mcp::{INPUT,RESIZE}_DESCRIPTION`. | `describe.rs` only. `INPUT_DESCRIPTION` and `RESIZE_DESCRIPTION` move to `describe::{OPERATION_INPUT, OPERATION_RESIZE}`, and the re-export at `crates/mcp/src/lib.rs:92` goes. Amend D2. |
+| C1 | **Where a shared description lives.** machine-capability R8 says `contracts::describe` only. mcp-tools D2 also allows `devagotchi_mcp::{INPUT,RESIZE}_DESCRIPTION`. | `describe.rs` only. `INPUT_DESCRIPTION` and `RESIZE_DESCRIPTION` move to `describe::{OPERATION_INPUT, OPERATION_RESIZE}`, and the re-export at `interfaces/mcp/src/lib.rs:92` goes. Amend D2. |
 | C2 | **Malformed arguments.** mcp-tools E1 says "ErrorData ... malformed arguments (rmcp)". machine-capability R12 says MCP 2025-11-25 makes input validation a tool execution error. | 2025-11-25 holds (G4): for a known tool, a serde refusal becomes `CallToolResult` isError with `invalid_arguments`. An unknown tool stays -32602 (`tests/mcp_protocol.py:265-268`). Amend E1. Patterns cite 2025-11-25 for errors; annotation semantics are the same in both revisions. |
 | C3 | **set_config_value's `destructive_hint`.** machine-capability's canonical snippet says `false`; mcp-tools A2 says `true`. | `true` on both surfaces: lowering `max_operations` retires retained jobs (`machine-engine/src/broker/history.rs:47-50`). Fix the snippet. |
 | C4 | **Hub defaults.** machine-capability R15 says a hub field has the contract's type with `#[serde(default = "devagotchi_contracts::default_*")]`. mcp-tools I3 says keep `Option` with `unwrap_or(DEFAULT_*)`. | R15's form, because the parity test compares inputSchemas and `Option` widens the hub's. Both are honoured: `pub const DEFAULT_X` plus `pub fn default_x() -> T { DEFAULT_X }` (G3). Amend I3. |
@@ -43,11 +45,11 @@ files before it changes them.
 | C7 | **Referrer-Policy.** identity K5 says "pages that post set same-origin". hub-pages rule 5 says it is the default in `head.rs::render`. | Default in `render()`; delete the 13 per-page inserts. Remove the per-page sentence from K5. |
 | C8 | **Origin before or after owner.** identity's record recipe checks owner first (404), then origin. hub-pages enforcement 1 puts the origin check in a layer first. | The layer runs first. A cross-site POST to an owner route gets 403; GET still hides the route with 404. Recipes renumber: origin (layer), owner, file-set 409, validate ... |
 | C9 | **Audit failure after the effect.** mcp-tools AU2 says a failed audit write fails the call (`ops/audit.rs:268-271`, `agenthub/mcp/calls.rs:174-186`). board-operations rule 12 says report the committed result and surface the audit failure. | G7: refuse only before the effect; after it, return the true result plus a log and an `audit.write_failed` operator signal. Keep one line per call: no "started" pre-row, which would break AU1 and the outcome vocabulary. **Needs the operator's agreement** (AGENTS.md: material behaviour change to authority/audit). Default if no answer: G7 as written. |
-| C10 | **Inline test modules.** persistence and machine-capability treat every inline `mod tests {}` as a layout-3 violation. link.md says rule 3 does not forbid them. identity's canonical section (`config/analytics.rs:68-111`) is inline. | G10: inline is allowed in a leaf file under the cap; a front door or an over-cap file moves its tests out. **Withdrawn:** `broker/settings.rs:284-341`, `files/write.rs:244`, `files/given.rs:63`, `mcp/src/files.rs:83`, `outputs.rs:58`, `adapter/history.rs:168`, `ops/audit.rs:356-452`, `machines/join/compose.rs`, `machines/update.rs` (each unless it is over the cap when touched). **Kept:** `files/search.rs` (463 lines, growing), `broker/system.rs` (becomes `system/mod.rs`), `machines/join/mod.rs` (front door, 482 lines), `agenthub/src/cli/hooks/mod.rs` (front door), `crates/link/src/lib.rs` (layout rule 4), `web/sessions.rs` (moves with S8). |
-| C11 | **Contracts layout.** link.md flat-re-exports `link::*` and notes this breaks layout rule 5. machine-capability keeps family modules in `lib.rs`. | G10's named exception for `crates/contracts`. Amend layout.md rule 5. One AGENTS.md:39 sentence (B0). |
+| C10 | **Inline test modules.** persistence and machine-capability treat every inline `mod tests {}` as a layout-3 violation. link.md says rule 3 does not forbid them. identity's canonical section (`config/analytics.rs:68-111`) is inline. | G10: inline is allowed in a leaf file under the cap; a front door or an over-cap file moves its tests out. **Withdrawn:** `broker/settings.rs:284-341`, `files/write.rs:244`, `files/given.rs:63`, `mcp/src/files.rs:83`, `outputs.rs:58`, `adapter/history.rs:168`, `ops/audit.rs:356-452`, `machines/join/compose.rs`, `machines/update.rs` (each unless it is over the cap when touched). **Kept:** `files/search.rs` (463 lines, growing), `broker/system.rs` (becomes `system/mod.rs`), `machines/join/mod.rs` (front door, 482 lines), `agenthub/src/cli/hooks/mod.rs` (front door), `runtime/link/src/lib.rs` (layout rule 4), `web/sessions.rs` (moves with S8). |
+| C11 | **Contracts layout.** link.md flat-re-exports `link::*` and notes this breaks layout rule 5. machine-capability keeps family modules in `lib.rs`. | G10's named exception for `platform/contracts`. Amend layout.md rule 5. One AGENTS.md:39 sentence (B0). |
 | C12 | **Clock.** persistence rule 15 takes `now` before the block; board-operations rule 3 takes the DB clock inside it. | G9: one clock per decision. AgentHub uses the DB clock inside (re-evaluated on retry, which is correct). Hub stores take `now` once before. Never mix them in a table. Board's standing-approval and undo violations are exactly such a mix. |
 | C13 | **Skip guarantee.** persistence uses a `layout.rs` scan that each Postgres binary is named in ci.yml. tests-and-ci uses `rdeps(devagotchi-store)` plus a REQUIRE flag. Skip text differs (`skipped:` vs `SKIPPED:`). | tests-and-ci's mechanism; drop the ci.yml scan (rdeps covers every binary). One text: `SKIPPED: no DEVAGOTCHI_TEST_POSTGRES_URL`. The skip-*shape* scan lives once, in `test_shape.rs`. |
-| C14 | **Overlapping tool checks.** mcp-tools `tools.rs`, board `contract.rs` (title, hints, field docs) and machine-capability `parity.rs` overlap. | `check_tools` (one function in `crates/mcp/src/pattern.rs`) is used by both surfaces. board `contract.rs` keeps only board-specific checks (`READ_ONLY_TOOLS` against hints, `PER_CALLER_WRITES`, `next_for` coverage). Its field-doc test is dropped as a duplicate. A single parity test lives in `machines/tests/parity.rs`; mcp-tools step 3 folds into it. |
+| C14 | **Overlapping tool checks.** mcp-tools `tools.rs`, board `contract.rs` (title, hints, field docs) and machine-capability `parity.rs` overlap. | `check_tools` (one function in `interfaces/mcp/src/pattern.rs`) is used by both surfaces. board `contract.rs` keeps only board-specific checks (`READ_ONLY_TOOLS` against hints, `PER_CALLER_WRITES`, `next_for` coverage). Its field-doc test is dropped as a duplicate. A single parity test lives in `machines/tests/parity.rs`; mcp-tools step 3 folds into it. |
 | C15 | **When web and identity tests move.** identity says move `web/*_tests.rs` to `web/tests/` before S8. hub-pages says move once, with S8. | Move once, with S8 (hub-pages). No interim move. |
 | C16 | **mcp_protocol.py in CI.** machine-capability runs it from `tests/e2e.py` on every OS. tests-and-ci adds a ubuntu ci.yml step. | From `tests/e2e.py` (tests-and-ci rule 11: one scenario runner), so it runs on Linux and Windows. |
 | C17 | **Compatibility under alpha.** `.ai/README.md` says no compatibility layers. link rule 2 (append-only golden, never bump) and persistence rule 5 (add-only migrations) keep old peers working. | Not a production layer. Enrolled machines and the hash chain cannot be fixed from the hub, so the wire and chain stay additive. Everything else (tool schemas, outbox kind names, MCP inputs) changes freely in alpha, noted in the parity doc and the changelog. |
@@ -74,12 +76,12 @@ Docs:
 - `layout.md`:
   - rule 3 clarification (G10);
   - rule 5 contracts exception;
-  - `:39-40` prefix test path → `crates/hub/src/store/tests.rs`, plus AgentHub's `migrations/tests.rs`.
-- `AGENTS.md:39`: "Contracts belong in a family module of `crates/contracts/src/`, re-exported from lib.rs; a new machine capability follows `.ai/patterns/machine-capability.md`. Regenerate artifacts, never edit them."
-- Fix the dead `crates/store/migrations/postgres` paths in `crates/hub/README.md:503`, `tests/throwaway_postgres.sh:5` and `docs/security-baseline.md:50`.
+  - `:39-40` prefix test path → `engine/hub/src/store/tests.rs`, plus AgentHub's `migrations/tests.rs`.
+- `AGENTS.md:39`: "Contracts belong in a family module of `platform/contracts/src/`, re-exported from lib.rs; a new machine capability follows `.ai/patterns/machine-capability.md`. Regenerate artifacts, never edit them."
+- Fix the dead `platform/store/migrations/postgres` paths in `engine/hub/README.md:503`, `tests/throwaway_postgres.sh:5` and `docs/security-baseline.md:50`.
 
 Honest-CI guard (tests-and-ci violations 1, 2, 3, 11, 12, 29, 33, 35):
-- `crates/store/src/testing.rs`:
+- `platform/store/src/testing.rs`:
   - `REQUIRE_ENV`; `empty_postgres` asserts it;
   - `or_skip!` prints `SKIPPED:`;
   - `server_url()`; `clickhouse()` with `DEVAGOTCHI_TEST_REQUIRE_CLICKHOUSE`.
@@ -120,13 +122,13 @@ Broker:
 - Replace the `lifecycle.rs:192` sleep with a deadline poll.
 
 Local adapter:
-- `crates/mcp/src/pattern.rs::check_tools`.
+- `interfaces/mcp/src/pattern.rs::check_tools`.
 - `local_tools()` (`router()` → `pub(crate)`).
 - `call_tool` maps `INVALID_PARAMS` for a known tool to `invalid_arguments` (C2).
 - `read_url` hints on both surfaces; `set_config_value` destructive=true on both (C3).
 
 Hub machine tools:
-- Defaults through serde `default = "devagotchi_contracts::default_*"`, replacing `files.rs:162,193,259,305`, `search.rs:77`, `system.rs:159`, `history.rs:68`. Move `read_multiple_files`' default into `crates/mcp/src/files.rs`.
+- Defaults through serde `default = "devagotchi_contracts::default_*"`, replacing `files.rs:162,193,259,305`, `search.rs:77`, `system.rs:159`, `history.rs:68`. Move `read_multiple_files`' default into `interfaces/mcp/src/files.rs`.
 - Contract field docs copied verbatim (`search.rs:20-49`, `system.rs:41-75`, `files.rs:23-139`).
 - `write_file` `idempotent_hint=false` (`files.rs:212`).
 - `machine_add` hints stated; `machine_update` destructive=true.
@@ -193,10 +195,10 @@ Hub:
 Join and installers:
 - `join.ps1:33-34` `DEVAGOTCHI_ROOT`, else `LOCALAPPDATA`.
 - `install-devagotchi.ps1`: `:7,:42` default `Root`; `:35,:348` the environment variable; `-EnrollCode` deprecated.
-- `crates/link/README.md:33-41`.
+- `runtime/link/README.md:33-41`.
 
 Checks:
-- `crates/devagotchi/tests/link_protocol.rs`.
+- `runtime/devagotchi/tests/link_protocol.rs`.
 - Contracts golden.
 - Hub socket test (hub-postgres).
 - e2e on Linux and Windows 2022/2025.
@@ -207,7 +209,7 @@ Checks:
 
 Every board-operations violation, plus mcp-tools on board tools, plus tests-and-ci and persistence on AgentHub tests.
 
-Store (`crates/agenthub`):
+Store (`agenthub`):
 - `hosted.rs` → `hosted/mod.rs`; split `hosted.rs` and `operations.rs` into `leases`, `notes`, `graph`, `settings`, `reads`, `tickets`, `inbox`, `issues`; update `oversize.txt`.
 - `migrations.rs` → `migrations/mod.rs`.
 - New single-transaction operations:
@@ -380,7 +382,7 @@ Schema and SQL:
 - Unqualified kernel tables (`kernel/stored.rs` 14, `authority.rs` 9).
 - `unsecs` (`connections/stored.rs:35,38`, `api_keys/mod.rs:190`, `sign_in_settings.rs:62`, `analytics_settings.rs:49`, `web/sessions.rs:181`).
 - Front-door *Owns* for `connections`, `offers`, `workflows`, `agenthub`, `store`; fix `tenancy/mod.rs:11-13`.
-- `crates/store/src/lib.rs` split (S10: `engine`, `transaction`, `tenancy`, `settings`).
+- `platform/store/src/lib.rs` split (S10: `engine`, `transaction`, `tenancy`, `settings`).
 
 Time:
 - Inject the nomen confirmation TTL and leeway, replacing the sleeps at `nomen/tests/mod.rs:242,274,306,426`, `kept.rs:42` and `web/tests/nomen_login.rs:296`.
@@ -404,8 +406,8 @@ Python and CI:
 - `ci-ok` aggregate job.
 
 Checks:
-- `crates/devagotchi/tests/test_shape.rs` (names, skip shapes, every script run or listed, pins, timeouts, permissions), with its baseline empty for the skip shapes.
-- `crates/devagotchi/tests/sql.rs` (qualified tables, `AssertSqlSafe` allow-list, no `QueryBuilder`, no `begin`/`finish` outside the store, `tenant_id` ratchet at 0).
+- `runtime/devagotchi/tests/test_shape.rs` (names, skip shapes, every script run or listed, pins, timeouts, permissions), with its baseline empty for the skip shapes.
+- `runtime/devagotchi/tests/sql.rs` (qualified tables, `AssertSqlSafe` allow-list, no `QueryBuilder`, no `begin`/`finish` outside the store, `tenant_id` ratchet at 0).
 - Catalog test in hub-postgres.
 - Full workflow run including release on a tag dry-run (`install-check` gate).
 - Junit shows 0 `SKIPPED:` in hub-postgres.

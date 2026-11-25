@@ -7,8 +7,8 @@ The Desktop Commander side is the snapshot under `reference/DesktopCommanderMCP`
 (`src/server.ts` advertises the tools below). That tree is a partial snapshot
 ([audit/README.md](../../audit/README.md)); a tool that is not in it is not claimed to be absent
 from upstream. Devagotchi's side is the tools `devagotchi mcp` registers
-(`crates/mcp/src/adapter/`) and the same calls through a hub
-(`crates/hub/src/machines/`, `crates/hub/src/mcp/`). The earlier working notes are
+(`interfaces/mcp/src/adapter/`) and the same calls through a hub
+(`engine/hub/src/machines/`, `engine/hub/src/mcp/`). The earlier working notes are
 [the parity plan](../dev/plans/desktop-commander-parity.md). `write_pdf` (P10) is still open.
 
 Devagotchi names a job by `operation_id`. Desktop Commander names a terminal session by pid.
@@ -17,7 +17,7 @@ That is a different shape, not a missing stop or read.
 Every shared machine tool has one description and the same arguments on both surfaces; the hub adds `machine`
 (B1, [the pattern](../patterns/machine-capability.md)). Since B1 the hub's `operation_*` tools take
 `machine` beside their arguments, not `{broker, input}`, and a known tool given bad arguments
-answers `invalid_arguments` as a tool error. `crates/hub/src/machines/tests/parity.rs` holds both.
+answers `invalid_arguments` as a tool error. `engine/hub/src/machines/tests/parity.rs` holds both.
 
 `operation_heartbeat(machine, operation_id)` is a hosted authority operation, so it is
 available only on an account-backed hub. It renews the original interactive admission
@@ -71,7 +71,7 @@ External editors do not join the broker mutation gate; these guards are not file
 Desktop Commander gives no ordering between two calls that change files. Devagotchi's broker
 orders `write_file`, `edit_file`, `create_directory`, `move_file` and `delete_file` through one gate per
 broker, held from path resolution through the preconditions, the change and the answer
-(`crates/machine-engine/src/broker/files.rs` has the whole contract in its module docs).
+(`engine/machine-engine/src/broker/files.rs` has the whole contract in its module docs).
 
 - Two writes guarded by the same `expected_sha256` cannot both succeed: the second answers
   `changed_since_read`. Of two `mode: create` writes or two moves onto one path, one answers
@@ -137,7 +137,7 @@ grants.
 
 | Capability | Devagotchi | Conformance case |
 |---|---|---|
-| Is the machine there and answering | `machines` (link), then `machine_inspect` / `broker_capabilities` (broker) | `tests/adapter_probe.py` (granted and account brokers); `tests/hub_probe.py` through `tests/e2e.py` (granted, account, unknown, not enrolled, offline, revoked, a stopped broker behind a live link, and after it restarts); `crates/hub/src/machines/tests/inspect.rs` (each outcome audited) |
+| Is the machine there and answering | `machines` (link), then `machine_inspect` / `broker_capabilities` (broker) | `tests/adapter_probe.py` (granted and account brokers); `tests/hub_probe.py` through `tests/e2e.py` (granted, account, unknown, not enrolled, offline, revoked, a stopped broker behind a live link, and after it restarts); `engine/hub/src/machines/tests/inspect.rs` (each outcome audited) |
 
 ## Not in this document's work
 

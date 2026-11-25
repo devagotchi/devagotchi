@@ -10,11 +10,11 @@ particular to a capability. The general form of an MCP tool (names, titles, hint
 audit) is [mcp-tools.md](mcp-tools.md). Where a file goes is [layout.md](layout.md), with G10.
 
 Who decides what (G1):
-- The broker (`crates/machine-engine`) is the only authority. Serde refuses unknown fields; the
+- The broker (`engine/machine-engine`) is the only authority. Serde refuses unknown fields; the
   broker checks every bound and every policy.
-- The local adapter (`crates/mcp`) passes the request through.
+- The local adapter (`interfaces/mcp`) passes the request through.
 - The hub names the machine and passes the request on (module docs of
-  `crates/hub/src/machines/system.rs`), and `Hub::call` audits the call.
+  `engine/hub/src/machines/system.rs`), and `Hub::call` audits the call.
 
 ## Account-backed files
 
@@ -36,25 +36,25 @@ is the only capability with a test at every layer.
 
 | Layer | Where |
 |---|---|
-| Contract | `crates/contracts/src/system.rs:53-80` (`CapabilitiesInput`, `BrokerCapabilities` with field docs); `REQUEST_METHODS` at `system.rs:21-47` |
-| Contract tests | `crates/contracts/src/system/tests.rs`: `capabilities_request_is_read_only_and_takes_nothing` (wire shape, unknown param refused, `held_for`, `target`, `caller`), `request_methods_are_every_request_the_wire_reads`, `capabilities_carry_no_path_grant_or_account` (an allow-list of answer fields) |
-| Broker dispatch | `crates/machine-engine/src/broker/system.rs:32-35`, in `Broker::on_system` |
-| Broker implementation | `crates/machine-engine/src/broker/settings.rs:107-137` (`Broker::capabilities`): policy only; a closing or faulted broker refuses. `GRANTED_REFUSES` at `settings.rs:22` |
-| Broker tests | `crates/machine-engine/src/broker/tests/capabilities.rs`: `capabilities_describe_both_policies_without_work_or_private_configuration`, `capabilities_refuse_a_closing_or_faulted_broker` |
-| Shared bounded helper | `crates/mcp/src/capabilities.rs` (`response`), tested in `crates/mcp/src/capabilities/tests.rs`; used by both surfaces |
-| Local tool | `crates/mcp/src/adapter/system_tools.rs:36-57`, description `describe::INSPECT` |
-| Hub tool | `crates/hub/src/machines/system.rs:101-120` (`machine_inspect`), through `Hub::call` in `crates/hub/src/mcp/hub.rs`; Rust test `crates/hub/src/machines/tests/inspect.rs` |
+| Contract | `platform/contracts/src/system.rs:53-80` (`CapabilitiesInput`, `BrokerCapabilities` with field docs); `REQUEST_METHODS` at `system.rs:21-47` |
+| Contract tests | `platform/contracts/src/system/tests.rs`: `capabilities_request_is_read_only_and_takes_nothing` (wire shape, unknown param refused, `held_for`, `target`, `caller`), `request_methods_are_every_request_the_wire_reads`, `capabilities_carry_no_path_grant_or_account` (an allow-list of answer fields) |
+| Broker dispatch | `engine/machine-engine/src/broker/system.rs:32-35`, in `Broker::on_system` |
+| Broker implementation | `engine/machine-engine/src/broker/settings.rs:107-137` (`Broker::capabilities`): policy only; a closing or faulted broker refuses. `GRANTED_REFUSES` at `settings.rs:22` |
+| Broker tests | `engine/machine-engine/src/broker/tests/capabilities.rs`: `capabilities_describe_both_policies_without_work_or_private_configuration`, `capabilities_refuse_a_closing_or_faulted_broker` |
+| Shared bounded helper | `interfaces/mcp/src/capabilities.rs` (`response`), tested in `interfaces/mcp/src/capabilities/tests.rs`; used by both surfaces |
+| Local tool | `interfaces/mcp/src/adapter/system_tools.rs:36-57`, description `describe::INSPECT` |
+| Hub tool | `engine/hub/src/machines/system.rs:101-120` (`machine_inspect`), through `Hub::call` in `engine/hub/src/mcp/hub.rs`; Rust test `engine/hub/src/machines/tests/inspect.rs` |
 | Probes | `tests/adapter_probe.py:91-108`, `tests/hub_probe.py:183-207`, `tests/mcp_protocol.py:31-32` |
 
 For a request with inputs that pages, read `search_files`:
-- Contract: `crates/contracts/src/search.rs` (module docs, named bounds, documented defaults).
-- Implementation: `Scope::search_for` in `crates/machine-engine/src/files/search.rs`. It checks
+- Contract: `platform/contracts/src/search.rs` (module docs, named bounds, documented defaults).
+- Implementation: `Scope::search_for` in `engine/machine-engine/src/files/search.rs`. It checks
   every input before it touches the disk.
 - Tests: the inline module in the same file, including
   `pages_go_on_from_their_cursor_without_losing_or_repeating`.
 
 For the simplest pass-through pair, read `set_config_value`:
-`crates/mcp/src/adapter/system_tools.rs:59-74` and `crates/hub/src/machines/system.rs:122-144`.
+`interfaces/mcp/src/adapter/system_tools.rs:59-74` and `engine/hub/src/machines/system.rs:122-144`.
 
 Neither exemplar is perfect. `machine_inspect` is the one allowed name exception (rule 14).
 `search_files` has the `PAGE_TIME` deadline bug, a description copied by hand and an inline
@@ -64,26 +64,26 @@ test module (see Known violations).
 
 | # | Layer | Where | What you add |
 |---|---|---|---|
-| 1 | Contract | the family module in `crates/contracts/src/` (`files`, `search`, `system`, `web`, `interactive`); `lib.rs` keeps the operation core and the envelope | `XInput`, the answer type, its bounds and defaults as named constants |
+| 1 | Contract | the family module in `platform/contracts/src/` (`files`, `search`, `system`, `web`, `interactive`); `lib.rs` keeps the operation core and the envelope | `XInput`, the answer type, its bounds and defaults as named constants |
 | 2 | Envelope | `lib.rs`, `interactive.rs`, `system.rs` | `RequestBody::X`; a `ResponseBody` kind (or a reused one) with its `kind()` arm; the `REQUEST_METHODS` entry; the `target()`, `caller_slot()`, `caller()` and `held_for()` arms |
-| 3 | Words | `crates/contracts/src/describe.rs` | `pub const X: &str`, the tool description, written once |
+| 3 | Words | `platform/contracts/src/describe.rs` | `pub const X: &str`, the tool description, written once |
 | 4 | Broker | `Broker::handle` in `broker.rs`, the family dispatcher, the domain implementation | a dispatch arm, the implementation, the policy decision |
-| 5 | Local tool | `crates/mcp/src/adapter/<family>_tools.rs` | a `#[tool]` that passes `XInput` through |
-| 6 | Hub tool | `crates/hub/src/machines/<family>.rs` | a `#[tool]` with the same name taking `{machine, ...XInput}` through `Hub::call`, and a scope in `scope_for` (`crates/hub/src/identity/accounts/api_keys/scope.rs`) |
+| 5 | Local tool | `interfaces/mcp/src/adapter/<family>_tools.rs` | a `#[tool]` that passes `XInput` through |
+| 6 | Hub tool | `engine/hub/src/machines/<family>.rs` | a `#[tool]` with the same name taking `{machine, ...XInput}` through `Hub::call`, and a scope in `scope_for` (`engine/hub/src/identity/accounts/api_keys/scope.rs`) |
 | 7 | Tests | see "The canonical test" | contract, domain, broker, hub parity, probes |
 
 Also update:
-- the export root `BrokerContracts` (`crates/contracts/src/bin/export-contracts.rs`), then run
+- the export root `BrokerContracts` (`platform/contracts/src/bin/export-contracts.rs`), then run
   `node scripts/generate-contracts.cjs`;
 - both servers' instructions: the adapter's `#[tool_handler(instructions = ...)]` in
-  `crates/mcp/src/adapter.rs`, and `mcp.instructions` in `crates/hub/site/default/site.json`;
-- the *Serves* section of `crates/hub/src/machines/mod.rs`;
+  `interfaces/mcp/src/adapter.rs`, and `mcp.instructions` in `engine/hub/site/default/site.json`;
+- the *Serves* section of `engine/hub/src/machines/mod.rs`;
 - `.ai/docs/desktop-commander-parity.md`. A changed tool schema is noted there and in the
   changelog. Tool schemas change freely in alpha (C17); the link wire does not.
 
 ## Canonical shape
 
-### 1. Contract (modelled on `crates/contracts/src/search.rs`)
+### 1. Contract (modelled on `platform/contracts/src/search.rs`)
 
 ```rust
 //! `thing_tool`: what it does, how it pages, what it never holds open.
@@ -134,7 +134,7 @@ Then wire it into the envelope:
   arm in `caller_slot()` and `caller()`.
 - `describe.rs`: `pub const THING: &str = "...";`.
 
-### 2. Broker (from `Broker::on_system` and `Broker::processes` in `crates/machine-engine/src/broker/system.rs`, condensed)
+### 2. Broker (from `Broker::on_system` and `Broker::processes` in `engine/machine-engine/src/broker/system.rs`, condensed)
 
 ```rust
 // broker.rs, Broker::handle: every variant named; a family goes to its dispatcher.
@@ -161,7 +161,7 @@ async fn processes(&self, input: ProcessListInput) -> BridgeResult<ProcessPage> 
 }
 ```
 
-### 3. Local tool (from `crates/mcp/src/adapter/system_tools.rs:59-74`, with C3 applied)
+### 3. Local tool (from `interfaces/mcp/src/adapter/system_tools.rs:59-74`, with C3 applied)
 
 ```rust
 #[tool(
@@ -184,14 +184,14 @@ async fn set_config_value(
 ```
 
 `destructive_hint` is `true` because lowering `max_operations` retires kept jobs
-(`shrink` in `crates/machine-engine/src/broker/history.rs`). Today's code still says `false`
+(`shrink` in `engine/machine-engine/src/broker/history.rs`). Today's code still says `false`
 on both surfaces (Known violations, rule 16).
 
 The family router is `#[tool_router(router = system_router, vis = "pub(super)")]`. It is added
-in `BridgeAdapter::router()` (`crates/mcp/src/adapter.rs:332-340`), which opens the output
+in `BridgeAdapter::router()` (`interfaces/mcp/src/adapter.rs:332-340`), which opens the output
 schemas (`devagotchi_mcp::outputs::open_outputs`).
 
-### 4. Hub tool (from `crates/hub/src/machines/system.rs:122-144`, with C3 and C4 applied)
+### 4. Hub tool (from `engine/hub/src/machines/system.rs:122-144`, with C3 and C4 applied)
 
 ```rust
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -228,14 +228,14 @@ A field with a default takes the contract's type and the contract's function (C4
 pub max_results: u32,
 ```
 
-`Hub::call` (`crates/hub/src/mcp/hub.rs`):
+`Hub::call` (`engine/hub/src/mcp/hub.rs`):
 - sets the caller from the session (G8);
 - routes to the machine's link or local socket;
 - honours MCP cancellation (`request_cancelled`);
 - writes the one audit line (G7).
 
 A composite (`run`, `read_multiple_files`, `read_image`) calls its shared function in
-`crates/mcp/src/` (`run::run`, `files::read_many`, `image::read_image`) with
+`interfaces/mcp/src/` (`run::run`, `files::read_many`, `image::read_image`) with
 `|body| self.send(&route, body)` (`run` uses `send_hinted`) and writes its own one audit line.
 It moves to `Hub::recorded` once that lands (G7; `Hub::recorded` comes with plan B1, the
 composites move to it in B4).
@@ -251,7 +251,7 @@ composites move to it in B4).
 2. **Closed inputs (G2).** Every wire struct derives `Serialize, Deserialize, JsonSchema` and
    carries `#[serde(deny_unknown_fields)]`. Every local tool's `inputSchema` then has
    `additionalProperties: false`
-   (`every_output_schema_is_open_and_every_input_closed` in `crates/mcp/src/adapter/tests.rs`);
+   (`every_output_schema_is_open_and_every_input_closed` in `interfaces/mcp/src/adapter/tests.rs`);
    the hub side is held by the parity test.
 3. **Every input field has a `///` doc, and a bounded field states its range and default**, as
    in `1..=500 (default 100)`. The doc is what the AI reads in `inputSchema`. The bound and the
@@ -264,7 +264,7 @@ composites move to it in B4).
    `broker/settings.rs`).
 5. **The transport sets `caller` (G8).** A caller-carrying variant is named in `caller_slot()`
    and `caller()`, and its input is in the schema loop of
-   `crates/contracts/src/interactive/tests.rs`.
+   `platform/contracts/src/interactive/tests.rs`.
 6. **Tables name every variant (G5).** The capability tables are `Broker::handle`, `on_files`
    and `answer`, `mutation`, `on_system`, `RequestBody::{target, caller, caller_slot, held_for}`,
    `ResponseBody::kind` and the hub's `Links::jobs_saw`. The precedent is `mutation` in
@@ -296,12 +296,12 @@ composites move to it in B4).
     Until `call_tool` maps it, rmcp 3.9.0 returns -32602 for both (Known violations, rule 12).
 13. **The broker answers inside the transport's deadline.** A local client and the machine link
     wait `devagotchi_ipc::IO_TIMEOUT + request.held_for()` (`exchange` in
-    `crates/ipc/src/lib.rs`, reached through `devagotchi_ipc::request`; the link forwards
-    through the same call in `crates/link/src/session/mod.rs`). Every internal time
+    `platform/ipc/src/lib.rs`, reached through `devagotchi_ipc::request`; the link forwards
+    through the same call in `runtime/link/src/session/mod.rs`). Every internal time
     budget is derived from that and held by a `const` assertion beside it (G6), as
     `MUTATION_WAIT` is in `broker/files.rs`. `held_for()` is only for requests that wait on
     purpose (`operation_wait`, `operations_changed`); the link counts them in its waits pool
-    (`crates/link/src/session/mod.rs`).
+    (`runtime/link/src/session/mod.rs`).
 
 ### Tools
 
@@ -319,58 +319,58 @@ composites move to it in B4).
     when the same arguments in every mode add nothing (so `write_file`, with `append`, is
     false), and a read-only tool sets no `destructive_hint` or `idempotent_hint`.
     `set_config_value` is `destructive_hint = true` (C3).
-17. **A composite has one implementation** in a module of `crates/mcp/src/` (`run.rs`,
+17. **A composite has one implementation** in a module of `interfaces/mcp/src/` (`run.rs`,
     `files.rs`, `image.rs`), generic over a `send` closure and used by both surfaces. Its bounds
     and defaults live there (`run::bounded`, `run::DEFAULT_WAIT_S`), not in either tool.
 18. **Registration.** The family router is in `BridgeAdapter::router()` and in
     `Hub::machine_router()`, the operation tools' router too (C5). The hub tool has an API-key
     scope in `scope_for` (test: `every_tool_is_either_scoped_or_deliberately_closed_to_keys`
-    in `crates/hub/src/identity/tests/keys.rs`). Both servers' instructions name the tool.
+    in `engine/hub/src/identity/tests/keys.rs`). Both servers' instructions name the tool.
 
 ## Where files go
 
 G10 and layout.md decide. For a capability:
 
-- **Contract:** the family module in `crates/contracts/src/`, re-exported flat from `lib.rs`
+- **Contract:** the family module in `platform/contracts/src/`, re-exported flat from `lib.rs`
   (G10's contracts exception, C11). Its tests: `<family>/tests.rs`.
 - **Broker:** dispatch in `broker.rs`; the family dispatcher in `broker/<family>`; the
   implementation in its domain (`files/<op>` on `Scope`, `broker/system/<op>`,
   `broker/settings`). Broker-level tests: `broker/tests/<family>.rs`. Domain tests: the
   domain's `tests.rs`, or inline in a leaf file under the cap (G10, C10).
-- **Local tool:** `crates/mcp/src/adapter/<family>_tools.rs`. Composite logic:
-  `crates/mcp/src/<module>.rs` (today `run.rs`, `files.rs`, `image.rs`) with
+- **Local tool:** `interfaces/mcp/src/adapter/<family>_tools.rs`. Composite logic:
+  `interfaces/mcp/src/<module>.rs` (today `run.rs`, `files.rs`, `image.rs`) with
   `<module>/tests.rs`.
-- **Hub tool:** `crates/hub/src/machines/<family>.rs` (C5). The `operation_*` tools go in a
+- **Hub tool:** `engine/hub/src/machines/<family>.rs` (C5). The `operation_*` tools go in a
   new `machines/operations.rs` (`operations_router`, merged in `machine_router()`); `machines`,
   `machine_add` and `machine_update` go in a new `machines/manage.rs`. Both files are created
-  by plan B1. `crates/hub/src/mcp/` keeps
+  by plan B1. `engine/hub/src/mcp/` keeps
   the `Hub` surface: `call`, `caller`, `send_hinted`, `outdated`, `whoami` and the shared
   schema. Hub tests: `machines/tests/<subject>.rs`. A test that needs no store runs in CI's
   `core` job; one that takes a store runs in `hub-postgres` (G13).
 
-Several capability files predate layout.md: `crates/contracts/src/system.rs` beside `system/`,
-`crates/contracts/src/interactive.rs` beside `interactive/`, `crates/machine-engine/src/files.rs`
-beside `files/`, and `crates/machine-engine/src/broker/system.rs` beside `broker/system/`. They stay until structure-cleanup S10
+Several capability files predate layout.md: `platform/contracts/src/system.rs` beside `system/`,
+`platform/contracts/src/interactive.rs` beside `interactive/`, `engine/machine-engine/src/files.rs`
+beside `files/`, and `engine/machine-engine/src/broker/system.rs` beside `broker/system/`. They stay until structure-cleanup S10
 (`.ai/dev/plans/structure-cleanup.md`) moves them. New files follow layout.md.
 
 ## The canonical test
 
-1. **Contract** (`crates/contracts/src/system/tests.rs`,
+1. **Contract** (`platform/contracts/src/system/tests.rs`,
    `capabilities_request_is_read_only_and_takes_nothing`): the request parses from
    `{"method", "params"}`, serializes back the same, refuses an unknown param, and has the right
    `held_for`, `target` and `caller`. Add an allow-list of answer fields when the answer must not
    leak (`capabilities_carry_no_path_grant_or_account`).
-2. **Domain** (`crates/machine-engine/src/files/search.rs`, inline tests): the implementation on
+2. **Domain** (`engine/machine-engine/src/files/search.rs`, inline tests): the implementation on
    `Scope` or `Table` against a `tempfile` tree, or a local server for the web. One test for the
    happy path and one per refusal code. A paged request also needs an invariant test: paging
    one result at a time, or stopping on time at every entry, finds the same results as one page.
-3. **Broker** (`crates/machine-engine/src/broker/tests/capabilities.rs`): through
+3. **Broker** (`engine/machine-engine/src/broker/tests/capabilities.rs`): through
    `Broker::handle(RequestBody::X)` on both `open_broker` (granted) and `account_broker`. Check
    the answer kind, the policy refusal codes, and that a query admits, journals and signals
    nothing.
 4. **Hub parity** (see The mechanical check): the tool exists on both surfaces with one
    description, the same hints, and hub properties equal to the contract's plus `machine`. Add
-   a hub Rust test (as `crates/hub/src/machines/tests/inspect.rs`) when the hub adds behaviour
+   a hub Rust test (as `engine/hub/src/machines/tests/inspect.rs`) when the hub adds behaviour
    of its own, such as a bound or an audit outcome.
 5. **Probes**, run by `tests/e2e.py` in CI's `e2e` job on Linux and Windows:
    - `tests/adapter_probe.py`: the name in `missing`, and a call in the `--account` section.
@@ -382,7 +382,7 @@ beside `files/`, and `crates/machine-engine/src/broker/system.rs` beside `broker
 ## Anti-patterns
 
 - A wildcard in a capability table (rule 6). The link uses `caller()` to refuse a hub that
-  speaks for the machine's own account (`from_a_hub` in `crates/link/src/session/mod.rs`); a new
+  speaks for the machine's own account (`from_a_hub` in `runtime/link/src/session/mod.rs`); a new
   caller-carrying request missing there passes silently.
 - Validation or defaults restated in a tool or a hub mirror (`unwrap_or(200)`), or a bound
   restated as a literal (`"1..=4096"`): two numbers that drift (G3).
@@ -407,10 +407,10 @@ Held today:
 
 Held by review until plan B1 lands these, each green with the fix it guards (G12):
 
-1. **Parity test**, a new `crates/hub/src/machines/tests/parity.rs` (rules 2, 8, 14, 15, 16).
+1. **Parity test**, a new `engine/hub/src/machines/tests/parity.rs` (rules 2, 8, 14, 15, 16).
    It is the one parity test; the form checks belong to `check_tools`, a new
-   `crates/mcp/src/pattern.rs` that [mcp-tools.md](mcp-tools.md) owns (C14). `Hub::router()` needs no store, so it runs in `core`. It needs a local tool list:
-   make `BridgeAdapter::router()` `pub(crate)` and add to `crates/mcp/src/lib.rs`:
+   `interfaces/mcp/src/pattern.rs` that [mcp-tools.md](mcp-tools.md) owns (C14). `Hub::router()` needs no store, so it runs in `core`. It needs a local tool list:
+   make `BridgeAdapter::router()` `pub(crate)` and add to `interfaces/mcp/src/lib.rs`:
 
    ```rust
    /// Every tool `devagotchi mcp` serves, as tools/list describes it: for parity tests.
@@ -453,7 +453,7 @@ Held by review until plan B1 lands these, each green with the fix it guards (G12
 
    From then on CI fails on a capability added to one surface only, a copied description, a
    drifted hint or doc, or a nested `{broker, input}` hub input.
-2. **`describe::BROKER_TOOLS`** (rule 7), with a test in `crates/contracts/src/system/tests.rs`:
+2. **`describe::BROKER_TOOLS`** (rule 7), with a test in `platform/contracts/src/system/tests.rs`:
 
    ```rust
    /// Each broker request an AI reaches, by its tool name. `operations_changed` is the desktop's own.
@@ -527,63 +527,63 @@ Checked at main `2b3feec`. Plan B1 fixes all of them unless noted.
 
 ### Rule 3: docs, named bounds and defaults
 
-- `crates/machine-engine/src/files.rs` (`MAX_ENTRIES`, `MAX_DEPTH`): list_directory's bounds
+- `engine/machine-engine/src/files.rs` (`MAX_ENTRIES`, `MAX_DEPTH`): list_directory's bounds
   are private to the broker; the contract docs on `FileListInput` restate "0..=3" and
   "1..=1000" by hand, and the hub docs "0 to 3" and "1 to 1000". ->
   `pub const MAX_LIST_ENTRIES: u32 = 1000;` and
-  `pub const MAX_LIST_DEPTH: u32 = 3;` in `crates/contracts/src/files.rs`, used by the broker's
+  `pub const MAX_LIST_DEPTH: u32 = 3;` in `platform/contracts/src/files.rs`, used by the broker's
   checks in `Scope::list`.
-- `crates/machine-engine/src/broker/settings.rs` (`OUTPUT_LIMIT`, `OPERATIONS`, `CONCURRENT`,
-  `checked`) and `crates/contracts/src/describe.rs` (`SET_CONFIG_VALUE`): the ranges are
+- `engine/machine-engine/src/broker/settings.rs` (`OUTPUT_LIMIT`, `OPERATIONS`, `CONCURRENT`,
+  `checked`) and `platform/contracts/src/describe.rs` (`SET_CONFIG_VALUE`): the ranges are
   private; `checked` writes "1..=4096" and "1..=64" as literals, and the description restates
   "1024 to 16777216", "1 to 4096" and "1 to 64". -> Range constants beside
-  `CHANGEABLE_SETTINGS` in `crates/contracts/src/system.rs`, `checked`'s messages formatted
+  `CHANGEABLE_SETTINGS` in `platform/contracts/src/system.rs`, `checked`'s messages formatted
   from them, and a contract test that `describe::SET_CONFIG_VALUE` contains each range's ends.
-- `crates/contracts/src/system.rs` (`ProcessKillInput.pid`) and `crates/contracts/src/files.rs`
+- `platform/contracts/src/system.rs` (`ProcessKillInput.pid`) and `platform/contracts/src/files.rs`
   (`FileWriteInput.mode`): no `///`, so the properties carry no description. ->
   `/// The process ID, from list_processes.` and
   `/// overwrite (default), create (refuse if it exists) or append.`
 
 ### Rule 5: the transport sets `caller`
 
-- `crates/contracts/src/interactive/tests.rs`
+- `platform/contracts/src/interactive/tests.rs`
   (`a_caller_in_a_tool_call_is_not_offered_and_a_transport_replaces_it`): the schema loop checks
   `StartInput`, `ListInput`, `SendInput` and `ResizeInput`, but not `GetInput`, `ReadInput` or
   `WaitInput`, which also carry `caller`. -> Add `schema_for!` of the three to the loop.
-- `crates/contracts/src/interactive.rs` (`RequestBody::target`): the doc line "The caller this
+- `platform/contracts/src/interactive.rs` (`RequestBody::target`): the doc line "The caller this
   request names, for a kind of request that carries one." sits on `target()`, not on
   `caller()`, so rustdoc shows both wrong. -> Move it onto `pub fn caller(&self)`.
 
 ### Rule 6: tables name every variant (G5)
 
-- `crates/contracts/src/interactive.rs` (`RequestBody::caller`): ends with `_ => None`. The link's
+- `platform/contracts/src/interactive.rs` (`RequestBody::caller`): ends with `_ => None`. The link's
   `from_a_hub` uses it, so a new caller-carrying request missed here passes that check
   silently. -> Name every variant, as `caller_slot` does.
-- `crates/contracts/src/lib.rs` (`RequestBody::held_for`): ends with
+- `platform/contracts/src/lib.rs` (`RequestBody::held_for`): ends with
   `_ => std::time::Duration::ZERO`, so a new request that holds gets the 5 s deadline silently.
   -> Name the other variants in an explicit `=> Duration::ZERO` arm.
-- `crates/hub/src/machines/link/calls.rs` (`Links::jobs_saw`): `_ => return` leaves out
+- `engine/hub/src/machines/link/calls.rs` (`Links::jobs_saw`): `_ => return` leaves out
   `ResponseBody::InputSent`, whose `operation` carries the job's state after `operation_input`,
   so the hub's kept job state does not move on it. -> Add
   `ResponseBody::InputSent(sent) => (&sent.operation, None)`, list the kinds that carry no single
   operation in a `=> return` arm, and add a case beside the `jobs_saw` tests in
-  `crates/hub/src/web/app/tests.rs`.
-- `crates/machine-engine/src/broker/files.rs` (`answer`): ends with
+  `engine/hub/src/web/app/tests.rs`.
+- `engine/machine-engine/src/broker/files.rs` (`answer`): ends with
   `_ => ("file request", Err(internal_error))`, while `mutation` in the same file names every
   variant. -> List the non-file variants in the error arm, or pass `answer` a narrowed type.
-- `crates/machine-engine/src/broker/system.rs` (`Broker::on_system`): ends with
+- `engine/machine-engine/src/broker/system.rs` (`Broker::on_system`): ends with
   `_ => ("system request", Err(internal_error))`. -> The same as `answer`.
 
 ### Rule 8: the description is written once
 
-- `crates/mcp/src/adapter/file_tools.rs` (`SEARCH_DESCRIPTION`) and
-  `crates/hub/src/machines/search.rs` (`SEARCH_ON_MACHINE`): the same text copied by hand, the
+- `interfaces/mcp/src/adapter/file_tools.rs` (`SEARCH_DESCRIPTION`) and
+  `engine/hub/src/machines/search.rs` (`SEARCH_ON_MACHINE`): the same text copied by hand, the
   hub's with a prefix. -> `describe::SEARCH_FILES` on both surfaces; the machine hint goes in the
   `machine` field doc.
 - 16 tools with two descriptions written separately: `run` and six `operation_*` tools in
-  `crates/mcp/src/adapter.rs`, nine file tools in `crates/mcp/src/adapter/file_tools.rs`, and on
-  the hub `crates/hub/src/machines/run.rs`, `crates/hub/src/mcp/tools/operations.rs` (five),
-  `crates/hub/src/mcp/callers/mod.rs` (`operation_list`) and `crates/hub/src/machines/files.rs`
+  `interfaces/mcp/src/adapter.rs`, nine file tools in `interfaces/mcp/src/adapter/file_tools.rs`, and on
+  the hub `engine/hub/src/machines/run.rs`, `engine/hub/src/mcp/tools/operations.rs` (five),
+  `engine/hub/src/mcp/callers/mod.rs` (`operation_list`) and `engine/hub/src/machines/files.rs`
   (nine). They have drifted: the hub's `edit_file` says you are told how many times `old_text`
   occurs, the hub's `operation_read` drops "Reading does not advance another reader's cursor",
   only the local `operation_start` says "For most commands use run instead", and the hub's `run`
@@ -592,14 +592,14 @@ Checked at main `2b3feec`. Plan B1 fixes all of them unless noted.
   EDIT_FILE, READ_MULTIPLE_FILES, READ_IMAGE, GET_FILE_INFO, CREATE_DIRECTORY, MOVE_FILE}` in
   machine-neutral words, used by both `#[tool]`s. `OPERATION_LIST` says what holds on both
   surfaces: the caller's own account's operations.
-- `crates/mcp/src/adapter/terminal.rs` (`INPUT_DESCRIPTION`, `RESIZE_DESCRIPTION`), re-exported
-  by `crates/mcp/src/lib.rs` and imported by `crates/hub/src/mcp/callers/mod.rs`: shared, but
+- `interfaces/mcp/src/adapter/terminal.rs` (`INPUT_DESCRIPTION`, `RESIZE_DESCRIPTION`), re-exported
+  by `interfaces/mcp/src/lib.rs` and imported by `engine/hub/src/mcp/callers/mod.rs`: shared, but
   not from `describe.rs` (C1). -> `describe::{OPERATION_INPUT, OPERATION_RESIZE}`; drop the
   re-export.
 
 ### Rule 9: the export root
 
-- `crates/contracts/src/bin/export-contracts.rs` (`BrokerContracts`): lacks `SendInput`,
+- `platform/contracts/src/bin/export-contracts.rs` (`BrokerContracts`): lacks `SendInput`,
   `ResizeInput` and `InputSent`, so the published schema has no `operation_input` or
   `operation_resize` types. `node scripts/generate-contracts.cjs --check` runs by hand only
   (`.ai/dev/workflow.md`); `.github/workflows/ci.yml` never runs it. -> Add the three fields,
@@ -607,7 +607,7 @@ Checked at main `2b3feec`. Plan B1 fixes all of them unless noted.
 
 ### Rule 10: blocking work on the blocking pool (G6)
 
-- `crates/machine-engine/src/broker/settings.rs` (`Broker::set_config`, `save`,
+- `engine/machine-engine/src/broker/settings.rs` (`Broker::set_config`, `save`,
   `Broker::config_view`, `account_name`): `save` runs `std::fs` read, write, set_permissions and
   rename on an async worker under the registry lock, and `account_name` runs sysinfo on one for
   `get_config` too. Saving under the lock is deliberate; doing it on an async worker is not. ->
@@ -616,7 +616,7 @@ Checked at main `2b3feec`. Plan B1 fixes all of them unless noted.
 
 ### Rule 12: refusals (G4)
 
-- `crates/mcp/src/adapter.rs` (`BridgeAdapter::call_tool`) and `crates/hub/src/mcp/handler.rs`
+- `interfaces/mcp/src/adapter.rs` (`BridgeAdapter::call_tool`) and `engine/hub/src/mcp/handler.rs`
   (`call_tool`): rmcp 3.9.0 turns an argument serde refuses into JSON-RPC -32602, where MCP
   2025-11-25 wants a tool execution error. Low severity; it is upstream's default. -> Map
   `INVALID_PARAMS` for a tool the router has to `CallToolResult::error` with
@@ -625,16 +625,16 @@ Checked at main `2b3feec`. Plan B1 fixes all of them unless noted.
 
 ### Rule 13: inside the transport's deadline
 
-- `crates/machine-engine/src/files/search.rs` (`PAGE_TIME`): 5 s, equal to `IO_TIMEOUT`, with
+- `engine/machine-engine/src/files/search.rs` (`PAGE_TIME`): 5 s, equal to `IO_TIMEOUT`, with
   `held_for()` zero. A page stopped by time answers after the client has stopped waiting, so it
   reaches the AI as `ipc_timeout` instead of a page with a cursor, locally and through the hub.
   -> `const PAGE_TIME: Duration = devagotchi_ipc::IO_TIMEOUT.saturating_sub(Duration::from_secs(2));`
   with a const assertion, as `MUTATION_WAIT` does.
-- `crates/machine-engine/src/broker/system/web.rs` (`FETCH_TIME`): 20 s with `held_for()` zero.
+- `engine/machine-engine/src/broker/system/web.rs` (`FETCH_TIME`): 20 s with `held_for()` zero.
   A fetch over about 5 s fails as `ipc_timeout` while the broker keeps fetching. -> Default D2:
   `IO_TIMEOUT.saturating_sub(Duration::from_secs(1))` with a const assertion. A read is ordinary
   work, not a deliberate hold.
-- `crates/machine-engine/src/broker/system.rs` (`EXIT_WATCH`): `kill_process` reads the whole
+- `engine/machine-engine/src/broker/system.rs` (`EXIT_WATCH`): `kill_process` reads the whole
   process table and then watches up to 3 s, leaving under 2 s of the deadline, with no assertion.
   -> `const _: () = assert!(EXIT_WATCH.as_millis() + 1000 < devagotchi_ipc::IO_TIMEOUT.as_millis());`
   If the table read measures over 1 s on Windows CI, lower `EXIT_WATCH` and update
@@ -642,24 +642,24 @@ Checked at main `2b3feec`. Plan B1 fixes all of them unless noted.
 
 ### Rule 15: the hub input is the contract input plus `machine`
 
-- `crates/hub/src/machines/files.rs` (`read_file`, `list_directory`, `edit_file`,
-  `read_multiple_files`), `crates/hub/src/machines/search.rs` (`search_files`),
-  `crates/hub/src/machines/system.rs` (`list_processes`) and
-  `crates/hub/src/machines/history.rs` (`get_recent_tool_calls`): the hub restates contract
+- `engine/hub/src/machines/files.rs` (`read_file`, `list_directory`, `edit_file`,
+  `read_multiple_files`), `engine/hub/src/machines/search.rs` (`search_files`),
+  `engine/hub/src/machines/system.rs` (`list_processes`) and
+  `engine/hub/src/machines/history.rs` (`get_recent_tool_calls`): the hub restates contract
   defaults with `unwrap_or` (`MAX_FILE_READ_BYTES`, 200, 1, 100, 200, 50) and widens the fields
   to `Option`, so the hub's `inputSchema` differs. The contract defaults are private
   (`default_file_read_bytes`, `default_list_entries`, `default_replacements` in `files.rs`,
   `default_search_results` in `search.rs`, `default_process_results` in `system.rs`,
-  `default_recent_calls` in `crates/contracts/src/history.rs`). -> `pub const DEFAULT_*` and `pub fn default_*`
+  `default_recent_calls` in `platform/contracts/src/history.rs`). -> `pub const DEFAULT_*` and `pub fn default_*`
   (G3, C4); the hub fields take the contract's type with
   `#[serde(default = "devagotchi_contracts::default_*")]` and pass through unchanged.
-- `crates/hub/src/machines/search.rs`, `crates/hub/src/machines/system.rs` and
-  `crates/hub/src/machines/files.rs` (the input structs): the hub field docs differ from the
+- `engine/hub/src/machines/search.rs`, `engine/hub/src/machines/system.rs` and
+  `engine/hub/src/machines/files.rs` (the input structs): the hub field docs differ from the
   contract's. `regex` drops "(Rust syntax, like ripgrep's)", `force` drops "On Windows a process
   is always ended at once", `pid` has no doc, ranges read "1 to 1000" against "1..=1000", and
   paths say "on that machine". -> Copy the contract's docs verbatim.
-- `crates/hub/src/mcp/schema.rs` (`StartRouted`, `GetRouted`, `WaitRouted`, `ReadRouted`) and
-  `crates/hub/src/mcp/callers/mod.rs` (`ListRouted`, `InputRouted`, `ResizeRouted`): the eight
+- `engine/hub/src/mcp/schema.rs` (`StartRouted`, `GetRouted`, `WaitRouted`, `ReadRouted`) and
+  `engine/hub/src/mcp/callers/mod.rs` (`ListRouted`, `InputRouted`, `ResizeRouted`): the eight
   `operation_*` tools take `{broker, input: {...}}`, while the other hub machine tools take a flat
   `machine`; none has `deny_unknown_fields`, so an unknown top-level argument is accepted.
   `Machine.name`'s doc says "The name to pass as `broker`". -> Flat closed structs such as
@@ -669,39 +669,39 @@ Checked at main `2b3feec`. Plan B1 fixes all of them unless noted.
 
 ### Rule 16: the same annotations
 
-- `crates/hub/src/machines/files.rs` (`write_file`): `idempotent_hint = true`; the local
+- `engine/hub/src/machines/files.rs` (`write_file`): `idempotent_hint = true`; the local
   `write_file` says `false`. With `append` the same arguments add content again. -> `false`.
-- `crates/mcp/src/adapter/system_tools.rs` and `crates/hub/src/machines/system.rs`
+- `interfaces/mcp/src/adapter/system_tools.rs` and `engine/hub/src/machines/system.rs`
   (`read_url`): `destructive_hint = false` and `idempotent_hint = true` on a read-only tool. ->
   `annotations(title = "...", read_only_hint = true, open_world_hint = true)` on both.
-- `crates/mcp/src/adapter/system_tools.rs` and `crates/hub/src/machines/system.rs`
+- `interfaces/mcp/src/adapter/system_tools.rs` and `engine/hub/src/machines/system.rs`
   (`set_config_value`): `destructive_hint = false`, but lowering `max_operations` retires kept
   jobs (C3). -> `destructive_hint = true` on both.
 
 ### Rule 17: one composite implementation
 
-- `crates/mcp/src/adapter/file_tools.rs` and `crates/hub/src/machines/files.rs`
+- `interfaces/mcp/src/adapter/file_tools.rs` and `engine/hub/src/machines/files.rs`
   (`read_multiple_files`): each tool restates `max_bytes_each.unwrap_or(MAX_FILE_READ_BYTES)`.
-  -> Move the default into `read_many` in `crates/mcp/src/files.rs`, which both call.
+  -> Move the default into `read_many` in `interfaces/mcp/src/files.rs`, which both call.
 
 ### Rule 18 and where files go
 
-- `crates/hub/src/mcp/tools/operations.rs` and `crates/hub/src/mcp/callers/mod.rs`: the
+- `engine/hub/src/mcp/tools/operations.rs` and `engine/hub/src/mcp/callers/mod.rs`: the
   `operation_*` tools live in `mcp/` and are added in `Hub::router()`, not through
-  `Hub::machine_router()`, while the *Serves* section of `crates/hub/src/machines/mod.rs` says
+  `Hub::machine_router()`, while the *Serves* section of `engine/hub/src/machines/mod.rs` says
   machines serves them. `machines`, `machine_add` and `machine_update` sit in
-  `crates/hub/src/mcp/tools/machines.rs`, with their helpers in `crates/hub/src/mcp/machines.rs`.
+  `engine/hub/src/mcp/tools/machines.rs`, with their helpers in `engine/hub/src/mcp/machines.rs`.
   -> C5: `machines/operations.rs` with
   `operations_router`, merged in `machine_router()`; `machines/manage.rs` for the three
   machine-management tools. *Serves* becomes true by moving the code.
-- `crates/machine-engine/src/files/search.rs` (inline `mod tests`): the file is 463 lines, 164
+- `engine/machine-engine/src/files/search.rs` (inline `mod tests`): the file is 463 lines, 164
   of them tests, near the 500-line cap (C10 keeps it). -> A new
-  `crates/machine-engine/src/files/search/tests.rs`, in S10's machine-engine PR.
-- `crates/machine-engine/src/broker/system.rs` (inline `mod tests`): a `<domain>.rs` beside
-  `broker/system/` (C10 keeps it). -> A new `crates/machine-engine/src/broker/system/mod.rs` with `system/tests.rs`.
-- `AGENTS.md` (Implementation, line 39): says "Contracts belong in `crates/contracts/src/lib.rs`",
+  `engine/machine-engine/src/files/search/tests.rs`, in S10's machine-engine PR.
+- `engine/machine-engine/src/broker/system.rs` (inline `mod tests`): a `<domain>.rs` beside
+  `broker/system/` (C10 keeps it). -> A new `engine/machine-engine/src/broker/system/mod.rs` with `system/tests.rs`.
+- `AGENTS.md` (Implementation, line 39): says "Contracts belong in `platform/contracts/src/lib.rs`",
   but requests live in family modules. -> Plan B0's sentence: "Contracts belong in a family
-  module of `crates/contracts/src/`, re-exported from lib.rs; a new machine capability follows
+  module of `platform/contracts/src/`, re-exported from lib.rs; a new machine capability follows
   `.ai/patterns/machine-capability.md`. Regenerate artifacts, never edit them."
 
 ### The canonical test
@@ -724,14 +724,14 @@ Checked at main `2b3feec`. Plan B1 fixes all of them unless noted.
   checked, but nothing checks the audit line the hub's hand-routed `read_image` composite writes.
   -> Check that `get_recent_tool_calls` with `tool: "read_image"` shows both calls, the refusal
   with its code.
-- `crates/hub/src/machines/tests/mod.rs`: no `parity` module; only `machine_inspect` has a hub
+- `engine/hub/src/machines/tests/mod.rs`: no `parity` module; only `machine_inspect` has a hub
   Rust test. -> Add `parity.rs` (The mechanical check, step 1).
-- `crates/machine-engine/src/broker/tests/`: no `processes.rs`. `process_list` and
+- `engine/machine-engine/src/broker/tests/`: no `processes.rs`. `process_list` and
   `process_kill` on an account broker have no Rust test, so `operation_process`,
-  `broker_process` and `process_not_found` are unchecked. -> A new `crates/machine-engine/src/broker/tests/processes.rs` on
+  `broker_process` and `process_not_found` are unchecked. -> A new `engine/machine-engine/src/broker/tests/processes.rs` on
   `account_broker`: list a spawned child with a filter, kill it (signal `terminate` on Unix,
   `kill` on Windows), and refuse a job's root, the broker's own PID and an unused PID.
-- `crates/machine-engine/src/broker/system/web.rs` (`read`): no Rust test. -> A new `crates/machine-engine/src/broker/system/web/tests.rs`
+- `engine/machine-engine/src/broker/system/web.rs` (`read`): no Rust test. -> A new `engine/machine-engine/src/broker/system/web/tests.rs`
   against a local server: a page and `next_offset`, a server that ignores Range, 416 at the end,
   `file:` refused `invalid_request`, and `max_bytes` 0 refused.
 

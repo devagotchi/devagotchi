@@ -45,7 +45,7 @@ runtime renders whatever an agent writes.
 
 ## 2. What Devagotchi has today
 
-- File changes go through `crates/machine-engine/src/files/write.rs`: the write policy's
+- File changes go through `engine/machine-engine/src/files/write.rs`: the write policy's
   reach, a new file written beside the target and renamed into place, `expected_sha256`
   against lost updates, at most 32 KiB per call (`MAX_FILE_WRITE_BYTES`).
 - Every change takes the broker's mutation gate (P11, `broker/files.rs`).
@@ -55,7 +55,7 @@ runtime renders whatever an agent writes.
   33.0 MB built with the `dist` profile (fat LTO, one codegen unit, symbols stripped), 9.7 MB
   compressed with xz. The release archive is 10.4 MB for Linux x86_64 and 16.1 MB for
   Windows x86_64.
-- The hub's UI has a font slot (`tokens.json` `font_files`, `crates/hub/src/site/style.rs`)
+- The hub's UI has a font slot (`tokens.json` `font_files`, `engine/hub/src/site/style.rs`)
   that is wired but empty: today the app uses each device's system fonts.
 
 ## 3. The library choice
@@ -209,7 +209,7 @@ share/devagotchi/fonts/
   `core` (and `ui` if chosen) next to the binary.
 - **Installers** put it inside each version's directory, beside the binary (§10), so the
   binary and its pack always switch and roll back together.
-- **Machine self-update** (`crates/link/src/update/mod.rs`) replaces the pack with the binary.
+- **Machine self-update** (`runtime/link/src/update/mod.rs`) replaces the pack with the binary.
   Every font file is listed in the release's `SHA256SUMS` and checked the same way the
   binary is.
 - **The hub's Docker image** carries the pack at `/usr/share/devagotchi/fonts`. The hub
@@ -500,12 +500,12 @@ Package names are checked against each distribution at P10g before the docs ship
 | Place | What |
 |---|---|
 | `crates/pdf` (new, library) | `markdown.rs` (to Typst, escaping, the HTML subset), `world.rs` (the sandboxed `World`), `fonts.rs` (the pack and `fonts.json`, also used by the hub), `edit.rs` and `stamp.rs` (`lopdf` operations), `read.rs` (text, info, outline, fields, images), `raster.rs` (`hayro`), `worker.rs` (the stdin and stdout protocol) |
-| `crates/devagotchi` | the hidden `pdf-worker` verb, the `pdf` and `fonts` verbs, the `pdf` feature |
-| `crates/contracts/src/files.rs` | the inputs, answers, operations, limits and request methods |
-| `crates/machine-engine/src/files/pdf.rs`, `broker/files.rs`, `broker.rs` | resolve and read inputs, the gate, the child with deadline and memory cap, atomic writes, the `pdf` settings |
-| `crates/mcp/src/adapter/file_tools.rs` | both tools locally |
-| `crates/hub/src/machines/files.rs`, `mcp/`, `site/style.rs`, `site/pwa.rs`, `tests/hub_probe.py` | both tools through a hub; serving `/fonts/`; the service worker caching them |
-| `scripts/stage-fonts.sh` (new), `scripts/stage-downloads.sh`, `dist-workspace.toml`, the installers, `crates/link/src/update/mod.rs`, `deploy/compose/Dockerfile` | the pack: source files, `woff2`, archives, installs, updates, the image |
+| `runtime/devagotchi` | the hidden `pdf-worker` verb, the `pdf` and `fonts` verbs, the `pdf` feature |
+| `platform/contracts/src/files.rs` | the inputs, answers, operations, limits and request methods |
+| `engine/machine-engine/src/files/pdf.rs`, `broker/files.rs`, `broker.rs` | resolve and read inputs, the gate, the child with deadline and memory cap, atomic writes, the `pdf` settings |
+| `interfaces/mcp/src/adapter/file_tools.rs` | both tools locally |
+| `engine/hub/src/machines/files.rs`, `mcp/`, `site/style.rs`, `site/pwa.rs`, `tests/hub_probe.py` | both tools through a hub; serving `/fonts/`; the service worker caching them |
+| `scripts/stage-fonts.sh` (new), `scripts/stage-downloads.sh`, `dist-workspace.toml`, the installers, `runtime/link/src/update/mod.rs`, `deploy/compose/Dockerfile` | the pack: source files, `woff2`, archives, installs, updates, the image |
 | `deny.toml`, `LICENSE` notices | BSD-2-Clause; the font licenses |
 
 Each `.rs` file stays at 500 lines or fewer, and the layout ratchet holds.

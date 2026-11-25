@@ -5,7 +5,7 @@
 `devagotchi ai` is a native command in the existing hub library; it needs neither an
 account, email, initialized board, network service nor model subscription. Repository
 [adapters](adapters.md) invoke it with native JSON stdin. The canonical event type lives
-in `crates/contracts/src/lib.rs`; `devagotchi ai schema` generates
+in `platform/contracts/src/lib.rs`; `devagotchi ai schema` generates
 [capture-event.schema.json](capture-event.schema.json). `ai check` detects schema,
 stage and default-policy drift. Runtime validation enforces sizes/consent beyond schema.
 

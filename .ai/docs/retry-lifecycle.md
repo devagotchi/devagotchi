@@ -3,7 +3,7 @@
 What a machine's broker promises about `operation_start` and its `idempotency_key`, whether
 the start comes from `devagotchi mcp`, a hub, or the inspector. It is not an exactly-once
 promise for every tool, command or outside service. The code is
-`crates/machine-engine/src/broker.rs` (`normalize`, `start`), `broker/history.rs` and
+`engine/machine-engine/src/broker.rs` (`normalize`, `start`), `broker/history.rs` and
 `journal.rs`; the tests are `broker/tests/retry.rs`, `broker/tests/lifecycle.rs` and
 `journal/tests.rs`.
 

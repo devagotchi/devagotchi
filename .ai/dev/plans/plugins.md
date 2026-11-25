@@ -17,7 +17,7 @@
   (F11 live activity), [AI sessions](ai-sessions.md) (S6 told when it matters),
   [adapters](../../docs/adapters.md), [agent board §6](../../../docs/agent-board.md).
   Code: `plugins/`, `.claude-plugin/marketplace.json`, `.agents/plugins/marketplace.json`,
-  `crates/hub/src/agenthub/cli.rs` (`plugin_hooks`, `plugin_host`), `crates/hub/src/plugin_tests.rs`.
+  `engine/hub/src/agenthub/cli.rs` (`plugin_hooks`, `plugin_host`), `engine/hub/src/plugin_tests.rs`.
 
 ## The boundary
 

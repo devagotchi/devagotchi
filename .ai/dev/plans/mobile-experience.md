@@ -10,7 +10,7 @@
 - Non-goals: a native app (the installed web app is the app); features that only make sense
   with a keyboard (those are the browser track).
 - Canonical architecture / related plan: [spec P1](../../../docs/spec-phone-app.md),
-  [mobile navigation](mobile-navigation.md), [roadmap](roadmap.md). Code: `crates/hub/src/web/app/`,
+  [mobile navigation](mobile-navigation.md), [roadmap](roadmap.md). Code: `engine/hub/src/web/app/`,
   `web/assets/app.js`, `web/hub.css`.
 
 ## Rules every milestone keeps

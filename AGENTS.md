@@ -33,13 +33,17 @@ from an unrelated passing test.
 - Extend existing owners. Broker owns execution; hub owns coordination; no second scheduler.
   Hosted accounts/boards use Postgres; ClickHouse is analytical, not coordination authority.
   Local journals/offline queues may use SQLite; never fall back locally for a bound board.
-- One binary; behavior goes in its libraries. No network in `mcp`; the machine engine makes no
+- One wrapper binary that starts and supervises the product's sub-processes (hub, broker, link,
+  AgentHub), bundled for clean deployment in Docker, containers and VMs
+  ([operator rules](.ai/operator-rules.md), "What is being built" 4). Code lives in layers:
+  `platform/`, `engine/`, `interfaces/`, `runtime/`, `agenthub/`, `apps/`
+  ([layout](.ai/patterns/layout.md)). No network in `mcp`; the machine engine makes no
   request on its own, and fetches a URL only for `read_url`, which only a broker running as its
   account allows (deny.toml says which crates may link an HTTP client, and why).
   Public OSS code must not contain private WardenMesh deployment code or secrets.
-- Platform execution/IPC backends and unsafe code remain confined to `crates/machine-engine/src/execution/platform/*`
-  and `crates/ipc/src/{unix,windows}*`, with real-OS tests. No unsafe shortcut elsewhere.
-- Contracts belong in a family module of `crates/contracts/src/`, re-exported from `lib.rs`;
+- Platform execution/IPC backends and unsafe code remain confined to `engine/machine-engine/src/execution/platform/*`
+  and `platform/ipc/src/{unix,windows}*`, with real-OS tests. No unsafe shortcut elsewhere.
+- Contracts belong in a family module of `platform/contracts/src/`, re-exported from `lib.rs`;
   a new machine capability follows `.ai/patterns/machine-capability.md`, a link change
   `.ai/patterns/link.md`. Regenerate artifacts, never edit generated schemas/desktop types.
   Follow existing formatting, localization and helpers.

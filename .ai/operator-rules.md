@@ -67,11 +67,11 @@ Reported under rule 3. None of these has been changed; each waits for the operat
 | Where | What it says | What this page says |
 |---|---|---|
 | `AGENTS.md`, Implementation | "One binary; behavior goes in its libraries." | One wrapper with multiple sub-processes |
-| `crates/agenthub` (pin of `devagotchi/agenthub`) | A Rust rewrite, compiled into the hub as a library | A clone of AgentHub, in its own repo, pulled in |
-| `crates/hub/src/web/app/agenthub/` | AgentHub's board pages live inside the hub | AgentHub is its own thing |
+| `agenthub` (pin of `devagotchi/agenthub`) | A Rust rewrite, compiled into the hub as a library | A clone of AgentHub, in its own repo, pulled in |
+| `engine/hub/src/web/app/agenthub/` | AgentHub's board pages live inside the hub | AgentHub is its own thing |
 | `.ai/dev/plans/absorb-preserved-sources.md` | Absorption means re-authoring the Go source's behavior in Rust | The old code is merged one by one |
-| `crates/hub/src/web/` | HTML built in Rust strings; hand-written CSS with no token source | Style Dictionary tokens applied to ColdLight components |
-| `crates/hub` | Machines, AgentHub, connections and identity compiled into one crate | A hub with spokes |
+| `engine/hub/src/web/` | HTML built in Rust strings; hand-written CSS with no token source | Style Dictionary tokens applied to ColdLight components |
+| `engine/hub` | Machines, AgentHub, connections and identity compiled into one crate | A hub with spokes |
 
 ## Not decided here
 

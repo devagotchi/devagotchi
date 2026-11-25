@@ -4,7 +4,7 @@ How the hub knows who someone is, how they sign in, and how the hub is configure
 every new setting, every new sign-in provider, and every change to sessions, cookies, the origin
 check or the hub's own OAuth server.
 
-It covers `crates/hub/src/config/`, `identity/`, `login/`, `ops/hub_settings.rs`, and the web
+It covers `engine/hub/src/config/`, `identity/`, `login/`, `ops/hub_settings.rs`, and the web
 files for sign-in and `/admin`: `web/{providers,provider_apply,sign_in,sign_in_cards,passkeys,
 session,sessions,oauth,device,email,claim,nomen_login,hosted,hub_settings*}.rs`, the workflow
 cookies in `web/workflow.rs` and the origin check in `web/approvals.rs`.
@@ -32,28 +32,28 @@ All ranges below were re-read at main 2b3feec.
 
 **Adding a live setting: the live settings catalog** (hub-settings M9).
 
-- `crates/hub/src/config/live/catalog.rs`:
+- `engine/hub/src/config/live/catalog.rs`:
   - `Setting` (:80-91) and `SETTINGS` (:98-179): one row per setting with key, group, label,
     help, kind with range and unit, and env.
   - `DEPLOY_TIME` (:183-254): every other key, with why.
   - `SPLIT_SECTIONS` (:259-265) and `PAGE_ONLY` (:269).
   - `Setting::find` and `Setting::parse` (:288-308).
-- `crates/hub/src/config/live.rs`:
+- `engine/hub/src/config/live.rs`:
   - `LiveSettings` (:30-131) with `get`, `set` and `with_saved`. A pinned key is skipped (:119).
     A saved value out of range is logged and left out (:122-127).
   - `Pinned::from` (:136-163): what the file or the environment set.
   - `Live` (:168-200): an `Arc<RwLock>`, read when the decision is made.
-- `crates/hub/src/web/hub_settings_live.rs`: `card` (:49-104) disables pinned fields and says
+- `engine/hub/src/web/hub_settings_live.rs`: `card` (:49-104) disables pinned fields and says
   where to change them; `read_form` (:125-147) takes all of a card or none and gives every
   reason; `save` (:149-206).
-- `crates/hub/src/ops/hub_settings.rs`: `save_hub_settings` (:33-69) writes the rows and one
+- `engine/hub/src/ops/hub_settings.rs`: `save_hub_settings` (:33-69) writes the rows and one
   `settings.changed` event per key on the home tenant, in one transaction. `apply_saved`
   (:159-164) is the same function at start (`serve/mod.rs:89`) and after a save.
 
 Why it is the best: one table drives the page, validation, persistence, precedence and the
 deploy-time map, and a test fails on a key in neither list.
 
-**Adding a config section: `crates/hub/src/config/analytics.rs`.** Module doc with a jsonc
+**Adding a config section: `engine/hub/src/config/analytics.rs`.** Module doc with a jsonc
 example (:5-10); `pub const ANALYTICS_ENV` and `RETENTION_ENV` (:20-22);
 `#[serde(deny_unknown_fields, default)]` plus `Default` (:24-39); `check()` names the dotted key
 and range (:42-47); `from_env` takes the injected env and treats blank as unset (:50-65); an
@@ -360,7 +360,7 @@ Two checks exist. `every_config_key_has_a_page_or_is_listed_as_set_at_deploy`
 a setting missing from `get` or `set`. The checks below are to be written. None has been
 compiled or run. Each lands green together with the fix it guards (G12).
 
-1. **C7**, in `crates/hub/src/config/live/tests.rs`. It is pure (no Postgres). It parses a base
+1. **C7**, in `engine/hub/src/config/live/tests.rs`. It is pure (no Postgres). It parses a base
    config with each number setting at min-1, min, max and max+1:
 
    ```rust
@@ -388,8 +388,8 @@ compiled or run. Each lands green together with the fix it guards (G12).
 
    At min-1 = -1 a `u32` field fails to deserialize, which correctly counts as refused.
 
-2. **Source scans** in a new `crates/hub/src/identity/tests/conventions.rs`, declared from
-   `identity/tests/mod.rs`. It walks `crates/hub/src/**/*.rs` with the walker lifted from
+2. **Source scans** in a new `engine/hub/src/identity/tests/conventions.rs`, declared from
+   `identity/tests/mod.rs`. It walks `engine/hub/src/**/*.rs` with the walker lifted from
    `site/brand_tests.rs` (G12), and skips `tests.rs`, `*_tests.rs` and `tests/`.
    - `every_cookie_has_a_host_prefixed_twin` (K1): every literal matching `"(dg|dvg)_[a-z_]+"`
      needs a `"__Host-<same>"` literal in the same file. Today it matches the 9 cookie literals
@@ -405,7 +405,7 @@ compiled or run. Each lands green together with the fix it guards (G12).
      each entry with its reason, and exactly one occurrence in `serve/mod.rs`. It fails today on
      `web/providers.rs`, `web/email.rs`, `offers/nomen.rs`, `agenthub/issue_lifecycle/mod.rs`,
      and on the two occurrences in `serve/mod.rs`.
-3. **K5** will be held by hub-pages' `crates/hub/src/web/tests/forms.rs`, which does not exist
+3. **K5** will be held by hub-pages' `engine/hub/src/web/tests/forms.rs`, which does not exist
    yet and lands with the K5 fix: every non-exempt POST answers 403 to a cross-site request and
    to one with neither header, and only one function reads both headers. Pair it with an HTTP
    test that a POST to `/admin/settings/passwords` with no `Origin` and no `Sec-Fetch-Site`
@@ -438,29 +438,29 @@ Re-verified at main 2b3feec. Line numbers are given where they help find the spo
 
 ### C1: the environment is read at an entry point
 
-- `crates/hub/src/serve/mod.rs` (`run`): reads the ClickHouse password with `std::env::var`
+- `engine/hub/src/serve/mod.rs` (`run`): reads the ClickHouse password with `std::env::var`
   (:192) and builds a second `env::var` closure for `Sink::new` (:224) -> build
   `let env = |name: &str| std::env::var(name).ok();` once, use `env(CLICKHOUSE_PASSWORD_ENV)`,
   and pass `&env` to `Providers::from_config` (which hands it to `Mailer::from_config`),
   `Offers::from_config`, `IssueLifecycleStore::from_config` and every `Sink::new`.
-- `crates/hub/src/web/providers.rs` (`Providers::from_config`, :133, :139): reads the client
+- `engine/hub/src/web/providers.rs` (`Providers::from_config`, :133, :139): reads the client
   secret and client id variables itself, while `ProviderConfig::check` read them through the
   injected env, so the two reads can disagree -> take `env` and use `env(v).ok_or_else(..)`.
-- `crates/hub/src/web/email.rs` (`Mailer::from_config`, :92, :98): the same for the SMTP URL
+- `engine/hub/src/web/email.rs` (`Mailer::from_config`, :92, :98): the same for the SMTP URL
   and password, against `EmailConfig::check` -> the same rewrite. Its other caller,
-  `crates/hub/src/cli/mod.rs` (`Command::CheckMail`, `devagotchi hub check-mail`), then passes
+  `engine/hub/src/cli/mod.rs` (`Command::CheckMail`, `devagotchi hub check-mail`), then passes
   its own `|name| std::env::var(name).ok()`, which is why `cli/mod.rs` is on the C1 list.
-- `crates/hub/src/offers/nomen.rs` (`Nomen::from_config`, :50): reads the provisioning token ->
+- `engine/hub/src/offers/nomen.rs` (`Nomen::from_config`, :50): reads the provisioning token ->
   take `env`, passed down from `Offers::from_config(&config, accounts, &env)`.
-- `crates/hub/src/agenthub/issue_lifecycle/mod.rs` (`IssueLifecycleStore::from_config`, :29):
+- `engine/hub/src/agenthub/issue_lifecycle/mod.rs` (`IssueLifecycleStore::from_config`, :29):
   reads the webhook secret -> take `env`.
-- `crates/hub/src/identity/tests/providers.rs` (`world`): every provider secret is a `*_file`,
+- `engine/hub/src/identity/tests/providers.rs` (`world`): every provider secret is a `*_file`,
   so the `*_env` path has no test -> add one provider test that injects the client secret
   through the closure.
 
 ### C4: `hub_settings` holds only `SETTINGS` keys
 
-- `crates/hub/src/ops/hub_settings.rs` (`MAIL_KEYS`, `stored_mail`, `save_mail`): five `mail.*`
+- `engine/hub/src/ops/hub_settings.rs` (`MAIL_KEYS`, `stored_mail`, `save_mail`): five `mail.*`
   rows live in `hub_settings`. None passes `Setting::find`, so `LiveSettings::with_saved` skips
   them, and they are parsed by hand. `unwrap_or(5)` in `stored_mail` restates
   `default_per_address` (G3) and turns a damaged row into a default (G4) -> a `mail_settings`
@@ -471,14 +471,14 @@ Re-verified at main 2b3feec. Line numbers are given where they help find the spo
 
 ### C5: the file wins
 
-- `crates/hub/src/web/hub_settings.rs` (`save_sign_in`, the `"new"` branch, :306-314): refuses
+- `engine/hub/src/web/hub_settings.rs` (`save_sign_in`, the `"new"` branch, :306-314): refuses
   a guided name or a stored name, but not a name the file's `auth.providers` uses. Saving `okta`
   when the file names `okta` makes `provider_apply::overlay` drop the file's provider without a
   word. Sinks refuse this case with 409 -> add `Providers::config_names()` and refuse with 409
   "This hub's configuration has a sign-in of that name; choose another."; add the case to
   `web/hub_settings_tests.rs`. The file is at 496 of 500 lines, so move `save_sign_in` into its
   own file first rather than grow it (layout rule 6).
-- `crates/hub/src/web/provider_apply.rs` (`overlay`) with `crates/hub/src/web/sign_in_cards.rs`
+- `engine/hub/src/web/provider_apply.rs` (`overlay`) with `engine/hub/src/web/sign_in_cards.rs`
   (`sign_in_card`): for the four guided names a saved row replaces the file's provider and its
   secret. The exception is not written down anywhere the plan or `/admin` shows -> record it in
   `.ai/dev/plans/hub-settings.md` and in `DEPLOY_TIME`'s `auth` line
@@ -487,7 +487,7 @@ Re-verified at main 2b3feec. Line numbers are given where they help find the spo
 
 ### C7: `SETTINGS` and `check()` ranges agree
 
-- `crates/hub/src/config/tenancy.rs` (`TenancyConfig::check`), `config/workflows.rs`
+- `engine/hub/src/config/tenancy.rs` (`TenancyConfig::check`), `config/workflows.rs`
   (`WorkflowsConfig::check`) and `config/analytics.rs` (`AnalyticsConfig::check`) against
   `config/live/catalog.rs` (`SETTINGS`): seven ranges are written twice (`starts_per_hour`,
   `max_unsecured`, `unsecured.machines`, `unsecured.clients`, `unsecured.idle_days`,
@@ -498,7 +498,7 @@ Re-verified at main 2b3feec. Line numbers are given where they help find the spo
 
 ### P8: contact discovery before saving
 
-- `crates/hub/src/web/hub_settings.rs` (`save_sign_in`): an OIDC provider is saved without
+- `engine/hub/src/web/hub_settings.rs` (`save_sign_in`): an OIDC provider is saved without
   fetching discovery, so a typo or an issuer mismatch fails only at a person's sign-in. Mail and
   ClickHouse check first. The test in `web/hub_settings_tests.rs` (`run`) saves
   `https://id.example.com`, which does not answer -> for an enabled `oidc` row, build the
@@ -510,8 +510,8 @@ Re-verified at main 2b3feec. Line numbers are given where they help find the spo
 
 ### P5 and P3: linking by email
 
-- `crates/hub/src/web/providers.rs` (`finish`, :692) with
-  `crates/hub/src/identity/accounts/identities.rs` (`sign_in_identity_in`, the email branch at
+- `engine/hub/src/web/providers.rs` (`finish`, :692) with
+  `engine/hub/src/identity/accounts/identities.rs` (`sign_in_identity_in`, the email branch at
   :259-282, and the module doc): only `proven.provider == "google"` gets the link page, and only
   for a password account. Any other provider whose verified email another sign-in already
   carries is linked to the first such account without proof -> drop the provider condition;
@@ -525,28 +525,28 @@ Re-verified at main 2b3feec. Line numbers are given where they help find the spo
 
 ### P3: no provider name in flow code
 
-- `crates/hub/src/web/providers.rs` (`Providers::buttons`, :208): `provider.config.name() ==
+- `engine/hub/src/web/providers.rs` (`Providers::buttons`, :208): `provider.config.name() ==
   "nomen"` decides whether `SHIPPIN_NOTICE` shows, while the nomen `Guide` already carries
   `notice: Some(SHIPPIN_NOTICE)` -> add `sign_in_cards::notice(name) -> Option<&'static str>`
   and render it when `Some`.
-- `crates/hub/src/web/passkeys.rs` (`HubSignIn::provider_names`) against
+- `engine/hub/src/web/passkeys.rs` (`HubSignIn::provider_names`) against
   `web/providers.rs` (`Providers::buttons`): both sort by `sign_in_rank` and build the label
   -> add `Providers::offered(&self, site) -> Vec<(String, String)>`; `buttons` maps it to HTML
   and `provider_names` returns it.
 
 ### P7: guidance never prefills an issuer
 
-- `crates/hub/src/web/sign_in_cards.rs` (`Guide::issuer`): the field's doc says the issuer is
+- `engine/hub/src/web/sign_in_cards.rs` (`Guide::issuer`): the field's doc says the issuer is
   "filled in for the person to keep or change", but every row is `None` and P7 forbids a
   prefill (G11) -> drop the field, or state that it stays empty.
 
 ### K1: one cookie helper, `__Host-` everywhere
 
-- `crates/hub/src/web/sign_in.rs` (`FRESH`, `fresh_cookie`, `fresh`): `dvg_fresh` has no
+- `engine/hub/src/web/sign_in.rs` (`FRESH`, `fresh_cookie`, `fresh`): `dvg_fresh` has no
   `__Host-` name and a different prefix, against the `web/mod.rs` doc and MDN -> `__Host-dg_fresh`
   on https and `dg_fresh` on loopback, through the helper below; update
-  `crates/hub/src/web/tests/mod.rs` and `tests/operator_browser.py`, which read `dvg_fresh`.
-- `crates/hub/src/web/passkeys.rs` (`HubSignIn::session_cookie`, `challenge_cookie`, `cookie`),
+  `engine/hub/src/web/tests/mod.rs` and `tests/operator_browser.py`, which read `dvg_fresh`.
+- `engine/hub/src/web/passkeys.rs` (`HubSignIn::session_cookie`, `challenge_cookie`, `cookie`),
   `web/nomen_login.rs` (`session_cookie`, `login_cookie`, `cookie`), `web/workflow.rs`
   (`code_cookie`, `browser_cookie`, `cookie`) and `web/providers.rs` (`signin_cookie`,
   `link_cookie`): eight hand-written name pairs and three identical `Set-Cookie` builders ->
@@ -555,7 +555,7 @@ Re-verified at main 2b3feec. Line numbers are given where they help find the spo
 
 ### K2: one seal and unseal
 
-- `crates/hub/src/web/providers.rs` (`link_page` and `link`): the `Waiting` cookie repeats the
+- `engine/hub/src/web/providers.rs` (`link_page` and `link`): the `Waiting` cookie repeats the
   MAC seal and unseal inline, beside `seal` and `unseal` for `Started` -> generic
   `seal<T: Serialize>(hub, purpose, value)` and
   `unseal<T: DeserializeOwned>(hub, purpose, cookie, ttl, issued)`. `Started` uses
@@ -563,7 +563,7 @@ Re-verified at main 2b3feec. Line numbers are given where they help find the spo
 
 ### K4: a new session on a privilege change
 
-- `crates/hub/src/web/session.rs` (`open_and_return`): when an unsecured account is secured by
+- `engine/hub/src/web/session.rs` (`open_and_return`): when an unsecured account is secured by
   linking a provider, the same session goes on, and
   `identity/tests/providers.rs` (`github_secures_the_account_made_on_first_connect`) asserts
   it -> pass `secured: bool` (the account was provisional before the link); when it is true,
@@ -572,16 +572,16 @@ Re-verified at main 2b3feec. Line numbers are given where they help find the spo
 
 ### K5: one strict origin check
 
-- `crates/hub/src/web/approvals.rs` (`same_origin`, wrapped by `web::from_this_hub` in
+- `engine/hub/src/web/approvals.rs` (`same_origin`, wrapped by `web::from_this_hub` in
   `web/mod.rs`): returns true when neither `Sec-Fetch-Site` nor `Origin` is sent. More than 30
   handlers in `web/` call it directly, among them the `/admin` saves, `POST /auth/password`
   (`web/sign_in.rs`) and the link page (`providers::link`); `tenancy/orgs/api/mod.rs` calls it
   through `from_this_hub` -> make `from_this_hub` strict as K5 states, run it as one layer with
   `EXEMPT`, and delete `approvals::same_origin` and its imports.
-- `crates/hub/src/web/passkeys.rs` (`HubSignIn::from_own_page`): a second helper with another
+- `engine/hub/src/web/passkeys.rs` (`HubSignIn::from_own_page`): a second helper with another
   rule (it always requires `Origin`), used by `web/passkeys.rs`, `web/claim.rs`,
   `web/device.rs` and `web/oauth.rs` -> call `from_this_hub`.
-- `crates/hub/src/web/hub_settings.rs` (`save_sign_in`, `save_analytics`),
+- `engine/hub/src/web/hub_settings.rs` (`save_sign_in`, `save_analytics`),
   `web/hub_settings_live.rs` (`save`), `web/hub_settings_mail.rs` (`save`),
   `web/hub_settings_sinks.rs` (`save`, `remove`): each checks the owner first and the origin
   second, inside the handler -> the layer refuses first (step 1 of the record recipe); the
@@ -589,7 +589,7 @@ Re-verified at main 2b3feec. Line numbers are given where they help find the spo
 
 ### Record recipe step 8: the event, tested
 
-- `crates/hub/src/web/hub_settings_tests.rs` (`run`): `save_sign_in` writes
+- `engine/hub/src/web/hub_settings_tests.rs` (`run`): `save_sign_in` writes
   `sign_in.configured`, but no test asserts the event or that the secret is absent from it. The
   mail and live tests do -> after the GitHub save, read `hub.accounts.events(&home, 50)`, assert
   a `sign_in.configured` event with detail `github: on`, and assert that no event detail holds
@@ -597,7 +597,7 @@ Re-verified at main 2b3feec. Line numbers are given where they help find the spo
 
 ### Provider recipe: a refusal test for every ID-token check
 
-- `crates/hub/src/identity/tests/providers.rs` (`a_sign_in_that_does_not_check_out_is_refused`,
+- `engine/hub/src/identity/tests/providers.rs` (`a_sign_in_that_does_not_check_out_is_refused`,
   with `Person`, `oidc_token` and `discovery`): covers wrong audience, missing cookie, swapped
   state, forged MAC and unknown provider, but not wrong `iss`, expired `exp`, wrong `nonce`, or a
   discovery issuer mismatch -> add `Person` fields `wrong_issuer`, `expired` and `wrong_nonce`,
@@ -606,12 +606,12 @@ Re-verified at main 2b3feec. Line numbers are given where they help find the spo
 
 ### Layout and front doors
 
-- `crates/hub/src/config/live.rs` beside `config/live/` (layout rule 2): one module, two homes
-  -> `git mv crates/hub/src/config/live.rs crates/hub/src/config/live/mod.rs`; `mod catalog;`
+- `engine/hub/src/config/live.rs` beside `config/live/` (layout rule 2): one module, two homes
+  -> `git mv engine/hub/src/config/live.rs engine/hub/src/config/live/mod.rs`; `mod catalog;`
   and `mod tests;` already resolve.
-- `crates/hub/src/config/live.rs` (module doc, line 1): cites "hub-settings M7", but the plan's
+- `engine/hub/src/config/live.rs` (module doc, line 1): cites "hub-settings M7", but the plan's
   M7 is Network providers and the live settings are M9 (G11) -> say M9.
-- `crates/hub/src/config/mod.rs` and `crates/hub/src/login/mod.rs` (front doors, layout rule 7):
+- `engine/hub/src/config/mod.rs` and `engine/hub/src/login/mod.rs` (front doors, layout rule 7):
   neither has Owns / Serves / Settings / Depends on -> `config/mod.rs`: Owns nothing in Postgres
   (reads the file and the env); Serves `HubConfig`, `Live` and `Pinned`; Settings: the file, its
   env overrides, and `SETTINGS` against `DEPLOY_TIME`; Depends on site, store, machines,
@@ -619,18 +619,18 @@ Re-verified at main 2b3feec. Line numbers are given where they help find the spo
   `login/mod.rs`: Owns `account.json` (0600) in the config directory; Serves
   `devagotchi login`, `logout` and `whoami`; Settings: `DEVAGOTCHI_HUB` and `--hub`; Depends on
   the hub's RFC 8414 metadata.
-- `crates/hub/src/ops/hub_settings.rs` and `web/hub_settings{,_live,_mail,_owner,_sinks}.rs`
+- `engine/hub/src/ops/hub_settings.rs` and `web/hub_settings{,_live,_mail,_owner,_sinks}.rs`
   (layout rule 8): `ops/mod.rs` Owns `hub_settings`, but `hub_` is the hub-settings domain ->
   with S8, a `settings/` domain: `mod.rs` (Owns `hub_settings`, plus `mail_settings` after the
   C4 fix; Serves `/admin` and `/admin/*`; Settings: `SETTINGS`; Depends on config, identity,
   notify, ops), `stored.rs` from `ops/hub_settings.rs`, and `web/`. Remove `hub_settings` from
   the Owns of `ops/mod.rs`.
-- `crates/hub/src/web/{passkey_tests,claim_tests,hub_settings_tests,hub_settings_live_tests,hub_settings_mail_tests,hub_settings_sinks_tests}.rs`
+- `engine/hub/src/web/{passkey_tests,claim_tests,hub_settings_tests,hub_settings_live_tests,hub_settings_mail_tests,hub_settings_sinks_tests}.rs`
   (G10): six test files beside the code -> move once, with S8: `passkey_tests.rs` (split by
   ceremony) and `claim_tests.rs` to `identity/web/tests/`, the `hub_settings*_tests.rs` to
   `settings/web/tests/{providers,live,mail,sinks}.rs`. No interim move.
 - Over the 500-line cap (layout rule 6), held at their current size by
-  `crates/devagotchi/tests/layout/oversize.txt`: `web/providers.rs` (937), `web/passkeys.rs`
+  `runtime/devagotchi/tests/layout/oversize.txt`: `web/providers.rs` (937), `web/passkeys.rs`
   (1112), `web/passkey_tests.rs` (1534), `web/workflow.rs` (1086), `web/oauth.rs` (751),
   `web/hub_settings_tests.rs` (542), `identity/auth.rs` (686), `identity/nomen/mod.rs` (696),
   `identity/nomen/tests/mod.rs` (711), `identity/accounts/oauth/mod.rs` (647),

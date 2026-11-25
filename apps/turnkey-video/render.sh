@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Renders the setup video into out/turnkey.mp4 (for posts and docs: the landing page shows the
 # same steps as an interactive walkthrough instead, content/landing.json hero.walkthrough), and
-# its step-6 frame as the built-in site's link-preview picture, crates/hub/site/default/assets/preview.png.
+# its step-6 frame as the built-in site's link-preview picture, engine/hub/site/default/assets/preview.png.
 #
 #   apps/turnkey-video/render.sh            # CRF=14 by default: about 1.7 MB
 #
@@ -11,7 +11,7 @@
 set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
 out="$here/out"
-assets="$here/../../crates/hub/site/default/assets"
+assets="$here/../../engine/hub/site/default/assets"
 mkdir -p "$out"
 cd "$here"
 npm ci --no-audit --no-fund

@@ -15,6 +15,20 @@ prerelease tag would not move the `:latest` image. The project stage stays alpha
 install, not a production promotion. The gap that is still open is in
 [.ai/docs/desktop-commander-parity.md](.ai/docs/desktop-commander-parity.md).
 
+### The workspace is laid out in layers
+
+- The crates moved out of `crates/` into layers, with no behaviour change:
+  - `platform/`: `contracts`, `store`, `ipc`;
+  - `engine/`: `machine-engine`, `hub`, `kernel`, `connectors`;
+  - `interfaces/`: `mcp`;
+  - `runtime/`: `devagotchi`, `link`.
+- AgentHub's submodule moved from `crates/agenthub` to `agenthub/`. After pulling, run
+  `git submodule sync && git submodule update --init` once.
+- `AGENTS.md` describes the runtime as one wrapper binary that starts and supervises the
+  sub-processes. Layout rule 0 names the layers.
+- `.ai/dev/plans/program.md` is now the one living plan: every operator instruction, the
+  target structure and the order of the work.
+
 ### Account-backed file access
 
 - Ordinary file tools, search, batch and image reads share live grant selection and
@@ -50,7 +64,7 @@ install, not a production promotion. The gap that is still open is in
   and relative paths, and deadlines up to a day (a `run` defaults to an hour). The gap that
   is still open is in the parity doc. `write_pdf` is not implemented.
 - A fresh `git clone` needs `git submodule update --init` before `cargo build`. AgentHub is
-  the `crates/agenthub` submodule.
+  the `agenthub` submodule.
 - A project's own board (`devagotchi board init`, no hub bound) is in Postgres: set
   `DEVAGOTCHI_BOARD_STORAGE_URL` to a `postgres://` URL, or pass `board init --storage URL`
   (kept in `.devagotchi/config.json`, refused with a password in it). With neither, every
@@ -170,7 +184,7 @@ install, not a production promotion. The gap that is still open is in
   on. `board_claim` no longer claims to be idempotent; `board_settings` says it is
   destructive. No tool schema holds a boolean where a schema goes: the MCP TypeScript SDK
   refused the whole tool list over the `true` schemars writes for a ticket's `progress`.
-- AgentHub's store is one file per subject (`crates/agenthub/src/hosted/`), and the hub runs no
+- AgentHub's store is one file per subject (`agenthub/src/hosted/`), and the hub runs no
   SQL on board tables (`hosted::registry`).
 
 ### Every commit on main is built again (B2a)
@@ -180,7 +194,7 @@ install, not a production promotion. The gap that is still open is in
   those commits exists. Main now builds, attests and pushes its hub image (`:main`,
   `:sha-<short>`) on every commit again; only a tag publishes a release; pull requests still
   skip it. Main's archives are attested too, so `scripts/fetch-main-build.sh` accepts them.
-  `crates/devagotchi/tests/release_builds.rs` fails if any job main needs can be skipped.
+  `runtime/devagotchi/tests/release_builds.rs` fails if any job main needs can be skipped.
 
 ### The machine link notices a hub that went away, and has one door (B2)
 
@@ -203,14 +217,14 @@ install, not a production promotion. The gap that is still open is in
   target column.
 - **Checks:** a golden list of every frame a released machine sends, pinned signing bytes,
   a socket test against the real `/link` route, fake-hub tests on the link, and
-  `crates/devagotchi/tests/link_protocol.rs`, which fails on a wildcard frame arm, a shared
+  `runtime/devagotchi/tests/link_protocol.rs`, which fails on a wildcard frame arm, a shared
   word written by hand, or a personal path in a join script or installer.
 
 ### The Desktop Commander tools follow one pattern (B1)
 
 - **Every machine tool follows the same path:** contract, broker, local tool, hub tool
   (`.ai/patterns/machine-capability.md`).
-  - Each tool's description is written once (`crates/contracts/src/describe.rs`), so the
+  - Each tool's description is written once (`platform/contracts/src/describe.rs`), so the
     local and hub tools say the same thing.
   - Defaults and bounds are defined once in the contracts.
   - A parity test fails if the two surfaces drift apart.
@@ -235,7 +249,7 @@ install, not a production promotion. The gap that is still open is in
   - The probes now call every local tool, including search, config, processes, `read_url`
     and terminal resize.
   - `tests/mcp_protocol.py` checks the complete tool catalog and runs from `tests/e2e.py`.
-- **The link frames** moved to `crates/contracts/src/link/`. The import paths are the same.
+- **The link frames** moved to `platform/contracts/src/link/`. The import paths are the same.
 
 ### The Docker line leaves a running machine (increment 209)
 
@@ -463,9 +477,9 @@ install, not a production promotion. The gap that is still open is in
   the database keeps tenants apart) and the steps to move the hub to a Postgres you already run.
 
 ### AgentHub is its own crate (increment 137)
-- `crates/agenthub` (`devagotchi-agenthub`) holds the board: tickets, leases, workflow,
+- `agenthub` (`devagotchi-agenthub`) holds the board: tickets, leases, workflow,
   approvals, notes that reach agents, the hosted Postgres board, GitHub issue records and the
-  ClickHouse export. `crates/store` (`devagotchi-store`) is the database it shares with the hub,
+  ClickHouse export. `platform/store` (`devagotchi-store`) is the database it shares with the hub,
   with the migrations. The hub serves AgentHub through the crate's public API; nothing changes
   for anyone running it. Next: AgentHub's own migrations, then a Postgres and ClickHouse of
   your own set from `/admin` (plan: `.ai/dev/plans/agenthub-crate.md`).
@@ -485,7 +499,7 @@ install, not a production promotion. The gap that is still open is in
   issuer), sealed, and offered at once without a restart.
 
 ### The phone app moves with a swipe (increments 131 and 132)
-- AgentHub lives in one place: `crates/hub/src/agenthub/` (the board, its tools, inbox,
+- AgentHub lives in one place: `engine/hub/src/agenthub/` (the board, its tools, inbox,
   approvals, GitHub issues) and `web/app/agenthub/` (its screens).
 - Tabs: Overview, AgentHub, Approvals, Machines, You. Swipe left or right on a tab's page to
   move to the next or previous one; the page slides that way. Tapping a tab still works.
@@ -514,7 +528,7 @@ install, not a production promotion. The gap that is still open is in
 - Every client on `/connect` that takes a bearer header has its configuration with a key.
 
 ### Connectors for 17 AI clients, from one catalog (increment 124)
-- `crates/connectors`: one JSON file per client under `catalog/<vendor>/<id>.json`, one schema generated
+- `engine/connectors`: one JSON file per client under `catalog/<vendor>/<id>.json`, one schema generated
   from its types (`schemas/connector.v1.schema.json`), one renderer. Claude Code, Claude Desktop, Claude on
   the web, ChatGPT, Codex, Cursor, VS Code, Windsurf, Gemini CLI, Grok, OpenRouter, Zed, Cline, Continue,
   Goose, Junie and Hermes Agent.
@@ -1127,7 +1141,7 @@ install, not a production promotion. The gap that is still open is in
   code: the landing page, `/docs`, `/privacy`, `/terms`, `/support`, the bar and every page's
   title, the sign-in email, the passkey prompt, the installed app's manifest, icon and
   notifications, the board's getting-started ticket, the terminal's client name, and the MCP
-  server's name and instructions. `crates/hub/src` holds no brand, domain or operator; a test
+  server's name and instructions. `engine/hub/src` holds no brand, domain or operator; a test
   walks its modules and fails on one (wire names such as `X-Devagotchi-Seat` excepted).
 - A site directory (`site.dir` in the config, or `DEVAGOTCHI_SITE_DIR`): `site.json`
   (product, operator, links, sign-in order and labels, the landing page's sections in order
@@ -1144,7 +1158,7 @@ install, not a production promotion. The gap that is still open is in
   out; one that does not is refused while the site it had stays. `devagotchi hub check-site
   DIR` runs the check alone. The stylesheet and manifest are revalidated (`no-cache`, ETag)
   instead of cached for an hour.
-- Today's content is the built-in site (`crates/hub/site/default/`), compiled in: with no
+- Today's content is the built-in site (`engine/hub/site/default/`), compiled in: with no
   directory the hub looks and reads as before. New: a Plans section rendered from `plans`
   (the built-in site has the Free plan only, D21, and the section off), a Services section,
   sections of a site's own, and radius tokens. The setup video moved to the built-in site.
@@ -1217,7 +1231,7 @@ install, not a production promotion. The gap that is still open is in
   versions below 0.38, which both link to the same SQLite.
 
 ### The landing page (increment 45)
-- `/` signed out is Devagotchi's product page on every hub (`crates/hub/src/web/landing.rs`):
+- `/` signed out is Devagotchi's product page on every hub (`engine/hub/src/web/landing.rs`):
   the hero with a diagram of AI apps, the hub, the phone and machines dialing out; how it
   works in three steps; Desktop Commander side by side, each of its facts cited to a section
   of `docs/desktop-commander-teardown.md` (commit c2b8795) or the plan's §14; features; this

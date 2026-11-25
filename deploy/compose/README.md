@@ -26,11 +26,11 @@ On the box,
 `docker compose exec hub devagotchi hub owner --state-dir /var/lib/devagotchi --config
 /etc/devagotchi/hub.json` prints a one-time owner link instead; it can make a passkey or set
 a local email and password, and later add passkeys
-(`crates/hub/README.md`).
+(`engine/hub/README.md`).
 
 AI clients connect to `https://<DEVAGOTCHI_DOMAIN>/mcp`: they register themselves, you approve
 each one once while signed in, and the hub issues and checks their tokens itself
-(`crates/hub/README.md`, "AI clients sign in with the hub itself"). From a terminal,
+(`engine/hub/README.md`, "AI clients sign in with the hub itself"). From a terminal,
 `devagotchi login --hub https://<DEVAGOTCHI_DOMAIN>` shows a link and a code; approve it on
 the hub's `/device` page, signed in to your account, and the CLI (and `devagotchi mcp --hub`)
 works as your account.
@@ -137,7 +137,7 @@ GitHub expects a response within ten seconds. This ingress bounds the projection
 transaction to eight seconds and acknowledges only after commit; a timeout or storage
 failure returns a retryable 503. Check GitHub's delivery log and explicitly redeliver
 failed deliveries using the original delivery identity. GitHub does not promise automatic
-retry. See the [API and consistency contract](../../crates/hub/README.md#issue-context).
+retry. See the [API and consistency contract](../../engine/hub/README.md#issue-context).
 
 ## On a server, kept current by itself
 
@@ -212,7 +212,7 @@ In a Proxmox VE container, `deploy/proxmox/hub-up.sh` runs it for you (`deploy/p
 ### The hub's site
 
 What the hub's pages say and look like (its name, copy, colours, pictures, the sign-in email
-and the name AI clients see) is its site, a directory (`crates/hub/README.md`, "The site"):
+and the name AI clients see) is its site, a directory (`engine/hub/README.md`, "The site"):
 
 ```bash
 sudo ./install.sh --domain hub.example.com --site /srv/hub-site    # install with it
@@ -237,7 +237,7 @@ the site it had and says why in `docker compose logs hub`.
 ### Rolling back across the tenant migration (0007)
 
 Migration 0007 (increment 60) moves the hub's tables into the `devagotchi` schema, renames
-them and puts each tenant's rows behind row-level security (`crates/hub/README.md`, "The
+them and puts each tenant's rows behind row-level security (`engine/hub/README.md`, "The
 store"). It is the one migration that does not only add: a hub image from before it cannot
 read the store after it. If the first image with 0007 is not healthy, `update.sh` puts the
 image before it back, which then cannot start either. The journal says "nothing healthy to
@@ -275,7 +275,7 @@ sudo ./install.sh --domain app.example.com --rp-id example.com --tenancy multi \
 ```
 
 - `--tenancy multi` makes it a hosted hub: everyone who connects gets an account and a tenant
-  of their own, and it is never claimed (`crates/hub/README.md`, "A hosted hub").
+  of their own, and it is never claimed (`engine/hub/README.md`, "A hosted hub").
 - `--operators` lists who operates it: `email:<verified address>`, or `<provider>:<subject>`
   (`google:`, `github:`, `nomen:`). Their sign-in is the hub's owner, with no claim. A
   one-owner hub with operators set is not claimed either.
@@ -413,7 +413,7 @@ Everything is in `.env`; each has a default (`.env.example` lists them).
 | `DEVAGOTCHI_CLICKHOUSE_IMAGE` | `clickhouse/clickhouse-server:25.8@sha256:…` | The ClickHouse image, pinned by digest. |
 
 The defaults suit a 2 GB box. The hub's own settings (token lifetimes, the claim code's, limits) go in its config,
-`configs.hub` in `compose.yaml` (`crates/hub/README.md`).
+`configs.hub` in `compose.yaml` (`engine/hub/README.md`).
 
 The hub's site is the directory `DEVAGOTCHI_SITE_DIR` names, mounted read-only; with it
 unset, the empty `site/` beside `compose.yaml` stands in and the hub serves the site built

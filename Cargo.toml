@@ -1,34 +1,34 @@
 [workspace]
 resolver = "3"
 members = [
-    "crates/contracts",
-    "crates/connectors",
-    "crates/ipc",
-    "crates/machine-engine",
-    "crates/kernel",
-    "crates/mcp",
-    "crates/store",
-    "crates/agenthub",
-    "crates/hub",
-    "crates/link",
-    "crates/devagotchi",
+    "platform/contracts",
+    "engine/connectors",
+    "platform/ipc",
+    "engine/machine-engine",
+    "engine/kernel",
+    "interfaces/mcp",
+    "platform/store",
+    "agenthub",
+    "engine/hub",
+    "runtime/link",
+    "runtime/devagotchi",
     "apps/desktop/src-tauri",
 ]
 # `cargo build` / `cargo test` at the root build the broker, adapter and their
 # libraries. The Tauri inspector needs native webview toolchains, so it is a
 # member (one lockfile, one toolchain) but built explicitly with `-p`.
 default-members = [
-    "crates/contracts",
-    "crates/connectors",
-    "crates/ipc",
-    "crates/machine-engine",
-    "crates/kernel",
-    "crates/mcp",
-    "crates/store",
-    "crates/agenthub",
-    "crates/hub",
-    "crates/link",
-    "crates/devagotchi",
+    "platform/contracts",
+    "engine/connectors",
+    "platform/ipc",
+    "engine/machine-engine",
+    "engine/kernel",
+    "interfaces/mcp",
+    "platform/store",
+    "agenthub",
+    "engine/hub",
+    "runtime/link",
+    "runtime/devagotchi",
 ]
 
 [workspace.package]
@@ -41,13 +41,13 @@ license = "FSL-1.1-ALv2"
 repository = "https://github.com/devagotchi/devagotchi"
 
 [workspace.dependencies]
-devagotchi-contracts = { path = "crates/contracts" }
-devagotchi-connectors = { path = "crates/connectors" }
-devagotchi-ipc = { path = "crates/ipc" }
-devagotchi-machine-engine = { path = "crates/machine-engine" }
-devagotchi-kernel = { path = "crates/kernel" }
-devagotchi-store = { path = "crates/store" }
-devagotchi-agenthub = { path = "crates/agenthub" }
+devagotchi-contracts = { path = "platform/contracts" }
+devagotchi-connectors = { path = "engine/connectors" }
+devagotchi-ipc = { path = "platform/ipc" }
+devagotchi-machine-engine = { path = "engine/machine-engine" }
+devagotchi-kernel = { path = "engine/kernel" }
+devagotchi-store = { path = "platform/store" }
+devagotchi-agenthub = { path = "agenthub" }
 
 rmcp = { version = "=3.9.0", default-features = false, features = ["server", "macros", "transport-io"] }
 schemars = "1"
@@ -61,7 +61,7 @@ hex = "0.4.3"
 # `fallible_uint`: rusqlite 0.38 put the u64/usize conversions behind it; they store values
 # up to i64::MAX and refuse larger ones, exactly as 0.37 did by default.
 rusqlite = { version = "0.39", features = ["bundled", "fallible_uint"] }
-# The Postgres engine every part shares (`crates/store`), AgentHub's boards included,
+# The Postgres engine every part shares (`platform/store`), AgentHub's boards included,
 # standalone ones too (ADR 0005); the machine's own journals are rusqlite (the kernel and the
 # machine engine, `.ai/dev/plans/path.md` decision 1).
 sqlx = { version = "0.9", default-features = false, features = ["runtime-tokio", "tls-rustls-aws-lc-rs", "postgres", "any", "migrate", "macros"] }
@@ -85,12 +85,12 @@ windows-sys = { version = "0.61.2", features = [
     "Win32_System_Threading",
 ] }
 
-# AgentHub is its own repository (devagotchi/agenthub, the submodule at crates/agenthub) and
+# AgentHub is its own repository (devagotchi/agenthub, the submodule at agenthub) and
 # takes these crates from this repository by git; built here, they are this workspace's own.
 [patch."https://github.com/devagotchi/devagotchi"]
-devagotchi-contracts = { path = "crates/contracts" }
-devagotchi-connectors = { path = "crates/connectors" }
-devagotchi-store = { path = "crates/store" }
+devagotchi-contracts = { path = "platform/contracts" }
+devagotchi-connectors = { path = "engine/connectors" }
+devagotchi-store = { path = "platform/store" }
 
 [workspace.lints.rust]
 unsafe_code = "deny"

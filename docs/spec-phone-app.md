@@ -2,11 +2,11 @@
 
 Status: APPROVED by Jesse 2026-11-06. Plan: `docs/plan-phone-and-signals.md` (P1). Ruled
 2026-11-06: control app installed from app.devagotchi.com, no app store. Paths relative to
-`crates/hub/`; function names are anchors, line numbers are hints (`main` 2026-11-06).
+`engine/hub/`; function names are anchors, line numbers are hints (`main` 2026-11-06).
 
 Since increment 119 the frame has five tabs (Home, Approvals, Boards, Machines, You), the
 person's mark in the bar, a count on the Approvals tab, and `/app/me` with their preferences
-(`crates/hub/README.md`, "The phone app and a person's preferences").
+(`engine/hub/README.md`, "The phone app and a person's preferences").
 
 ## What the person gets
 1. On the phone, app.devagotchi.com → sign in (the first-connect sign-in) → a one-line banner

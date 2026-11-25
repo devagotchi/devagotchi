@@ -36,7 +36,7 @@ those obligations; the surface integration tests remain required.
 
 ## Authored and checked locally
 
-- `crates/store/src/receipts/{mod,request,tests}.rs`, additive migration, build tracking.
+- `platform/store/src/receipts/{mod,request,tests}.rs`, additive migration, build tracking.
 - Store connection bootstrap moved by concern to `opening.rs`, bringing the former oversized
   `lib.rs` under the cap. The size baseline only removes its old entry.
 - Hub table-prefix and migration-history expectations include the store owner; standalone
@@ -268,7 +268,7 @@ Read S1 httpapi/{server,tasks,admin,events,protocol,export}.go, expanded the dyn
 configuration kinds, and compared store/edit.go's actual NewTask/TaskPatch fields.
 [HTTP mapping](a03-http.md) defines the adapters and remaining administrative/SSE work.
 The task/lease routes plus event pages and verification are authored in
-crates/hub/src/agenthub/http/. They use typed MCP inputs, the existing scoped board
+engine/hub/src/agenthub/http/. They use typed MCP inputs, the existing scoped board
 authorization/profile resolver, live bearer/session middleware and the same PostgreSQL
 receipts. Idempotency header/body disagreement refuses. If-Match is validated and becomes
 part of typed input; fresh stale conditions return 412. Old completed requests can replay

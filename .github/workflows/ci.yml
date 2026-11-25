@@ -75,7 +75,7 @@ jobs:
     # Every test in every crate that depends on the store (rdeps(devagotchi-store): the hub,
     # AgentHub, the one binary's board and recovery tests) runs here on Postgres, against a
     # throwaway cluster. DEVAGOTCHI_TEST_REQUIRE_POSTGRES=1 makes a test that would skip for
-    # want of a server fail instead (crates/store/src/testing.rs server_url), so nothing here
+    # want of a server fail instead (platform/store/src/testing.rs server_url), so nothing here
     # passes without running.
     name: hub (postgres)
     runs-on: ubuntu-24.04
@@ -227,7 +227,7 @@ jobs:
       # the bytes on disk are checked; every scenario must overlap at least once.
       - name: Concurrent file mutations
         run: python tests/file_mutation_concurrency.py --devagotchi "target/debug/devagotchi${{ runner.os == 'Windows' && '.exe' || '' }}" --work-root target --source-commit ${{ github.sha }}
-      # Two builds of this commit by name (crates/devagotchi/build.rs), for machine_update
+      # Two builds of this commit by name (runtime/devagotchi/build.rs), for machine_update
       # from one to the other (tests/machine_update_probe.py); then target/debug as it was.
       - name: Builds ci-a and ci-b
         if: runner.os == 'Linux'
@@ -334,7 +334,7 @@ jobs:
         with:
           persist-credentials: false
           submodules: true
-      - run: shellcheck deploy/linux/*.sh crates/hub/src/machines/join/join.sh
+      - run: shellcheck deploy/linux/*.sh engine/hub/src/machines/join/join.sh
       - run: rustup toolchain install
       - run: cargo build --locked --bins
       - name: Start a throwaway Postgres

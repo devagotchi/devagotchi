@@ -1,3 +1,3 @@
-[submodule "crates/agenthub"]
-	path = crates/agenthub
+[submodule "agenthub"]
+	path = agenthub
 	url = https://github.com/devagotchi/agenthub.git

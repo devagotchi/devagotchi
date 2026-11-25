@@ -4,13 +4,13 @@ A hub has one account system, `auth.mode` `hub`. Accounts, passkeys, linked sign
 browser sessions are in the hub's Postgres. AI clients (Claude, ChatGPT, Cursor, Codex, the
 CLI) sign in with the hub's own OAuth 2.1 server at `/oauth/*`. Sign in with Shippin (Nomen),
 Google, GitHub and any OpenID Connect provider are optional sign-in buttons: the hub serves
-with none of them configured. Operator detail is in [crates/hub/README.md](../crates/hub/README.md):
+with none of them configured. Operator detail is in [engine/hub/README.md](../engine/hub/README.md):
 "The hub's own accounts", "AI clients sign in with the hub itself" and "Shippin sign-in
 (Nomen)".
 
 A hosted hub (`tenancy.mode` `multi`, app.devagotchi.com) makes each person's account and
 tenant the first time they connect from Claude, Codex or the CLI, and is never claimed; see
-[crates/hub/README.md](../crates/hub/README.md), "A hosted hub".
+[engine/hub/README.md](../engine/hub/README.md), "A hosted hub".
 
 `/auth/login` offers configured Google, GitHub or OIDC providers and email/password sign-in
 before the passkey fallback. Password sign-in is for an existing account; single-owner hubs do

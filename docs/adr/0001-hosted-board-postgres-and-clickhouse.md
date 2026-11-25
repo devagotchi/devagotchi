@@ -52,7 +52,7 @@ Retain the source until cutover, backup/restore and recovery are independently v
 The `0014_boards.sql` migrations and `hub import-board` satisfy the staging foundation.
 *(Amended 2026-11-15, increment 148: pre-release, nothing is imported; `hub import-board` is
 deleted, and the board tables are AgentHub's own migrations with their own history,
-`crates/agenthub/migrations`. Postgres is the hub's only board backend.)*
+`agenthub/migrations`. Postgres is the hub's only board backend.)*
 They do **not** make Postgres the live backend. Cutover requires all board operations,
 the shared resolver, account/org/grant checks, MCP/web parity and concurrent-worker tests
 on real Postgres. ClickHouse provisioning, export, deduplication, lag/backpressure and

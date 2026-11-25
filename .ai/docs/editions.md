@@ -69,7 +69,7 @@ Decided by the operator on 2026-11-14, and recorded so this repository does not 
   ([ADR 0004](../../docs/adr/0004-optional-cache-dragonfly.md)); AgentHub is Postgres in every
   form, a library in Devagotchi and Shippin and a binary or container on its own
   ([ADR 0005](../../docs/adr/0005-agenthub-postgres-everywhere.md)).
-- What the cloud replaces is `crates/hub/src/extensions.rs`: extra routes, plan limits, tenant
+- What the cloud replaces is `engine/hub/src/extensions.rs`: extra routes, plan limits, tenant
   lifecycle, and an in-process event hook. Each default is what a self-hosted hub already does.
 
 Decided by the operator on 2026-11-18:
@@ -82,7 +82,7 @@ Decided by the operator on 2026-11-18:
     listed there and now sit on the multi-tenant side. The standalone release gets there through
     [free edition](../dev/plans/free-edition.md) R4 (tenancy as its own crate, out of the
     default build). Until R4 lands, `/admin` shows a People section (sign-up limits and
-    organisations, `crates/hub/src/web/hub_settings.rs:224`, `:231`, `:251-255`) even on a
+    organisations, `engine/hub/src/web/hub_settings.rs:224`, `:231`, `:251-255`) even on a
     single-owner hub; R4 removes it from the single-user build.
   - *Managed deployments*: offer multi-tenancy. [ADR 0003](../../docs/adr/0003-hosting-pooled-free-per-instance-paid.md)
     describes a paid instance as running "no tenancy code"; that line needs the operator's

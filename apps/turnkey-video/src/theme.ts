@@ -1,4 +1,4 @@
-// The hub's own look, from crates/hub/src/web/hub.css (light scheme).
+// The hub's own look, from engine/hub/src/web/hub.css (light scheme).
 export const c = {
   bg: "#f3f5f1",
   surface: "#ffffff",

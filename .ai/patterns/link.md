@@ -23,12 +23,12 @@ the compiler.
 
 | Part | Home |
 |---|---|
-| The wire: frames, sizes, versions, deadlines, signed bytes, words both sides compare | `crates/contracts/src/link/mod.rs`, re-exported flat from `lib.rs` (G10's contracts exception); its golden tests in `link/tests.rs` |
-| Machine side | `crates/link/src/`: `lib.rs` (the command line), `run/` (enroll, run, backoff), `session/` (one connection), `update/` (updating the machine, with `handoff.rs`, `idle.rs` and the Windows updater script), `state.rs` |
-| Hub side | `crates/hub/src/machines/link/`, one job per file: `serve.rs` (the session loop), `enroll.rs` (`admit`, `may_enroll`), `calls.rs`, `updates.rs`, `presence.rs`, `registry.rs`; the door in `crates/hub/src/machines/routes.rs`; what the hub remembers about updates in `crates/hub/src/machines/update.rs` |
-| The AI's verbs `machines`, `machine_add`, `machine_update` | tools in `crates/hub/src/machines/manage.rs`; `update_machine` in `crates/hub/src/mcp/machines.rs` |
-| Join: the one line (sh, ps1, compose) and the installers it downloads | `crates/hub/src/machines/join/`, `deploy/linux/install-devagotchi.sh`, `deploy/windows/install-devagotchi.ps1` |
-| Build name | `crates/devagotchi/build.rs` (`DEVAGOTCHI_BUILD`). The hub offers its downloads' version (`crates/hub/src/serve/mod.rs`, the `.offering(..)` call). |
+| The wire: frames, sizes, versions, deadlines, signed bytes, words both sides compare | `platform/contracts/src/link/mod.rs`, re-exported flat from `lib.rs` (G10's contracts exception); its golden tests in `link/tests.rs` |
+| Machine side | `runtime/link/src/`: `lib.rs` (the command line), `run/` (enroll, run, backoff), `session/` (one connection), `update/` (updating the machine, with `handoff.rs`, `idle.rs` and the Windows updater script), `state.rs` |
+| Hub side | `engine/hub/src/machines/link/`, one job per file: `serve.rs` (the session loop), `enroll.rs` (`admit`, `may_enroll`), `calls.rs`, `updates.rs`, `presence.rs`, `registry.rs`; the door in `engine/hub/src/machines/routes.rs`; what the hub remembers about updates in `engine/hub/src/machines/update.rs` |
+| The AI's verbs `machines`, `machine_add`, `machine_update` | tools in `engine/hub/src/machines/manage.rs`; `update_machine` in `engine/hub/src/mcp/machines.rs` |
+| Join: the one line (sh, ps1, compose) and the installers it downloads | `engine/hub/src/machines/join/`, `deploy/linux/install-devagotchi.sh`, `deploy/windows/install-devagotchi.ps1` |
+| Build name | `runtime/devagotchi/build.rs` (`DEVAGOTCHI_BUILD`). The hub offers its downloads' version (`engine/hub/src/serve/mod.rs`, the `.offering(..)` call). |
 
 Versions are on three axes, each with one job:
 
@@ -52,10 +52,10 @@ that touches every layer with its own test, and the one that uses serde's forwar
 field idiom.
 
 - Contracts: `LinkFrame::Hello.kind` and `MACHINE_KIND_CONTAINER`
-  (`crates/contracts/src/link/mod.rs`). Its golden line in `link/tests.rs` `SEEN`, and
+  (`platform/contracts/src/link/mod.rs`). Its golden line in `link/tests.rs` `SEEN`, and
   `fields_added_after_v1_stay_off_the_wire_when_none`.
-- Link: `KIND_ENV` and `run` (`crates/link/src/run/mod.rs`), `Updater::kind` and
-  `Updater::request` (`crates/link/src/update/mod.rs`). Test
+- Link: `KIND_ENV` and `run` (`runtime/link/src/run/mod.rs`), `Updater::kind` and
+  `Updater::request` (`runtime/link/src/update/mod.rs`). Test
   `a_container_refuses_every_update_and_says_so` (`update/tests.rs`).
 - Hub: `admit` (`enroll.rs`), `Session.container` (`machines/link/mod.rs`), `ask_update` and
   `auto_update_now` (`updates.rs`). Test
@@ -65,7 +65,7 @@ field idiom.
 - Real OS: `tests/compose_join.py` `docker_leg`: `machine_update` on the Docker machine is
   refused as a container's, and a second `docker compose up -d` leaves it online.
 
-**Loop shape: the hub session**, `Links::serve` (`crates/hub/src/machines/link/serve.rs`).
+**Loop shape: the hub session**, `Links::serve` (`engine/hub/src/machines/link/serve.rs`).
 
 - Bounded before trust: the handshake permit (`routes.rs` `link_upgrade`), a hello of at most
   4 KiB within 10 s (`HELLO_TIMEOUT`, `MAX_HELLO_BYTES`), every write within
@@ -74,7 +74,7 @@ field idiom.
 - Each exit is a named reason, audited as `link.disconnect`.
 - Redacted wire refusals (`wire_refusal`) with an itemized, rate-limited audit (`refused`).
 
-**The same shape on the machine**, `connect_with` (`crates/link/src/session/mod.rs`): its
+**The same shape on the machine**, `connect_with` (`runtime/link/src/session/mod.rs`): its
 three frame matches name every variant; the serve loop Pings on every `LINK_HEARTBEAT`, gives
 the hub up after `LINK_IDLE_TIMEOUT` with nothing from it (its Pong included), and times out
 every write after `LINK_SEND_TIMEOUT` (`write`). `Liveness` carries the three so the tests in
@@ -128,7 +128,7 @@ match serde_json::from_str::<LinkFrame>(&text) {
 
 ## Rules
 
-1. **The wire lives in `crates/contracts` (G1, G3).**
+1. **The wire lives in `platform/contracts` (G1, G3).**
    - Every frame is a variant of `HubFrame` or `LinkFrame`.
    - G3 applies to every value one crate writes and the other compares, and to two values
      whose correctness depends on each other across the crates.
@@ -189,7 +189,7 @@ match serde_json::from_str::<LinkFrame>(&text) {
      Weak keys are refused, then the signature is checked with `verify_strict` (`enroll.rs`
      `admit`). There is no other door: `POST /enroll` was removed in B2 (decision D3).
    - The enroll code is a secret under G8. Every program on the join path reads it from the
-     environment or stdin, never from argv (`crates/link/src/lib.rs` `USAGE`, `run/mod.rs`
+     environment or stdin, never from argv (`runtime/link/src/lib.rs` `USAGE`, `run/mod.rs`
      `enrollment_code`, `join.sh`, `join.ps1`, `compose.yml`, the hub's "Add a machine" page
      in `web/machines.rs`). The Windows installer's `-EnrollCode` is deprecated and warns.
 9. **Every lifecycle transition is audited (G7)** under a dotted name:
@@ -233,18 +233,18 @@ match serde_json::from_str::<LinkFrame>(&text) {
 
 G10 holds.
 
-- `crates/contracts/src/link/mod.rs`: the frames, constants and signing bytes. `lib.rs`
+- `platform/contracts/src/link/mod.rs`: the frames, constants and signing bytes. `lib.rs`
   re-exports them flat with `mod link; pub use link::*;` (G10's contracts exception). Tests
   go in `link/tests.rs`.
-- `crates/link/src/<step>/mod.rs`, with `tests.rs` beside it: `run/`, `session/`, `update/`.
+- `runtime/link/src/<step>/mod.rs`, with `tests.rs` beside it: `run/`, `session/`, `update/`.
   `lib.rs` keeps `USAGE`, `parse_args` and `cli`, and the `parse_args` tests.
-- `crates/hub/src/machines/link/<job>.rs`, one job per file. Tests go in
+- `engine/hub/src/machines/link/<job>.rs`, one job per file. Tests go in
   `machines/link/tests/<subject>.rs` (`admit`, `calls`, `container`, `presence`, `socket`,
   `updates`, `wire`); `tests/mod.rs` holds the shared fixtures `test_links`, `hello` and
   `connect` over `Session::fake`.
 - `machine_add`, `machine_update` and `machines` are served from
-  `crates/hub/src/machines/manage.rs` (layout rule 7: the domain serves its tools).
-- Join templates stay in `crates/hub/src/machines/join/`, with their tests in
+  `engine/hub/src/machines/manage.rs` (layout rule 7: the domain serves its tools).
+- Join templates stay in `engine/hub/src/machines/join/`, with their tests in
   `join/tests.rs`. `join/compose.rs` and `machines/update.rs` keep their inline tests while
   under the cap (G10).
 
@@ -269,7 +269,7 @@ G10 holds.
 
 ## The canonical test
 
-1. **Wire golden** (`crates/contracts/src/link/tests.rs`).
+1. **Wire golden** (`platform/contracts/src/link/tests.rs`).
    - Every shape a released peer sends parses (`SEEN`, append-only).
    - Every variant has a line, and naming a new variant is a compile error until it is
      added (`hub_name`, `link_name`).
@@ -288,7 +288,7 @@ G10 holds.
    - Plays the device with `tokio-tungstenite` (a hub dev-dependency) and signs with
      `link_signing_message`.
    - Asserts what reached the device and the `link.disconnect` audit row's outcome.
-4. **Link unit** (`crates/link/src/<step>/tests.rs`).
+4. **Link unit** (`runtime/link/src/<step>/tests.rs`).
    - Exercises the step with a fake broker (`update/tests.rs`) or none.
    - A dispatch arm or a deadline gets a fake hub on `127.0.0.1:0` with
      `tokio_tungstenite::accept_async` (`session/tests/mod.rs`), driven through `connect_with`
@@ -326,7 +326,7 @@ G10 holds.
 Three checks hold rules 1, 2, 5 and 11. None needs a database. CI runs them through its
 existing `cargo nextest run`.
 
-**1. Wire golden**, `crates/contracts/src/link/tests.rs`:
+**1. Wire golden**, `platform/contracts/src/link/tests.rs`:
 `every_frame_a_released_peer_sends_still_parses_and_every_variant_has_a_line`,
 `the_signed_bytes_and_the_protocol_never_change`,
 `fields_added_after_v1_stay_off_the_wire_when_none`. Beside the constants, `const`
@@ -338,15 +338,15 @@ assertions hold the liveness trio (G6). It catches:
 - a new variant not named in `hub_name` or `link_name` (does not compile);
 - a change to the signed bytes or the protocol version.
 
-**2. Source scan**, `crates/devagotchi/tests/link_protocol.rs`, walking the workspace with
-`crates/devagotchi/tests/support/mod.rs` (shared with `layout.rs`; G12). It needs no
+**2. Source scan**, `runtime/devagotchi/tests/link_protocol.rs`, walking the workspace with
+`runtime/devagotchi/tests/support/mod.rs` (shared with `layout.rs`; G12). It needs no
 allow-list. Test files (`tests.rs`, `*_tests.rs`, anything under a `tests/` folder) are not
 scanned, and neither is text after a file's first `#[cfg(test)]`. It fails when:
 
-- `crates/link/src/session/mod.rs` or `crates/hub/src/machines/link/serve.rs` contains
+- `runtime/link/src/session/mod.rs` or `engine/hub/src/machines/link/serve.rs` contains
   `Ok(_) =>` or `Ok(_) |` (rule 5);
-- a Rust file under `crates/link/src`, `crates/hub/src/machines/link` or
-  `crates/hub/src/machines/join` holds the literal `"container"`, `"unavailable"`,
+- a Rust file under `runtime/link/src`, `engine/hub/src/machines/link` or
+  `engine/hub/src/machines/join` holds the literal `"container"`, `"unavailable"`,
   `"waiting_for_jobs"`, `"downloading"` or `"installing"` (rule 1). `done` and `failed` are
   too common to scan for; review holds them;
 - `join.sh`, `join.ps1`, `compose.yml`, `deploy/windows/install-devagotchi.ps1` or

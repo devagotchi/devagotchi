@@ -10,7 +10,7 @@ and actual PR once created; use `not_created` before a PR exists, never invent a
 Plans are requested deliverables here, not a general permission to litter the repository
 with scratch notes. Private logs/evidence stay outside Git.
 
-Start with [the path](path.md): every feature asked for, in order, each proven on Texas and
+Start with [the program](program.md): every operator instruction in one place, the target structure, the order of the work and its status (2026-11-25). It replaces the order of the plans below. Then [the path](path.md): every feature asked for, in order, each proven on Texas and
 the phone before the next phase; the cloud waits until it is all proven. The work that gets
 the one-user edition there is ordered in [the one-user edition](one-user-edition.md)
 (increments 208 onward). Then the

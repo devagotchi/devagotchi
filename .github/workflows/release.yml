@@ -156,7 +156,7 @@ jobs:
       - name: Install dependencies
         run: |
           ${{ matrix.packages_install }}
-      # The build's name, compiled in (crates/devagotchi/build.rs): the same string the hub's
+      # The build's name, compiled in (runtime/devagotchi/build.rs): the same string the hub's
       # downloads VERSION holds (image.yml `Version`, scripts/lay-down-dist.sh).
       - name: Build name
         shell: bash

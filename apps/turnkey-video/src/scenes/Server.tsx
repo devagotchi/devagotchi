@@ -5,7 +5,7 @@ import { CLAIM_CODE, HUB, c } from "../theme";
 
 const UP = "docker compose up -d";
 const LOGS = 'docker compose logs hub | grep -A1 "Claim it in a browser"';
-// What the hub prints when it starts with no owner (crates/hub/src/lib.rs), as Compose shows it.
+// What the hub prints when it starts with no owner (engine/hub/src/lib.rs), as Compose shows it.
 const UNCLAIMED =
   "hub-1  | devagotchi hub is unclaimed: nobody can sign in as its owner yet. Claim it in a browser before 2026-11-02 18:00 UTC:";
 const LINK = `${HUB}/claim#${CLAIM_CODE}`;

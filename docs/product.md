@@ -68,7 +68,7 @@ These are requirements, not a claim that local-user management or deployment is 
 | Repository | What it holds |
 |---|---|
 | `devagotchi/devagotchi` (this one) | The hub, the broker, the link, the local MCP adapter, the phone app's pages, the plugins |
-| `devagotchi/agenthub` | AgentHub. It is a git submodule at `crates/agenthub` and keeps its own migration history |
+| `devagotchi/agenthub` | AgentHub. It is a git submodule at `agenthub` and keeps its own migration history |
 | `shippinAI/devagotchi-cloud` (private) | The commercial cloud. Later. No work happens there until every phase of [the path](../.ai/dev/plans/path.md) is proven (its non-goals) |
 
 ## Licence and stage
@@ -92,28 +92,28 @@ exists and CI is set up to run it. It does not mean this check ran the test.
 | Capability | Status | Evidence at 2b3feec |
 |---|---|---|
 | Commands, files and processes through the hub, on Linux machines | built | `tests/e2e.py` drives `tests/adapter_probe.py` (local MCP) and `tests/hub_probe.py` (through the hub). The CI `e2e` job runs it on `ubuntu-24.04` and `ubuntu-24.04-arm` (`.github/workflows/ci.yml`). Gaps: reading PDF, DOCX and XLSX, Office writes, and `write_pdf` ([one-user edition](../.ai/dev/plans/one-user-edition.md) increments 221, 222 and 223; [parity](../.ai/docs/desktop-commander-parity.md)) |
-| The same, on Windows machines | built | Provider in `crates/machine-engine/src/execution/platform/windows.rs`. CI runs `tests/e2e.py` with the hub on `windows-2022` and `windows-2025`. `windows-11-arm` runs it with `--no-hub` |
-| macOS machines | absent | `spawn` in `crates/machine-engine/src/service/background.rs` and `serve` in `crates/machine-engine/src/service/mod.rs` return `unsupported_platform` on any OS that is not Linux or Windows. `crates/machine-engine/src/execution/platform/` has providers only for Linux (`linux`) and Windows (`windows`). `dist-workspace.toml` `targets` lists no Apple target. CI `core` on `macos-latest` builds the workspace and runs its tests, but no broker runs there: the broker binary reports `unsupported_platform` |
-| Docker machine join | built | `crates/hub/src/machines/join/compose.yml`, served by `crates/hub/src/machines/join/compose.rs`. Test `a_container_is_never_asked_to_update_and_is_told_how_to_move` (`crates/hub/src/machines/link/tests/container.rs`). The Docker leg of `tests/compose_join.py` (`--docker`) runs only in `.github/workflows/image.yml` |
+| The same, on Windows machines | built | Provider in `engine/machine-engine/src/execution/platform/windows.rs`. CI runs `tests/e2e.py` with the hub on `windows-2022` and `windows-2025`. `windows-11-arm` runs it with `--no-hub` |
+| macOS machines | absent | `spawn` in `engine/machine-engine/src/service/background.rs` and `serve` in `engine/machine-engine/src/service/mod.rs` return `unsupported_platform` on any OS that is not Linux or Windows. `engine/machine-engine/src/execution/platform/` has providers only for Linux (`linux`) and Windows (`windows`). `dist-workspace.toml` `targets` lists no Apple target. CI `core` on `macos-latest` builds the workspace and runs its tests, but no broker runs there: the broker binary reports `unsupported_platform` |
+| Docker machine join | built | `engine/hub/src/machines/join/compose.yml`, served by `engine/hub/src/machines/join/compose.rs`. Test `a_container_is_never_asked_to_update_and_is_told_how_to_move` (`engine/hub/src/machines/link/tests/container.rs`). The Docker leg of `tests/compose_join.py` (`--docker`) runs only in `.github/workflows/image.yml` |
 | Self-hosted users share one environment | local-user administration implemented; release acceptance tracked separately | `web::people` lets the owner add, edit, disable and reset local users through existing PostgreSQL accounts. `web::one_user` hides organization/invite pages and APIs in single mode. Domain and HTTP tests cover authority, versions and session revocation; hosted build separation remains open in [free edition](../.ai/dev/plans/free-edition.md) R4. |
-| AgentHub board: claim, notes, handoff, approvals | built | `crates/agenthub/src/tests/hosted.rs` `native_board_graph_filters_versions_handoff_and_approval_rules`; `crates/agenthub/src/tests/approvals.rs` `an_approval_waits_for_a_person_and_records_the_verdict`. The hub serves the board tools from `crates/hub/src/agenthub/mcp/`. `tests/e2e.py` runs `tests/board_probe.py` |
+| AgentHub board: claim, notes, handoff, approvals | built | `agenthub/src/tests/hosted.rs` `native_board_graph_filters_versions_handoff_and_approval_rules`; `agenthub/src/tests/approvals.rs` `an_approval_waits_for_a_person_and_records_the_verdict`. The hub serves the board tools from `engine/hub/src/agenthub/mcp/`. `tests/e2e.py` runs `tests/board_probe.py` |
 | Board settings and workflow forms | built; development Docker accepted | Owners/admins edit lease/task defaults, states, work stages and manual moves through versioned PostgreSQL methods. Stale saves retain the draft; standing approvals and used-state meanings are preserved. PR277 passed CI and official-image browser/restart acceptance ([configuration plan](../.ai/dev/plans/october-board-configuration.md)). Shared catalogs and bindings are being integrated separately ([shared-workflow plan](../.ai/dev/plans/october-shared-workflows.md)). |
 | AgentHub as a software factory | mostly absent | [agenthub-factory](../.ai/dev/plans/agenthub-factory.md), milestone table: F12 done, F5a built, F1, F2 and F5 partial. Not started: F1b, F3, F4, F4b, F5b, F5c, F6, F8, F8b, F9, F10, F11 and F13 to F23 (completion gated on checks, plan before code, proof of work, review agents, the notification outbox, the project overview, and the rest) |
-| Android phone app, installable | built, never on a real phone | `crates/hub/src/site/pwa.rs`. `tests/android_browser.py` claims a one-user hub on an emulated Pixel 7 in the runner's Chrome, driven by Playwright (`--channel chrome`), and checks `Page.getInstallabilityErrors`; CI runs it on `ubuntu-24.04`. No real-device test exists yet (increment 253) |
-| Web push to the phone | built, tested only against a fake push service | `crates/hub/src/notify/push/mod.rs`. Test `notify_this_phone_then_an_approval_buzzes_it_encrypted` (`crates/hub/src/web/tests/mod.rs`) sends to a fake push service. Nothing has been sent through a real push service |
-| Approval email | absent | The hub's mailer (`crates/hub/src/web/email.rs`, over `crates/hub/src/notify/mail.rs`) sends sign-in links, the test message from `/admin` and the early-access "let in" notice. It sends no approval email. Increment 259 |
+| Android phone app, installable | built, never on a real phone | `engine/hub/src/site/pwa.rs`. `tests/android_browser.py` claims a one-user hub on an emulated Pixel 7 in the runner's Chrome, driven by Playwright (`--channel chrome`), and checks `Page.getInstallabilityErrors`; CI runs it on `ubuntu-24.04`. No real-device test exists yet (increment 253) |
+| Web push to the phone | built, tested only against a fake push service | `engine/hub/src/notify/push/mod.rs`. Test `notify_this_phone_then_an_approval_buzzes_it_encrypted` (`engine/hub/src/web/tests/mod.rs`) sends to a fake push service. Nothing has been sent through a real push service |
+| Approval email | absent | The hub's mailer (`engine/hub/src/web/email.rs`, over `engine/hub/src/notify/mail.rs`) sends sign-in links, the test message from `/admin` and the early-access "let in" notice. It sends no approval email. Increment 259 |
 | Desktop notifications | absent | There is no `devagotchi watch` (262) and no companion popup (263). The hooks plugin (`plugins/devagotchi-agenthub/hooks/hooks.json`) has `SessionStart`, `PostToolUse`, `Stop` and `SessionEnd` only, with no notification hook (264) |
-| Claude Code plugin | partial: installs, points at a placeholder hub | Marketplace `.claude-plugin/marketplace.json`. `plugins/devagotchi/.mcp.json` points at `https://hub.example.com/mcp`, and the `hub_url` default in `plugins/devagotchi/.claude-plugin/plugin.json` is `https://hub.example.com`. Test `the_connector_names_a_placeholder_hub_and_claude_names_its_seat` (`crates/hub/src/mcp/tests/plugins.rs`). [plugins](../.ai/dev/plans/plugins.md) records an install into a throwaway config on 2026-11-13, made when the plugin still pointed at app.devagotchi.com, and no signed-in session (G7) |
+| Claude Code plugin | partial: installs, points at a placeholder hub | Marketplace `.claude-plugin/marketplace.json`. `plugins/devagotchi/.mcp.json` points at `https://hub.example.com/mcp`, and the `hub_url` default in `plugins/devagotchi/.claude-plugin/plugin.json` is `https://hub.example.com`. Test `the_connector_names_a_placeholder_hub_and_claude_names_its_seat` (`engine/hub/src/mcp/tests/plugins.rs`). [plugins](../.ai/dev/plans/plugins.md) records an install into a throwaway config on 2026-11-13, made when the plugin still pointed at app.devagotchi.com, and no signed-in session (G7) |
 | Codex plugin | partial: installs, cannot set the hub | `plugins/devagotchi/.codex-plugin/plugin.json` has no `userConfig`. Increment 211 |
-| VS Code extension | absent | No VS Code extension exists in `plugins/` (increment 268). `crates/connectors/catalog/microsoft/vscode-copilot.json` is connect steps for VS Code's MCP config, not an extension |
-| ChatGPT Desktop | absent | Increment 269. `crates/connectors/catalog/openai/chatgpt.json` is the web surface (`"surface": "web"`) |
+| VS Code extension | absent | No VS Code extension exists in `plugins/` (increment 268). `engine/connectors/catalog/microsoft/vscode-copilot.json` is connect steps for VS Code's MCP config, not an extension |
+| ChatGPT Desktop | absent | Increment 269. `engine/connectors/catalog/openai/chatgpt.json` is the web surface (`"surface": "web"`) |
 | Claude Desktop | partial | `devagotchi setup` writes the MCP entry into Claude Desktop's config ([README](../README.md), "Install: one line, for you or your AI"). The local package (`.mcpb`, increment 269) does not exist |
 | Update notice in the UI | absent | The hub has no release check (increment 240) and no update notice or button (241). The plugins' notice (270) is not built either. Machines already follow the hub's build (`tests/machine_update_probe.py`, run by `tests/e2e.py` on Linux when it is given two builds with `--update-builds`) |
-| Sign in with Shippin | partial: the card exists, untested end to end | The card is one of the Sign-in cards on `/admin`, in `crates/hub/src/web/sign_in_cards.rs`. Tests `the_switch_hides_shippin_and_keeps_the_install_secret` and `a_fresh_hub_shows_shippin_off_until_an_issuer_is_saved` (`crates/hub/src/web/shippin_tests.rs`). `tests/nomen_probe.py` signs in against a fake Nomen, but only in the hub's `nomen` auth mode. No test signs in through the card on a one-user hub (226). Nothing has signed in through the real Shippin issuer |
+| Sign in with Shippin | partial: the card exists, untested end to end | The card is one of the Sign-in cards on `/admin`, in `engine/hub/src/web/sign_in_cards.rs`. Tests `the_switch_hides_shippin_and_keeps_the_install_secret` and `a_fresh_hub_shows_shippin_off_until_an_issuer_is_saved` (`engine/hub/src/web/shippin_tests.rs`). `tests/nomen_probe.py` signs in against a fake Nomen, but only in the hub's `nomen` auth mode. No test signs in through the card on a one-user hub (226). Nothing has signed in through the real Shippin issuer |
 
 ## What the code is
 
-Measured at 2b3feec, with the `crates/agenthub` submodule at its pinned commit 5c1499c.
+Measured at 2b3feec, with the `agenthub` submodule at its pinned commit 5c1499c.
 
 How it was measured:
 
@@ -123,29 +123,29 @@ How it was measured:
   top-level `tests/`. In any other Rust file, everything from a `#[cfg(test)]` line directly
   followed by a `mod` line, to the end of the file, is test.
 - Counted: Rust under `crates/`; TypeScript, JavaScript, CSS and HTML under `apps/`;
-  JavaScript and CSS under `crates/hub/src/`; and the Python under the top-level `tests/`,
+  JavaScript and CSS under `engine/hub/src/`; and the Python under the top-level `tests/`,
   reported on its own.
 - Not counted: `reference/` (the upstream Desktop Commander copy), generated files (`*.d.ts`,
   `apps/desktop/src/generated/`, `apps/desktop/src-tauri/gen/`), SQL migrations, lockfiles,
   SVG, the scripts under `scripts/` and `audit/`, and JSON, Markdown, YAML, TOML, shell and
-  PowerShell files. The hub's site words (`crates/hub/site/`) are JSON, so they are not
+  PowerShell files. The hub's site words (`engine/hub/site/`) are JSON, so they are not
   counted.
 
 ### Rust, per crate
 
 | Crate | Non-test lines | Test lines |
 |---|---:|---:|
-| `crates/hub` | 54,214 | 37,002 |
-| `crates/agenthub` | 9,275 | 5,080 |
-| `crates/machine-engine` | 8,759 | 4,967 |
-| `crates/kernel` | 2,746 | 2,693 |
-| `crates/mcp` | 2,444 | 1,016 |
-| `crates/contracts` | 1,784 | 266 |
-| `crates/link` | 1,310 | 399 |
-| `crates/ipc` | 1,175 | 158 |
-| `crates/devagotchi` | 843 | 2,212 |
-| `crates/store` | 729 | 127 |
-| `crates/connectors` | 83 | 445 |
+| `engine/hub` | 54,214 | 37,002 |
+| `agenthub` | 9,275 | 5,080 |
+| `engine/machine-engine` | 8,759 | 4,967 |
+| `engine/kernel` | 2,746 | 2,693 |
+| `interfaces/mcp` | 2,444 | 1,016 |
+| `platform/contracts` | 1,784 | 266 |
+| `runtime/link` | 1,310 | 399 |
+| `platform/ipc` | 1,175 | 158 |
+| `runtime/devagotchi` | 843 | 2,212 |
+| `platform/store` | 729 | 127 |
+| `engine/connectors` | 83 | 445 |
 | **Total** | **83,362** | **54,365** |
 
 Other code, non-test: `apps/website` 1,723 lines, `apps/desktop` 1,245 (its Tauri Rust
@@ -153,8 +153,8 @@ included), `apps/turnkey-video` 736. The Python tests under `tests/` are 10,208 
 
 ### The hub, per module
 
-Non-test lines of Rust, JavaScript and CSS under `crates/hub/src/`. The Rust here is 54,208
-lines; the other 6 of the crate's 54,214 are `crates/hub/build.rs`.
+Non-test lines of Rust, JavaScript and CSS under `engine/hub/src/`. The Rust here is 54,208
+lines; the other 6 of the crate's 54,214 are `engine/hub/build.rs`.
 
 | Module | Lines | What it is |
 |---|---:|---|
@@ -183,13 +183,13 @@ hub's JavaScript and CSS. The Python tests are not in it.
 
 | Area | Lines | Share | What is counted |
 |---|---:|---:|---|
-| Desktop Commander core | 27,347 | 30.8% | `machine-engine`, `ipc`, `link`, `mcp`, `contracts`, `connectors`, `crates/devagotchi`, `apps/desktop`; the hub's `machines`, `mcp` and `workflows`, and the machine, connect and workflow pages |
+| Desktop Commander core | 27,347 | 30.8% | `machine-engine`, `ipc`, `link`, `mcp`, `contracts`, `connectors`, `runtime/devagotchi`, `apps/desktop`; the hub's `machines`, `mcp` and `workflows`, and the machine, connect and workflow pages |
 | Accounts and sign-in | 16,320 | 18.4% | The hub's `identity` and `login`, the sign-in, passkey, OAuth, email-link, claim and device pages, the account and API-key pages, sign-in config, mail |
-| AgentHub | 14,425 | 16.2% | `crates/agenthub`, the hub's `agenthub`, the approvals page, the board and ticket pages |
-| Shared plumbing | 8,331 | 9.4% | `crates/store`, the hub's `serve`, `cli`, `store`, page shell, site words and style, audit, health, signals, the rest of `config` |
+| AgentHub | 14,425 | 16.2% | `agenthub`, the hub's `agenthub`, the approvals page, the board and ticket pages |
+| Shared plumbing | 8,331 | 9.4% | `platform/store`, the hub's `serve`, `cli`, `store`, page shell, site words and style, audit, health, signals, the rest of `config` |
 | Multi-tenant and commercial | 6,910 | 7.8% | The hub's `tenancy`, `offers`, `extensions.rs`, the organisation, operator, offers and hosted pages, tenancy config |
 | Marketing site | 6,794 | 7.6% | `apps/website`, `apps/turnkey-video`, the hub's landing and public pages, discovery files, and the visit counts behind them |
-| Kernel (lexicon, dictionary, AI capture) | 3,990 | 4.5% | `crates/kernel`, the hub's `kernel` |
+| Kernel (lexicon, dictionary, AI capture) | 3,990 | 4.5% | `engine/kernel`, the hub's `kernel` |
 | Admin (`/admin`) | 2,100 | 2.4% | The `hub_settings*` pages, live settings, the one-user switch |
 | Phone | 1,625 | 1.8% | The `/app` shell and home, web push, the service worker, the app manifest |
 | Connections gateway | 1,045 | 1.2% | The hub's `connections` and its page |
@@ -208,13 +208,13 @@ account pages as accounts.
 | The order of work, and what "done" means | [.ai/dev/plans/path.md](../.ai/dev/plans/path.md) |
 | The one-user edition's increments (208 to 269, and 270 from the operator's later clarification) | [.ai/dev/plans/one-user-edition.md](../.ai/dev/plans/one-user-edition.md) |
 | Desktop Commander tools and gaps | [.ai/docs/desktop-commander-parity.md](../.ai/docs/desktop-commander-parity.md), [plan](../.ai/dev/plans/desktop-commander-parity.md) |
-| The AgentHub board contract | [docs/agent-board.md](agent-board.md), [crates/agenthub/README.md](../crates/agenthub/README.md) |
+| The AgentHub board contract | [docs/agent-board.md](agent-board.md), [agenthub/README.md](../agenthub/README.md) |
 | AgentHub as a software factory | [.ai/dev/plans/agenthub-factory.md](../.ai/dev/plans/agenthub-factory.md) |
 | The phone | [.ai/dev/plans/mobile-experience.md](../.ai/dev/plans/mobile-experience.md), [docs/spec-phone-app.md](spec-phone-app.md) |
 | Plugins | [.ai/dev/plans/plugins.md](../.ai/dev/plans/plugins.md), [plugins/README.md](../plugins/README.md) |
 | Sign-in and identity | [docs/identity.md](identity.md) |
 | Security | [docs/security-baseline.md](security-baseline.md) |
-| Running a hub | [docs/deploy.md](deploy.md), [deploy/compose/README.md](../deploy/compose/README.md), [crates/hub/README.md](../crates/hub/README.md) |
+| Running a hub | [docs/deploy.md](deploy.md), [deploy/compose/README.md](../deploy/compose/README.md), [engine/hub/README.md](../engine/hub/README.md) |
 | The free and cloud editions' plans | [free edition](../.ai/dev/plans/free-edition.md), [cloud edition](../.ai/dev/plans/cloud-edition.md) |
 | How code is written | [.ai/patterns/README.md](../.ai/patterns/README.md) |
 | Decisions | [docs/adr/](adr/) |

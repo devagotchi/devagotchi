@@ -26,10 +26,10 @@ because one of those can break.
 
 | Layer | What it proves | Where it lives | Runs in |
 |---|---|---|---|
-| static | deps and licences, layout ratchet, generated schemas, owner grep, shellcheck | `crates/devagotchi/tests/layout.rs`, `security.yml`, `ci.yml` `repository-owner`, the shellcheck steps in `hub-deploy` and `host-install` | every PR: the layout tests and the owner grep; `security.yml` when the PR changes `Cargo.lock`, a `Cargo.toml` or `deny.toml`. Main and weekly: all of it |
+| static | deps and licences, layout ratchet, generated schemas, owner grep, shellcheck | `runtime/devagotchi/tests/layout.rs`, `security.yml`, `ci.yml` `repository-owner`, the shellcheck steps in `hub-deploy` and `host-install` | every PR: the layout tests and the owner grep; `security.yml` when the PR changes `Cargo.lock`, a `Cargo.toml` or `deny.toml`. Main and weekly: all of it |
 | unit | pure logic, parsers, renderers, OS backends | `src/<domain>/tests.rs` (G10) | every PR: `core` on ubuntu-24.04 and windows-2025. Main: all six OS legs |
 | store | everything that takes a store, on real Postgres (and ClickHouse) | `src/<domain>/tests.rs` with `or_skip!` | every PR, `hub-postgres` |
-| binary e2e | the one binary as processes: broker, `mcp`, hub, link, update, install | `crates/devagotchi/tests/*.rs`, `tests/e2e.py` and its probes, `tests/file_mutation_concurrency.py`, `deploy/linux/ci-install-check.sh`, `deploy/windows/ci-install-check.ps1` | every PR: `e2e (ubuntu-24.04)`. Main: `e2e` on Linux x64 and arm64, Windows 2022, 2025 and arm64, and `host-install` |
+| binary e2e | the one binary as processes: broker, `mcp`, hub, link, update, install | `runtime/devagotchi/tests/*.rs`, `tests/e2e.py` and its probes, `tests/file_mutation_concurrency.py`, `deploy/linux/ci-install-check.sh`, `deploy/windows/ci-install-check.ps1` | every PR: `e2e (ubuntu-24.04)`. Main: `e2e` on Linux x64 and arm64, Windows 2022, 2025 and arm64, and `host-install` |
 | browser | the hub's pages, passkeys, phone emulation, real AI clients over OAuth | `tests/*_browser.py`, `tests/clients_oauth.py` | every PR, `e2e (ubuntu-24.04)` |
 | deploy | compose stack, install, update and backup scripts | `deploy/compose/check.sh`, `tests/deploy_scripts.sh` | main: `hub-compose`, `hub-deploy` |
 | release artifacts | dist archives install from every shell; the image joins a machine | `install-check.yml` (`tests/install_check.py`), `image.yml` (`tests/compose_join.py`) | tags, through `release.yml`; `host` runs only when install-check succeeded or was skipped. Main runs only `plan` at 2b3feec (see Known violations, Cadence) |
@@ -59,7 +59,7 @@ Known gaps, recorded here rather than hidden:
 
 Rust test against the store:
 
-- Fixture: `crates/agenthub/src/tests/mod.rs`.
+- Fixture: `agenthub/src/tests/mod.rs`.
   - The module doc (:1-4) names `DEVAGOTCHI_TEST_POSTGRES_URL` and says each test skips
     without it. `pub(crate) use devagotchi_store::or_skip;` is :6.
   - `fixture() -> Option<Fixture>` (:22-29) documents the runtime flavor its calls need.
@@ -67,14 +67,14 @@ Rust test against the store:
 - Time: `Fixture::advance` (:32-82) moves the stored lease and standing-authorization times
   instead of sleeping, because the board decides on Postgres's clock (G9).
 - Test: `expired_lease_goes_back_to_ready_and_the_old_fence_is_rejected`
-  (`crates/agenthub/src/tests/lanes.rs:213-244`). The fixture is its first statement, its name
+  (`agenthub/src/tests/lanes.rs:213-244`). The fixture is its first statement, its name
   is a falsifiable sentence, every fallible call is labelled with `.expect("..")` or
   `.expect_err("..")`, it moves time with `f.advance(60_001)`, and the one non-obvious step
   carries a comment.
 - The same folder still has the old `stores()` loop helper (`mod.rs:115-118`). The exemplar is
   the `fixture()` and `advance` shape, not the whole folder.
 
-Fixture machinery: `crates/store/src/testing.rs`.
+Fixture machinery: `platform/store/src/testing.rs`.
 
 - `postgres_with` (:17-26) and `empty_postgres` (:28-52): a new database per test, named
   `dvg_test_<secs>_<hex>`.
@@ -87,20 +87,20 @@ Fixture machinery: `crates/store/src/testing.rs`.
 Other shapes to copy:
 
 - Table-driven unit test with the input as the message:
-  `a_stores_place_never_shows_its_user_password_or_query` (`crates/store/src/tests.rs:3-23`).
-- An environment skip that cannot happen in CI: `crates/ipc/src/windows/security.rs:488-500`
+  `a_stores_place_never_shows_its_user_password_or_query` (`platform/store/src/tests.rs:3-23`).
+- An environment skip that cannot happen in CI: `platform/ipc/src/windows/security.rs:488-500`
   asserts `GITHUB_ACTIONS` is unset, then prints why it skips. Its sibling
-  `a_shell_script_runs_in_git_bash` (`crates/machine-engine/src/execution/platform/windows/tests.rs:50-53`)
+  `a_shell_script_runs_in_git_bash` (`engine/machine-engine/src/execution/platform/windows/tests.rs:50-53`)
   says "fails here, never skips".
-- Bounded wait: `output_holding` (`crates/machine-engine/src/broker/tests/interactive.rs:113-125`)
+- Bounded wait: `output_holding` (`engine/machine-engine/src/broker/tests/interactive.rs:113-125`)
   waits on a 60 s deadline and puts the last output in the panic. The Python equivalents are
   `settled` (`tests/claim_browser.py:86-95`) and `poll` (`tests/app_browser.py:107-117`).
-- Injected durations: `links.offline_after` (`crates/hub/src/machines/link/tests.rs:89`) and
-  `nomen.retry` (`crates/hub/src/identity/nomen/tests/mod.rs:268`).
-- Real-server HTTP test: `world` and `world_with` (`crates/hub/src/web/tests/mod.rs:142-256`)
+- Injected durations: `links.offline_after` (`engine/hub/src/machines/link/tests.rs:89`) and
+  `nomen.retry` (`engine/hub/src/identity/nomen/tests/mod.rs:268`).
+- Real-server HTTP test: `world` and `world_with` (`engine/hub/src/web/tests/mod.rs:142-256`)
   bind `127.0.0.1:0`, run `axum::serve` for the fake Nomen and for the hub, and drive them with
   reqwest. This is axum's `the_real_deal` shape.
-- A ratchet check: `crates/devagotchi/tests/layout.rs`. Its baseline only shrinks, with
+- A ratchet check: `runtime/devagotchi/tests/layout.rs`. Its baseline only shrinks, with
   `DEVAGOTCHI_WRITE_LAYOUT` to lower entries (:163), and its own logic is unit-tested on
   synthetic input (:183-261).
 
@@ -135,8 +135,8 @@ rewrite plan cite them.
 2. **It lives with its domain** (G10).
    - Unit and store tests go where G10 says, including an inline `#[cfg(test)] mod tests` in a
      leaf file under the cap.
-   - Tests that drive the built binary go in `crates/devagotchi/tests/` and start it with
-     `env!("CARGO_BIN_EXE_devagotchi")` (`crates/devagotchi/tests/one_binary.rs:8-10`).
+   - Tests that drive the built binary go in `runtime/devagotchi/tests/` and start it with
+     `env!("CARGO_BIN_EXE_devagotchi")` (`runtime/devagotchi/tests/one_binary.rs:8-10`).
    - The hub's `web/*_tests.rs` files move once, with S8 (C15), not before.
 3. **One store fixture shape** (G13 states it).
    - Each fixture's doc says what it builds and that it is `None` without
@@ -159,7 +159,7 @@ rewrite plan cite them.
      `testing` constant.
    - nextest hides a passing test's output by default, so the flag is the guarantee and the
      print is a courtesy that junit keeps (rule 20).
-   - Any other environment skip follows `crates/ipc/src/windows/security.rs:488-500`: it
+   - Any other environment skip follows `platform/ipc/src/windows/security.rs:488-500`: it
      asserts it is not CI, and it says why it skips. AGENTS.md forbids hidden test skips.
 6. **Every store-backed test runs with Postgres in CI** (G13: `hub-postgres` runs
    `rdeps(devagotchi-store)`). That filter is exactly the crates that enable the store's
@@ -175,7 +175,7 @@ rewrite plan cite them.
    fix it. Only after the cause is known may a nextest test-group with `max-threads` serialize
    it.
 9. **A failure says which case failed.** `assert_eq!` already prints both sides. A loop or table
-   case carries its input as the message (`crates/store/src/tests.rs:20`). A boolean `assert!`
+   case carries its input as the message (`platform/store/src/tests.rs:20`). A boolean `assert!`
    carries the value it judged (`"{view:?}"`).
 10. **A generated artefact is checked by a test that can rewrite it** (`DEVAGOTCHI_WRITE_LAYOUT`,
     `DEVAGOTCHI_WRITE_SCHEMA`, `DEVAGOTCHI_WRITE_SIGNAL_SCHEMA`), and by a CI job that runs the
@@ -236,10 +236,10 @@ here.
 | What | Where |
 |---|---|
 | Unit and store tests | G10: `src/<domain>/tests.rs`, `src/<domain>/tests/<subject>.rs`, or inline in a leaf file under the cap |
-| Store fixtures and skip machinery | `crates/store/src/testing.rs` (feature `testing`); a domain's own fixtures in its `tests` module |
-| Tests that drive the built binary | `crates/devagotchi/tests/<subject>.rs` |
-| Workspace-wide source scans | `crates/devagotchi/tests/`, sharing `layout.rs`'s walker (G12) |
-| Their baselines | `crates/devagotchi/tests/<check>/` (as `crates/devagotchi/tests/layout/`) |
+| Store fixtures and skip machinery | `platform/store/src/testing.rs` (feature `testing`); a domain's own fixtures in its `tests` module |
+| Tests that drive the built binary | `runtime/devagotchi/tests/<subject>.rs` |
+| Workspace-wide source scans | `runtime/devagotchi/tests/`, sharing `layout.rs`'s walker (G12) |
+| Their baselines | `runtime/devagotchi/tests/<check>/` (as `runtime/devagotchi/tests/layout/`) |
 | Scenario scripts and probes | `tests/<scenario>.py`, run from `tests/e2e.py` or a named ci.yml step |
 | Shared Python helpers | a non-runnable module in `tests/` (`tests/fake_nomen.py` today; `tests/harness.py` once rule 14 lands) |
 | Manual-only scripts | listed in `tests/MANUAL.md` (to be created, rule 15) |
@@ -249,7 +249,7 @@ here.
 
 ## The canonical test
 
-From `crates/agenthub/src/tests`, as it is at main:
+From `agenthub/src/tests`, as it is at main:
 
 ```rust
 // tests/mod.rs
@@ -337,7 +337,7 @@ the check named here replaces review. Each lands green together with the fix it 
    - `pub const REQUIRE_ENV: &str = "DEVAGOTCHI_TEST_REQUIRE_POSTGRES";`, and the ClickHouse
      twin `DEVAGOTCHI_TEST_REQUIRE_CLICKHOUSE`.
    - The decision is factored into a pure function and table-tested in
-     `crates/store/src/tests.rs`; spawning a test binary is not needed.
+     `platform/store/src/tests.rs`; spawning a test binary is not needed.
    - Proof: run hub-postgres once with `DEVAGOTCHI_TEST_POSTGRES_URL` unset. It must go red.
 2. **ci.yml** (B0 and B6).
    - `hub-postgres` runs one step, `cargo nextest run --locked --profile ci -E
@@ -347,8 +347,8 @@ the check named here replaces review. Each lands green together with the fix it 
      --check`, `devagotchi ai check` (rules 10, 15).
    - An `if: always()` aggregate job, `ci-ok`, whose `needs:` names every job and which fails
      unless each result is success. Branch protection then requires one check.
-3. **`crates/devagotchi/tests/test_shape.rs`** (B6), beside `layout.rs` and in its ratchet style.
-   - Baseline `crates/devagotchi/tests/test_shape/allowed.txt`, one `<rule>\t<path>:<line or
+3. **`runtime/devagotchi/tests/test_shape.rs`** (B6), beside `layout.rs` and in its ratchet style.
+   - Baseline `runtime/devagotchi/tests/test_shape/allowed.txt`, one `<rule>\t<path>:<line or
      name>` per line. It only shrinks; `DEVAGOTCHI_WRITE_TEST_SHAPE=1` drops entries that are
      gone and never adds any. Its decision functions get synthetic-input unit tests.
    - It reuses `layout.rs`'s walker (`rust_files`, which skips `target`, `node_modules` and dot
@@ -364,8 +364,8 @@ the check named here replaces review. Each lands green together with the fix it 
      - `if let Some\(.*\) = .*(postgres|empty_postgres)\(`;
      - a `let (...) = ...` naming `postgres`, `POSTGRES_ENV` or `CLICKHOUSE` followed within 6
        lines by `else {` and `return`;
-     - `env::var(_os)?\(.*(POSTGRES_ENV|"DEVAGOTCHI_TEST_)` outside `crates/store/src/testing.rs`;
-     - a `macro_rules!` containing `None => return` outside `crates/store/src/testing.rs`;
+     - `env::var(_os)?\(.*(POSTGRES_ENV|"DEVAGOTCHI_TEST_)` outside `platform/store/src/testing.rs`;
+     - a `macro_rules!` containing `None => return` outside `platform/store/src/testing.rs`;
      - `fn \w+\(store: Option<&str>`, and a `^\s*store: Option<&str>,` parameter line in a
        multi-line signature (`hosted_with`, `hosted_with_ingress`).
      The baseline starts with today's sites and must reach zero.
@@ -406,48 +406,48 @@ Final receipt for B6: junit from hub-postgres shows 0 `SKIPPED:` lines.
 
 ## Known violations
 
-Verified at main 2b3feec (submodule `crates/agenthub` at 5c1499c). Each entry is
+Verified at main 2b3feec (submodule `agenthub` at 5c1499c). Each entry is
 `file (symbol): problem -> rewrite`.
 
 ### Rule 1 (the name is a claim)
 
-- `crates/hub/src/identity/accounts/passkey/tests.rs` (`registration_refusals`, `assertion_refusals`, :42, :112): noun phrases. -> `a_registration_is_refused_for_each_bad_field_and_names_it` and `an_assertion_is_refused_for_each_bad_field_and_names_it`, from what each asserts.
-- `crates/hub/src/ops/analytics/tests.rs` (`the_tables_are_the_hubs_own_on_both_engines_and_a_milestone_is_kept_once`, :475): names two engines; there is one. -> `the_analytics_tables_are_the_hubs_own_and_a_milestone_is_kept_once`.
-- `crates/hub/src/identity/accounts/api_keys/tests.rs` (`keys_hold_on_postgres`, :256) and `crates/hub/src/identity/preferences/tests.rs` (`preferences_hold_on_postgres_under_row_level_security`, :184): engine names. -> rename each to what its `holds` helper asserts (read the helper first), for example `a_key_keeps_its_limits_and_is_refused_once_revoked`. The skip shape is under rule 3.
+- `engine/hub/src/identity/accounts/passkey/tests.rs` (`registration_refusals`, `assertion_refusals`, :42, :112): noun phrases. -> `a_registration_is_refused_for_each_bad_field_and_names_it` and `an_assertion_is_refused_for_each_bad_field_and_names_it`, from what each asserts.
+- `engine/hub/src/ops/analytics/tests.rs` (`the_tables_are_the_hubs_own_on_both_engines_and_a_milestone_is_kept_once`, :475): names two engines; there is one. -> `the_analytics_tables_are_the_hubs_own_and_a_milestone_is_kept_once`.
+- `engine/hub/src/identity/accounts/api_keys/tests.rs` (`keys_hold_on_postgres`, :256) and `engine/hub/src/identity/preferences/tests.rs` (`preferences_hold_on_postgres_under_row_level_security`, :184): engine names. -> rename each to what its `holds` helper asserts (read the helper first), for example `a_key_keeps_its_limits_and_is_refused_once_revoked`. The skip shape is under rule 3.
 
 ### Rule 3 (one store fixture shape)
 
-- `crates/hub/src/store/mod.rs` (`testing::stores`, :86-89) and `crates/agenthub/src/tests/mod.rs` (`stores`, :115-118): turn an `Option` into a 0-or-1 `Vec` so callers can loop. -> delete both; callers write `let test = or_skip!(testing::postgres());` (AgentHub: `or_skip!(super::postgres())`).
-- `crates/hub/src/ops/tests.rs` (`stores`, :20-27; loops :101, :257), `crates/hub/src/workflows/tests.rs` (`stores`, :68-75; loops :244, :397, :482, :628, :680, :795, :1005, :1214, :1497), `crates/hub/src/offers/tests.rs` (`stores`, :22-29; loops :109, :314, :486), `crates/hub/src/tenancy/tests/access.rs` (`stores`, :69-76; loops :80, :260): four identical `Vec<Option<String>>` copies; every loop runs zero times without Postgres. -> delete the four; each test opens with `let hub = or_skip!(hosted_with(..));` (see the `hosted_on` entry).
-- `crates/hub/src/web/analytics_tests.rs` (`the_operator_sees_the_counts_and_the_funnel_move_and_nobody_else_sees_anything`, :50-57) and `crates/hub/src/web/operator_tests.rs` (`the_operator_lets_a_waiting_person_in_and_their_next_call_works`, :91-98): the same `Vec<Option<String>>` built inline from `empty_postgres`, then `for store in stores`. -> open with `let hub = or_skip!(..)` on the split fixture (see the `hosted_on` entry).
-- `crates/hub/src/identity/accounts/tests.rs` (`stores` :6, `hosted_stores` :785), `crates/hub/src/identity/accounts/claim/tests.rs` (`stores`, :9), `crates/hub/src/identity/accounts/oauth/tests.rs` (`stores`, :14), `crates/hub/src/identity/accounts/sessions/tests.rs` (`stores`, :13), `crates/hub/src/identity/accounts/tenants/tests.rs` (`stores`, :22), `crates/hub/src/tenancy/access/tests.rs` (`stores`, :44): seven wrappers return `Vec<(TestStore, Accounts)>` (`Arc<Accounts>` in `tenancy/access`) for tests to loop over. -> each becomes `async fn accounts(..) -> Option<(TestStore, Accounts)>` (or `hosted_accounts`) built with `testing::postgres().await?`; tests write `let (_store, accounts) = or_skip!(accounts());` and lose one indent.
-- Direct `for .. in testing::stores().await` loops, 16 sites: `crates/hub/src/identity/accounts/passwords/tests.rs:7`; `crates/hub/src/tenancy/operator/tests.rs:27`; `crates/hub/src/tenancy/orgs/tests.rs:29,58,146,290,345`; `crates/hub/src/ops/analytics/tests.rs:317,421,478,527`; `crates/hub/src/store/tests.rs:43,53,92,200`; `crates/hub/src/agenthub/tests/hosted.rs:16`. -> `let test = or_skip!(testing::postgres());` and un-indent the body.
-- `crates/agenthub/src/tests/hosted.rs` (:17, :294) and `crates/agenthub/src/tests/hosted_lifecycle.rs` (:15, :152): `super::stores()` loops beside the exemplar fixture. -> `let test = or_skip!(super::postgres());`. This lands in the devagotchi/agenthub repo first, then the submodule moves (B3).
-- `crates/hub/src/machines/link/tests.rs` (`links!`, :16-24; uses :88, :174, :196, :235, :281, :325, :337, :370, :421, and `crates/hub/src/machines/link/tests/container.rs:33`): a private copy of `or_skip!` (`None => return`). -> delete it; write `let links = or_skip!(test_links(dir.path()));` at each use.
-- `crates/devagotchi/tests/hub_recovery.rs` (`hub_set_password_reads_stdin_keeps_the_owner_and_never_prints_the_password`, :19-22), `crates/hub/src/cli/tests.rs` (:258-260), `crates/hub/src/identity/cli/tests.rs` (:66-68, :187-189): sync tests hand-write `let Some(url) = runtime.block_on(empty_postgres()) else { return }`. -> add `or_skip_blocking!(runtime, fixture)` to `store::testing` and write `let url = or_skip_blocking!(runtime, empty_postgres());`.
-- `crates/store/src/tests.rs` (`the_hub_role_is_taken_only_where_the_database_granted_it`, :78-80): a hand-written let-else. -> `let url = or_skip!(testing::empty_postgres());`.
-- `crates/hub/src/identity/accounts/api_keys/tests.rs` (`keys_hold_on_postgres`, :257-259) and `crates/hub/src/identity/preferences/tests.rs` (`preferences_hold_on_postgres_under_row_level_security`, :185-187): `if let Some(test) = testing::postgres().await { .. }` skips silently. -> `let test = or_skip!(testing::postgres());`, then call the helper.
-- `crates/hub/src/identity/accounts/tenants/tests.rs` (`stores_from_before_tenants`, :61-66): builds a 0-or-1 `Vec` through `if let Some(url) = empty_postgres()`. -> return `Option<(String, TempDir)>` with `empty_postgres().await?`, and `or_skip!` at the call site.
-- `crates/hub/src/tenancy/tests/tenants.rs` (`hosted_on` :38, `hosted_with` :43, `hosted_with_ingress` :55), with the `run(None)` and `pages(None)` wrappers at `crates/hub/src/agenthub/tests/ahead.rs:146`, `crates/hub/src/agenthub/tests/notes.rs:139`, `crates/hub/src/connections/tests.rs:287`, `crates/hub/src/identity/tests/keys.rs:192`, `crates/hub/src/identity/tests/me.rs:276`, `crates/hub/src/tenancy/tests/orgs.rs:253,434`, `crates/hub/src/web/hub_settings_tests.rs:254`, and the same `store: Option<&str>` argument on `hub_on` (`crates/hub/src/ops/tests.rs:30`, `crates/hub/src/workflows/tests.rs:57`, `crates/hub/src/web/operator_tests.rs:56`) and `hub_with` (`crates/hub/src/tenancy/tests/access.rs:46`): a `store: Option<&str>` where `None` means "make one", and thin tests that hide the fixture in a helper. -> split into `hosted_with(extra) -> Option<Hosted>` (makes its own database) and `hosted_on_store(url, extra) -> Hosted` for a test that reopens one; inline each wrapper so the test opens with `let hub = or_skip!(hosted_with(..));`.
+- `engine/hub/src/store/mod.rs` (`testing::stores`, :86-89) and `agenthub/src/tests/mod.rs` (`stores`, :115-118): turn an `Option` into a 0-or-1 `Vec` so callers can loop. -> delete both; callers write `let test = or_skip!(testing::postgres());` (AgentHub: `or_skip!(super::postgres())`).
+- `engine/hub/src/ops/tests.rs` (`stores`, :20-27; loops :101, :257), `engine/hub/src/workflows/tests.rs` (`stores`, :68-75; loops :244, :397, :482, :628, :680, :795, :1005, :1214, :1497), `engine/hub/src/offers/tests.rs` (`stores`, :22-29; loops :109, :314, :486), `engine/hub/src/tenancy/tests/access.rs` (`stores`, :69-76; loops :80, :260): four identical `Vec<Option<String>>` copies; every loop runs zero times without Postgres. -> delete the four; each test opens with `let hub = or_skip!(hosted_with(..));` (see the `hosted_on` entry).
+- `engine/hub/src/web/analytics_tests.rs` (`the_operator_sees_the_counts_and_the_funnel_move_and_nobody_else_sees_anything`, :50-57) and `engine/hub/src/web/operator_tests.rs` (`the_operator_lets_a_waiting_person_in_and_their_next_call_works`, :91-98): the same `Vec<Option<String>>` built inline from `empty_postgres`, then `for store in stores`. -> open with `let hub = or_skip!(..)` on the split fixture (see the `hosted_on` entry).
+- `engine/hub/src/identity/accounts/tests.rs` (`stores` :6, `hosted_stores` :785), `engine/hub/src/identity/accounts/claim/tests.rs` (`stores`, :9), `engine/hub/src/identity/accounts/oauth/tests.rs` (`stores`, :14), `engine/hub/src/identity/accounts/sessions/tests.rs` (`stores`, :13), `engine/hub/src/identity/accounts/tenants/tests.rs` (`stores`, :22), `engine/hub/src/tenancy/access/tests.rs` (`stores`, :44): seven wrappers return `Vec<(TestStore, Accounts)>` (`Arc<Accounts>` in `tenancy/access`) for tests to loop over. -> each becomes `async fn accounts(..) -> Option<(TestStore, Accounts)>` (or `hosted_accounts`) built with `testing::postgres().await?`; tests write `let (_store, accounts) = or_skip!(accounts());` and lose one indent.
+- Direct `for .. in testing::stores().await` loops, 16 sites: `engine/hub/src/identity/accounts/passwords/tests.rs:7`; `engine/hub/src/tenancy/operator/tests.rs:27`; `engine/hub/src/tenancy/orgs/tests.rs:29,58,146,290,345`; `engine/hub/src/ops/analytics/tests.rs:317,421,478,527`; `engine/hub/src/store/tests.rs:43,53,92,200`; `engine/hub/src/agenthub/tests/hosted.rs:16`. -> `let test = or_skip!(testing::postgres());` and un-indent the body.
+- `agenthub/src/tests/hosted.rs` (:17, :294) and `agenthub/src/tests/hosted_lifecycle.rs` (:15, :152): `super::stores()` loops beside the exemplar fixture. -> `let test = or_skip!(super::postgres());`. This lands in the devagotchi/agenthub repo first, then the submodule moves (B3).
+- `engine/hub/src/machines/link/tests.rs` (`links!`, :16-24; uses :88, :174, :196, :235, :281, :325, :337, :370, :421, and `engine/hub/src/machines/link/tests/container.rs:33`): a private copy of `or_skip!` (`None => return`). -> delete it; write `let links = or_skip!(test_links(dir.path()));` at each use.
+- `runtime/devagotchi/tests/hub_recovery.rs` (`hub_set_password_reads_stdin_keeps_the_owner_and_never_prints_the_password`, :19-22), `engine/hub/src/cli/tests.rs` (:258-260), `engine/hub/src/identity/cli/tests.rs` (:66-68, :187-189): sync tests hand-write `let Some(url) = runtime.block_on(empty_postgres()) else { return }`. -> add `or_skip_blocking!(runtime, fixture)` to `store::testing` and write `let url = or_skip_blocking!(runtime, empty_postgres());`.
+- `platform/store/src/tests.rs` (`the_hub_role_is_taken_only_where_the_database_granted_it`, :78-80): a hand-written let-else. -> `let url = or_skip!(testing::empty_postgres());`.
+- `engine/hub/src/identity/accounts/api_keys/tests.rs` (`keys_hold_on_postgres`, :257-259) and `engine/hub/src/identity/preferences/tests.rs` (`preferences_hold_on_postgres_under_row_level_security`, :185-187): `if let Some(test) = testing::postgres().await { .. }` skips silently. -> `let test = or_skip!(testing::postgres());`, then call the helper.
+- `engine/hub/src/identity/accounts/tenants/tests.rs` (`stores_from_before_tenants`, :61-66): builds a 0-or-1 `Vec` through `if let Some(url) = empty_postgres()`. -> return `Option<(String, TempDir)>` with `empty_postgres().await?`, and `or_skip!` at the call site.
+- `engine/hub/src/tenancy/tests/tenants.rs` (`hosted_on` :38, `hosted_with` :43, `hosted_with_ingress` :55), with the `run(None)` and `pages(None)` wrappers at `engine/hub/src/agenthub/tests/ahead.rs:146`, `engine/hub/src/agenthub/tests/notes.rs:139`, `engine/hub/src/connections/tests.rs:287`, `engine/hub/src/identity/tests/keys.rs:192`, `engine/hub/src/identity/tests/me.rs:276`, `engine/hub/src/tenancy/tests/orgs.rs:253,434`, `engine/hub/src/web/hub_settings_tests.rs:254`, and the same `store: Option<&str>` argument on `hub_on` (`engine/hub/src/ops/tests.rs:30`, `engine/hub/src/workflows/tests.rs:57`, `engine/hub/src/web/operator_tests.rs:56`) and `hub_with` (`engine/hub/src/tenancy/tests/access.rs:46`): a `store: Option<&str>` where `None` means "make one", and thin tests that hide the fixture in a helper. -> split into `hosted_with(extra) -> Option<Hosted>` (makes its own database) and `hosted_on_store(url, extra) -> Hosted` for a test that reopens one; inline each wrapper so the test opens with `let hub = or_skip!(hosted_with(..));`.
 
 ### Rule 5 (a skip is impossible where guaranteed, and visible)
 
 Fixed in f13b8e1 (B0): `testing::server_url()` with `DEVAGOTCHI_TEST_REQUIRE_POSTGRES`, the one `SKIPPED:` text in `or_skip!`, `store/src/tests.rs` and `hub_recovery.rs` moved onto them. Still open below: the ClickHouse flag and the synchronous skips.
 
-- `crates/hub/src/ops/warehouse/tests.rs` (`the_real_clickhouse_keeps_one_event_per_id_and_answers_a_boards_statistics`, :254-259): a tuple let-else returns silently when Postgres or ClickHouse is missing; nothing fails if hub-postgres loses the ClickHouse URL. -> `let test = or_skip!(testing::postgres()); let ch = or_skip!(testing::clickhouse());`, where `clickhouse()` reads `DEVAGOTCHI_TEST_CLICKHOUSE_URL`, `_USER` and `_PASSWORD` and panics under `DEVAGOTCHI_TEST_REQUIRE_CLICKHOUSE=1`.
-- `crates/hub/src/store/tests.rs` (`without_a_url_there_is_no_store_and_the_configs_is_used_as_written`, :31-33): returns without a word when `STORAGE_URL_ENV` is set. -> say why it skips, or assert it is not CI, as `crates/ipc/src/windows/security.rs:488-500` does (rewrite plan B6).
+- `engine/hub/src/ops/warehouse/tests.rs` (`the_real_clickhouse_keeps_one_event_per_id_and_answers_a_boards_statistics`, :254-259): a tuple let-else returns silently when Postgres or ClickHouse is missing; nothing fails if hub-postgres loses the ClickHouse URL. -> `let test = or_skip!(testing::postgres()); let ch = or_skip!(testing::clickhouse());`, where `clickhouse()` reads `DEVAGOTCHI_TEST_CLICKHOUSE_URL`, `_USER` and `_PASSWORD` and panics under `DEVAGOTCHI_TEST_REQUIRE_CLICKHOUSE=1`.
+- `engine/hub/src/store/tests.rs` (`without_a_url_there_is_no_store_and_the_configs_is_used_as_written`, :31-33): returns without a word when `STORAGE_URL_ENV` is set. -> say why it skips, or assert it is not CI, as `platform/ipc/src/windows/security.rs:488-500` does (rewrite plan B6).
 
 ### Rule 6 (every store-backed test runs with Postgres in CI)
 
-- `.github/workflows/ci.yml` (`hub-postgres`, :91 and :97) and `crates/devagotchi/tests/hub_recovery.rs` (:15-23): hub-postgres runs a hand-kept package list plus `-p devagotchi --test board`, so `hub_set_password_reads_stdin_keeps_the_owner_and_never_prints_the_password` runs only in `core`, where it skips and passes. No job can fail it. -> one step, `cargo nextest run --locked --profile ci -E 'rdeps(devagotchi-store)'`, with `DEVAGOTCHI_TEST_POSTGRES_URL`, the ClickHouse URL and user, and both REQUIRE flags set to `1`.
+- `.github/workflows/ci.yml` (`hub-postgres`, :91 and :97) and `runtime/devagotchi/tests/hub_recovery.rs` (:15-23): hub-postgres runs a hand-kept package list plus `-p devagotchi --test board`, so `hub_set_password_reads_stdin_keeps_the_owner_and_never_prints_the_password` runs only in `core`, where it skips and passes. No job can fail it. -> one step, `cargo nextest run --locked --profile ci -E 'rdeps(devagotchi-store)'`, with `DEVAGOTCHI_TEST_POSTGRES_URL`, the ClickHouse URL and user, and both REQUIRE flags set to `1`.
 
 ### Rule 7 (no fixed sleep for a condition)
 
-- `crates/hub/src/identity/nomen/tests/mod.rs` (:242, :274, :306, :426), `crates/hub/src/identity/nomen/tests/kept.rs` (:42), `crates/hub/src/web/tests/nomen_login.rs` (:296): sleeps of `RETRY_FIRST` + 100 ms, 150 ms, 3 s, 2.1 s, 3 s and 1.2 s wait out real retry, cache and token expiry; `RETRY_FIRST` is 2 s (`crates/hub/src/identity/nomen/mod.rs:69`), so about 11.5 s per run, fragile at the margins. -> extend the verifier's existing injection (`nomen.retry`, `nomen.fresh_for`, mod.rs:267-268) to its confirmation TTL and leeway, in milliseconds; mint tokens whose `exp` is already past.
-- `crates/hub/src/web/passkey_tests.rs` (:1442): `sleep(5 s)` waits out the device-code poll interval (`interval` 5, :1338). -> make the interval a config field the test sets to its minimum; test `slow_down` with an interval the test controls.
-- `crates/hub/src/workflows/tests.rs` (:1094, :1127, :1581): `sleep(300ms)` inside a `join!` assumes the waiter is parked first; under load the event lands first and the parked-wait path goes untested. -> a test hook (a `tokio::sync::Notify` the wait path signals once subscribed) awaited before firing, or poll the subscriber count with a deadline.
-- `crates/machine-engine/src/broker/tests/lifecycle.rs` (:192): `sleep(1500ms)`, then an assertion that assumes the root has exited. -> poll with a deadline until the root is gone, then assert the operation is still running.
-- `crates/hub/src/machines/link/tests.rs` (`wait`, :91), `crates/hub/src/tenancy/tests/access.rs` (:409), `crates/hub/src/site/tests.rs` (:778): bare 200, 200 and 800 ms windows to prove something did not happen; the positive assertions in link/tests.rs after `wait()` also sit behind the fixed wait. -> positive cases poll with a deadline (`output_holding` shape); negative cases wait a window derived from the injected duration (`links.offline_after`) or a signal that the attempt ran (for example a reload-attempt counter on the site watcher).
+- `engine/hub/src/identity/nomen/tests/mod.rs` (:242, :274, :306, :426), `engine/hub/src/identity/nomen/tests/kept.rs` (:42), `engine/hub/src/web/tests/nomen_login.rs` (:296): sleeps of `RETRY_FIRST` + 100 ms, 150 ms, 3 s, 2.1 s, 3 s and 1.2 s wait out real retry, cache and token expiry; `RETRY_FIRST` is 2 s (`engine/hub/src/identity/nomen/mod.rs:69`), so about 11.5 s per run, fragile at the margins. -> extend the verifier's existing injection (`nomen.retry`, `nomen.fresh_for`, mod.rs:267-268) to its confirmation TTL and leeway, in milliseconds; mint tokens whose `exp` is already past.
+- `engine/hub/src/web/passkey_tests.rs` (:1442): `sleep(5 s)` waits out the device-code poll interval (`interval` 5, :1338). -> make the interval a config field the test sets to its minimum; test `slow_down` with an interval the test controls.
+- `engine/hub/src/workflows/tests.rs` (:1094, :1127, :1581): `sleep(300ms)` inside a `join!` assumes the waiter is parked first; under load the event lands first and the parked-wait path goes untested. -> a test hook (a `tokio::sync::Notify` the wait path signals once subscribed) awaited before firing, or poll the subscriber count with a deadline.
+- `engine/machine-engine/src/broker/tests/lifecycle.rs` (:192): `sleep(1500ms)`, then an assertion that assumes the root has exited. -> poll with a deadline until the root is gone, then assert the operation is still running.
+- `engine/hub/src/machines/link/tests.rs` (`wait`, :91), `engine/hub/src/tenancy/tests/access.rs` (:409), `engine/hub/src/site/tests.rs` (:778): bare 200, 200 and 800 ms windows to prove something did not happen; the positive assertions in link/tests.rs after `wait()` also sit behind the fixed wait. -> positive cases poll with a deadline (`output_holding` shape); negative cases wait a window derived from the injected duration (`links.offline_after`) or a signal that the attempt ran (for example a reload-attempt counter on the site watcher).
 
 ### Rule 8 (no retries; a cause before a test-group)
 

@@ -16,7 +16,7 @@
 | M1 | Store, hash, scopes, durations, chain events | none | `accounts/api_keys/tests.rs` | done |
 | M2 | Enforcement in `Hub::call_tool`, closed by default | M1 | `keys_tests.rs` | done |
 | M3 | `/app/keys`: make, show once, last use, revoke, replace | M1 | `keys_tests.rs` | done |
-| M4 | Each client's configuration with a key | M1, connectors | `crates/connectors` tests | done |
+| M4 | Each client's configuration with a key | M1, connectors | `engine/connectors` tests | done |
 | M5 | Review and merge to main | M1-M4, operator approval | merged PR | pending |
 
 ## Risks and approved decisions

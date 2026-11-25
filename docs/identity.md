@@ -5,13 +5,13 @@
 > has one account system, `auth.mode hub`, in Postgres: [docs/auth.md](auth.md). This file is
 > kept as the history of that design; nothing in it describes the code.
 
-One account system, on the hub, that an AI can open and a person can claim. Nomen is a way in, not the account. This is the model for the hosted service at devagotchi.com and for any hub in `auth.mode` `devagotchi`. It is written from the hub code (commit `190978ae`) and from the passkey work on `main` (`crates/hub/src/accounts.rs`, `web/passkeys.rs`, `devagotchi hub owner`). Hosts and container ids are not part of this model; `docs/deploy.md` says where an operator names them.
+One account system, on the hub, that an AI can open and a person can claim. Nomen is a way in, not the account. This is the model for the hosted service at devagotchi.com and for any hub in `auth.mode` `devagotchi`. It is written from the hub code (commit `190978ae`) and from the passkey work on `main` (`engine/hub/src/accounts.rs`, `web/passkeys.rs`, `devagotchi hub owner`). Hosts and container ids are not part of this model; `docs/deploy.md` says where an operator names them.
 
 Nothing in this document deploys.
 
 ## What is live
 
-Claude.ai already completes OAuth against this hub: dynamic registration of a public client, PKCE S256, the Allow page, a hub-signed JWT, refresh rotation with reuse detection, and the tool list. That path is `crates/hub/src/oauth.rs`. The account id in the token is a Devagotchi id (`dg_` plus 32 lowercase hex), not a Nomen subject (`crates/hub/src/identity.rs`).
+Claude.ai already completes OAuth against this hub: dynamic registration of a public client, PKCE S256, the Allow page, a hub-signed JWT, refresh rotation with reuse detection, and the tool list. That path is `engine/hub/src/oauth.rs`. The account id in the token is a Devagotchi id (`dg_` plus 32 lowercase hex), not a Nomen subject (`engine/hub/src/identity.rs`).
 
 The hub that is up has this owner row, and it must survive every change here:
 
@@ -21,7 +21,7 @@ The hub that is up has this owner row, and it must survive every change here:
 | Linked sign-in | issuer `https://id.shippin.cloud`, subject `395290028818825218` |
 | Brokers | `homelab-infra-dev`, `tx-infra-prod`, `wi-infra-dev` |
 
-Those broker names stay grant-only. A new account does not receive them. A machine the account enrolls is `devices.owner` of that account (`crates/hub/src/link.rs`).
+Those broker names stay grant-only. A new account does not receive them. A machine the account enrolls is `devices.owner` of that account (`engine/hub/src/link.rs`).
 
 The code also has `auth.mode hub` (`docs/product-and-platform-plan.md` §14), with `acct_` ids in its own store (`accounts.sqlite3` or Postgres) and the rule that a configured owner keeps the bare Nomen subject as the account id. Both modes are in the code side by side since PR #79 merged (increment 42); a hub runs the one its config names and they share no tables. This hub runs `devagotchi` and already rekeyed that subject onto the `dg_` row above. Switching it to `hub` mode, or rewriting the subject back, would orphan the grants and the machines. `identities.sqlite3` is the account of record on this hub.
 
@@ -49,7 +49,7 @@ A credential proves an account. It is not an account.
 |---|---|---|
 | MCP access JWT | An agent seat on the account | Signed by the hub (`oauth-signing.json`, P-256, mode 0600). `aud` is `{public_url}/mcp`. About one hour. `jti` can be revoked. |
 | Refresh token | That same client | Opaque, stored as SHA-256, family rotation. Reuse of a spent token deletes the family. |
-| Passkey | The person | WebAuthn, attestation `none`, verified in-process with `aws-lc-rs` (the verifier shape in `crates/hub/src/accounts/passkey.rs` on `main`: ES256, EdDSA, RS256). Public key and sign count in the identity store. Not `webauthn-rs` (it pulls OpenSSL, which `deny.toml` bans). |
+| Passkey | The person | WebAuthn, attestation `none`, verified in-process with `aws-lc-rs` (the verifier shape in `engine/hub/src/accounts/passkey.rs` on `main`: ES256, EdDSA, RS256). Public key and sign count in the identity store. Not `webauthn-rs` (it pulls OpenSSL, which `deny.toml` bans). |
 | Email magic link | The person | Single-use token, hash only, short TTL. Off on a public URL until `auth.local.deliver` is `log` or real mail exists. |
 | Recovery codes | The person | Ten single-use codes, hashes only, shown once when the first passkey is enrolled. |
 | Nomen (or any OIDC upstream) | The person | Not a credential the hub stores. The hub is a public PKCE client of that issuer. The result is a `linked_identities` row. |
@@ -61,7 +61,7 @@ There is no OAuth auto-accept. `/authorize` for a new client is a consent page. 
 
 ## The hub is the authorization server
 
-`auth.mode` `devagotchi` (`crates/hub/src/oauth.rs`, `crates/hub/src/auth.rs`). Metadata is RFC 8414 on the hub. The protected resource is RFC 9728, resource `{public_url}/mcp`. Registration (`POST /register`) accepts public clients only (`token_endpoint_auth_method` `none`). Redirects are `https`, or `http` to loopback. PKCE is S256 only. The seeded client `devagotchi-cli` is for the CLI.
+`auth.mode` `devagotchi` (`engine/hub/src/oauth.rs`, `engine/hub/src/auth.rs`). Metadata is RFC 8414 on the hub. The protected resource is RFC 9728, resource `{public_url}/mcp`. Registration (`POST /register`) accepts public clients only (`token_endpoint_auth_method` `none`). Redirects are `https`, or `http` to loopback. PKCE is S256 only. The seeded client `devagotchi-cli` is for the CLI.
 
 Nomen mode (`auth.mode` `nomen`) stays for hubs that have not cut over. It is not how `app.devagotchi.com` serves `/mcp`.
 
@@ -73,7 +73,7 @@ An AI must be able to work before a person finishes sign-in.
 - CLI: `devagotchi login` calls `POST /auth/agent/start` and stores the tokens. The terminal prints the claim code.
 - `whoami` includes `provisional_until`, `claim_code`, and `claim_url`. `claim_url` is `{public_url}/claim?code=…`.
 
-Limits, live, from `GET`/`PUT /api/v1/admin/settings` (`crates/hub/src/lib.rs`): `provisional.ttl_days` 1..=90, default 14; `starts_per_hour` 1..=10000, default 8; `unclaimed_cap` 1..=1000000, default 500. Caller is the hub owner or a grant with `operator: true`. The saved row in `operator_limits` wins over `auth.provisional` in `hub.json` on restart. The next account uses the new lifetime. Accounts already opened keep the `provisional_until` they were given. `provisional_warning` is recomputed from the live lifetime (under one seventh, and at least an hour). Denied calls and changes are audit rows `admin.settings`.
+Limits, live, from `GET`/`PUT /api/v1/admin/settings` (`engine/hub/src/lib.rs`): `provisional.ttl_days` 1..=90, default 14; `starts_per_hour` 1..=10000, default 8; `unclaimed_cap` 1..=1000000, default 500. Caller is the hub owner or a grant with `operator: true`. The saved row in `operator_limits` wins over `auth.provisional` in `hub.json` on restart. The next account uses the new lifetime. Accounts already opened keep the `provisional_until` they were given. `provisional_warning` is recomputed from the live lifetime (under one seventh, and at least an hour). Denied calls and changes are audit rows `admin.settings`.
 
 An expired provisional token is `invalid_token`. A claimed account does not expire.
 
@@ -161,7 +161,7 @@ A join code is `dvg-` plus 32 lowercase hex, 15 minutes, single-use, bound to th
 | Proxmox or Incus host | `{hub}/join/{code}.host.sh` — the Linux installer on the host itself, not inside a guest, so the broker is the host's |
 | Manual | The tarball URL under `{hub}/dist/…`, the checksum, and `devagotchi link enroll` with the code on stdin |
 
-`/join` serves the script only when `/dist` has the archive and `SHA256SUMS` for this hub's version (`crates/hub/src/machines/join/mod.rs`). A pull-request commit has no GitHub Release, so a hub installed from a PR keeps serving whatever was copied into the downloads directory last. A hub from the image serves the builds of the image's own commit, which the image carries (`/usr/share/devagotchi/downloads`). Promoting a build copies that build's archives into the downloads directory as part of the install. The script refuses a checksum mismatch and does not enroll.
+`/join` serves the script only when `/dist` has the archive and `SHA256SUMS` for this hub's version (`engine/hub/src/machines/join/mod.rs`). A pull-request commit has no GitHub Release, so a hub installed from a PR keeps serving whatever was copied into the downloads directory last. A hub from the image serves the builds of the image's own commit, which the image carries (`/usr/share/devagotchi/downloads`). Promoting a build copies that build's archives into the downloads directory as part of the install. The script refuses a checksum mismatch and does not enroll.
 
 Operator-configured brokers are not issued by `machine_add`. The free owned-machine cap stays 16 unless the account is the hub owner.
 

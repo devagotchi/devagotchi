@@ -27,7 +27,7 @@
 Rule 1, shared values (G3):
 
 - `LINK_HEARTBEAT` (20 s), `LINK_IDLE_TIMEOUT` (60 s) and `LINK_SEND_TIMEOUT` (10 s) in
-  `crates/contracts/src/link/mod.rs`, held by `const` assertions; the hub's `IDLE_TIMEOUT`
+  `platform/contracts/src/link/mod.rs`, held by `const` assertions; the hub's `IDLE_TIMEOUT`
   and `SEND_TIMEOUT` are those, and the link's own loop uses them (rule 6).
 - `MACHINE_KIND_CONTAINER` at the link (`run/mod.rs`, `update/mod.rs`), the hub (`enroll.rs`)
   and the compose test.
@@ -94,19 +94,19 @@ Rule 12, test layers:
 - `Session::fake` replaces the five hand-built sessions; `links!` and its tempdirs are gone
   (`or_skip!(test_links())`); the absence window is derived from `offline_after`.
 
-Layout (G10): `crates/link/src/{run,session,update}/` with `tests.rs` each; `lib.rs` is the
+Layout (G10): `runtime/link/src/{run,session,update}/` with `tests.rs` each; `lib.rs` is the
 command line. `machines/link/tests/` is one file per subject. `join/mod.rs` moved its tests
 to `join/tests.rs` (482 to 291 lines). The `enroll` helper lives in
 `tenancy/tests/machines.rs`, so `tenants.rs` shrank (its ratchet entry lowered).
 
 Docs (G11): the stale paths (`machine_update.rs`, `link.rs`, the `devagotchi-link` binary),
-`crates/link/README.md` (the real command, a placeholder hub, the installers, Update and
+`runtime/link/README.md` (the real command, a placeholder hub, the installers, Update and
 Layout sections), `AGENTS.md`'s contracts sentence, and `.ai/patterns/link.md` rewritten to
 name functions instead of lines.
 
 Also in this batch:
 
-- `crates/mcp/src/arguments.rs` imported `ContentBlock` outside its tests (a warning from
+- `interfaces/mcp/src/arguments.rs` imported `ContentBlock` outside its tests (a warning from
   B1).
 - `git_bash.rs` `runs_shell_script` was dead code that duplicated `bash_line`; it is folded
   into `bash_line`'s doc and tests.

@@ -37,7 +37,7 @@ curl -fsSL https://raw.githubusercontent.com/devagotchi/devagotchi/main/deploy/p
       --email-from "Hub <sign-in@example.com>" --env-file /root/devagotchi-hub.env
 ```
 
-The hub's site (its name, copy, colours and pictures: `crates/hub/README.md`, "The site")
+The hub's site (its name, copy, colours and pictures: `engine/hub/README.md`, "The site")
 is a directory on the Proxmox host. `--site DIR` packs it, pushes it into the container and
 has `install.sh` check it with the hub image and put it in place (a site that does not check
 out is refused and never reaches the hub); the copy pushed in is removed after. To change
