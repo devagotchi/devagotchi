@@ -317,7 +317,7 @@ its atomicity shown by a refused outbox row). Fixture and skip shape are G13
    `each_account_imports_its_own_and_a_repeat_from_another_session_is_the_same`, which checks
    `isError`, `structuredContent.code` and `next`, events unchanged by refusals, and
    cross-account `not_found`.
-3. **Page test** for a page action: `engine/hub/src/web/app/agenthub/ticket_tests.rs`, covering
+3. **Page test** for a page action: `engine/hub/src/agenthub/web/tests/ticket.rs`, covering
    the chain and the audit line.
 4. **CLI test** for the exit class and `next`: `agenthub/src/cli/tests/output.rs`
    (`every_code_a_command_can_reach_names_its_next_step`,

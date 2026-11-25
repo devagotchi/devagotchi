@@ -17,7 +17,7 @@ Ruled 2026-11-06 (Jesse):
 
 | Piece | Where | State |
 |---|---|---|
-| Installable web app manifest, service worker, web push, push subscribe | `engine/hub/src/web/notify.rs`, `web/assets/push.js`, `engine/hub/src/push.rs` | **exists**: used for approvals |
+| Installable web app manifest, service worker, web push, push subscribe | `engine/hub/src/notify/web/mod.rs`, `web/assets/push.js`, `engine/hub/src/push.rs` | **exists**: used for approvals |
 | Approvals inbox on the web | `web/approvals.rs` (`/approvals`) | **exists** |
 | Machines on the web | `web/machines.rs` (add, revoke only), `/account` | partial: no list page with status/build/update |
 | The board: tickets, claim/lease, handoff, deps, notes, event chain, one board per project | `engine/hub/src/board/` (`mod.rs` `Board::create/update/list/events`), `docs/agent-board.md` | **exists** |

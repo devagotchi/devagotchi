@@ -188,7 +188,7 @@ Three more constraints shape the program:
   - `GET /dist/` (and `/dist`) answers a `text/plain` index: VERSION, then the `SHA256SUMS` lines with full URLs.
   - The `manual` text in `machine_add` names the exact archive URL per OS and architecture, the checksum, `devagotchi start --background` (broker), `link enroll` with the code on stdin, then `devagotchi link run --state-dir …`. For Windows it names the zip and `.exe` steps.
   - Route both `/dist` paths through a `join::dist_routes()` merged in `routes.rs`, replacing its existing `/dist/{name}` line so the net change is 0.
-- **Files:** `engine/hub/src/mcp/tools/machines.rs`, `engine/hub/src/machines/join/mod.rs` (only `dist_routes`; the template moved out in 209), `engine/hub/src/web/routes.rs` (net 0), `engine/hub/src/web/tests/machines.rs`, `docs/identity.md`, `tests/compose_join.py`.
+- **Files:** `engine/hub/src/mcp/tools/machines.rs`, `engine/hub/src/machines/join/mod.rs` (only `dist_routes`; the template moved out in 209), `engine/hub/src/web/routes.rs` (net 0), `engine/hub/src/machines/web/tests/machines.rs`, `docs/identity.md`, `tests/compose_join.py`.
 - **Acceptance:**
   - Hub test: `/dist/` lists every `SHA256SUMS` file as a URL under the hub. `machine_add.manual` contains `link run` and `start`, and no URL ending in `/dist/`.
   - `compose_join.py` follows the manual text on the runner (download, `sha256sum -c`, start, enroll, run) and the machine comes online.
@@ -353,7 +353,7 @@ Three more constraints shape the program:
   - drop the Organisations card from You;
   - `/orgs*`, `/invite` and `/assets/invite.js` get the unknown-path 404. Gate this where the orgs router is merged in `routes.rs` (net 0), not inside `orgs.rs` (1082 lines, at its ratchet).
   - Replace the literal "17 clients" with `devagotchi_connectors::all().len()`.
-- **Files:** `engine/hub/src/web/hub_settings.rs`, `engine/hub/src/web/app/me.rs`, `engine/hub/src/web/routes.rs` (net 0), `engine/hub/src/web/one_user/tests.rs` (new, under a `web/one_user/` module).
+- **Files:** `engine/hub/src/settings/web/admin.rs`, `engine/hub/src/identity/web/me.rs`, `engine/hub/src/web/routes.rs` (net 0), `engine/hub/src/web/one_user/tests.rs` (new, under a `web/one_user/` module).
 - **Acceptance:**
   - New Postgres test on a single-tenancy hub: `/admin` has no `id="people"` and no `tenancy.` inputs; `/orgs` and `/invite` return 404; `/app/me` has no `id="orgs"`.
   - `web::shippin_tests` and the operator tests still pass on a multi-tenant hub.
@@ -365,7 +365,7 @@ Three more constraints shape the program:
   - A single-tenancy web fixture with the stand-in Nomen (`tests/fake_nomen.py` or the in-process stand-in).
   - The confirm-to-link page applies to every provider: change the `== "google"` check, net 0 lines in `providers.rs`.
   - An `operators` `email:` entry keeps working only for providers whose email is verified, as today, and is documented on the Shippin card.
-- **Files:** `engine/hub/src/web/providers.rs` (net 0), `engine/hub/src/identity/accounts/identities.rs`, `engine/hub/src/identity/tests/providers_single.rs` (new).
+- **Files:** `engine/hub/src/identity/web/providers.rs` (net 0), `engine/hub/src/identity/accounts/identities.rs`, `engine/hub/src/identity/tests/providers_single.rs` (new).
 - **Acceptance:** New Postgres tests:
   - the owner links Shippin from `/account`, then signs in with it;
   - an unknown subject gets 403 `no_account`;
@@ -378,7 +378,7 @@ Three more constraints shape the program:
   - Discovery's authorization and token endpoints must be on the issuer's origin. Loopback stand-ins are allowed as today; Google is exempt.
   - Check `azp` and `iat`.
   - `OidcVerifier` uses `redirect(Policy::none())`, and `jwks_uri` must be on the issuer's origin.
-- **Files:** `engine/hub/src/identity/id_token.rs` (new), `engine/hub/src/identity/tests/id_token.rs` (new), `engine/hub/src/web/providers.rs` and `engine/hub/src/identity/auth.rs` (call sites only, net 0 or less).
+- **Files:** `engine/hub/src/identity/id_token.rs` (new), `engine/hub/src/identity/tests/id_token.rs` (new), `engine/hub/src/identity/web/providers.rs` and `engine/hub/src/identity/auth.rs` (call sites only, net 0 or less).
 - **Acceptance:** The D1b list (`free-edition.md:174`) as tests:
   - two audiences without `azp` refused; a foreign `azp` refused; `iat` before the sign-in refused;
   - a cross-origin token endpoint refused; Google accepted; a loopback stand-in accepted;
@@ -394,7 +394,7 @@ Three more constraints shape the program:
 
 ### 229: `/admin` → Shippin: Check and status (S)
 - **Scope:** A Check button runs discovery with no redirects, checks the issuer matches, shows the exact redirect URI `<public_url>/auth/provider/nomen/callback`, and shows when Shippin last signed someone in.
-- **Files:** `engine/hub/src/web/hub_settings_shippin.rs` (new), `engine/hub/src/web/hub_settings_shippin_tests.rs` (new), `engine/hub/src/web/sign_in_cards.rs`.
+- **Files:** `engine/hub/src/web/hub_settings_shippin.rs` (new), `engine/hub/src/web/hub_settings_shippin_tests.rs` (new), `engine/hub/src/identity/web/sign_in_cards.rs`.
 - **Acceptance:** With the stand-in: OK for a matching issuer, "names itself X" for a mismatch, a 302 refused; a non-owner gets 404.
 - **Depends on:** 227.
 
@@ -425,7 +425,7 @@ Three more constraints shape the program:
 
 ### 232: You → AI apps: see and disconnect connected AI clients (M)
 - **Scope:** List the OAuth clients that hold tokens for this account, with family and last use. Disconnect one (a new revoke by client) or all (`revoke_connections`, `oauth/mod.rs:519`, which has no product caller today).
-- **Files:** `engine/hub/src/web/app/ai_clients.rs` (new), `engine/hub/src/identity/accounts/oauth/mod.rs` (at its 647 ratchet: the new function goes in `oauth/revoke.rs`), `engine/hub/src/web/app/me.rs` (one link).
+- **Files:** `engine/hub/src/web/app/ai_clients.rs` (new), `engine/hub/src/identity/accounts/oauth/mod.rs` (at its 647 ratchet: the new function goes in `oauth/revoke.rs`), `engine/hub/src/identity/web/me.rs` (one link).
 - **Acceptance:** Hub test: two clients are listed; disconnecting one makes its next `/mcp` call 401 while the other still works; "disconnect all" ends both.
 - **Depends on:** 225.
 
@@ -447,7 +447,7 @@ Three more constraints shape the program:
   - It edits the limits and the 217 settings through the `set_config_value` path, with a same-origin check, owner only and audited. Widening triggers the 217 approval inline.
   - Exec policy and workspace stay read-only, with the `broker.json` lines to change.
   - Rename is excluded: the name is the routing and enroll key.
-- **Files:** `engine/hub/src/web/app/machine_settings.rs` (new), `engine/hub/src/web/app/machine.rs` (one card call), `engine/hub/src/web/app/machine_settings_tests.rs` (new).
+- **Files:** `engine/hub/src/web/app/machine_settings.rs` (new), `engine/hub/src/machines/web/machine.rs` (one card call), `engine/hub/src/web/app/machine_settings_tests.rs` (new).
 - **Acceptance:** Hub test with a real broker: the card shows the limits; saving `max_concurrent=2` changes `get_config` and `broker.json`; an out-of-range value shows the broker's refusal; the change is in the audit.
 - **Depends on:** 217, 225.
 
@@ -462,7 +462,7 @@ Three more constraints shape the program:
   - `/healthz` gains `build`, `revision` and `channel`. This is public, like `downloads.version` already is.
   - MCP `serverInfo.version` becomes the build. `site.rs:605-608` is at its ratchet, so the change is one expression.
   - A Hub card on `/admin` in a new file shows build, linked commit, channel, the build offered to machines, and an "alpha, pre-release" badge (path.md 6.4).
-- **Files:** `runtime/devagotchi/{build.rs,src/main.rs}`, `.github/workflows/{image,release}.yml`, `deploy/compose/compose.yaml`, `engine/hub/src/serve/options.rs` (or the existing options struct), `engine/hub/src/ops/health.rs`, `engine/hub/src/site.rs` (net 0), `engine/hub/src/web/hub_settings.rs` (one chip and one call), `engine/hub/src/web/hub_settings_hub.rs` (new), `engine/hub/src/web/hub_settings_hub_tests.rs` (new), `engine/hub/site/default/content/messages.json`.
+- **Files:** `runtime/devagotchi/{build.rs,src/main.rs}`, `.github/workflows/{image,release}.yml`, `deploy/compose/compose.yaml`, `engine/hub/src/serve/options.rs` (or the existing options struct), `engine/hub/src/ops/health.rs`, `engine/hub/src/site.rs` (net 0), `engine/hub/src/settings/web/admin.rs` (one chip and one call), `engine/hub/src/web/hub_settings_hub.rs` (new), `engine/hub/src/web/hub_settings_hub_tests.rs` (new), `engine/hub/site/default/content/messages.json`.
 - **Acceptance:**
   - Hub tests: `/healthz` build and revision equal the values passed at start; `/admin` has `id="hub"` showing them; MCP `initialize` reports `serverInfo.version` equal to the build.
   - After deploy, `curl https://app.devagotchi.com/healthz` gives a revision equal to the GHCR `:main` revision label.
@@ -539,7 +539,7 @@ Three more constraints shape the program:
   - The hub update card says how many machines will follow and how many are offline.
   - No new frames.
   - The link's `/dist` client uses `redirect(Policy::none())` (D2b).
-- **Files:** `engine/hub/src/web/app/machine.rs`, `engine/hub/src/web/app/machines_update.rs` (new), `engine/hub/src/web/app/home.rs`, `engine/hub/src/machines/link/updates.rs`, `runtime/link/src/update/mod.rs`, `runtime/link/src/update/tests.rs`.
+- **Files:** `engine/hub/src/machines/web/machine.rs`, `engine/hub/src/web/app/machines_update.rs` (new), `engine/hub/src/web/app/home.rs`, `engine/hub/src/machines/link/updates.rs`, `runtime/link/src/update/mod.rs`, `runtime/link/src/update/tests.rs`.
 - **Acceptance:**
   - Hub test (new file): an out-of-date machine shows both builds and "Update to <v>"; a current one shows no button; Update all sends `HubFrame::Update` only to out-of-date machines, with one audit row each.
   - Link test: a 302 on `/dist/SHA256SUMS` fails the update and leaves nothing under `updates/`.
@@ -764,7 +764,7 @@ Three more constraints shape the program:
   - Limit 20 per address per hour, then one digest.
   - Each outcome goes to `ops::audit` without the address. `approval_request` gains `emailed`.
   - The template goes in `site/approval_mail.rs`, since `site.rs` is at its ratchet.
-- **Files:** `engine/hub/src/notify/approvals.rs` (new), `engine/hub/src/notify/approvals_tests.rs` (new), `engine/hub/src/mcp/hub.rs`, `engine/hub/src/serve/mod.rs` (one line), `engine/hub/src/web/email.rs` (visibility only), `engine/hub/src/agenthub/mcp/{approvals,schema}.rs`, `engine/hub/src/site/approval_mail.rs` (new), `engine/hub/site/default/content/messages.json`.
+- **Files:** `engine/hub/src/notify/approvals.rs` (new), `engine/hub/src/notify/approvals_tests.rs` (new), `engine/hub/src/mcp/hub.rs`, `engine/hub/src/serve/mod.rs` (one line), `engine/hub/src/identity/web/email.rs` (visibility only), `engine/hub/src/agenthub/mcp/{approvals,schema}.rs`, `engine/hub/src/site/approval_mail.rs` (new), `engine/hub/site/default/content/messages.json`.
 - **Acceptance:** Hub tests with a stub SMTP server:
   - "email only when no device" with no device sends exactly one mail, with the title and the 256 link, no What text, and no injected header;
   - opening the link and deciding wakes `approval_wait`;
@@ -783,7 +783,7 @@ Three more constraints shape the program:
 
 ### 261: Guided plugin install on the hub (G2) (M)
 - **Scope:** Plugins P4. `/connect` and the `ai_client` workflow step show each client's plugin commands with this hub's `public_url` filled in: Claude Code `/plugin` plus the configure value, and `devagotchi connect codex --hub`. The VS Code and companion downloads are added when 263 and 268 land.
-- **Files:** `engine/hub/src/web/connectors.rs`, `engine/connectors/src/lib.rs`, `engine/connectors/catalog/anthropic/claude-code.json`, `engine/hub/src/workflows/mod.rs` (at its 541 ratchet: net 0, or move into `workflows/ai_client.rs`).
+- **Files:** `engine/hub/src/identity/connect/web.rs`, `engine/connectors/src/lib.rs`, `engine/connectors/catalog/anthropic/claude-code.json`, `engine/hub/src/workflows/mod.rs` (at its 541 ratchet: net 0, or move into `workflows/ai_client.rs`).
 - **Acceptance:** Web and workflow tests: the commands contain `public_url` and never `hub.example.com`. After deploy, `curl https://app.devagotchi.com/connect` contains "plugin install".
 - **Depends on:** 211.
 

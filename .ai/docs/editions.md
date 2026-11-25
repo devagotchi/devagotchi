@@ -82,7 +82,7 @@ Decided by the operator on 2026-11-18:
     listed there and now sit on the multi-tenant side. The standalone release gets there through
     [free edition](../dev/plans/free-edition.md) R4 (tenancy as its own crate, out of the
     default build). Until R4 lands, `/admin` shows a People section (sign-up limits and
-    organisations, `engine/hub/src/web/hub_settings.rs:224`, `:231`, `:251-255`) even on a
+    organisations, `engine/hub/src/settings/web/admin.rs:224`, `:231`, `:251-255`) even on a
     single-owner hub; R4 removes it from the single-user build.
   - *Managed deployments*: offer multi-tenancy. [ADR 0003](../../docs/adr/0003-hosting-pooled-free-per-instance-paid.md)
     describes a paid instance as running "no tenancy code"; that line needs the operator's
