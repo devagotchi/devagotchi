@@ -3,7 +3,11 @@
 !Cargo.toml
 !Cargo.lock
 !rust-toolchain.toml
-!crates/
+!platform/
+!engine/
+!interfaces/
+!runtime/
+!agenthub/
 !apps/desktop/src-tauri/
 apps/desktop/src-tauri/gen/
 apps/desktop/src-tauri/icons/
