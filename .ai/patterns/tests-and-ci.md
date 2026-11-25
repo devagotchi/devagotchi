@@ -26,15 +26,18 @@ because one of those can break.
 
 | Layer | What it proves | Where it lives | Runs in |
 |---|---|---|---|
-| static | deps and licences, layout ratchet, generated schemas, owner grep, shellcheck | `crates/devagotchi/tests/layout.rs`, `security.yml`, `ci.yml` `repository-owner`, the shellcheck steps in `hub-deploy` and `host-install` | every PR |
-| unit | pure logic, parsers, renderers, OS backends | `src/<domain>/tests.rs` (G10) | every PR, `core` on six OS legs |
+| static | deps and licences, layout ratchet, generated schemas, owner grep, shellcheck | `crates/devagotchi/tests/layout.rs`, `security.yml`, `ci.yml` `repository-owner`, the shellcheck steps in `hub-deploy` and `host-install` | every PR: the layout tests and the owner grep; `security.yml` when the PR changes `Cargo.lock`, a `Cargo.toml` or `deny.toml`. Main and weekly: all of it |
+| unit | pure logic, parsers, renderers, OS backends | `src/<domain>/tests.rs` (G10) | every PR: `core` on ubuntu-24.04 and windows-2025. Main: all six OS legs |
 | store | everything that takes a store, on real Postgres (and ClickHouse) | `src/<domain>/tests.rs` with `or_skip!` | every PR, `hub-postgres` |
-| binary e2e | the one binary as processes: broker, `mcp`, hub, link, update, install | `crates/devagotchi/tests/*.rs`, `tests/e2e.py` and its probes, `tests/file_mutation_concurrency.py`, `deploy/linux/ci-install-check.sh`, `deploy/windows/ci-install-check.ps1` | every PR, `e2e` (Linux x64 and arm64, Windows 2022, 2025 and arm64), `host-install` |
+| binary e2e | the one binary as processes: broker, `mcp`, hub, link, update, install | `crates/devagotchi/tests/*.rs`, `tests/e2e.py` and its probes, `tests/file_mutation_concurrency.py`, `deploy/linux/ci-install-check.sh`, `deploy/windows/ci-install-check.ps1` | every PR: `e2e (ubuntu-24.04)`. Main: `e2e` on Linux x64 and arm64, Windows 2022, 2025 and arm64, and `host-install` |
 | browser | the hub's pages, passkeys, phone emulation, real AI clients over OAuth | `tests/*_browser.py`, `tests/clients_oauth.py` | every PR, `e2e (ubuntu-24.04)` |
-| deploy | compose stack, install, update and backup scripts | `deploy/compose/check.sh`, `tests/deploy_scripts.sh` | every PR, `hub-compose`, `hub-deploy` |
+| deploy | compose stack, install, update and backup scripts | `deploy/compose/check.sh`, `tests/deploy_scripts.sh` | main: `hub-compose`, `hub-deploy` |
 | release artifacts | dist archives install from every shell; the image joins a machine | `install-check.yml` (`tests/install_check.py`), `image.yml` (`tests/compose_join.py`) | tags, through `release.yml`; `host` runs only when install-check succeeded or was skipped. Main runs only `plan` at 2b3feec (see Known violations, Cadence) |
 | live | the deployed test hub, seen from outside | `tests/live_check.py` | hourly (`live.yml`) |
 | hardware | a real Android phone, the operator's machines | plan receipts | by hand, before alpha is confirmed |
+
+Until alpha (operator, 2026-11-24), a pull request runs the smaller set above and every push to
+main runs all of it (`ci.yml`, `security.yml`). A red main is fixed on main.
 
 Known gaps, recorded here rather than hidden:
 
