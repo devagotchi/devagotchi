@@ -3,6 +3,7 @@
 //! `OwnedTree` API and the detail text recorded on its operations.
 
 pub(crate) mod file_identity;
+pub(crate) mod file_path;
 pub(crate) mod git_bash;
 #[cfg(target_os = "linux")]
 mod linux;

@@ -204,7 +204,7 @@ jobs:
           python-version: "3.13"
       - name: Start a throwaway Postgres
         if: runner.os == 'Linux'
-        run: tests/throwaway_postgres.sh e2e claim passkey device_login operator analytics workflow first_connect app android clients orgs
+        run: tests/throwaway_postgres.sh file_access e2e claim passkey device_login operator analytics workflow first_connect app android clients orgs
       - name: Start the runner's PostgreSQL service
         if: matrix.os == 'windows-2022' || matrix.os == 'windows-2025'
         shell: pwsh
@@ -213,11 +213,16 @@ jobs:
           Get-Service postgresql* | Start-Service
           & "$env:PGBIN\pg_isready.exe" -h 127.0.0.1 -p 5432
           $env:PGPASSWORD = 'root'
-          foreach ($db in 'e2e', 'install', 'install_join', 'install_update') {
+          foreach ($db in 'file_access', 'e2e', 'install', 'install_join', 'install_update') {
             & "$env:PGBIN\createdb.exe" -h 127.0.0.1 -p 5432 -U postgres $db
             if ($LASTEXITCODE -ne 0) { throw "createdb $db failed" }
           }
       - run: cargo build --locked --bins
+      - name: Account-backed file journey
+        if: matrix.os != 'windows-11-arm'
+        run: python tests/file_access_journey.py --devagotchi "target/debug/devagotchi${{ runner.os == 'Windows' && '.exe' || '' }}"
+        env:
+          DEVAGOTCHI_HUB_STORAGE_URL: ${{ env.DEVAGOTCHI_PG }}/file_access
       # Two MCP adapters race file changes on one broker (no hub, no Postgres): both answers and
       # the bytes on disk are checked; every scenario must overlap at least once.
       - name: Concurrent file mutations

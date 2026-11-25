@@ -22,6 +22,7 @@ pub use system::*;
 pub use web::*;
 
 pub const API_VERSION: u32 = 1;
+pub const MAX_OPERATION_KEY_BYTES: usize = 128;
 pub const MAX_FRAME_BYTES: usize = 64 * 1024;
 pub const MAX_OUTPUT_PAGE_BYTES: usize = 16 * 1024;
 
@@ -314,6 +315,7 @@ pub enum RequestBody {
     FileInfo(FileInfoInput),
     FileMkdir(DirectoryInput),
     FileMove(FileMoveInput),
+    FileDelete(FileDeleteInput),
     FileSearch(FileSearchInput),
     ConfigGet(ConfigGetInput),
     ConfigSet(ConfigSetInput),
@@ -346,6 +348,7 @@ impl RequestBody {
             | Self::FileInfo(_)
             | Self::FileMkdir(_)
             | Self::FileMove(_)
+            | Self::FileDelete(_)
             | Self::FileSearch(_)
             | Self::ConfigGet(_)
             | Self::ConfigSet(_)
@@ -381,6 +384,7 @@ pub enum ResponseBody {
     File(FileContent),
     Listing(FileListing),
     Written(FileWritten),
+    Deleted(FileDeleted),
     Revision(Revision),
     Info(FileInfo),
     InputSent(InputSent),
@@ -404,6 +408,7 @@ impl ResponseBody {
             Self::File(_) => "file",
             Self::Listing(_) => "listing",
             Self::Written(_) => "written",
+            Self::Deleted(_) => "deleted",
             Self::Revision(_) => "revision",
             Self::Info(_) => "info",
             Self::InputSent(_) => "input_sent",

@@ -15,10 +15,10 @@ use rmcp::model::{CallToolResult, ContentBlock};
 use crate::unexpected;
 
 /// Largest image returned: its base64 stays under the 5 MB an AI client takes per image.
-pub const MAX_IMAGE_BYTES: u64 = 3_750_000;
+pub const MAX_IMAGE_BYTES: u64 = devagotchi_contracts::MAX_IMAGE_BYTES;
 /// Widest or tallest image returned: the Claude API refuses a larger one, and an image it
 /// refused stays in the conversation and fails every later request.
-pub const MAX_IMAGE_SIDE: u32 = 8000;
+pub const MAX_IMAGE_SIDE: u32 = devagotchi_contracts::MAX_IMAGE_SIDE;
 
 /// An image as read: its bytes, base64, and what it is.
 #[derive(Debug)]

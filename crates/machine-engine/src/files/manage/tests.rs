@@ -5,7 +5,11 @@ use devagotchi_contracts::{DirectoryInput, FileInfoInput, FileMoveInput};
 use super::*;
 
 fn scope(workspace: &Path, policy: ExecPolicy) -> Scope<'_> {
-    Scope { workspace, policy }
+    Scope {
+        workspace,
+        policy,
+        authority: None,
+    }
 }
 
 fn text(path: &Path) -> String {
@@ -14,6 +18,7 @@ fn text(path: &Path) -> String {
 
 fn moving(source: &Path, destination: &Path, overwrite: bool) -> FileMoveInput {
     FileMoveInput {
+        expected_sha256: None,
         source: text(source),
         destination: text(destination),
         overwrite,
@@ -27,7 +32,12 @@ fn info_says_what_a_path_is() {
     let scope = scope(&workspace, ExecPolicy::Granted);
     let file = workspace.join("notes.txt");
     fs::write(&file, "one\ntwo\nthree").unwrap();
-    let info = scope.info(FileInfoInput { path: text(&file) }).unwrap();
+    let info = scope
+        .info(FileInfoInput {
+            sha256: false,
+            path: text(&file),
+        })
+        .unwrap();
     assert_eq!(info.kind, "file");
     assert_eq!(info.size, 13);
     assert_eq!(info.lines, Some(3), "a last line without a newline counts");
@@ -42,6 +52,7 @@ fn info_says_what_a_path_is() {
     fs::write(workspace.join("ended.txt"), "a\nb\n").unwrap();
     let ended = scope
         .info(FileInfoInput {
+            sha256: false,
             path: text(&workspace.join("ended.txt")),
         })
         .unwrap();
@@ -49,6 +60,7 @@ fn info_says_what_a_path_is() {
     fs::write(workspace.join("blob.bin"), [0u8, 159, 146, 150]).unwrap();
     let blob = scope
         .info(FileInfoInput {
+            sha256: false,
             path: text(&workspace.join("blob.bin")),
         })
         .unwrap();
@@ -56,12 +68,14 @@ fn info_says_what_a_path_is() {
 
     let here = scope
         .info(FileInfoInput {
+            sha256: false,
             path: text(&workspace),
         })
         .unwrap();
     assert_eq!(here.kind, "dir", "the workspace itself is in reach");
     let missing = scope
         .info(FileInfoInput {
+            sha256: false,
             path: text(&workspace.join("nothing")),
         })
         .unwrap_err();
@@ -80,6 +94,7 @@ fn a_link_is_described_as_itself_and_must_point_inside_under_granted() {
     let granted = scope(&workspace, ExecPolicy::Granted);
     let inside = granted
         .info(FileInfoInput {
+            sha256: false,
             path: text(&workspace.join("inside")),
         })
         .unwrap();
@@ -88,6 +103,7 @@ fn a_link_is_described_as_itself_and_must_point_inside_under_granted() {
     assert_eq!(inside.path, text(&workspace.join("inside")));
     let refused = granted
         .info(FileInfoInput {
+            sha256: false,
             path: text(&workspace.join("outside")),
         })
         .unwrap_err();
@@ -96,6 +112,7 @@ fn a_link_is_described_as_itself_and_must_point_inside_under_granted() {
     assert!(
         account
             .info(FileInfoInput {
+                sha256: false,
                 path: text(&workspace.join("outside"))
             })
             .is_ok()
@@ -247,7 +264,10 @@ fn info_on_a_root_answers_under_account() {
     let workspace = dunce::canonicalize(dir.path()).unwrap();
     let root = workspace.ancestors().last().unwrap().to_path_buf();
     let info = scope(&workspace, ExecPolicy::Account)
-        .info(FileInfoInput { path: text(&root) })
+        .info(FileInfoInput {
+            sha256: false,
+            path: text(&root),
+        })
         .unwrap();
     assert_eq!(info.kind, "dir");
 }
@@ -263,6 +283,7 @@ fn a_dangling_link_out_of_the_workspace_is_refused_under_granted() {
     let granted = scope(&workspace, ExecPolicy::Granted);
     let refused = granted
         .info(FileInfoInput {
+            sha256: false,
             path: text(&workspace.join("door")),
         })
         .unwrap_err();
@@ -295,7 +316,12 @@ fn a_relative_link_is_judged_from_where_it_moves_to() {
     std::os::unix::fs::symlink("../../target.txt", &link).unwrap();
     let granted = scope(&workspace, ExecPolicy::Granted);
     assert!(
-        granted.info(FileInfoInput { path: text(&link) }).is_ok(),
+        granted
+            .info(FileInfoInput {
+                sha256: false,
+                path: text(&link)
+            })
+            .is_ok(),
         "inside where it is"
     );
     let refused = granted

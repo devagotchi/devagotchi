@@ -100,7 +100,7 @@ impl GrantBinding {
             || !token(&self.admission_id, 128)
             || !token(&self.grant_id, 128)
             || self.grant_version < 1
-            || !token(&self.operation_key, 128)
+            || !token(&self.operation_key, crate::MAX_OPERATION_KEY_BYTES)
             || !digest(&self.input_sha256)
             || self.lease_sha256.as_deref().is_some_and(|v| !digest(v))
         {

@@ -2,12 +2,12 @@
 
 use devagotchi_contracts::{
     BridgeError, BrokerCapabilities, CapabilitiesInput, ChangesInput, ConfigGetInput,
-    ConfigSetInput, ConfigView, DirectoryInput, FileContent, FileEditInput, FileInfo,
-    FileInfoInput, FileListInput, FileListing, FileMoveInput, FileReadInput, FileSearchInput,
-    FileWriteInput, FileWritten, GetInput, HeartbeatOutput, InputSent, ListInput, OperationView,
-    OperationsPage, OutputPage, ProcessKillInput, ProcessKilled, ProcessListInput, ProcessPage,
-    ReadInput, ResizeInput, Revision, SearchPage, SendInput, StartInput, StartOutput, UrlContent,
-    UrlReadInput, WaitInput,
+    ConfigSetInput, ConfigView, DirectoryInput, FileContent, FileDeleteInput, FileDeleted,
+    FileEditInput, FileInfo, FileInfoInput, FileListInput, FileListing, FileMoveInput,
+    FileReadInput, FileSearchInput, FileWriteInput, FileWritten, GetInput, HeartbeatOutput,
+    InputSent, ListInput, OperationView, OperationsPage, OutputPage, ProcessKillInput,
+    ProcessKilled, ProcessListInput, ProcessPage, ReadInput, ResizeInput, Revision, SearchPage,
+    SendInput, StartInput, StartOutput, UrlContent, UrlReadInput, WaitInput,
 };
 use schemars::{JsonSchema, generate::SchemaSettings};
 use serde_json::Value;
@@ -45,6 +45,8 @@ struct BrokerContracts {
     file_info_input: FileInfoInput,
     directory_input: DirectoryInput,
     file_move_input: FileMoveInput,
+    file_delete_input: FileDeleteInput,
+    file_deleted: FileDeleted,
     file_info: FileInfo,
     file_search_input: FileSearchInput,
     search_page: SearchPage,

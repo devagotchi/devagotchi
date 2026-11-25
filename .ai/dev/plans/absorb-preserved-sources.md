@@ -1,6 +1,6 @@
 # Complete preserved-source absorption before the self-hosted prerelease
 
-## Current delivery, 2026-11-22
+## Current delivery, 2026-11-23
 
 PR280 merged into main `18d3ee2`; PR/main CI and security passed. Release 45053944830
 passed all four platform builds, seven installer checks and both architecture image/join
@@ -17,15 +17,24 @@ and the superseded image removed. The integration branch is deleted locally/remo
 
 PR282 merged the audit request correlation parent as `d0c44ee`, pinning AgentHub PR18
 at `3acf12a`. All 18 PR checks and all main CI/security checks passed; reviewed/merged
-trees match and both integration branches are deleted. Its official image publication
-and replacement are being followed. Existing event hashes remain verifiable.
+trees match and both integration branches are deleted. Its official image was deployed
+and restart-verified with existing event hashes intact, then replaced by PR283's image.
 
-Current implementation: `increment-292/live-agenthub-board`, scoped in the existing
-[A01 ledger](absorption/a01-review.md#restore-live-board-updates-increment-292).
-Restore committed board updates and lease countdowns through the existing scoped wait;
-retain drafts/focus/filters, stop on ended authority, expose stale/disconnected state and
-keep the server-rendered fallback. Local HTTP, site, binary and complete browser checks passed; publication is next. Principal names
-and the remaining S1-S5 inventory remain open.
+PR283 restored committed board updates and lease countdowns through the scoped wait,
+preserving drafts/focus/filters and the static fallback, and clearing ended access.
+Reviewed `955c06b` merged as `2a0b670` with identical trees; all PR/main CI and security
+checks passed. Release 45115054529 passed all 18 active jobs. Its official image was
+deployed and verified before/after restart: seven routes, all four persisted boards and
+audit chains, live updates, local users, desktop/phone layouts and six download hashes.
+The previous image and integration branch were removed. The canonical repositories were
+clean with only main after delivery. Preserved sources remain intact and unclosed.
+
+Current implementation: `increment-293/absorb-file-access`, from main `2a0b670`.
+The [A04 file unit](absorption/a04-access.md#file-operations-increment-293) owns the
+complete ordinary/batch/image/delete admission, native enforcement and retry flow.
+Planning is grounded; implementation and validation are pending. No CI-triggering push
+until the complete unit is authored and locally validated. Principal display names,
+the board refresh-link copy, and all other S1-S5 gaps remain open.
 
 ## Earlier image follow-through record
 

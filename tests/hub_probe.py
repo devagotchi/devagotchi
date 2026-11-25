@@ -164,7 +164,7 @@ unannotated = [t["name"] for t in listed if not t.get("title") or not (
     "readOnlyHint" in t.get("annotations", {}) and "openWorldHint" in t.get("annotations", {})
     and (t["annotations"]["readOnlyHint"] or "destructiveHint" in t["annotations"]))]
 check("every tool has a title and annotations", not unannotated, ", ".join(unannotated))
-broker_tools = ["approval_request", "approval_wait", "connection_call", "connections", "create_directory", "dictionary_get", "edit_file", "get_config", "get_file_info", "get_recent_tool_calls",
+broker_tools = ["approval_request", "approval_wait", "connection_call", "connections", "create_directory", "delete_file", "dictionary_get", "edit_file", "get_config", "get_file_info", "get_recent_tool_calls",
                 "get_usage_stats", "kill_process", "lexicon_handoff", "lexicon_propose", "lexicon_resolve", "lexicon_review", "list_directory", "list_processes", "machine_add", "machine_inspect", "machine_update", "machines", "move_file", "operation_cancel", "operation_get", "operation_heartbeat", "operation_input",
                 "operation_list", "operation_read", "operation_resize", "operation_start", "operation_wait", "read_file", "read_image", "read_multiple_files", "read_url", "run", "search_files", "set_config_value", "whoami",
                 "workflow_cancel", "workflow_list", "workflow_start", "workflow_status", "workflow_wait",
@@ -465,6 +465,10 @@ if args.run_broker and args.run_dir:
     check("read_multiple_files reads one and reports the other", len(files) == 2
           and (files[0].get("content") or {}).get("text") == "alpha\ngamma\n"
           and (files[1].get("error") or {}).get("code") == "path_not_found", json.dumps(both)[:240])
+    is_error, guard = call("get_file_info", {"machine": args.run_broker, "path": moved_file, "sha256": True})
+    check("get_file_info supplies whole-file guard", not is_error and len(guard.get("sha256", "")) == 64, json.dumps(guard)[:200])
+    is_error, removed = call("delete_file", {"machine": args.run_broker, "path": moved_file, "expected_sha256": guard["sha256"]})
+    check("delete_file removes the guarded regular file", not is_error and not os.path.exists(moved_file), json.dumps(removed)[:200])
     # A broker that runs only granted programs reaches files only inside its workspace.
     is_error, outside = call("read_file", {"machine": args.broker, "path": probe_file})
     check("read_file outside a granted broker's workspace refused",

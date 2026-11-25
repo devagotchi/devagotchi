@@ -13,7 +13,7 @@ use serde::Serialize;
 use crate::unexpected;
 
 /// Most files one call reads.
-pub const MAX_FILES: usize = 20;
+pub const MAX_FILES: usize = devagotchi_contracts::MAX_FILE_BATCH;
 
 #[derive(Debug, Serialize, JsonSchema)]
 pub struct FileResult {
@@ -38,6 +38,33 @@ pub async fn read_many<C, F>(
     call: C,
     paths: Vec<String>,
     max_bytes: Option<usize>,
+) -> Result<Files, BridgeError>
+where
+    C: Fn(RequestBody) -> F,
+    F: Future<Output = Result<ResponseBody, BridgeError>>,
+{
+    read_many_with(call, paths, max_bytes, false).await
+}
+
+/// A granted composite must abort on authority/transport failure, never return earlier
+/// private pages as a successful partial response after the credential has ended.
+pub async fn read_many_authorized<C, F>(
+    call: C,
+    paths: Vec<String>,
+    max_bytes: Option<usize>,
+) -> Result<Files, BridgeError>
+where
+    C: Fn(RequestBody) -> F,
+    F: Future<Output = Result<ResponseBody, BridgeError>>,
+{
+    read_many_with(call, paths, max_bytes, true).await
+}
+
+async fn read_many_with<C, F>(
+    call: C,
+    paths: Vec<String>,
+    max_bytes: Option<usize>,
+    authorized: bool,
 ) -> Result<Files, BridgeError>
 where
     C: Fn(RequestBody) -> F,
@@ -69,7 +96,24 @@ where
         let (content, error) = match read {
             Ok(ResponseBody::File(content)) => (Some(content), None),
             Ok(other) => (None, Some(unexpected("file", &other))),
-            Err(error) => (None, Some(error)),
+            Err(error) => {
+                if authorized
+                    && !matches!(
+                        error.code.as_str(),
+                        "path_not_found"
+                            | "not_a_file"
+                            | "io_error"
+                            | "permission_denied"
+                            | "changed_since_read"
+                            | "changed_while_reading"
+                            | "too_far"
+                            | "file_timeout"
+                    )
+                {
+                    return Err(error);
+                }
+                (None, Some(error))
+            }
         };
         files.push(FileResult {
             path,
@@ -86,6 +130,7 @@ mod tests {
 
     fn content(path: &str, text: &str) -> FileContent {
         FileContent {
+            sha256: None,
             path: path.into(),
             size: text.len() as u64,
             offset: 0,
@@ -148,5 +193,32 @@ mod tests {
                 .await
                 .is_err()
         );
+    }
+    #[tokio::test]
+    async fn authorization_failure_discards_already_read_private_pages() {
+        for code in [
+            "authority_revoked",
+            "not_granted",
+            "transport_closed",
+            "scope_denied",
+        ] {
+            let call = |body: RequestBody| async move {
+                let RequestBody::FileRead(input) = body else {
+                    panic!("only reads")
+                };
+                if input.path == "/first" {
+                    Ok(ResponseBody::File(content(&input.path, "private")))
+                } else {
+                    Err(BridgeError::new(code, "refused after first page"))
+                }
+            };
+            let result =
+                read_many_authorized(call, vec!["/first".into(), "/second".into()], Some(100))
+                    .await;
+            assert_eq!(
+                result.err().expect("no partial successful batch").code,
+                code
+            );
+        }
     }
 }

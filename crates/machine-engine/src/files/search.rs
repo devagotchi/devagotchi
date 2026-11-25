@@ -8,8 +8,8 @@ use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
 use devagotchi_contracts::{
-    BridgeError, BridgeResult, FileSearchInput, MAX_SEARCH_CONTEXT, MAX_SEARCH_RESULTS,
-    SearchMatch, SearchPage, SearchTarget,
+    BridgeResult, FileSearchInput, MAX_SEARCH_CONTEXT, MAX_SEARCH_RESULTS, SearchMatch, SearchPage,
+    SearchTarget,
 };
 use regex::{Regex, RegexBuilder};
 
@@ -20,8 +20,6 @@ const PAGE_TIME: Duration = devagotchi_ipc::IO_TIMEOUT.saturating_sub(Duration::
 const _: () = assert!(PAGE_TIME.as_millis() < devagotchi_ipc::IO_TIMEOUT.as_millis());
 /// Larger files are skipped (and counted) by a contents search.
 const MAX_SEARCHED_FILE: u64 = 8 * 1024 * 1024;
-/// A file whose first bytes hold a NUL is binary, as git and ripgrep judge it.
-const BINARY_PROBE: usize = 8 * 1024;
 /// Characters of a line returned; the rest is cut.
 const MAX_LINE_CHARS: usize = 400;
 
@@ -96,12 +94,6 @@ impl Scope<'_> {
         };
         let cursor = input.cursor.as_deref().map(Cursor::parse).transpose()?;
         let root = self.resolve(&input.path)?;
-        if !root.is_dir() {
-            return Err(BridgeError::new(
-                "not_a_directory",
-                format!("{} is not a directory", display(&root)?),
-            ));
-        }
         let mut page = SearchPage {
             path: display(&root)?,
             matches: Vec::new(),
@@ -113,17 +105,17 @@ impl Scope<'_> {
         };
         let started = Instant::now();
         let mut searched_one = false;
-        for entry in walker(&root, &input, cursor.as_ref().map(|c| c.entry.clone())) {
-            let Ok(entry) = entry else {
-                page.files_skipped += 1;
-                continue;
-            };
-            if entry.depth() == 0 {
-                continue;
-            }
-            let Ok(relative) = entry.path().strip_prefix(&root) else {
-                continue;
-            };
+        let mut walk = super::search_walk::Walk::new(
+            self,
+            &root,
+            input.include_ignored,
+            cursor.as_ref().map(|c| c.entry.clone()),
+        )?;
+        while let Some(entry) = walk.next()? {
+            let relative = entry
+                .path
+                .strip_prefix(&root)
+                .map_err(|e| invalid(e.to_string()))?;
             let mut after_line = 0;
             if let Some(cursor) = &cursor {
                 match (relative.cmp(&cursor.entry), cursor.done) {
@@ -141,15 +133,15 @@ impl Scope<'_> {
                 return Ok(page);
             }
             searched_one = true;
-            let kind = entry.file_type().map_or("other", |kind| {
-                if kind.is_dir() {
-                    "dir"
-                } else if kind.is_symlink() {
-                    "symlink"
-                } else {
-                    "file"
-                }
-            });
+            let kind = if entry.metadata.is_dir() {
+                "dir"
+            } else if entry.metadata.is_symlink() {
+                "symlink"
+            } else if entry.metadata.is_file() {
+                "file"
+            } else {
+                "other"
+            };
             let wanted = glob
                 .as_ref()
                 .is_none_or(|glob| kind != "dir" && glob.is_match(glob_target(relative, &input)));
@@ -158,7 +150,7 @@ impl Scope<'_> {
             }
             match input.target {
                 SearchTarget::Names => {
-                    let name = entry.file_name().to_string_lossy();
+                    let name = entry.name.to_string_lossy();
                     if matcher.is_match(&name) {
                         page.matches.push(SearchMatch {
                             path: shown.clone(),
@@ -175,7 +167,7 @@ impl Scope<'_> {
                     }
                 }
                 SearchTarget::Contents if kind == "file" => {
-                    let Some(text) = searchable(entry.path()) else {
+                    let Some(text) = entry.text(self, MAX_SEARCHED_FILE)? else {
                         page.files_skipped += 1;
                         continue;
                     };
@@ -256,41 +248,6 @@ fn matcher(input: &FileSearchInput) -> BridgeResult<Regex> {
         })
 }
 
-/// The walk, in path order, skipping whole directories that a cursor has already passed.
-fn walker(root: &Path, input: &FileSearchInput, after: Option<PathBuf>) -> ignore::Walk {
-    let mut builder = ignore::WalkBuilder::new(root);
-    builder
-        .standard_filters(!input.include_ignored)
-        .require_git(false)
-        .follow_links(false)
-        .sort_by_file_path(|left, right| left.cmp(right));
-    if let Some(after) = after {
-        let root = root.to_path_buf();
-        builder.filter_entry(move |entry| {
-            let Ok(relative) = entry.path().strip_prefix(&root) else {
-                return true;
-            };
-            !(entry.file_type().is_some_and(|kind| kind.is_dir())
-                && relative < after.as_path()
-                && !after.starts_with(relative))
-        });
-    }
-    builder.build()
-}
-
-/// A file's text when a contents search reads it: a regular file, not too large, not binary.
-fn searchable(path: &Path) -> Option<String> {
-    let metadata = std::fs::metadata(path).ok()?;
-    if !metadata.is_file() || metadata.len() > MAX_SEARCHED_FILE {
-        return None;
-    }
-    let bytes = std::fs::read(path).ok()?;
-    if bytes[..bytes.len().min(BINARY_PROBE)].contains(&0) {
-        return None;
-    }
-    Some(String::from_utf8_lossy(&bytes).into_owned())
-}
-
 fn cut(line: &str) -> String {
     match line.char_indices().nth(MAX_LINE_CHARS) {
         Some((end, _)) => format!("{}…", &line[..end]),
@@ -357,6 +314,7 @@ mod tests {
         let scope = Scope {
             workspace: &root,
             policy: ExecPolicy::Granted,
+            authority: None,
         };
         let page = scope
             .search(input(&root, "match", SearchTarget::Names))
@@ -383,6 +341,7 @@ mod tests {
         let scope = Scope {
             workspace: &root,
             policy: ExecPolicy::Granted,
+            authority: None,
         };
         let mut asked = input(&root, "match", SearchTarget::Contents);
         asked.context_lines = 1;
@@ -414,6 +373,7 @@ mod tests {
         let scope = Scope {
             workspace: &root,
             policy: ExecPolicy::Granted,
+            authority: None,
         };
         for target in [SearchTarget::Names, SearchTarget::Contents] {
             let whole = found(&scope.search(input(&root, "match", target)).unwrap());
@@ -440,6 +400,7 @@ mod tests {
         let scope = Scope {
             workspace: &root.join("src"),
             policy: ExecPolicy::Granted,
+            authority: None,
         };
         let mut bad = input(&root, "(", SearchTarget::Contents);
         bad.regex = true;
@@ -460,5 +421,26 @@ mod tests {
         let mut cursor = input(&root.join("src"), "x", SearchTarget::Names);
         cursor.cursor = Some("nonsense".into());
         assert!(scope.search(cursor).unwrap_err().message.contains("cursor"));
+    }
+    #[test]
+    fn nested_ignore_precedence_stays_inside_the_search_root() {
+        let directory = tempfile::tempdir().unwrap();
+        let root = dunce::canonicalize(directory.path()).unwrap();
+        std::fs::create_dir_all(root.join("search/nested")).unwrap();
+        std::fs::write(root.join(".gitignore"), "*\n").unwrap();
+        std::fs::write(root.join("search/.gitignore"), "*.txt\n").unwrap();
+        std::fs::write(root.join("search/nested/.ignore"), "!keep.txt\n").unwrap();
+        for name in ["hidden.txt", "nested/keep.txt", "nested/drop.txt"] {
+            std::fs::write(root.join("search").join(name), "content").unwrap();
+        }
+        let scope = Scope {
+            workspace: &root,
+            policy: ExecPolicy::Granted,
+            authority: None,
+        };
+        let page = scope
+            .search(input(&root.join("search"), ".txt", SearchTarget::Names))
+            .unwrap();
+        assert_eq!(found(&page), ["nested/keep.txt"]);
     }
 }

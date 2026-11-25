@@ -3,6 +3,140 @@
 Part of Batch 2 in implementation.md, after the catalog storage/editor unit. This is
 an execution refinement of the full S1-S5 plan, not a new backlog or completion claim.
 
+## File operations (increment-293)
+
+Starting point: root main `2a0b670`, AgentHub `3acf12a`, clean after PR283's green
+merge, official-image deployment and restart acceptance. This is one complete file
+unit within S1, not S1 closure. No publication until its adapters, native enforcement,
+mutation receipts and ordinary/composite acceptance are authored and checked together.
+
+### Grounded corrections
+
+- Source `bridge/fsops/{fsops,read,write,sandboxed_linux}.go` and the existing file
+  constraints in `branch-execution.md` define read/list/stat/write/edit/move/delete.
+  The old Linux helper falls back to in-process execution on sandbox/setup/parse errors;
+  do not reproduce that fail-open behavior. This unit does not advertise new process
+  sandbox levels. Unsupported confinement still refuses.
+- Source `doRead` hashes only the returned page. A page digest cannot guard a whole-file
+  write. Add an explicit whole-file checksum request to file info; stream it from the
+  same checked open file with bounded memory and a deadline. A read may report a
+  whole-file SHA only when it actually returned the entire file. Check changed-file
+  metadata and keep the actual mutation's independent CAS check.
+- IPC responses are bounded to 256 KiB. Keep batch results and 3.75 MB images paged;
+  do not raise transport limits or put an entire image in one response. One composite
+  intent binds all paths/read bounds and consumes one admission, not one per page.
+- Current file operations resolve a name and later reopen it with ambient filesystem
+  calls. Rechecking strings before dispatch does not protect IO during a path race.
+  Use checked directory/file handles at the existing filesystem owner, including walks,
+  metadata reads, temporary writes, rename and deletion. Preserve local tool behavior
+  while moving common IO behind that owner. External editors do not join the broker's
+  mutation gate; do not claim filesystem-wide CAS.
+
+### Implementation order and owners
+
+1. **Contracts and checksum/delete semantics.** Extend `contracts/src/files.rs` and its
+   family modules with optional whole-file SHA results, an explicit checksum request,
+   optional move SHA precondition, and a regular-file-only guarded delete input/result.
+   Existing local write/edit/move semantics remain available. Account-backed mutations
+   require a stable retry key; write requires SHA or explicit create/absence, move/delete
+   require the source SHA, and edit retains exact-text/count guards. Add the corresponding
+   local/hub tool, descriptions, scope mapping and exhaustive request/response tables.
+   Regenerate schemas/types from their owner after the complete wire shape is authored.
+2. **Closed file invocation and pages.** Add a file-specific remote invocation describing
+   one ordinary request, an ordered bounded batch, or one image. Its retry identity,
+   original inputs and canonical broker paths bind preparation/admission. Each page must
+   fit that intent's paths, offsets and byte bounds; no arbitrary RequestBody can ride a
+   read admission. Capability-negotiate the extension under link protocol 1; old peers
+   refuse before effects. Keep image type/size/identity checks in the existing shared MCP
+   helper. Keep ordered per-file results, but authorization/credential failure aborts the
+   account-backed result rather than being disguised as a successful partial batch.
+3. **Checked native IO.** Extend `machine-engine/src/files/` and the permitted native
+   owner `execution/platform/` for handle identity/path validation. Open canonical parent
+   handles, verify their actual target, and perform leaf IO relative to those handles
+   without following a newly substituted leaf symlink. Directory traversal must also use
+   handles; an ambient walker followed by a final read check can already disclose foreign
+   names. Account-backed ignore-file reads may not escape the authorized search root.
+   Preparation never creates directories. Validate every missing directory that a write
+   would create and all source/destination paths before any effect. Recheck authority and
+   canonical material after the existing async mutation gate and immediately before IO.
+   Preserve deadlines through the blocking worker and release the gate only when it ends.
+4. **One existing machine journal.** Add file admission/result records to the existing
+   private broker journal, not a new database or scheduler. Atomically bind the immutable
+   grant identity and a pending mutation before the effect; persist the actual result or
+   refusal afterwards. Completed retries return that result, changed material conflicts,
+   and a pending record after crash/lost result is explicitly uncertain and never repeats
+   the mutation. Process and file retry keys cannot collide. Retiring bounded result
+   payloads leaves permanent identities/tombstones. Reads store no file contents; a
+   bounded read invocation ends explicitly after its pages, or becomes ended when its
+   authority expires. Status/completion integrates with the existing hub admission owner.
+5. **Shared grant selection/admission.** Generalize existing `PreparedStart`/selection
+   internals to carry the closed prepared operation, retaining wrappers for existing
+   process callers. Reuse candidate paging, least-privilege order, original retry affinity,
+   project filtering, live task checks and the private prepared value. Extend candidate
+   and `current_in` capability checks through `GrantCapability::covers`: fs.write may
+   cover fs.read while the policy action remains exactly fs.read. Finished file retries
+   may retrieve a recorded result only through current authority and a broker receipt;
+   they cannot revive a process or execute an uncertain/retired mutation.
+6. **Every account-backed adapter.** Route ordinary files, search, batch and image through
+   `mcp/callers` and the same Access owner. No raw Hub::send or configured-local fallback
+   for an account request. Prepare once per invocation; each page retains the same
+   admission and refreshes current credentials/scopes/project bounds after waits and
+   before disclosing results. Refresh after the final broker reply too. Keep one true
+   completion audit for the user intent and report cancellation/uncertain delivery honestly.
+7. **Lifecycle, docs and full verification.** Connect file status/retirement to existing
+   admission completion/maintenance. Update machine-capability instructions, generated
+   contracts and public tool guidance; explain how to obtain the SHA and reuse a retry
+   key after a lost reply. Update this ledger with actual evidence before publication.
+
+Handle implementation candidate: patched `cap-std`/`cap-fs-ext` 4.0.3, subject to actual
+Linux and Windows tests and dependency policy. Its [directory API](https://docs.rs/cap-std/4.0.3/cap_std/fs/struct.Dir.html)
+requires Windows directory handles without delete sharing. Earlier releases have a
+[trailing-slash escape advisory](https://rustsec.org/advisories/RUSTSEC-2026-0482.html);
+do not select an affected version or treat the dependency as a substitute for tests.
+The two patched dependencies are now selected for implementation; native verification is
+still pending and no confinement claim follows from selecting a dependency.
+
+### Acceptance before this unit's PR
+
+- Real files through ordinary read/list/info/checksum/write/edit/mkdir/move/delete/search,
+  batch and image requests; original local behavior and image paging remain intact.
+- Missing/foreign/revoked/exhausted grant, disabled principal, revoked or restricted key,
+  released/reclaimed task, changed enrollment and policy denial: no effect or disclosure.
+  Cover key/task revocation while Prepare, a queued mutation and a page wait are outstanding.
+- One once-grant consumes once for a full batch/image; a second invocation refuses.
+  Later eligible candidate, fs.write-to-read coverage, project filtering and original
+  retry affinity still work; store failures never become fallback selection.
+- No-effect preparation, both move paths, missing-parent authority, wrong SHA/absence,
+  directory deletion refusal, exact edit counts and two concurrent CAS writers with one
+  winner. Partial-read SHA must never be advertised as the whole-file digest.
+- Real Linux/Windows path substitution probes before Execute and during reads/walks/
+  mutations: outside bytes/names are not disclosed and outside paths are not changed.
+  Test leaf/parent links, trailing slashes, relative/home paths and Windows reparse paths.
+- Duplicate keys, changed input, lost replies, journal reopen, pending uncertain effects,
+  payload retirement and process/file key collisions: no repeated mutation. Current
+  authorization remains mandatory before returning a stored receipt.
+- Actual MCP-to-broker journeys, PostgreSQL grant/admission tests, native broker tests,
+  generated contracts, applicable full pre-push gates, green reviewed-head/main CI,
+  exact-tree merge and matching-image Docker acceptance. No historical log closes a test.
+
+Status (local implementation checkpoint, not delivery): contracts, checked native IO,
+whole-file SHA, guarded move/delete, file journal/remote broker, shared hub selection,
+ordinary/batch/image routing and lifecycle wiring are authored. Linux engine library:
+151 tests passed, including eight new remote file tests (prepare without effects, failed
+CAS without parent creation, restart receipt replay, whole versus partial SHA, move/delete
+retry after source removal, one batch identity/completion, pending outcome uncertainty,
+and revocation while queued). Hub/link library checks passed. MCP run: 36 passed and
+one tool-pattern failure (missing delete title/field docs); correction authored, retest pending.
+Native Windows, PostgreSQL/account adapter journeys, further race/retirement/collision
+acceptance, generated contracts, full validation and all publication steps remain pending.
+No commit/push/PR exists for 293. PR283 remains the verified running development build.
+
+Search now uses directory handles and checked in-root .gitignore/.ignore text rather
+than ambient parent/global ignore readers. All 41 existing file tests pass. This changes
+search ignore discovery: document and test nested precedence and the in-root boundary
+before publication. The source's unsafe sandbox fallback is not copied. Only the existing
+unsandboxed grant level is advertised so far; no new process sandbox is claimed.
+
 ## Source comparison completed so far
 
 Read at S1 `46419c697964016eb547c60416a8f2f5e854a95f`:

@@ -5,12 +5,12 @@
 use devagotchi_contracts::describe;
 
 use devagotchi_contracts::{
-    BridgeError, DirectoryInput, FileContent, FileEditInput, FileInfo, FileInfoInput,
-    FileListInput, FileListing, FileMoveInput, FileReadInput, FileWriteInput, FileWritten,
-    RequestBody, ResponseBody,
+    BridgeError, DirectoryInput, FileContent, FileDeleteInput as DeleteInput, FileDeleted,
+    FileEditInput, FileInfo, FileInfoInput, FileIntent, FileInvocation, FileListInput, FileListing,
+    FileMoveInput, FileReadInput, FileWriteInput, FileWritten, RequestBody, ResponseBody,
 };
 use devagotchi_mcp::{
-    files::{Files, read_many},
+    files::{Files, read_many, read_many_authorized},
     image::read_image,
 };
 use rmcp::{
@@ -18,7 +18,7 @@ use rmcp::{
     service::RequestContext, tool, tool_router,
 };
 
-use crate::mcp::{Hub, unexpected_response};
+use crate::mcp::{FileRetryKey, Hub, read_key, unexpected_response};
 
 mod inputs;
 use inputs::*;
@@ -100,8 +100,11 @@ impl Hub {
     async fn write_file(
         &self,
         Parameters(input): Parameters<WriteFileInput>,
-        context: RequestContext<RoleServer>,
+        mut context: RequestContext<RoleServer>,
     ) -> Result<Json<FileWritten>, Json<BridgeError>> {
+        context
+            .extensions
+            .insert(FileRetryKey(input.idempotency_key));
         let body = RequestBody::FileWrite(FileWriteInput {
             path: input.path,
             text: input.text,
@@ -134,8 +137,11 @@ impl Hub {
     async fn edit_file(
         &self,
         Parameters(input): Parameters<EditFileInput>,
-        context: RequestContext<RoleServer>,
+        mut context: RequestContext<RoleServer>,
     ) -> Result<Json<FileWritten>, Json<BridgeError>> {
+        context
+            .extensions
+            .insert(FileRetryKey(input.idempotency_key));
         let body = RequestBody::FileEdit(FileEditInput {
             path: input.path,
             old_text: input.old_text,
@@ -183,11 +189,42 @@ impl Hub {
                 return Err(Json(error));
             }
         };
-        let read = read_many(
-            |body| self.send(&route, body),
-            input.paths,
-            input.max_bytes_each,
-        );
+        let read = async {
+            let session = self
+                .file_session_for_route(
+                    &route,
+                    FileInvocation {
+                        key: read_key()?,
+                        intent: FileIntent::Batch {
+                            paths: input.paths.clone(),
+                            max_bytes: input
+                                .max_bytes_each
+                                .unwrap_or_else(devagotchi_contracts::default_file_read_bytes),
+                        },
+                    },
+                    &context,
+                )
+                .await?;
+            let result = if let Some(session) = &session {
+                read_many_authorized(
+                    |body| session.page(self, &context, body),
+                    input.paths,
+                    input.max_bytes_each,
+                )
+                .await
+            } else {
+                read_many(
+                    |body| self.send(&route, body),
+                    input.paths,
+                    input.max_bytes_each,
+                )
+                .await
+            };
+            if let Some(session) = &session {
+                session.finish(self, &context).await?;
+            }
+            result
+        };
         let files = tokio::select! {
             biased;
             _ = context.ct.cancelled() => Err(BridgeError::new(
@@ -226,7 +263,10 @@ impl Hub {
         Parameters(input): Parameters<PathOnMachine>,
         context: RequestContext<RoleServer>,
     ) -> Result<Json<FileInfo>, Json<BridgeError>> {
-        let body = RequestBody::FileInfo(FileInfoInput { path: input.path });
+        let body = RequestBody::FileInfo(FileInfoInput {
+            path: input.path,
+            sha256: input.sha256,
+        });
         match self
             .call("get_file_info", &input.machine, body, context)
             .await?
@@ -251,8 +291,11 @@ impl Hub {
     async fn create_directory(
         &self,
         Parameters(input): Parameters<DirectoryOnMachine>,
-        context: RequestContext<RoleServer>,
+        mut context: RequestContext<RoleServer>,
     ) -> Result<Json<FileInfo>, Json<BridgeError>> {
+        context
+            .extensions
+            .insert(FileRetryKey(input.idempotency_key));
         let body = RequestBody::FileMkdir(DirectoryInput { path: input.path });
         match self
             .call("create_directory", &input.machine, body, context)
@@ -278,12 +321,16 @@ impl Hub {
     async fn move_file(
         &self,
         Parameters(input): Parameters<MoveFileInput>,
-        context: RequestContext<RoleServer>,
+        mut context: RequestContext<RoleServer>,
     ) -> Result<Json<FileInfo>, Json<BridgeError>> {
+        context
+            .extensions
+            .insert(FileRetryKey(input.idempotency_key));
         let body = RequestBody::FileMove(FileMoveInput {
             source: input.source,
             destination: input.destination,
             overwrite: input.overwrite,
+            expected_sha256: input.expected_sha256,
         });
         match self
             .call("move_file", &input.machine, body, context)
@@ -291,6 +338,29 @@ impl Hub {
         {
             ResponseBody::Info(info) => Ok(Json(info)),
             other => Err(unexpected_response("info", &other)),
+        }
+    }
+
+    #[tool(name = "delete_file", description = describe::DELETE_FILE, title = "Delete a file on a machine",
+        annotations(title = "Delete a file on a machine", read_only_hint = false, destructive_hint = true, idempotent_hint = false, open_world_hint = false))]
+    async fn delete_file(
+        &self,
+        Parameters(input): Parameters<DeleteFileInput>,
+        mut context: RequestContext<RoleServer>,
+    ) -> Result<Json<FileDeleted>, Json<BridgeError>> {
+        context
+            .extensions
+            .insert(FileRetryKey(input.idempotency_key));
+        let body = RequestBody::FileDelete(DeleteInput {
+            path: input.path,
+            expected_sha256: input.expected_sha256,
+        });
+        match self
+            .call("delete_file", &input.machine, body, context)
+            .await?
+        {
+            ResponseBody::Deleted(deleted) => Ok(Json(deleted)),
+            other => Err(unexpected_response("deleted", &other)),
         }
     }
 
@@ -324,7 +394,33 @@ impl Hub {
                 return Err(Json(error));
             }
         };
-        let read = read_image(|body| self.send(&route, body), input.path.clone());
+        let read = async {
+            let session = self
+                .file_session_for_route(
+                    &route,
+                    FileInvocation {
+                        key: read_key()?,
+                        intent: FileIntent::Image {
+                            path: input.path.clone(),
+                        },
+                    },
+                    &context,
+                )
+                .await?;
+            let result = if let Some(session) = &session {
+                read_image(
+                    |body| session.page(self, &context, body),
+                    input.path.clone(),
+                )
+                .await
+            } else {
+                read_image(|body| self.send(&route, body), input.path.clone()).await
+            };
+            if let Some(session) = &session {
+                session.finish(self, &context).await?;
+            }
+            result
+        };
         let image = tokio::select! {
             biased;
             _ = context.ct.cancelled() => Err(BridgeError::new(

@@ -106,7 +106,9 @@ pub fn scope_for(tool: &str) -> Option<Scope> {
         | "workflow_status" | "workflow_wait" | "workflow_cancel" => Scope::MachinesManage,
         "read_file" | "read_multiple_files" | "read_image" => Scope::FilesRead,
         "list_directory" | "get_file_info" | "search_files" => Scope::FilesRead,
-        "write_file" | "edit_file" | "create_directory" | "move_file" => Scope::FilesWrite,
+        "write_file" | "edit_file" | "create_directory" | "move_file" | "delete_file" => {
+            Scope::FilesWrite
+        }
         "approval_request" | "approval_wait" | "request_access" | "wait_for_access" => {
             Scope::ApprovalsRequest
         }

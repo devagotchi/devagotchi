@@ -184,6 +184,10 @@ pub const TOOLS: [(&str, &[(&[&str], &str)]); 8] = [
                 &["create_directory", "move_file"],
                 "Makes folders, and moves or renames on the same filesystem.",
             ),
+            (
+                &["delete_file"],
+                "Deletes one file, only when it is still the version you read.",
+            ),
         ],
     ),
     (

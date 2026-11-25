@@ -8,6 +8,18 @@ impl Broker {
     pub(super) fn admission_status(&self, binding: &GrantBinding) -> BridgeResult<RemoteReply> {
         binding.validate()?;
         let state = self.shared.lock();
+        if let Some(file) = state.journal.file_record(&binding.operation_key)? {
+            state.journal.check_file_binding(binding)?;
+            let status = file.status(
+                now_ms()
+                    .try_into()
+                    .map_err(|_| invalid("broker clock overflow"))?,
+            );
+            return Ok(RemoteReply::FileStatus {
+                operation_id: file.id,
+                state: status,
+            });
+        }
         let id = state
             .keys
             .get(&binding.operation_key)

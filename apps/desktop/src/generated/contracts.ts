@@ -61,6 +61,8 @@ export interface BrokerContracts {
   config_view: ConfigView;
   directory_input: DirectoryInput;
   file_content: FileContent;
+  file_delete_input: FileDeleteInput;
+  file_deleted: FileDeleted;
   file_edit_input: FileEditInput;
   file_info: FileInfo;
   file_info_input: FileInfoInput;
@@ -262,6 +264,11 @@ export interface FileContent {
    */
   path: string;
   /**
+   * SHA-256 of the whole file, only when this read returned every byte. A page
+   * checksum is never a write guard; request get_file_info with sha256 for larger files.
+   */
+  sha256?: string | null;
+  /**
    * The file's size in bytes when it was read.
    */
   size: number;
@@ -280,6 +287,26 @@ export interface FileContent {
    * known line number reaches the end.
    */
   total_lines?: number | null;
+}
+/**
+ * Delete one regular file only after checking its whole-file content. Never recursive.
+ */
+export interface FileDeleteInput {
+  /**
+   * SHA-256 from get_file_info with sha256=true, or a complete read/write result.
+   */
+  expected_sha256: string;
+  /**
+   * Path (absolute, home-relative or workspace-relative) of the regular file to remove.
+   */
+  path: string;
+}
+export interface FileDeleted {
+  path: string;
+  /**
+   * Verified whole-file digest of the removed regular file.
+   */
+  sha256: string;
 }
 export interface FileEditInput {
   /**
@@ -336,6 +363,10 @@ export interface FileInfo {
    */
   replaced?: boolean | null;
   /**
+   * Whole-file SHA-256, when explicitly requested for a regular file.
+   */
+  sha256?: string | null;
+  /**
    * Size in bytes (for a link, the link's own).
    */
   size: number;
@@ -345,6 +376,11 @@ export interface FileInfoInput {
    * Path (absolute, `~/...`, or relative to the workspace) of a file, directory or symbolic link.
    */
   path: string;
+  /**
+   * Stream a whole-file SHA-256 for a guarded change. Refuses non-regular files,
+   * a changing file or a checksum that cannot finish within the broker deadline.
+   */
+  sha256?: boolean;
 }
 export interface FileListInput {
   /**
@@ -408,6 +444,12 @@ export interface FileMoveInput {
    * Path (absolute, `~/...`, or relative to the workspace) it moves to, on the same filesystem. Its parent directory must exist.
    */
   destination: string;
+  /**
+   * Move only if the regular source file still has this whole-file SHA-256.
+   * Required for account-backed grant execution; omitted local moves keep their
+   * existing file/directory/link behavior.
+   */
+  expected_sha256?: string | null;
   /**
    * Replace a file already at the destination (never a directory). Default false: an
    * existing destination refuses the move and changes nothing.

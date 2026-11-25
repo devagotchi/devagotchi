@@ -6,7 +6,6 @@
 //! had when the call began, so a log that grows meanwhile is read as it was. Line counts
 //! are exact for files up to 8 MiB, and once a read from a known line reaches the end.
 
-use std::fs::File;
 use std::io::{Read, Seek, SeekFrom};
 
 use devagotchi_contracts::{BridgeError, BridgeResult, MAX_READ_LINES};
@@ -52,6 +51,12 @@ pub(super) fn count(bytes: &[u8]) -> u64 {
 }
 
 fn changed(error: std::io::Error) -> BridgeError {
+    if let Some(error) = error
+        .get_ref()
+        .and_then(|e| e.downcast_ref::<BridgeError>())
+    {
+        return error.clone();
+    }
     if error.kind() == std::io::ErrorKind::UnexpectedEof {
         BridgeError::new(
             "changed_while_reading",
@@ -73,7 +78,7 @@ fn too_far() -> BridgeError {
 }
 
 /// Lines in the file's first `size` bytes.
-fn count_lines(file: &mut File, size: u64) -> std::io::Result<u64> {
+fn count_lines(file: &mut (impl Read + Seek), size: u64) -> std::io::Result<u64> {
     file.seek(SeekFrom::Start(0))?;
     let mut chunk = vec![0; CHUNK];
     let (mut lines, mut last, mut left) = (0u64, b'\n', size);
@@ -89,7 +94,12 @@ fn count_lines(file: &mut File, size: u64) -> std::io::Result<u64> {
 
 /// Byte offset where 1-based line `line` starts, scanning forward through at most `scan`
 /// bytes; `Ok(Err(lines))` with the line count when the file has fewer lines.
-fn line_start(file: &mut File, size: u64, line: u64, scan: u64) -> BridgeResult<Result<u64, u64>> {
+fn line_start(
+    file: &mut (impl Read + Seek),
+    size: u64,
+    line: u64,
+    scan: u64,
+) -> BridgeResult<Result<u64, u64>> {
     if line == 1 {
         return Ok(if size > 0 { Ok(0) } else { Err(0) });
     }
@@ -120,7 +130,12 @@ fn line_start(file: &mut File, size: u64, line: u64, scan: u64) -> BridgeResult<
 
 /// Byte offset where the last `lines` lines start, scanning backward through at most
 /// `scan` bytes.
-fn tail_start(file: &mut File, size: u64, lines: u64, scan: u64) -> BridgeResult<u64> {
+fn tail_start(
+    file: &mut (impl Read + Seek),
+    size: u64,
+    lines: u64,
+    scan: u64,
+) -> BridgeResult<u64> {
     if size == 0 {
         return Ok(0);
     }
@@ -156,12 +171,16 @@ fn tail_start(file: &mut File, size: u64, lines: u64, scan: u64) -> BridgeResult
     Ok(0)
 }
 
-pub(super) fn read_lines(file: &mut File, size: u64, ask: Ask) -> BridgeResult<Lines> {
+pub(super) fn read_lines(
+    file: &mut (impl Read + Seek),
+    size: u64,
+    ask: Ask,
+) -> BridgeResult<Lines> {
     read_lines_within(file, size, ask, COUNTED_BYTES, SCANNED_BYTES)
 }
 
 fn read_lines_within(
-    file: &mut File,
+    file: &mut (impl Read + Seek),
     size: u64,
     ask: Ask,
     counted: u64,

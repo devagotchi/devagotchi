@@ -27,6 +27,14 @@ Its receipt contains only the acknowledged operation ID and deadline. The existi
 local adapter has no hosted grant to renew. This is the preserved source's explicit
 process heartbeat mapped to the existing admission/Refresh protocol.
 
+Account-backed file mutations additionally take `idempotency_key`; local IPC does not.
+`get_file_info(sha256=true)` obtains a whole-file guard; partial `read_file` pages omit
+SHA-256. Account writes require a checksum or `mode=create`, move/delete require the
+source checksum, and edit keeps its exact text/count guard. `delete_file` removes one
+regular file, never a directory or link. Batch/image reads use one admission, and access
+failure aborts disclosure of the composite result. Search uses only in-root ignore files.
+External editors do not join the broker mutation gate; these guards are not filesystem-wide CAS.
+
 ## Tool by tool
 
 | Desktop Commander | What it does | Devagotchi | Gap |
@@ -61,7 +69,7 @@ process heartbeat mapped to the existing admission/Refresh protocol.
 ## Mutation ordering
 
 Desktop Commander gives no ordering between two calls that change files. Devagotchi's broker
-orders `write_file`, `edit_file`, `create_directory` and `move_file` through one gate per
+orders `write_file`, `edit_file`, `create_directory`, `move_file` and `delete_file` through one gate per
 broker, held from path resolution through the preconditions, the change and the answer
 (`crates/machine-engine/src/broker/files.rs` has the whole contract in its module docs).
 
@@ -95,8 +103,12 @@ broker, held from path resolution through the preconditions, the change and the 
   assuming the change did not happen.
 - Limits: this is not a filesystem-wide compare-and-swap. External editors, commands the
   broker runs, and a second broker do not take the gate. Reads can see a move or an append
-  half done. File changes have no journal, retry identity or rollback; whole-file replacement
-  is still by rename.
+  half done. A change made through a hub's grant has a retry identity and a receipt in the
+  machine journal, so a retry returns the first answer; a local change through `devagotchi
+  mcp` has neither. There is no rollback. Whole-file replacement is by rename; a create on a
+  filesystem without hard links (FAT32, exFAT, some network and Android storage) writes the
+  new file in place. Under a hub grant a move never overwrites: delete the destination with
+  its own `expected_sha256` first.
 
 Checked by `broker/tests/file_mutations.rs` (gate coverage, reads and queries not gated,
 cancellation before and during a change, release after an error or panic, `mutation_busy`

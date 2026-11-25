@@ -63,7 +63,7 @@ impl Access {
         input: &AdmissionInput<'_>,
     ) -> BridgeResult<Admitted> {
         if input.operation_key.is_empty()
-            || input.operation_key.len() > 256
+            || input.operation_key.len() > devagotchi_contracts::MAX_OPERATION_KEY_BYTES
             || input.operation_key.chars().any(char::is_control)
             || input.input_sha256.len() != 64
             || !input
@@ -151,6 +151,9 @@ impl Access {
                             "request_retired",
                             "operation retry identity is permanently retired",
                         ));
+                    }
+                    "finished" if input.action == devagotchi_contracts::GrantAction::FileWrite => {
+                        ()
                     }
                     "finished" => {
                         return Err(refused(

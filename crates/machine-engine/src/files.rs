@@ -18,16 +18,22 @@ use devagotchi_contracts::{
 use crate::broker::ExecPolicy;
 use crate::execution::platform::file_identity::file_identity;
 
+mod checked;
+mod checksum;
+mod delete;
 pub(crate) mod given;
 mod lines;
 mod manage;
+mod projection;
 mod search;
+mod search_walk;
 mod write;
 
 /// Where file requests may reach.
 pub(crate) struct Scope<'a> {
     pub(crate) workspace: &'a Path,
     pub(crate) policy: ExecPolicy,
+    pub(crate) authority: Option<&'a (dyn Fn(Option<&Path>) -> BridgeResult<()> + Sync)>,
 }
 
 fn invalid(message: impl Into<String>) -> BridgeError {
@@ -35,6 +41,12 @@ fn invalid(message: impl Into<String>) -> BridgeError {
 }
 
 fn io_error(path: &str, error: std::io::Error) -> BridgeError {
+    if let Some(error) = error
+        .get_ref()
+        .and_then(|e| e.downcast_ref::<BridgeError>())
+    {
+        return error.clone();
+    }
     match error.kind() {
         std::io::ErrorKind::NotFound => {
             BridgeError::new("path_not_found", format!("{path} does not exist"))
@@ -83,6 +95,29 @@ pub(crate) fn text_prefix(bytes: &[u8]) -> Option<usize> {
 }
 
 impl Scope<'_> {
+    /// This scope without the caller's authority, for what runs after a change's commit
+    /// point (a rename, a remove, a made directory): describing what now exists must not
+    /// turn a change that happened into a refusal. Never used before the commit point.
+    fn committed(&self) -> Scope<'_> {
+        Scope {
+            workspace: self.workspace,
+            policy: self.policy,
+            authority: None,
+        }
+    }
+
+    pub(super) fn check(&self) -> BridgeResult<()> {
+        match self.authority {
+            Some(check) => check(None),
+            None => Ok(()),
+        }
+    }
+    fn check_path(&self, path: &Path) -> BridgeResult<()> {
+        match self.authority {
+            Some(check) => check(Some(path)),
+            None => Ok(()),
+        }
+    }
     /// `path` as the agent wrote it, made absolute: `~` is the broker account's home and a
     /// relative path is under the workspace.
     fn given(&self, path: &str) -> BridgeResult<PathBuf> {
@@ -90,6 +125,7 @@ impl Scope<'_> {
     }
 
     fn resolve(&self, path: &str) -> BridgeResult<PathBuf> {
+        self.check()?;
         let given = self.given(path)?;
         let canonical = dunce::canonicalize(&given).map_err(|error| io_error(path, error))?;
         if self.policy == ExecPolicy::Granted && !canonical.starts_with(self.workspace) {
@@ -98,6 +134,7 @@ impl Scope<'_> {
                 "This machine's broker reaches files only inside its workspace",
             ));
         }
+        self.check_path(&canonical)?;
         Ok(canonical)
     }
 
@@ -109,7 +146,19 @@ impl Scope<'_> {
         }
         let path = self.resolve(&input.path)?;
         let shown = display(&path)?;
-        let mut file = std::fs::File::open(&path).map_err(|e| io_error(&shown, e))?;
+        let entry = checked::Entry::at(&path).map_err(|e| io_error(&shown, e))?;
+        let kind = entry
+            .parent
+            .handle
+            .symlink_metadata(&entry.name)
+            .map_err(|e| io_error(&shown, e))?;
+        if !kind.is_file() {
+            return Err(BridgeError::new(
+                "not_a_file",
+                "read_file requires a regular file",
+            ));
+        }
+        let mut file = entry.read().map_err(|e| io_error(&shown, e))?;
         let metadata = file.metadata().map_err(|e| io_error(&shown, e))?;
         if !metadata.is_file() {
             return Err(BridgeError::new(
@@ -125,8 +174,17 @@ impl Scope<'_> {
                 max_bytes: input.max_bytes,
                 offset: input.offset,
             };
-            let lines = lines::read_lines(&mut file, size, ask)?;
+            let lines = lines::read_lines(&mut checked::Reader::new(&mut file, self), size, ask)?;
+            self.check()?;
+            entry.parent.verify().map_err(|e| io_error(&shown, e))?;
+            let after = file.metadata().map_err(|e| io_error(&shown, e))?;
+            if after.len() != size || after.modified().ok() != metadata.modified().ok() {
+                return Err(checksum::changed());
+            }
+            let sha256 = (lines.offset == 0 && lines.text.len() as u64 == size)
+                .then(|| checksum::bytes(lines.text.as_bytes()));
             return Ok(FileContent {
+                sha256,
                 path: shown,
                 size,
                 offset: lines.offset,
@@ -184,7 +242,15 @@ impl Scope<'_> {
             None => (None, Some(BASE64.encode(&bytes)), bytes.len()),
         };
         let next_offset = start + used as u64;
+        self.check()?;
+        entry.parent.verify().map_err(|e| io_error(&shown, e))?;
+        let after = file.metadata().map_err(|e| io_error(&shown, e))?;
+        if after.len() != size || after.modified().ok() != metadata.modified().ok() {
+            return Err(checksum::changed());
+        }
+        let sha256 = (start == 0 && used as u64 == size).then(|| checksum::bytes(&bytes[..used]));
         Ok(FileContent {
+            sha256,
             path: shown,
             size,
             offset: start,
@@ -211,7 +277,11 @@ impl Scope<'_> {
         }
         let root = self.resolve(&input.path)?;
         let shown = display(&root)?;
-        let metadata = std::fs::metadata(&root).map_err(|e| io_error(&shown, e))?;
+        let directory = checked::Directory::open(&root).map_err(|e| io_error(&shown, e))?;
+        let metadata = directory
+            .handle
+            .dir_metadata()
+            .map_err(|e| io_error(&shown, e))?;
         if !metadata.is_dir() {
             return Err(BridgeError::new(
                 "not_a_directory",
@@ -224,7 +294,8 @@ impl Scope<'_> {
         // a page goes on from the entry its cursor names; one that is gone is said, not guessed.
         let mut after = input.cursor.clone();
         walk(
-            &root,
+            self,
+            &directory,
             "",
             input.depth,
             input.max_entries as usize,
@@ -232,9 +303,9 @@ impl Scope<'_> {
                 entries: &mut entries,
                 truncated: &mut truncated,
                 after: &mut after,
+                deadline: std::time::Instant::now() + checksum::IO_BUDGET,
             },
-        )
-        .map_err(|e| io_error(&shown, e))?;
+        )?;
         if let Some(cursor) = after {
             return Err(BridgeError::new(
                 "cursor_not_found",
@@ -259,37 +330,52 @@ struct Walk<'a> {
     entries: &'a mut Vec<FileEntry>,
     truncated: &'a mut bool,
     after: &'a mut Option<String>,
+    deadline: std::time::Instant,
 }
 
 /// One directory's entries, directories first then by name, and below them as deep as
 /// `depth` allows. Only the root's own read failure is an error; a subdirectory that
 /// cannot be read is listed with why.
 fn walk(
-    dir: &Path,
+    scope: &Scope<'_>,
+    dir: &checked::Directory,
     prefix: &str,
     depth: u32,
     limit: usize,
     at: &mut Walk<'_>,
-) -> std::io::Result<()> {
-    let mut children: Vec<(String, bool, PathBuf, Option<Metadata>)> = std::fs::read_dir(dir)?
-        .filter_map(Result::ok)
-        .map(|entry| {
-            let native = entry.file_name();
-            let name = native.to_string_lossy().into_owned();
-            (
-                name,
-                native.to_str().is_none(),
-                entry.path(),
-                std::fs::symlink_metadata(entry.path()).ok(),
-            )
-        })
-        .collect();
+) -> BridgeResult<()> {
+    use cap_std::fs::Metadata;
+    scope.check()?;
+    dir.verify().map_err(|e| io_error("listing", e))?;
+    let mut children = Vec::new();
+    for entry in dir.handle.entries().map_err(|e| io_error("listing", e))? {
+        scope.check()?;
+        if std::time::Instant::now() >= at.deadline {
+            return Err(BridgeError::new(
+                "file_timeout",
+                "directory listing exceeded its IO deadline",
+            ));
+        }
+        let entry = entry.map_err(|e| io_error("listing", e))?;
+        let native = entry.file_name();
+        let name = native.to_string_lossy().into_owned();
+        let metadata = dir.handle.symlink_metadata(&native).ok();
+        children.push((name, native.to_str().is_none(), native, metadata));
+    }
     children.sort_by(|left, right| {
         let left_dir = left.3.as_ref().is_some_and(Metadata::is_dir);
         let right_dir = right.3.as_ref().is_some_and(Metadata::is_dir);
         right_dir.cmp(&left_dir).then_with(|| left.0.cmp(&right.0))
     });
-    for (name, name_lossy, path, metadata) in children {
+    for (name, name_lossy, native, metadata) in children {
+        scope.check()?;
+        dir.verify().map_err(|e| io_error("listing", e))?;
+        if std::time::Instant::now() >= at.deadline {
+            return Err(BridgeError::new(
+                "file_timeout",
+                "directory listing exceeded its IO deadline",
+            ));
+        }
         if at.after.is_none() && at.entries.len() >= limit {
             *at.truncated = true;
             return Ok(());
@@ -309,7 +395,11 @@ fn walk(
             path: relative.clone(),
             kind: kind.to_owned(),
             size: metadata.as_ref().filter(|m| m.is_file()).map(Metadata::len),
-            modified_ms: metadata.as_ref().and_then(modified_ms),
+            modified_ms: metadata
+                .as_ref()
+                .and_then(|m| m.modified().ok())
+                .and_then(|t| t.into_std().duration_since(UNIX_EPOCH).ok())
+                .map(|d| d.as_millis().min(u64::MAX as u128) as u64),
             error: None,
             name_lossy,
         };
@@ -324,10 +414,10 @@ fn walk(
             at.entries.push(entry);
         }
         if kind == "dir" && depth > 0 {
-            if let Err(error) = walk(&path, &relative, depth - 1, limit, at) {
-                if returned {
-                    at.entries[slot].error = Some(error.to_string());
-                }
+            match dir.child(&native) {
+                Ok(child) => walk(scope, &child, &relative, depth - 1, limit, at)?,
+                Err(error) if returned => at.entries[slot].error = Some(error.to_string()),
+                Err(_) => {}
             }
             if *at.truncated {
                 return Ok(());

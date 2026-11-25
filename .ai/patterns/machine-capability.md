@@ -16,6 +16,19 @@ Who decides what (G1):
 - The hub names the machine and passes the request on (module docs of
   `crates/hub/src/machines/system.rs`), and `Hub::call` audits the call.
 
+## Account-backed files
+
+Ordinary file tools, search, batch and image calls use `mcp/callers/files` and the
+shared Access selection/admission owner, then the capability-negotiated closed file
+invocation on the authenticated link. They must never fall back to raw `Hub::send`.
+The account hub adds `idempotency_key` to mutation inputs; local direct IPC has no
+hosted admission. All other common input fields and descriptions retain parity.
+Only currently advertised native levels may execute; this extension adds no process
+sandbox claim. Native held-handle checks, current authorization after waits, whole-file
+mutation guards, bounded pages and durable non-repeating receipts are required.
+The broker's existing private journal may retain mutation receipts and read diagnostic
+codes, never read contents. Account and grant records remain in PostgreSQL.
+
 ## Exemplar
 
 `broker_capabilities` (hub: `machine_inspect`) is the exemplar for the chain and its tests. It

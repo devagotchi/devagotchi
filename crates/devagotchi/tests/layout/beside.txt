@@ -15,7 +15,6 @@ crates/machine-engine/src/execution/platform/linux.rs
 crates/machine-engine/src/execution/platform/windows.rs
 crates/machine-engine/src/files.rs
 crates/machine-engine/src/files/lines.rs
-crates/machine-engine/src/files/manage.rs
 crates/machine-engine/src/journal.rs
 crates/mcp/src/adapter.rs
 crates/mcp/src/capabilities.rs

@@ -10,6 +10,7 @@ use std::fs::OpenOptions;
 use std::os::unix::fs::{MetadataExt, OpenOptionsExt, PermissionsExt};
 use std::path::Path;
 use std::time::Duration;
+pub(crate) mod files;
 mod grants;
 
 #[derive(Debug, Clone)]
@@ -195,6 +196,7 @@ impl Journal {
         }
         let journal = Self { connection };
         journal.initialize_grants()?;
+        journal.initialize_files()?;
         Ok(journal)
     }
 

@@ -2,9 +2,9 @@
 //! one request to this user's broker; `read_multiple_files` and `read_image` are several.
 
 use devagotchi_contracts::{
-    BridgeError, DirectoryInput, FileContent, FileEditInput, FileInfo, FileInfoInput,
-    FileListInput, FileListing, FileMoveInput, FileReadInput, FileSearchInput, FileWriteInput,
-    FileWritten, RequestBody, ResponseBody, SearchPage, describe,
+    BridgeError, DirectoryInput, FileContent, FileDeleteInput, FileDeleted, FileEditInput,
+    FileInfo, FileInfoInput, FileListInput, FileListing, FileMoveInput, FileReadInput,
+    FileSearchInput, FileWriteInput, FileWritten, RequestBody, ResponseBody, SearchPage, describe,
 };
 use rmcp::{
     Json, RoleServer, handler::server::wrapper::Parameters, model::CallToolResult,
@@ -36,6 +36,21 @@ pub struct ImageInput {
 
 #[tool_router(router = files_router, vis = "pub(super)")]
 impl BridgeAdapter {
+    #[tool(name = "delete_file", description = describe::DELETE_FILE, title = "Delete a file",
+        annotations(title = "Delete a file", read_only_hint = false, destructive_hint = true, idempotent_hint = false, open_world_hint = false))]
+    async fn delete_file(
+        &self,
+        Parameters(input): Parameters<FileDeleteInput>,
+        context: RequestContext<RoleServer>,
+    ) -> Result<Json<FileDeleted>, Json<BridgeError>> {
+        match self
+            .request(RequestBody::FileDelete(input), context)
+            .await?
+        {
+            ResponseBody::Deleted(deleted) => Ok(Json(deleted)),
+            other => Err(Json(unexpected("deleted", &other))),
+        }
+    }
     #[tool(
         name = "read_file",
         description = describe::READ_FILE,

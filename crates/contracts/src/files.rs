@@ -69,6 +69,10 @@ pub struct FileContent {
     /// pages read in turn are known to be of one file when it is the same on each.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub identity: Option<String>,
+    /// SHA-256 of the whole file, only when this read returned every byte. A page
+    /// checksum is never a write guard; request get_file_info with sha256 for larger files.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sha256: Option<String>,
     /// Read by lines: the 1-based number of the first line returned, when known (always
     /// for a positive `start_line`; from the end, for files up to 8 MiB).
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -221,6 +225,28 @@ pub struct FileWritten {
 pub struct FileInfoInput {
     /// Path (absolute, `~/...`, or relative to the workspace) of a file, directory or symbolic link.
     pub path: String,
+    /// Stream a whole-file SHA-256 for a guarded change. Refuses non-regular files,
+    /// a changing file or a checksum that cannot finish within the broker deadline.
+    #[serde(default)]
+    pub sha256: bool,
+}
+
+/// Delete one regular file only after checking its whole-file content. Never recursive.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct FileDeleteInput {
+    /// Path (absolute, home-relative or workspace-relative) of the regular file to remove.
+    pub path: String,
+    /// SHA-256 from get_file_info with sha256=true, or a complete read/write result.
+    pub expected_sha256: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct FileDeleted {
+    pub path: String,
+    /// Verified whole-file digest of the removed regular file.
+    pub sha256: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -239,6 +265,11 @@ pub struct FileMoveInput {
     pub source: String,
     /// Path (absolute, `~/...`, or relative to the workspace) it moves to, on the same filesystem. Its parent directory must exist.
     pub destination: String,
+    /// Move only if the regular source file still has this whole-file SHA-256.
+    /// Required for account-backed grant execution; omitted local moves keep their
+    /// existing file/directory/link behavior.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub expected_sha256: Option<String>,
     /// Replace a file already at the destination (never a directory). Default false: an
     /// existing destination refuses the move and changes nothing.
     #[serde(default)]
@@ -254,6 +285,9 @@ pub struct FileInfo {
     pub kind: String,
     /// Size in bytes (for a link, the link's own).
     pub size: u64,
+    /// Whole-file SHA-256, when explicitly requested for a regular file.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sha256: Option<String>,
     pub modified_ms: Option<u64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub created_ms: Option<u64>,

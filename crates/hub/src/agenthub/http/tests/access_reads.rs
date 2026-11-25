@@ -14,6 +14,9 @@ use crate::{
 use devagotchi_agenthub::{Actor, policy::Identity};
 
 pub(super) async fn requested(admin: &Admin) -> Requested {
+    requested_for(admin, "exec").await
+}
+pub(super) async fn requested_for(admin: &Admin, capability: &str) -> Requested {
     let accounts = &admin.hub.accounts;
     let agent = accounts
         .put_agent(
@@ -56,7 +59,7 @@ pub(super) async fn requested(admin: &Admin) -> Requested {
     };
     let input =
         serde_json::from_value(json!({"machine":"lab","selection":{"kind":"items","items":[
-        {"capability":"exec","sandbox_level":"read-only","selector":{}}]},"duration":"1h",
+        {"capability":capability,"sandbox_level":"read-only","selector":{}}]},"duration":"1h",
         "reason":"Inspect the source repository to prepare the requested change."}))
         .unwrap();
     Access::new(accounts.clone())

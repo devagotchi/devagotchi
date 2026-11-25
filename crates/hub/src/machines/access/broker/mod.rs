@@ -8,7 +8,10 @@ use crate::machines::{
 use devagotchi_agenthub::{Actor, hosted::HostedBoard};
 use devagotchi_contracts::*;
 use sha2::{Digest, Sha256};
+mod prepared;
 mod selection;
+use prepared::PreparedInput;
+mod files;
 pub(crate) use selection::StartSelection;
 
 #[derive(Debug, Clone)]
@@ -28,7 +31,7 @@ pub(crate) struct LinkExecution<'a> {
 /// Owned, non-serializable broker preparation. Private fields prevent adapters from
 /// replacing canonical input, selected authority or request identity after validation.
 #[derive(Debug, Clone)]
-pub(crate) struct PreparedStart {
+pub(crate) struct PreparedCall {
     account: String,
     principal: String,
     grant_id: String,
@@ -36,13 +39,13 @@ pub(crate) struct PreparedStart {
     target: ExecutionTarget,
     origin: GrantOrigin,
     levels: Vec<GrantLevel>,
-    input: StartInput,
+    input: PreparedInput,
     action: GrantAction,
     operation_key: String,
     input_sha256: String,
     call: GrantCall,
 }
-impl PreparedStart {
+impl PreparedCall {
     pub(crate) fn grant_id(&self) -> &str {
         &self.grant_id
     }
@@ -127,11 +130,20 @@ impl Access {
     }
     /// Preparation has no effect and consumes no use. Adapters must refresh current
     /// credentials and scopes after this wait, before calling execute_prepared.
+    #[cfg(test)]
     pub(crate) async fn prepare_start(
         &self,
         execution: &LinkExecution<'_>,
         input: StartInput,
-    ) -> BridgeResult<PreparedStart> {
+    ) -> BridgeResult<PreparedCall> {
+        self.prepare_call(execution, PreparedInput::Start(input))
+            .await
+    }
+    async fn prepare_call(
+        &self,
+        execution: &LinkExecution<'_>,
+        input: PreparedInput,
+    ) -> BridgeResult<PreparedCall> {
         let target = self
             .execution_target(execution.account, execution.actor, execution.grant_id)
             .await?;
@@ -144,14 +156,18 @@ impl Access {
         actor.validate()?;
         let levels = match execution
             .links
-            .call_remote(&target.machine.name, RemoteRequest::Capabilities {})
+            .call_remote(&target.machine.name, input.capabilities())
             .await?
         {
             RemoteReply::Capabilities {
                 version: REMOTE_ACCESS_VERSION,
                 sandbox_levels,
                 ..
-            } => sandbox_levels,
+            } if matches!(&input, PreparedInput::Start(_)) => sandbox_levels,
+            RemoteReply::FileCapabilities {
+                version: REMOTE_FILE_ACCESS_VERSION,
+                sandbox_levels,
+            } if matches!(&input, PreparedInput::Files(_)) => sandbox_levels,
             _ => {
                 return Err(BridgeError::new(
                     "invalid_response",
@@ -169,12 +185,7 @@ impl Access {
             .links
             .call_remote(
                 &target.machine.name,
-                RemoteRequest::Prepare {
-                    origin: origin.clone(),
-                    actor,
-                    level: target.level,
-                    request: RequestBody::OperationStart(input.clone()),
-                },
+                input.prepare(origin.clone(), actor, target.level),
             )
             .await?;
         let RemoteReply::Prepared {
@@ -189,21 +200,14 @@ impl Access {
                 "broker did not prepare this operation",
             ));
         };
-        let expected = if input.interactive.is_some() {
-            GrantAction::ProcessStart
-        } else {
-            GrantAction::Exec
-        };
-        if action != expected
-            || operation_key != input.idempotency_key
-            || call.level != target.level
-        {
+        let expected = input.action();
+        if action != expected || operation_key != input.key() || call.level != target.level {
             return Err(BridgeError::new(
                 "invalid_response",
                 "broker preparation changed the requested operation identity",
             ));
         }
-        Ok(PreparedStart {
+        Ok(PreparedCall {
             account: execution.account.into(),
             principal: execution.actor.id.into(),
             grant_id: execution.grant_id.into(),
@@ -218,13 +222,11 @@ impl Access {
             call,
         })
     }
-    /// Only the original request can consume this preparation. Current domain authority
-    /// is checked in the admission transaction, after adapter credential refresh.
-    pub(crate) async fn execute_prepared(
+    fn check_prepared_identity(
         &self,
         execution: &LinkExecution<'_>,
-        prepared: PreparedStart,
-    ) -> BridgeResult<(Admitted, StartOutput)> {
+        prepared: &PreparedCall,
+    ) -> BridgeResult<()> {
         if prepared.account != execution.account
             || prepared.principal != execution.actor.id
             || prepared.grant_id != execution.grant_id
@@ -236,44 +238,55 @@ impl Access {
                 "preparation belongs to another request",
             ));
         }
-        let PreparedStart {
-            target,
-            origin,
-            levels,
-            input,
-            action,
-            operation_key,
-            input_sha256,
-            call,
-            ..
-        } = prepared;
-        let admitted = self
-            .admit(
-                execution.account,
-                execution.actor,
-                execution.board,
-                &AdmissionMachine {
-                    binding: &target.machine,
-                    sandbox_levels: &levels,
-                },
-                &AdmissionInput {
-                    action,
-                    grant_id: execution.grant_id,
-                    operation_key: &operation_key,
-                    input_sha256: &input_sha256,
-                    call: &call,
-                },
-            )
-            .await?;
-        let authority = admitted.authority(origin)?;
+        Ok(())
+    }
+    /// Current domain authority is checked after adapter credential refresh.
+    async fn admit_prepared(
+        &self,
+        execution: &LinkExecution<'_>,
+        prepared: &PreparedCall,
+    ) -> BridgeResult<Admitted> {
+        self.check_prepared_identity(execution, prepared)?;
+        self.admit(
+            execution.account,
+            execution.actor,
+            execution.board,
+            &AdmissionMachine {
+                binding: &prepared.target.machine,
+                sandbox_levels: &prepared.levels,
+            },
+            &AdmissionInput {
+                action: prepared.action,
+                grant_id: execution.grant_id,
+                operation_key: &prepared.operation_key,
+                input_sha256: &prepared.input_sha256,
+                call: &prepared.call,
+            },
+        )
+        .await
+    }
+
+    pub(crate) async fn execute_prepared(
+        &self,
+        execution: &LinkExecution<'_>,
+        prepared: PreparedCall,
+    ) -> BridgeResult<(Admitted, StartOutput)> {
+        let PreparedInput::Start(input) = &prepared.input else {
+            return Err(BridgeError::new(
+                "authority_mismatch",
+                "process execution needs a process preparation",
+            ));
+        };
+        let admitted = self.admit_prepared(execution, &prepared).await?;
+        let authority = admitted.authority(prepared.origin.clone())?;
         match execution
             .links
             .call_remote(
-                &target.machine.name,
+                &prepared.target.machine.name,
                 RemoteRequest::Execute {
                     authority,
                     client: execution.client.into(),
-                    request: RequestBody::OperationStart(input),
+                    request: RequestBody::OperationStart(input.clone()),
                 },
             )
             .await?
@@ -282,7 +295,7 @@ impl Access {
                 self.bind_operation(
                     execution.account,
                     execution.actor,
-                    &target.machine,
+                    &prepared.target.machine,
                     &admitted.admission_id,
                     &output.operation.operation_id,
                 )

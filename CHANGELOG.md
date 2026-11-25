@@ -15,6 +15,17 @@ prerelease tag would not move the `:latest` image. The project stage stays alpha
 install, not a production promotion. The gap that is still open is in
 [.ai/docs/desktop-commander-parity.md](.ai/docs/desktop-commander-parity.md).
 
+### Account-backed file access
+
+- Ordinary file tools, search, batch and image reads share live grant selection and
+  admission. A batch or image consumes one use; ended credentials or grants refuse access.
+- Account file mutations require a stable `idempotency_key`. Lost-response retries return
+  the original receipt; unresolved mutations after a crash are uncertain and never repeat.
+- `get_file_info(sha256=true)` supplies whole-file guards; partial reads omit SHA-256.
+  `delete_file` requires that guard and removes one regular file only. Remote write/move
+  guards and exact edit counts are checked before effects, through checked native handles.
+- Search reads ignore rules only inside its requested root, with nested rules taking precedence.
+
 ### Hosted process access
 
 - `operation_heartbeat(machine, operation_id)` renews an existing interactive process's

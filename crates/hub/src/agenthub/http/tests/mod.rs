@@ -4,6 +4,7 @@ mod access_browser;
 mod access_control;
 mod access_decisions;
 mod access_execution;
+mod access_files;
 mod access_heartbeat;
 mod access_mcp;
 mod access_reads;

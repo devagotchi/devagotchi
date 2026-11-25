@@ -1,7 +1,11 @@
 use super::*;
 
 fn scope(workspace: &Path, policy: ExecPolicy) -> Scope<'_> {
-    Scope { workspace, policy }
+    Scope {
+        workspace,
+        policy,
+        authority: None,
+    }
 }
 
 fn read(scope: &Scope<'_>, path: &Path, offset: i64, max_bytes: usize) -> FileContent {

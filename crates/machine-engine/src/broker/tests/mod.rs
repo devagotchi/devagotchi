@@ -187,4 +187,5 @@ mod processes;
 
 mod remote;
 mod remote_control;
+mod remote_files;
 mod remote_observation;

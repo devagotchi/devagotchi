@@ -1,10 +1,11 @@
-//! File requests: answered directly (no operation, nothing journaled) where the broker's
+//! Local file requests are answered directly. Account-backed remote file calls use the
+//! durable admission/result journal in `remote::files` and this same IO owner. The broker's
 //! policy lets files be reached, on the blocking pool so a large file or a long search never
 //! stalls the broker's jobs, waits or other callers. A refusal goes to the broker log.
 //!
 //! # Mutation ordering
 //!
-//! `write_file`, `edit_file`, `create_directory` and `move_file` take one gate per broker
+//! `write_file`, `edit_file`, `create_directory`, `move_file` and `delete_file` take one gate per broker
 //! ([`MutationGate`]) for the whole of their work: path resolution, the preconditions
 //! (`expected_sha256`, `mode: create`, the count of `old_text`, an existing move destination),
 //! the change and the answer. Two writes guarded by the same SHA-256 cannot both succeed: the
@@ -47,9 +48,13 @@
 //!
 //! **Limits.** This orders file tools within one broker. It is not a filesystem-wide
 //! compare-and-swap: external editors, commands the broker runs and a second broker do not take
-//! the gate and can still race. Reads can see a move or append half way. There is no journal,
-//! retry identity or rollback for file changes; whole-file replacement is still by rename;
-//! shutdown and persistence faults treat file tools as before.
+//! the gate and can still race. Reads can see a move or append half way. A file change made
+//! through a hub's grant has a retry identity and a receipt in the machine journal
+//! (`journal/files`), so a retry returns the first answer instead of changing the file again;
+//! a local change through `devagotchi mcp` has neither. There is no rollback; whole-file
+//! replacement is by rename, and a create where the filesystem has no hard links writes the
+//! new file in place. Past a change's commit point nothing refuses: its receipt comes from what
+//! is already known (`files/write`, `Scope::committed`).
 
 use super::*;
 use crate::files::Scope;
@@ -145,6 +150,7 @@ impl Broker {
             let files = Scope {
                 workspace: &workspace,
                 policy,
+                authority: None,
             };
             work(&files)
         })
@@ -165,6 +171,7 @@ fn mutation(request: &RequestBody) -> Option<&'static str> {
         RequestBody::FileEdit(_) => Some("edit_file"),
         RequestBody::FileMkdir(_) => Some("create_directory"),
         RequestBody::FileMove(_) => Some("move_file"),
+        RequestBody::FileDelete(_) => Some("delete_file"),
         RequestBody::FileRead(_)
         | RequestBody::FileList(_)
         | RequestBody::FileInfo(_)
@@ -188,7 +195,10 @@ fn mutation(request: &RequestBody) -> Option<&'static str> {
 }
 
 /// The request's tool name, and its answer.
-fn answer(files: &Scope<'_>, request: RequestBody) -> (&'static str, BridgeResult<ResponseBody>) {
+pub(super) fn answer(
+    files: &Scope<'_>,
+    request: RequestBody,
+) -> (&'static str, BridgeResult<ResponseBody>) {
     match request {
         RequestBody::FileRead(input) => ("read_file", files.read(input).map(ResponseBody::File)),
         RequestBody::FileList(input) => (
@@ -207,6 +217,10 @@ fn answer(files: &Scope<'_>, request: RequestBody) -> (&'static str, BridgeResul
             files.mkdir(input).map(ResponseBody::Info),
         ),
         RequestBody::FileMove(input) => ("move_file", files.moved(input).map(ResponseBody::Info)),
+        RequestBody::FileDelete(input) => (
+            "delete_file",
+            files.delete(input).map(ResponseBody::Deleted),
+        ),
         RequestBody::FileSearch(input) => (
             "search_files",
             files.search(input).map(ResponseBody::Search),

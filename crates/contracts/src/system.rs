@@ -26,7 +26,7 @@ pub const MAX_CONCURRENT_RANGE: std::ops::RangeInclusive<usize> = 1..=64;
 
 /// Every request method this build's broker serves, in `RequestBody`'s order: what
 /// `broker_capabilities` starts from before a broker's policy removes what it always refuses.
-pub const REQUEST_METHODS: [&str; 23] = [
+pub const REQUEST_METHODS: [&str; 24] = [
     "operation_start",
     "operation_get",
     "operation_read",
@@ -41,6 +41,7 @@ pub const REQUEST_METHODS: [&str; 23] = [
     "file_info",
     "file_mkdir",
     "file_move",
+    "file_delete",
     "file_search",
     "config_get",
     "config_set",
