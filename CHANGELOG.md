@@ -15,6 +15,20 @@ prerelease tag would not move the `:latest` image. The project stage stays alpha
 install, not a production promotion. The gap that is still open is in
 [.ai/docs/desktop-commander-parity.md](.ai/docs/desktop-commander-parity.md).
 
+### Each domain serves its own pages
+
+- The hub's flat `web/` folder had about 63 files from every domain. The pages now live in
+  their domains:
+  - `identity/web`: sign-in, passkeys, OAuth, keys, me, agents;
+  - `settings/`: a new domain for `/admin` and its store;
+  - `agenthub/web`: board, ticket, approvals, configuration;
+  - `machines/web`, `catalog/web`, `site/web`, `tenancy/web` and `ops/web`;
+  - `connections`, `offers`, `workflows` and `notify`.
+- Each domain merges its own `routes()`. `web/` keeps only the shell: the HTML kit, the
+  router, the phone frame and the shared assets and styles.
+- No behaviour or route changed: the same 235 route paths, and 1241 tests passing before and
+  after.
+
 ### The workspace is laid out in layers
 
 - The crates moved out of `crates/` into layers, with no behaviour change:
@@ -1231,7 +1245,7 @@ install, not a production promotion. The gap that is still open is in
   versions below 0.38, which both link to the same SQLite.
 
 ### The landing page (increment 45)
-- `/` signed out is Devagotchi's product page on every hub (`engine/hub/src/web/landing.rs`):
+- `/` signed out is Devagotchi's product page on every hub (`engine/hub/src/site/web/landing/mod.rs`):
   the hero with a diagram of AI apps, the hub, the phone and machines dialing out; how it
   works in three steps; Desktop Commander side by side, each of its facts cited to a section
   of `docs/desktop-commander-teardown.md` (commit c2b8795) or the plan's §14; features; this
