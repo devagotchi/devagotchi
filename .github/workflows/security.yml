@@ -1,7 +1,15 @@
 name: security
 
 on:
+  # Until alpha (operator, 2026-11-24): a pull request is checked only when it changes the
+  # dependency graph or this policy. An advisory published against an untouched crate shows
+  # up on main and in the weekly run, and is fixed on main, instead of failing every PR.
   pull_request:
+    paths:
+      - Cargo.lock
+      - "**/Cargo.toml"
+      - deny.toml
+      - .github/workflows/security.yml
   push:
     branches: [main]
   schedule:
@@ -19,7 +27,7 @@ jobs:
         with:
           persist-credentials: false
           submodules: true
-      - uses: EmbarkStudios/cargo-deny-action@3c6349835b2b7b196a839186cb8b78e02f7b5f25 # v2
+      - uses: EmbarkStudios/cargo-deny-action@17aeb3c839e42274e2b8adf721c8c65edfdc74dd # v2
         with:
           command: check
           arguments: --all-features

@@ -1,5 +1,10 @@
 name: ci
 
+# Until alpha (operator, 2026-11-24): a pull request runs the owner check, core on
+# ubuntu-24.04 and windows-2025, the Postgres hub tests and e2e on ubuntu-24.04 (with the
+# browser and AI-client steps). Every push to main runs everything below: the ARM, Windows
+# 2022, Windows ARM and macOS legs, the compose stack, the deploy scripts and the host
+# installer. A red main is fixed on main.
 on:
   pull_request:
   push:
@@ -43,7 +48,7 @@ jobs:
         # IPC crate and the adapter build and test there, and the broker binary
         # reports unsupported_platform. ubuntu-24.04-arm and windows-11-arm run the same
         # tests natively on 64-bit ARM (aarch64 Linux, Arm64 Windows 11).
-        os: [ubuntu-24.04, ubuntu-24.04-arm, windows-2025, windows-2022, windows-11-arm, macos-latest]
+        os: ${{ github.event_name == 'pull_request' && fromJSON('["ubuntu-24.04", "windows-2025"]') || fromJSON('["ubuntu-24.04", "ubuntu-24.04-arm", "windows-2025", "windows-2022", "windows-11-arm", "macos-latest"]') }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     steps:
@@ -53,7 +58,7 @@ jobs:
           submodules: true
       # Installs the toolchain pinned in rust-toolchain.toml.
       - run: rustup toolchain install
-      - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2 (2026-10-24)
+      - uses: taiki-e/install-action@75a7c0f87bd666af3cdb75c5b9e9d03ab6044e6f # v2 (2026-10-24)
         with:
           tool: cargo-nextest
       # Default members: contracts, ipc, machine-engine, mcp, hub and the rest. The Tauri inspector
@@ -81,7 +86,7 @@ jobs:
           persist-credentials: false
           submodules: true
       - run: rustup toolchain install
-      - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2 (2026-10-24)
+      - uses: taiki-e/install-action@75a7c0f87bd666af3cdb75c5b9e9d03ab6044e6f # v2 (2026-10-24)
         with:
           tool: cargo-nextest
       - name: Start a throwaway Postgres
@@ -101,6 +106,7 @@ jobs:
     # Postgres over a Unix socket and Caddy for TLS, brought up as a user would, then
     # checked through Caddy by deploy/compose/check.sh.
     name: hub (compose)
+    if: github.event_name == 'push'
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
@@ -146,6 +152,7 @@ jobs:
     # against a stand-in Proxmox host. Not the image GHCR publishes: that exists only once
     # the commit is on main (release.yml, image.yml).
     name: hub (deploy scripts)
+    if: github.event_name == 'push'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
@@ -175,7 +182,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04, ubuntu-24.04-arm, windows-2025, windows-2022, windows-11-arm]
+        os: ${{ github.event_name == 'pull_request' && fromJSON('["ubuntu-24.04"]') || fromJSON('["ubuntu-24.04", "ubuntu-24.04-arm", "windows-2025", "windows-2022", "windows-11-arm"]') }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     env:
@@ -315,6 +322,7 @@ jobs:
     # user services from root-owned binaries, the link joining a hub with a piped code, upgrade,
     # crash recovery, a revoke that leaves the link down, and uninstall. x86_64 and aarch64.
     name: host-install (${{ matrix.os }})
+    if: github.event_name == 'push'
     strategy:
       fail-fast: false
       matrix:
