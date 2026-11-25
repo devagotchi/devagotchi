@@ -31,7 +31,7 @@ engine/connectors/
   src/tests.rs             the catalog's rules, run as tests
   catalog/<vendor>/<id>.json
 schemas/connector.v1.schema.json
-engine/hub/src/web/connectors.rs   /connect and GET /api/v1/connectors
+engine/hub/src/identity/connect/web.rs   /connect and GET /api/v1/connectors
 interfaces/mcp/src/connect.rs          devagotchi connect --list, ID --print
 ```
 

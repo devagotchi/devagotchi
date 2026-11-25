@@ -1,7 +1,7 @@
 //! The landing page's setup walkthrough (`content/landing.json` `hero.walkthrough`): the
 //! steps of getting started, each a scene of one or two screens (a terminal, a browser
 //! window, a phone, an AI chat) drawn as HTML. The page moves to the next step on its own
-//! after the step's seconds, or when a step is chosen (`web/landing/walkthrough.rs`).
+//! after the step's seconds, or when a step is chosen (`site/web/landing/walkthrough.rs`).
 
 use serde::Deserialize;
 

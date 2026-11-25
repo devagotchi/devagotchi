@@ -1,5 +1,5 @@
 //! Sign-in links sent by email. A link proves the mailbox only because it is delivered out
-//! of band: the hub's answer never contains it (`web/email.rs` mails it). Each is 256
+//! of band: the hub's answer never contains it (`identity/web/email.rs` mails it). Each is 256
 //! random bits, only its SHA-256 kept with the address it went to, spent once, good for
 //! 15 minutes. One sent to add the address to an account (securing one made on first
 //! connect) names that account and works only in a browser signed in to it.

@@ -8,6 +8,7 @@ use std::path::{Path, PathBuf};
 use super::{
     Ctx, Front, Site, builtin,
     markdown::{DOC_FRONTS, SWITCHES},
+    web::landing,
 };
 
 /// What the neutral site must never show.
@@ -40,7 +41,7 @@ fn everything(site: &Site) -> Vec<(String, String)> {
         Front::Hosted,
     ] {
         let ctx = Ctx::new(site);
-        let (title, body) = crate::web::landing_for(site, &ctx, front, "https://hub.example.org");
+        let (title, body) = landing::render(site, &ctx, front, "https://hub.example.org");
         out.push((
             format!("landing {}", front.key()),
             format!("{title}\n{body}"),
@@ -177,8 +178,7 @@ fn the_built_in_site_checks_out_and_says_what_the_hub_always_said() {
             .any(|s| s.id == "plans" && !s.on)
     );
     let ctx = Ctx::new(&site);
-    let (_, page) =
-        crate::web::landing_for(&site, &ctx, Front::Passkeys, "https://hub.example.org");
+    let (_, page) = landing::render(&site, &ctx, Front::Passkeys, "https://hub.example.org");
     assert!(!page.contains("id=\"plans\""));
     // Every asset it names is served under its hash; nothing else is.
     let names: Vec<&str> = site.assets.keys().map(String::as_str).collect();
@@ -212,8 +212,7 @@ fn a_neutral_site_names_nothing_of_the_built_in_one_anywhere() {
     }
     // And it is its own: its name, its operator, its links and its sign-in label.
     let ctx = Ctx::new(&site);
-    let (title, page) =
-        crate::web::landing_for(&site, &ctx, Front::Nomen, "https://hub.example.org");
+    let (title, page) = landing::render(&site, &ctx, Front::Nomen, "https://hub.example.org");
     assert_eq!(title, "A relay between your assistant and your computers");
     assert!(page.contains("Log in with Example ID"), "{page}");
     assert!(page.contains("Run by Example Operator Ltd."), "{page}");

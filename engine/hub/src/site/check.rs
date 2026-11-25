@@ -21,7 +21,7 @@ impl Site {
             Front::Hosted,
         ] {
             let ctx = Ctx::checking(self);
-            crate::web::landing_for(self, &ctx, front, "https://hub.example.org");
+            crate::site::web::landing::render(self, &ctx, front, "https://hub.example.org");
             errors.extend(
                 ctx.errors()
                     .into_iter()

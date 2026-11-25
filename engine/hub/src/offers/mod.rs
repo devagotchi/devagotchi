@@ -12,7 +12,7 @@
 //!   `shippin.provisioning` (`config/shippin.rs`) and an account whose email the hub has
 //!   verified, the hub finds that person on Nomen, or makes them, and links the account to
 //!   them at once (`identity/nomen/`). Otherwise the AI hands over one link, `/offers/<token>`
-//!   (`web/offers.rs`): one tap signs in with the network's sign-in (`shippin.provider`)
+//!   (`offers/web.rs`): one tap signs in with the network's sign-in (`shippin.provider`)
 //!   and links it the way the account page does; `offers` then says it is linked.
 //! - **Off is gone.** With the site's offers off (or none listed), or on a hub with no
 //!   accounts of its own, the tools are not listed or served, the landing section and its
@@ -21,6 +21,7 @@
 pub(crate) mod mcp;
 pub mod nomen;
 pub mod stored;
+pub(crate) mod web;
 
 use std::sync::Arc;
 

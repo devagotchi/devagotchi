@@ -9,7 +9,6 @@ use std::path::Path;
 use serde_json::{Value, json};
 
 use crate::tenancy::tests::tenants::{Hosted, Person, fill, hosted_with, refused};
-use crate::web;
 
 /// A site directory under `dir`: the built-in site with `edit` applied to its site.json
 /// (every other file the built-in one's).
@@ -357,12 +356,13 @@ async fn a_tenant_let_in_hears_so_by_email_when_it_has_a_verified_address() {
                                  "from": "Hub <hub@hub.test>" } }
         })
     }));
-    let providers = web::Providers::from_config(&hub.config).unwrap();
+    let providers = crate::identity::web::providers::Providers::from_config(&hub.config).unwrap();
     assert!(providers.email.get().is_some(), "a mail server");
-    hub.accounts.on_admitted(web::announce_admissions(
-        providers.email.clone(),
-        hub.config.clone(),
-    ));
+    hub.accounts
+        .on_admitted(crate::identity::web::email::announce_admissions(
+            providers.email.clone(),
+            hub.config.clone(),
+        ));
     let mut with = hub.first_connect("Claude").await;
     let mut without = hub.first_connect("Codex").await;
     let who = whoami(&hub, &mut with).await;

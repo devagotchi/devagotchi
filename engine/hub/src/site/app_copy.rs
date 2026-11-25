@@ -36,7 +36,7 @@ pub struct AppCopy {
     pub open_count: String,
     pub offline_title: String,
     pub offline_text: String,
-    /// The machine page (`web/app/machine.rs`).
+    /// The machine page (`machines/web/machine.rs`).
     pub machine_status: String,
     pub machine_build: String,
     pub machine_build_unknown: String,
@@ -56,7 +56,7 @@ pub struct AppCopy {
     pub machine_unknown_text: String,
     /// A form posted from another site.
     pub not_from_here: String,
-    /// The board and ticket pages (`web/app/agenthub/board.rs`, `web/app/agenthub/ticket.rs`). `not_changed`:
+    /// The board and ticket pages (`agenthub/web/board.rs`, `agenthub/web/ticket.rs`). `not_changed`:
     /// `{why}`, the board's answer.
     pub filter_state: String,
     pub filter_assignee: String,
@@ -101,7 +101,7 @@ pub struct AppCopy {
     pub done_undo: String,
     pub done_hand: String,
     pub undo_late: String,
-    /// The ticket page's "Assign to an agent" (`web/app/agenthub/ticket.rs`).
+    /// The ticket page's "Assign to an agent" (`agenthub/web/ticket.rs`).
     #[serde(default)]
     pub delegate: DelegateCopy,
     pub not_changed: String,

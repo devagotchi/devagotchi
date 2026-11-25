@@ -353,7 +353,7 @@ passes every check, with no exception.
 | Board-only checks: `READ_ONLY_TOOLS` against hints, `PER_CALLER_WRITES`, `next_for` coverage | board-operations | `engine/hub/src/agenthub/mcp/tests/contract.rs` (new, B3) |
 | Instructions name only served tools | D5 | the token scan of `every_tool_a_skill_names_is_one_the_hub_serves` (`engine/hub/src/mcp/tests/plugins.rs`), run on `get_info().instructions` with offers shown and hidden (B4) |
 | Scope or closed to keys | W4 | `engine/hub/src/identity/tests/keys.rs` |
-| No compared product named | D4 | `engine/hub/src/web/naming_tests.rs`, `the_adapter_names_no_other_product` (`interfaces/mcp/src/adapter/tests.rs`) |
+| No compared product named | D4 | `engine/hub/src/web/tests/naming.rs`, `the_adapter_names_no_other_product` (`interfaces/mcp/src/adapter/tests.rs`) |
 | Answers open | O2 | `no_output_schema_refuses_a_field_added_later` (`engine/hub/src/mcp/tests/schema.rs`) |
 
 `check_tools`:

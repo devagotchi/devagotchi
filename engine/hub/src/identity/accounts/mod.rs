@@ -7,7 +7,7 @@
 //! then its challenge is recorded as spent, in the same transaction as what it did, until
 //! it would have expired anyway. A flood of unanswered sign-ins fills nothing.
 //!
-//! The hub's pages use it in `web/passkeys.rs`; `devagotchi hub owner` makes the owner and
+//! The hub's pages use it in `identity/web/passkeys.rs`; `devagotchi hub owner` makes the owner and
 //! the one-time link.
 
 mod account;

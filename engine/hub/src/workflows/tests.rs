@@ -1,5 +1,5 @@
 //! Workflows end to end over HTTP, the whole router as it serves (increment 68,
-//! `workflows.rs`, `web/workflow.rs`): an AI lists and starts a workflow, its person opens
+//! `workflows.rs`, `workflows/web/mod.rs`): an AI lists and starts a workflow, its person opens
 //! the link in a browser that never signed in, and each kind of step is done and ticked as
 //! the hub sees it. Opening the link spends and reveals nothing; Get my command issues the
 //! line; keeping the account is offered after the first success, to the browser that did

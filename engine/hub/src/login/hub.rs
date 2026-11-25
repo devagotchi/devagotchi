@@ -11,7 +11,7 @@ use super::{
 
 pub(super) const DEVICE_GRANT_HUB: &str = "urn:ietf:params:oauth:grant-type:device_code";
 
-/// The CLI's client id at a hub: built in, no registration (`web/device.rs`).
+/// The CLI's client id at a hub: built in, no registration (`identity/web/device.rs`).
 pub(super) const HUB_CLIENT: &str = "devagotchi-cli";
 
 /// What the CLI asks a hub for: its MCP tools, and a refresh token.

@@ -24,7 +24,7 @@ G9 (one clock, nothing outside the store inside `transaction!`), G10 (where test
   `tenant_id = $1`. The three writes take `now` before the block, and `save_connection` and
   `remove_connection` write the chain record with `tenants::record_in` in the same transaction.
   Do not copy its `.max(0) as u64` at lines 35 and 38 (rule 19).
-- A hub-wide store: `engine/hub/src/ops/hub_settings.rs` (`Accounts::hub_settings` and the
+- A hub-wide store: `engine/hub/src/settings/store.rs` (`Accounts::hub_settings` and the
   writes after it).
 - The engine: `platform/store/src/lib.rs` (`transaction!` 111-139, `Store::open_in` 165-289,
   `scope` 309-321, `tenant_of` 323 on, `begin`/`finish` 401-442, `collided` 468-473).
@@ -528,9 +528,9 @@ Fixed in f13b8e1 (B0): `server_url()`, the REQUIRE flag, the `SKIPPED:` text, an
   `src/tests/hosted.rs` (17, 294) and `src/tests/hosted_lifecycle.rs` (15, 152): each loop runs
   zero times without the URL -> `let (test, accounts) = or_skip!(store());` (or
   `let test = or_skip!(postgres());`), then the old body unindented (hub B6, AgentHub B3).
-- `engine/hub/src/web/analytics_tests.rs`
+- `engine/hub/src/ops/web/tests/analytics.rs`
   (`the_operator_sees_the_counts_and_the_funnel_move_and_nobody_else_sees_anything`, 50-58)
-  and `engine/hub/src/web/operator_tests.rs`
+  and `engine/hub/src/tenancy/web/tests/operator.rs`
   (`the_operator_lets_a_waiting_person_in_and_their_next_call_works`, 91-98): an inline
   `Vec<Option<String>>` looped with `or_skip!` inside -> `let url =
   or_skip!(crate::store::testing::empty_postgres()); dashboard(or_skip!(hub_on(Some(&url),
@@ -552,7 +552,7 @@ Fixed in f13b8e1 (B0): `server_url()`, the REQUIRE flag, the `SKIPPED:` text, an
 
 ### Where files go
 
-- `engine/hub/src/web/sessions.rs` (395 lines; inline `mod tests` at 273): it keeps
+- `engine/hub/src/identity/web/sessions.rs` (395 lines; inline `mod tests` at 273): it keeps
   `auth_web_sessions`, an identity table, from `web/`, and its tests run SQL as `admin()` ->
   move to `identity/web/sessions.rs` with its tests beside it, in S8 (waits on decision D6).
 - `engine/hub/src/connections/mod.rs`, `offers/mod.rs`, `workflows/mod.rs`, `agenthub/mod.rs`,

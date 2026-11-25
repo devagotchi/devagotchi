@@ -1,4 +1,4 @@
-//! Sending one email over SMTP (RFC 5321): the hub's sign-in links (`web/email.rs`). Enough
+//! Sending one email over SMTP (RFC 5321): the hub's sign-in links (`identity/web/email.rs`). Enough
 //! of the protocol for that and no more: TLS from the first byte (`smtps://`, port 465) or
 //! STARTTLS (`smtp://`, required, port 587), AUTH PLAIN, one recipient, a plain-text body.
 //! Certificates are checked against the platform's roots. Plain SMTP without TLS goes only

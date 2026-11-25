@@ -253,7 +253,7 @@ async fn a_change_of_role_holds_from_the_ais_next_call() {
     run(None).await;
 }
 
-/// The organisation pages in a browser's place (`web/orgs.rs`): forms from this hub only, an
+/// The organisation pages in a browser's place (`tenancy/web/orgs.rs`): forms from this hub only, an
 /// invite shown once and taken on `/invite`, the organisation's board in the app, and a
 /// person made viewer refused on the ticket page's actions.
 async fn pages(store: Option<&str>) {

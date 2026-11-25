@@ -60,7 +60,11 @@ pub(super) fn render(
     let site = site();
     let head = match kind {
         Kind::Plain => String::new(),
-        Kind::Landing => format!("{}{}", installable(&site), super::super::landing::head()),
+        Kind::Landing => format!(
+            "{}{}",
+            installable(&site),
+            crate::site::web::landing::head()
+        ),
         Kind::App { push, .. } => format!(
             "{}<script src=\"/assets/reveal.js\"></script>\
 <script src=\"/assets/app.js\" defer></script>{}",

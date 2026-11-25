@@ -1,5 +1,5 @@
-//! The person's own page end to end over HTTP, the whole router as it serves (`web/app/me.rs`,
-//! `crate::preferences`, `web/approvals.rs`): the frame says who is signed in, what a person
+//! The person's own page end to end over HTTP, the whole router as it serves (`identity/web/me.rs`,
+//! `crate::preferences`, `agenthub/web/approvals/`): the frame says who is signed in, what a person
 //! sets changes what approvals offer them, a kind set to always ask stops what they allowed
 //! and cannot be allowed again, and only their own page changes any of it. On the test Postgres (`DEVAGOTCHI_TEST_POSTGRES_URL`; CI sets it).
 

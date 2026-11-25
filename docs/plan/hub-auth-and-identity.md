@@ -22,7 +22,7 @@ The product that already works is the broker, the link, and the board. None of t
 - `/join` and the downloads directory (`engine/hub/src/join.rs`, `engine/hub/src/downloads.rs`, `engine/hub/src/lib.rs:342-360`).
 - Boards, org directories, seats, free limit, approvals (`engine/hub/src/board/mcp.rs:161-168`, `engine/hub/src/board/mcp.rs:202-213`).
 - Hash-chained audit (`engine/hub/src/audit.rs:40-88`). `/healthz` already refuses a broken chain (`engine/hub/src/lib.rs:668-688`).
-- Session sealing (AES-256-GCM, `__Host-` cookies) (`engine/hub/src/web/sessions.rs:1-27`). The crypto is worth keeping. What is sealed today is a Nomen token (`sessions.rs:28-35`), so the *contents* change.
+- Session sealing (AES-256-GCM, `__Host-` cookies) (`engine/hub/src/identity/web/sessions.rs:1-27`). The crypto is worth keeping. What is sealed today is a Nomen token (`sessions.rs:28-35`), so the *contents* change.
 - Web Push (`engine/hub/src/push.rs`).
 - CI: locked build, nextest on six OS targets, `tests/e2e.py`, host install, `cargo deny`, cargo-dist archives attested on `main` (`.github/workflows/ci.yml`, `.github/workflows/release.yml:41-49`).
 - Installer and rollback by re-running with the previous `--version` (`deploy/linux/README.md:26`, `deploy/linux/install-devagotchi.sh:433-451`).

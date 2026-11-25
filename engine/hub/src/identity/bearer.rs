@@ -10,7 +10,7 @@ use axum::{
     response::{IntoResponse, Response},
 };
 
-use crate::{AppState, identity::auth::AuthError, site, web};
+use crate::{AppState, identity::auth::AuthError, site};
 
 /// Request-local verification services installed by authenticated middleware. This holds
 /// no bearer and is never serialized or persisted on an MCP session.
@@ -79,7 +79,10 @@ pub(crate) async fn require_bearer(
     let (metadata_url, scope) = {
         let scope = match state.hub.config.auth.nomen() {
             _ if state.hub.config.has_accounts() => {
-                format!(", scope=\"{}\"", web::oauth::SCOPES.join(" "))
+                format!(
+                    ", scope=\"{}\"",
+                    crate::identity::web::oauth::SCOPES.join(" ")
+                )
             }
             Some(nomen) => format!(
                 ", scope=\"{}\"",
@@ -241,7 +244,7 @@ fn resource_metadata(state: &AppState, resource: String) -> Response {
     );
     if state.hub.config.has_accounts() {
         // The hub is its own authorization server (32b).
-        body["scopes_supported"] = serde_json::json!(web::oauth::SCOPES);
+        body["scopes_supported"] = serde_json::json!(crate::identity::web::oauth::SCOPES);
     } else if let Some(nomen) = state.hub.config.auth.nomen() {
         // MCP clients ask for exactly these (RFC 9728 `scopes_supported`), so the account's
         // org reaches the hub with every call.
@@ -251,7 +254,7 @@ fn resource_metadata(state: &AppState, resource: String) -> Response {
             .into();
     }
     let mut response = axum::Json(body).into_response();
-    web::oauth::allow_any_origin(&mut response);
+    crate::identity::web::oauth::allow_any_origin(&mut response);
     response
 }
 

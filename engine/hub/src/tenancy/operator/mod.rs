@@ -1,4 +1,4 @@
-//! What the operator page reads about each tenant (increment 64, `web/operator.rs`): who is
+//! What the operator page reads about each tenant (increment 64, `tenancy/web/operator.rs`): who is
 //! waiting to be let in and who is in, with what an operator needs to decide.
 //!
 //! Which tenants come from `Store::tenants_in` (their ids in one access state, nothing

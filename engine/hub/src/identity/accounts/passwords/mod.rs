@@ -209,7 +209,7 @@ impl Accounts {
     }
 
     /// The account a password sign-up made for `proven`'s verified address, when `proven`
-    /// itself reaches no account yet: the page that offers to link them (`web/providers.rs`).
+    /// itself reaches no account yet: the page that offers to link them (`identity/web/providers.rs`).
     pub async fn password_account_for(&self, proven: &Proven) -> BridgeResult<Option<String>> {
         let Some(email) = proven.verified_email.as_deref().and_then(normalize_email) else {
             return Ok(None);

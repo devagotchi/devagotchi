@@ -1,6 +1,6 @@
 //! The hub's stylesheet after its tokens, in cascade order. `site/style.rs` serves one sheet:
 //! the layer order (`@layer reset, tokens, base, components, pages`), the tokens in `tokens`,
-//! `web/hub.css` and `web/landing.css` in `base`, then the sheets listed here.
+//! `web/hub.css` and `site/web/landing/landing.css` in `base`, then the sheets listed here.
 //!
 //! - [`PRIMITIVES`]: the layout primitives every page composes (`stack`, `cluster`,
 //!   `auto-grid`, `sidebar`, `switcher`, `query`), in `@layer components`.
@@ -17,13 +17,16 @@ pub(crate) const PRIMITIVES: &str = include_str!("primitives.css");
 
 /// Each page's sheet, by the `data-page` it is scoped to.
 pub(crate) const PAGES: [(&str, &str); 4] = [
-    ("board", include_str!("../app/agenthub/board.css")),
+    ("board", include_str!("../../agenthub/web/board.css")),
     (
         "board-configuration",
-        include_str!("../app/agenthub/configuration/page.css"),
+        include_str!("../../agenthub/web/configuration/page.css"),
     ),
-    ("ticket", include_str!("../app/agenthub/ticket.css")),
-    ("approvals", include_str!("../approvals/page.css")),
+    ("ticket", include_str!("../../agenthub/web/ticket.css")),
+    (
+        "approvals",
+        include_str!("../../agenthub/web/approvals/page.css"),
+    ),
 ];
 
 #[cfg(test)]

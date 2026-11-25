@@ -3869,8 +3869,8 @@
         "engine/hub/src/machines/access/default_tests.rs",
         "engine/hub/src/agenthub/http/catalog.rs",
         "engine/hub/src/agenthub/http/tests/catalog_defaults.rs",
-        "engine/hub/src/web/app/catalog/form.rs",
-        "engine/hub/src/web/app/catalog/render.rs"
+        "engine/hub/src/catalog/web/form.rs",
+        "engine/hub/src/catalog/web/render.rs"
       ],
       "evidence": [
         "Source default selection is authored through the catalog owner with exact typed confirmation, live environment-wide policy and source preset.default authorization. Selected-default edits and receipt replay also check policy; actual unsafe items cannot bypass metadata. Required-PostgreSQL 12 catalog/API/browser and three access_default_ tests passed. See a04-access.md. Remaining catalog consumers, full integration and main delivery are open; no source closure."
@@ -5080,7 +5080,7 @@
         "engine/hub/src/agenthub/http/projects.rs",
         "engine/hub/src/agenthub/mcp/projects.rs",
         "engine/hub/src/agenthub/http/tests/projects.rs",
-        "engine/hub/src/web/app/agenthub/projects/mod.rs",
+        "engine/hub/src/agenthub/web/projects/mod.rs",
         "engine/hub/src/agenthub/http/configuration/aggregate.rs",
         "engine/hub/src/agenthub/http/tests/aggregate.rs",
         "engine/hub/src/agenthub/http/tests/project_races.rs"
@@ -6191,7 +6191,7 @@
         "engine/hub/src/identity/accounts/agents/configuration.rs",
         "engine/hub/src/identity/accounts/receipts.rs",
         "agenthub/src/hosted/shared_workflows/mutations.rs",
-        "engine/hub/src/web/app/agenthub/configuration/mod.rs",
+        "engine/hub/src/agenthub/web/configuration/mod.rs",
         "engine/hub/src/agenthub/http/principals/configuration.rs",
         "agenthub/src/board/shared_workflows.rs",
         "engine/hub/src/agenthub/http/configuration/workflows.rs",
@@ -6219,7 +6219,7 @@
       "target_paths": [
         "agenthub/src/settings.rs",
         "agenthub/src/hosted/settings.rs",
-        "engine/hub/src/web/app/agenthub/configuration/form.rs",
+        "engine/hub/src/agenthub/web/configuration/form.rs",
         "engine/hub/src/identity/accounts/agents/configuration.rs",
         "agenthub/src/hosted/shared_workflows/mutations.rs",
         "engine/hub/src/agenthub/http/principals/configuration.rs",
@@ -6443,7 +6443,7 @@
       "target_paths": [
         "engine/hub/src/identity/accounts/agents/mod.rs",
         "engine/hub/src/identity/accounts/api_keys/mod.rs",
-        "engine/hub/src/web/app/agents/render.rs",
+        "engine/hub/src/identity/web/agents/render.rs",
         "engine/hub/src/identity/accounts/api_keys/revocation.rs",
         "engine/hub/src/identity/accounts/agents/mutations.rs",
         "engine/hub/src/identity/accounts/agents/roster.rs",
@@ -8269,8 +8269,8 @@
       "packet": "A02",
       "status": "partial",
       "target_paths": [
-        "engine/hub/src/web/app/agents/form.rs",
-        "engine/hub/src/web/app/agents/render.rs"
+        "engine/hub/src/identity/web/agents/form.rs",
+        "engine/hub/src/identity/web/agents/render.rs"
       ],
       "evidence": [
         "Pinned source read and partial implementation/tests: .ai/dev/plans/absorption/a02-review.md. Outstanding source-specific behavior and final acceptance are listed there; no main delivery or source closure."
@@ -8285,8 +8285,8 @@
       "packet": "A02",
       "status": "partial",
       "target_paths": [
-        "engine/hub/src/web/app/agents/render.rs",
-        "engine/hub/src/web/app/agents/acceptance_tests.rs"
+        "engine/hub/src/identity/web/agents/render.rs",
+        "engine/hub/src/identity/web/agents/tests/acceptance.rs"
       ],
       "evidence": [
         "Pinned source read and partial implementation/tests: .ai/dev/plans/absorption/a02-review.md. Outstanding source-specific behavior and final acceptance are listed there; no main delivery or source closure."
@@ -8411,7 +8411,7 @@
       "packet": "A02",
       "status": "partial",
       "target_paths": [
-        "engine/hub/src/web/app/agents/configuration.rs"
+        "engine/hub/src/identity/web/agents/configuration.rs"
       ],
       "evidence": [
         "Pinned source read and partial implementation/tests: .ai/dev/plans/absorption/a02-review.md. Outstanding source-specific behavior and final acceptance are listed there; no main delivery or source closure."
@@ -8459,7 +8459,7 @@
       "packet": "A02",
       "status": "partial",
       "target_paths": [
-        "engine/hub/src/web/app/agents/configuration.rs"
+        "engine/hub/src/identity/web/agents/configuration.rs"
       ],
       "evidence": [
         "Pinned source read and partial implementation/tests: .ai/dev/plans/absorption/a02-review.md. Outstanding source-specific behavior and final acceptance are listed there; no main delivery or source closure."
@@ -8529,8 +8529,8 @@
       "packet": "A02",
       "status": "partial",
       "target_paths": [
-        "engine/hub/src/web/app/keys.rs",
-        "engine/hub/src/web/app/key_tests.rs"
+        "engine/hub/src/identity/web/keys.rs",
+        "engine/hub/src/identity/web/tests/keys.rs"
       ],
       "evidence": [
         "Pinned source read and partial implementation/tests: .ai/dev/plans/absorption/a02-review.md. Outstanding source-specific behavior and final acceptance are listed there; no main delivery or source closure."
@@ -8567,13 +8567,13 @@
       "packet": "A04",
       "status": "partial",
       "target_paths": [
-        "engine/hub/src/web/app/access/mod.rs",
-        "engine/hub/src/web/app/access/render.rs",
-        "engine/hub/src/web/app/access/form.rs",
+        "engine/hub/src/machines/web/access/mod.rs",
+        "engine/hub/src/machines/web/access/render.rs",
+        "engine/hub/src/machines/web/access/form.rs",
         "engine/hub/src/machines/access/review.rs",
         "engine/hub/src/machines/access/reads.rs",
         "engine/hub/src/agenthub/http/tests/access_browser.rs",
-        "engine/hub/src/web/app/access/form_tests.rs"
+        "engine/hub/src/machines/web/access/tests.rs"
       ],
       "evidence": [
         "Pinned S1 browser comparison and implementation recorded in a04-access.md; owner review/narrow/deny/revoke and actual granted history share PostgreSQL domain authority. Five browser tests plus ended-pagination regression passed within the required-PostgreSQL 90-test access suite. Remaining policy/resume controls, native execution integration and actual-main Docker acceptance remain open; no source closure or deletion."
@@ -8599,8 +8599,8 @@
       "packet": "A05",
       "status": "unverified",
       "target_paths": [
-        "engine/hub/src/web/app/catalog/mod.rs",
-        "engine/hub/src/web/app/catalog/render.rs"
+        "engine/hub/src/catalog/web/mod.rs",
+        "engine/hub/src/catalog/web/render.rs"
       ],
       "evidence": [
         "Partial A05 catalog storage/API/browser mapping; see .ai/dev/plans/absorption/a05-catalog.md. Consumer references, unsandboxed-default policy/confirmation, provider integration and main delivery remain open."
@@ -8615,8 +8615,8 @@
       "packet": "A05",
       "status": "unverified",
       "target_paths": [
-        "engine/hub/src/web/app/catalog/form.rs",
-        "engine/hub/src/web/app/catalog/render.rs",
+        "engine/hub/src/catalog/web/form.rs",
+        "engine/hub/src/catalog/web/render.rs",
         "engine/hub/src/agenthub/http/tests/catalog_access.rs"
       ],
       "evidence": [
@@ -8632,13 +8632,13 @@
       "packet": "A04",
       "status": "partial",
       "target_paths": [
-        "engine/hub/src/web/app/access/mod.rs",
-        "engine/hub/src/web/app/access/render.rs",
-        "engine/hub/src/web/app/access/form.rs",
+        "engine/hub/src/machines/web/access/mod.rs",
+        "engine/hub/src/machines/web/access/render.rs",
+        "engine/hub/src/machines/web/access/form.rs",
         "engine/hub/src/machines/access/review.rs",
         "engine/hub/src/machines/access/reads.rs",
         "engine/hub/src/agenthub/http/tests/access_browser.rs",
-        "engine/hub/src/web/app/access/form_tests.rs"
+        "engine/hub/src/machines/web/access/tests.rs"
       ],
       "evidence": [
         "Pinned S1 browser comparison and implementation recorded in a04-access.md; owner review/narrow/deny/revoke and actual granted history share PostgreSQL domain authority. Five browser tests plus ended-pagination regression passed within the required-PostgreSQL 90-test access suite. Remaining policy/resume controls, native execution integration and actual-main Docker acceptance remain open; no source closure or deletion."
@@ -8785,13 +8785,13 @@
       "packet": "A04",
       "status": "partial",
       "target_paths": [
-        "engine/hub/src/web/app/access/mod.rs",
-        "engine/hub/src/web/app/access/render.rs",
-        "engine/hub/src/web/app/access/form.rs",
+        "engine/hub/src/machines/web/access/mod.rs",
+        "engine/hub/src/machines/web/access/render.rs",
+        "engine/hub/src/machines/web/access/form.rs",
         "engine/hub/src/machines/access/review.rs",
         "engine/hub/src/machines/access/reads.rs",
         "engine/hub/src/agenthub/http/tests/access_browser.rs",
-        "engine/hub/src/web/app/access/form_tests.rs"
+        "engine/hub/src/machines/web/access/tests.rs"
       ],
       "evidence": [
         "Pinned S1 browser comparison and implementation recorded in a04-access.md; owner review/narrow/deny/revoke and actual granted history share PostgreSQL domain authority. Five browser tests plus ended-pagination regression passed within the required-PostgreSQL 90-test access suite. Remaining policy/resume controls, native execution integration and actual-main Docker acceptance remain open; no source closure or deletion."
@@ -8966,13 +8966,13 @@
       "packet": "A11",
       "status": "partial",
       "target_paths": [
-        "engine/hub/src/web/app/access/mod.rs",
-        "engine/hub/src/web/app/access/render.rs",
-        "engine/hub/src/web/app/access/form.rs",
+        "engine/hub/src/machines/web/access/mod.rs",
+        "engine/hub/src/machines/web/access/render.rs",
+        "engine/hub/src/machines/web/access/form.rs",
         "engine/hub/src/machines/access/review.rs",
         "engine/hub/src/machines/access/reads.rs",
         "engine/hub/src/agenthub/http/tests/access_browser.rs",
-        "engine/hub/src/web/app/access/form_tests.rs"
+        "engine/hub/src/machines/web/access/tests.rs"
       ],
       "evidence": [
         "Pinned S1 browser comparison and implementation recorded in a04-access.md; owner review/narrow/deny/revoke and actual granted history share PostgreSQL domain authority. Five browser tests plus ended-pagination regression passed within the required-PostgreSQL 90-test access suite. Remaining policy/resume controls, native execution integration and actual-main Docker acceptance remain open; no source closure or deletion."

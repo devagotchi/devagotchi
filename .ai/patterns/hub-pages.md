@@ -11,7 +11,7 @@ it names it (for example [G4](../patterns/README.md)) instead of repeating it.
 
 ## Exemplar
 
-`engine/hub/src/web/app/machine.rs`: the page `page` and its *Update now* POST `update`. Its
+`engine/hub/src/machines/web/machine.rs`: the page `page` and its *Update now* POST `update`. Its
 test is `a_machines_page_shows_its_state_and_jobs_and_updates_from_here_only` in
 `engine/hub/src/web/app/tests.rs:362-488`.
 
