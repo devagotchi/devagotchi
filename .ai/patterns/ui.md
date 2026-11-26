@@ -6,7 +6,7 @@ This page is how every screen of Devagotchi is built. The authority is the opera
 - the operator's decision of 2026-11-25: **all existing UI converts to Svelte**.
 
 The shared rules G1 to G14 in [README.md](README.md) hold here too. The checks named below
-are built in program step 6, together with the first screens. Until each one exists, review
+are built in program step 10, together with the first screens. Until each one exists, review
 holds its rule.
 
 ## What converts
