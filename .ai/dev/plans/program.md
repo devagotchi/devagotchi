@@ -81,7 +81,7 @@ then and are recorded here until he moves them into it.
 - `runtime/` holds `devagotchi`, the wrapper, and `link`.
 - `agenthub/` is the submodule.
 - `apps/` holds the desktop app and the website.
-- `ui/` is the Svelte app, added in step 6.
+- `ui/` is the Svelte app, added in step 10.
 
 **Every domain folder has the same files, in every crate.** Only the roles a domain has
 exist, and none is ever named differently:
@@ -116,10 +116,14 @@ later test checks that every domain exists consistently in `engine/`, `interface
 | 1 | Absorb every open PR and branch | GitHub has only main and no open PR | done 2026-11-25: #284 to #291 merged; #291 (file access) with its review fixes |
 | 2 | The layers: every crate moved, every path and doc updated, `AGENTS.md` on the wrapper with sub-processes, layout rule 0 | moves only; the suite and CI green | done: #292, with the image's build context fixed in #293; main `9aae814` green on every leg, image published |
 | 3 | The domain files in every crate. The hub's 63 flat `web/` files go to their domains. Defects found on main get fixed here: the contract drift (`scripts/generate-contracts.cjs --check` fails on main), and unused code in `engine/hub/src/machines/access/` (`Requested`, `Revoked`, `revoke_machine`, `agent_resumed`) | the layout check holds the roles | in progress: the pages moved into their domains (`web/` keeps only the shell: `mod.rs`, `routes.rs`, `pages.rs`, `hub.css` and the shell's folders), and each domain merges its own `routes()`. Still open: the role-file names in every domain, `/go/*` routes (`workflows/web` is at its ratchet), identity's handlers in `web/routes.rs`, the contract drift and the unused code |
-| 4 | Absorb the Go AgentHub (S1) by domain, in parallel worktrees. First a generated ledger (every Go file and function, its target, ported, equivalent or dropped with a reason) and a test that fails while a row is open. Then one complete PR per group, the Go tests ported first. The hub's engine and interface split is done per domain here | every S1 row closed | pending |
-| 5 | S2 to S4 (128 paths of docs, packaging, enrollment, auth and connectivity) as one batch. S5 is closed in the ledger: its content came in through #252 (increments 201 to 205) | S1 to S5 closed | pending |
-| 6 | The UI ([ui.md](../../patterns/ui.md)): ColdLight tokens and primitives with their stories, then every screen converted, domain by domain, in the order the domains are ported | the stories and the routes for every domain | pending |
-| 7 | Alpha acceptance on the operator's own server and phone | his receipts | pending |
+| 4 | bebop B0 (§6): the rule format, the structure engine, XML and plain-text output, and examples as tests. The first rules are the layout tests (the 500-line ratchet, no file beside a folder of its name, no `*_tests.rs`), plus the naming rules N1 to N5 (§5). Today's violations go on a shrink-only baseline | the layout tests run as bebop rules; every rule's examples pass | pending |
+| 5 | The names (§5), under bebop's naming rules: every crate, layer and hub domain renamed; table prefixes moved by one clean migration per domain, here and in AgentHub; MCP tool prefixes; `.ai/` per boundary (§8). The naming baseline goes to zero | no naming violation, no baseline | pending |
+| 6 | The rest of step 3: the role files in every domain; `/go/*` and identity's handlers out of `web/routes.rs`; the contract drift; the unused code | the role rules hold with no baseline | pending |
+| 7 | bebop B1 and B3: proposing and approving rules (only the operator approves), hooks on every edit and at the end of a turn, pre-commit and CI, and the internal/official build split | an agent's edit gets its XML back; a rule cannot be weakened without approval; the official build holds no devtool | pending |
+| 8 | Absorb S1, the Go AgentHub (`agent-hub`), by domain in parallel worktrees, with bebop B2's code rules. The S1 ledger records 737 files: 2 authored, 62 partial and 673 unverified. They include `server/` (the groups below), `bridge/` (the Go machine bridge: tools, processes, runner, GUI, file operations, search, xlsx) and `web/src` (the React UI, converted in step 10). Each group is one complete PR, with the Go tests ported first. The hub's engine and interface split happens per domain here | every S1 row closed | pending |
+| 9 | S2 to S4 (128 paths of docs, packaging, enrollment, auth and connectivity) as one batch. S5 is closed in the ledger: its content came in through #252 (increments 201 to 205) | S1 to S5 closed | pending |
+| 10 | bebop B4 (the UI rules), then the UI ([ui.md](../../patterns/ui.md)): ColdLight tokens and primitives with their stories, then every screen converted, domain by domain, in the order the domains are ported | the stories and the routes for every domain | pending |
+| 11 | Alpha acceptance on the operator's own server and phone | his receipts | pending |
 
 **Step 4's groups:**
 
@@ -136,7 +140,179 @@ later test checks that every domain exists consistently in `engine/`, `interface
 `store` and `db` go into each domain's `store.rs`; `lifecycle` and `health` go into
 `runtime/`.
 
-## 4. What this page replaces
+## 5. Names (agreed by the operator, 2026-11-25)
+
+The operator asked for clear, self-describing, consistent names, each with a canonical prefix.
+bebop's `naming` rules hold these.
+
+- **N1. A folder names what it holds.** It is kebab-case `<qualifier>-<subject>`
+  (`postgres-store`, `machine-broker`). Never `core`, `common`, `shared`, `utils`, `helpers`,
+  `misc`, `lib`, `base` or `manager`.
+- **N2. One prefix names a thing everywhere:**
+
+  | Where | Form |
+  |---|---|
+  | crate | `devagotchi-<folder>` |
+  | Rust module | the folder in snake_case |
+  | Postgres tables | `<domain>_` |
+  | pages | `/app/<domain>/…` |
+  | JSON API | `/api/v1/<domain>/…` |
+  | MCP tools | `<domain>_<verb>` |
+  | UI route folder | `ui/src/routes/(app)/<domain>/` |
+
+  The Desktop Commander tools keep their upstream names (`read_file`, `edit_file`, …), so the
+  parity is exact.
+- **N3. Domains are plural count nouns** (`machines`, `workflows`, `notifications`). Mass
+  nouns stay as they are (`identity`, `tenancy`, `audit`).
+- **N4. Layer folders are singular:** `platform/`, `engine/`, `interface/`, `runtime/`,
+  `devtool/`. `platform/` keeps the industry's name for what everything stands on.
+- **N5. Every domain has the same role files:** `mod.rs`, `model.rs`, `store.rs`,
+  `service.rs`, `mcp.rs`, `http.rs`, `web/`, `cli.rs`, `tests/`.
+
+**Crates:**
+
+| Now | Becomes | Crate |
+|---|---|---|
+| `platform/contracts` | `platform/contracts` | `devagotchi-contracts` |
+| `platform/store` | `platform/postgres-store` | `devagotchi-postgres-store` |
+| `platform/ipc` | `platform/local-ipc` | `devagotchi-local-ipc` |
+| `engine/machine-engine` | `engine/machine-broker` | `devagotchi-machine-broker` |
+| `engine/kernel` | `engine/lexicon` | `devagotchi-lexicon` |
+| `engine/connectors` | `engine/client-catalog` | `devagotchi-client-catalog` |
+| `engine/hub` | `engine/hub` | `devagotchi-hub` |
+| `interfaces/mcp` | `interface/local-mcp` | `devagotchi-local-mcp` |
+| `runtime/devagotchi` | `runtime/supervisor` | `devagotchi-supervisor` (the binary stays `devagotchi`) |
+| `runtime/link` | `runtime/machine-link` | `devagotchi-machine-link` |
+| (new) | `devtool/bebop` | `devagotchi-bebop` (internal build only) |
+
+**Hub domains:**
+
+| Now | Becomes | Table prefix (today's in brackets) |
+|---|---|---|
+| `ops` | `audit` and `analytics` | `audit_`, `analytics_` |
+| `notify` | `notifications` | `notifications_` (`push_`, `mail_`, `signal_`) |
+| `catalog` | `capability_catalog` | `capability_catalog_` |
+| `kernel` | `lexicon` | `lexicon_` (`kernel_`) |
+| `serve` | `http_server` | none |
+| `site` | `site_content` | none |
+| `login` and `identity` | `identity` (merged) | `identity_` (`auth_`, `oauth_`) |
+| `config` | `deploy_config` (the config file; `/admin` stays `settings`) | none |
+| `settings` | `settings` | `settings_` (`hub_`) |
+| `connections` | `connectors`, as ruled 2026-11-13: the services agents call are connectors, AI clients are clients | `connectors_` (`connector_`) |
+| `mcp` | `mcp_server` | none |
+| `store` | `database` | none |
+| `tests` | `source_checks` | none |
+| `web` | `web_shell` | none |
+| `machines`, `tenancy`, `workflows`, `offers` | unchanged | `machines_`, `tenancy_` (`tenancy_`, `org_`, `project_`), `workflows_`, `offers_` |
+| AgentHub (its own repository) | unchanged | `agenthub_` (`board_`) |
+
+Pre-release: every table rename is one clean migration per domain, with no compatibility shim.
+
+## 6. bebop, the rules devtool (agreed 2026-11-25)
+
+**What it is.** bebop lives in `devtool/bebop/`: a Rust crate with its own binary. It is never
+in the official build.
+- The internal build is the workspace plus `devtool/`, and `devagotchi` with an `internal`
+  feature for dev stats and diagnostics.
+- The official build is the release pipeline's `devagotchi` alone.
+- A check proves the split.
+
+**A rule is data.** Each rule is `<boundary>/.ai/rules/<category>/<id>.rule.yml`, held by the
+boundary that owns it. Nothing is shared until its reuse is confirmed. A rule records:
+- `id` and `category`;
+- `statement`, the operator's words;
+- `why`, with the upstream practice it follows;
+- `scope`: paths, domains and languages. A rule covers every file in scope, whatever its
+  provenance: written by hand or by an AI, absorbed, or taken from a library. Provenance is
+  recorded and never exempts;
+- `check`: the engine and its rule;
+- `guidance`: what good looks like, the fix, and an example in the code;
+- good and bad examples, which bebop runs as the rule's own tests;
+- `status` (proposed, approved, enforced, retired), `version`, and an approval record.
+
+**The engines.** Structure (folders and names, native), ast-grep (code shape), wrapped linters
+(clippy, stylelint, eslint and its Svelte plugin) and cargo tests. They all report through one
+format.
+
+**Proposing a rule.**
+1. `bebop rule propose "<words>"` drafts the category, scope, check and examples, and dry-runs
+   the rule on today's code.
+2. Every ambiguity becomes a question that must be answered. Nothing is defaulted silently.
+3. Only the operator approves. An AI proposes, and never approves, weakens, retires or
+   exempts. A check refuses a loosened rule without an approval record, and `.ai/rules/**` is
+   owner-reviewed.
+4. Existing violations go on a shrink-only baseline.
+5. `bebop docs` renders the pattern pages from the rules, so the docs never drift from what is
+   enforced.
+
+**Output.** One finding, two forms: XML for an AI, and readable text for a person. The XML
+looks like this:
+
+```xml
+<bebop-report rules="42" violations="1">
+  <violation rule="ui.component-has-story" category="ui" severity="error"
+             file="ui/src/lib/coldlight/primitives/Button/Button.svelte" line="1">
+    <statement>Every ColdLight component has a Storybook story beside it.</statement>
+    <why>A story shows every state; reviewers and the visual tests read it.</why>
+    <expected>ui/src/lib/coldlight/primitives/Button/Button.stories.svelte</expected>
+    <fix>Add Button.stories.svelte with one story per variant in Button.variants.ts.</fix>
+    <example path="ui/src/lib/coldlight/primitives/Badge/Badge.stories.svelte"/>
+  </violation>
+</bebop-report>
+```
+
+Every finding says what good looks like and how to reach it. An error exits non-zero.
+
+**Where it runs:** on every file an agent edits (a hook, its XML handed straight back), at the
+end of an agent's turn, at pre-commit, and in CI.
+
+**The order:**
+
+| Phase | What |
+|---|---|
+| B0 | Format, structure engine, output, examples as tests, the layout and naming rules |
+| B1 | Propose and approve |
+| B2 | ast-grep and the code rules taken from the patterns |
+| B3 | Hooks, CI, the build split |
+| B4 | The UI rules |
+
+## 7. The lanes
+
+Each lane has:
+- a skill, which explains how to do the work;
+- its rules and checks, which enforce it;
+- a hook, which says when it runs;
+- a hand-off: the lane writes its status into this plan, and the next lane starts only from
+  it.
+
+A skill loads by relevance, so it guides. The checks and hooks enforce, whether or not a
+skill was loaded.
+
+| Lane | Does | Ends when |
+|---|---|---|
+| plan | the plan, agreed with the operator; no code | the operator approves |
+| absorb | existing code in, ledger first | the ledger's rows are closed |
+| engine | domain code in the role files | its rules hold |
+| ui | ColdLight and Svelte, under [ui.md](../../patterns/ui.md) | its rules and stories hold |
+| verify | checks, CI and receipts | green, with receipts |
+
+## 8. `.ai` per boundary
+
+Every boundary has its own `.ai/`:
+- a README with Owns, Serves, Settings and Depends on;
+- its patterns, its rules and its plan.
+
+The boundaries are `platform/`, `engine/hub`, `engine/machine-broker`, `interface/`,
+`runtime/`, `ui/` with ColdLight, and AgentHub's repository.
+
+The root `.ai/` keeps only what governs everything: the operator rules, this program and the
+lanes. The shared rules G1 to G14 move into the boundaries that use them. A fact lives at the
+narrowest boundary that owns it, and a rule is promoted only when two boundaries confirm the
+same reuse. ColdLight stays inside Devagotchi's UI boundary. Components from other projects
+(`platform_devpulse/packages/coldlight` among them) come in only through intake, held to
+`ui.md`.
+
+## 9. What this page replaces
 
 These plans keep their detail and history. Their order and their target layout are replaced
 by this page:
@@ -145,7 +321,7 @@ by this page:
 - [rewrite](rewrite.md): B5 and B6.
 - [structure-cleanup](structure-cleanup.md): S8 to S12.
 - [absorb-preserved-sources](absorb-preserved-sources.md): the packet order. Its S1 to S5
-  source accounting stays the record that step 4's ledger closes.
+  source accounting stays the record that step 8's ledger closes.
 
 ## Verification receipts
 

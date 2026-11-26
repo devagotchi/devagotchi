@@ -17,7 +17,7 @@ it one step at a time; until a step lands, the code it covers stays where it is.
    | `apps/` | the desktop inspector, the website | `apps/desktop`, `apps/website` |
 
    The hub still holds both its engine and its interfaces per domain; they move into
-   `interfaces/` domain by domain as the program ports each domain (program, step 4).
+   `interfaces/` domain by domain as the program ports each domain (program, step 8).
 1. **A crate per boundary.** A boundary is something that can be built, tested and depended
    on without the rest: the broker, the link, the hub, AgentHub. A boundary never reaches
    into another crate's modules; it depends on that crate's public surface or on
