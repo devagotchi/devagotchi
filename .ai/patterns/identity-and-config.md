@@ -630,7 +630,7 @@ Re-verified at main 2b3feec. Line numbers are given where they help find the spo
   ceremony) and `claim_tests.rs` to `identity/web/tests/`, the `hub_settings*_tests.rs` to
   `settings/web/tests/{providers,live,mail,sinks}.rs`. No interim move.
 - Over the 500-line cap (layout rule 6), held at their current size by
-  `runtime/devagotchi/tests/layout/oversize.txt`: `web/providers.rs` (937), `web/passkeys.rs`
+  `.ai/rules/layout/file-size-cap/baseline.txt`: `web/providers.rs` (937), `web/passkeys.rs`
   (1112), `web/passkey_tests.rs` (1534), `web/workflow.rs` (1086), `web/oauth.rs` (751),
   `web/hub_settings_tests.rs` (542), `identity/auth.rs` (686), `identity/nomen/mod.rs` (696),
   `identity/nomen/tests/mod.rs` (711), `identity/accounts/oauth/mod.rs` (647),
@@ -639,7 +639,7 @@ Re-verified at main 2b3feec. Line numbers are given where they help find the spo
   `identity/tests/providers.rs` (764) -> fold the K1 and K2 helpers out of `providers.rs` and
   `passkeys.rs` first; then split by subject (`providers/{mod,discovery,flow,link}.rs`,
   `passkeys/{mod,ceremonies,owner_link}.rs`, test files into `tests/` folders); lower each
-  `oversize.txt` entry with `DEVAGOTCHI_WRITE_LAYOUT=1`.
+  baseline entry with `bebop baseline tighten`.
 
 Store failures read as "signed out" in this area (`hub_settings_owner::owner`,
 `providers::finish`, both through `hub.who(headers).await.ok().flatten()`) break G4. They are

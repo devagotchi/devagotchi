@@ -1,0 +1,44 @@
+id = "layout.tests-with-their-domain"
+category = "layout"
+statement = """
+Tests sit with their domain. `src/<domain>/tests.rs`, declared from the domain's `mod.rs` as \
+`#[cfg(test)] mod tests;`. No `<domain>_tests.rs`."""
+why = """
+A domain's tests are found where the domain is, under one name, so a reader never hunts for \
+them. Layout rule 3 (.ai/patterns/layout.md), and the program's step 4 names it among the first \
+rules ("no `*_tests.rs`"). The Rust Book puts unit tests in a `tests` module beside the code they \
+test. The files named so on the tree when the rule arrived are on the baseline."""
+sources = ["https://doc.rust-lang.org/book/ch11-03-test-organization.html"]
+severity = "error"
+status = "enforced"
+version = 1
+
+[scope]
+include = [
+  "platform/**/*.rs",
+  "engine/**/*.rs",
+  "interface/**/*.rs",
+  "interfaces/**/*.rs",
+  "runtime/**/*.rs",
+  "devtool/**/*.rs",
+  "agenthub/**/*.rs",
+  "apps/**/*.rs",
+]
+exclude = ["**/target", "**/node_modules", "**/.*"]
+
+[check]
+engine = "forbidden_file_name"
+patterns = ["*_tests.rs"]
+
+[guidance]
+expected = """
+The tests in `{file}` sit with their domain as `tests.rs` or `tests/<subject>.rs`, never in a file \
+named like `{pattern}`."""
+fix = """
+Move `{file}` into its domain's `tests/` folder as `tests/<subject>.rs` (or into `tests.rs`), \
+declared from the domain's `mod.rs` with `#[cfg(test)] mod tests;`."""
+example = "engine/hub/src/cli/tests.rs"
+
+[approval]
+by = "operator"
+date = "2026-11-26"

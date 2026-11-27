@@ -339,7 +339,7 @@ assertions hold the liveness trio (G6). It catches:
 - a change to the signed bytes or the protocol version.
 
 **2. Source scan**, `runtime/devagotchi/tests/link_protocol.rs`, walking the workspace with
-`runtime/devagotchi/tests/support/mod.rs` (shared with `layout.rs`; G12). It needs no
+`runtime/devagotchi/tests/support/mod.rs` (shared with `release_builds.rs`; G12). It needs no
 allow-list. Test files (`tests.rs`, `*_tests.rs`, anything under a `tests/` folder) are not
 scanned, and neither is text after a file's first `#[cfg(test)]`. It fails when:
 

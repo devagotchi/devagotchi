@@ -26,7 +26,7 @@ because one of those can break.
 
 | Layer | What it proves | Where it lives | Runs in |
 |---|---|---|---|
-| static | deps and licences, layout ratchet, generated schemas, owner grep, shellcheck | `runtime/devagotchi/tests/layout.rs`, `security.yml`, `ci.yml` `repository-owner`, the shellcheck steps in `hub-deploy` and `host-install` | every PR: the layout tests and the owner grep; `security.yml` when the PR changes `Cargo.lock`, a `Cargo.toml` or `deny.toml`. Main and weekly: all of it |
+| static | deps and licences, bebop's structure rules (the layout ratchet, module homes, names), generated schemas, owner grep, shellcheck | `devtool/bebop/tests/workspace.rs` (bebop over `.ai/rules/`), `security.yml`, `ci.yml` `repository-owner`, the shellcheck steps in `hub-deploy` and `host-install` | every PR: the bebop rules and the owner grep; `security.yml` when the PR changes `Cargo.lock`, a `Cargo.toml` or `deny.toml`. Main and weekly: all of it |
 | unit | pure logic, parsers, renderers, OS backends | `src/<domain>/tests.rs` (G10) | every PR: `core` on ubuntu-24.04 and windows-2025. Main: all six OS legs |
 | store | everything that takes a store, on real Postgres (and ClickHouse) | `src/<domain>/tests.rs` with `or_skip!` | every PR, `hub-postgres` |
 | binary e2e | the one binary as processes: broker, `mcp`, hub, link, update, install | `runtime/devagotchi/tests/*.rs`, `tests/e2e.py` and its probes, `tests/file_mutation_concurrency.py`, `deploy/linux/ci-install-check.sh`, `deploy/windows/ci-install-check.ps1` | every PR: `e2e (ubuntu-24.04)`. Main: `e2e` on Linux x64 and arm64, Windows 2022, 2025 and arm64, and `host-install` |
@@ -100,9 +100,9 @@ Other shapes to copy:
 - Real-server HTTP test: `world` and `world_with` (`engine/hub/src/web/tests/mod.rs:142-256`)
   bind `127.0.0.1:0`, run `axum::serve` for the fake Nomen and for the hub, and drive them with
   reqwest. This is axum's `the_real_deal` shape.
-- A ratchet check: `runtime/devagotchi/tests/layout.rs`. Its baseline only shrinks, with
-  `DEVAGOTCHI_WRITE_LAYOUT` to lower entries (:163), and its own logic is unit-tested on
-  synthetic input (:183-261).
+- A ratchet check: bebop's `layout.file-size-cap` rule (`.ai/rules/layout/file-size-cap/`). Its
+  baseline only shrinks, `bebop baseline tighten` lowers entries and never adds one, and the
+  ratchet's own logic is unit-tested on synthetic input (`devtool/bebop/src/baselines/tests.rs`).
 
 Python: `tests/e2e.py`.
 
@@ -177,7 +177,7 @@ rewrite plan cite them.
 9. **A failure says which case failed.** `assert_eq!` already prints both sides. A loop or table
    case carries its input as the message (`platform/store/src/tests.rs:20`). A boolean `assert!`
    carries the value it judged (`"{view:?}"`).
-10. **A generated artefact is checked by a test that can rewrite it** (`DEVAGOTCHI_WRITE_LAYOUT`,
+10. **A generated artefact is checked by a test that can rewrite it** (`bebop baseline tighten`,
     `DEVAGOTCHI_WRITE_SCHEMA`, `DEVAGOTCHI_WRITE_SIGNAL_SCHEMA`), and by a CI job that runs the
     check (G12).
 
@@ -238,8 +238,9 @@ here.
 | Unit and store tests | G10: `src/<domain>/tests.rs`, `src/<domain>/tests/<subject>.rs`, or inline in a leaf file under the cap |
 | Store fixtures and skip machinery | `platform/store/src/testing.rs` (feature `testing`); a domain's own fixtures in its `tests` module |
 | Tests that drive the built binary | `runtime/devagotchi/tests/<subject>.rs` |
-| Workspace-wide source scans | `runtime/devagotchi/tests/`, sharing `layout.rs`'s walker (G12) |
-| Their baselines | `runtime/devagotchi/tests/<check>/` (as `runtime/devagotchi/tests/layout/`) |
+| Workspace-wide source scans | `runtime/devagotchi/tests/`, sharing `support/mod.rs`'s walker (G12) |
+| Their baselines | `runtime/devagotchi/tests/<check>/` |
+| Structure rules (sizes, homes, names) and their baselines | bebop: `.ai/rules/<category>/<name>/` (`rule.toml`, `baseline.txt`, `examples/`) |
 | Scenario scripts and probes | `tests/<scenario>.py`, run from `tests/e2e.py` or a named ci.yml step |
 | Shared Python helpers | a non-runnable module in `tests/` (`tests/fake_nomen.py` today; `tests/harness.py` once rule 14 lands) |
 | Manual-only scripts | listed in `tests/MANUAL.md` (to be created, rule 15) |
@@ -347,12 +348,12 @@ the check named here replaces review. Each lands green together with the fix it 
      --check`, `devagotchi ai check` (rules 10, 15).
    - An `if: always()` aggregate job, `ci-ok`, whose `needs:` names every job and which fails
      unless each result is success. Branch protection then requires one check.
-3. **`runtime/devagotchi/tests/test_shape.rs`** (B6), beside `layout.rs` and in its ratchet style.
+3. **`runtime/devagotchi/tests/test_shape.rs`** (B6), in the ratchet style of bebop's baselines (or as a bebop rule once B2's engines land).
    - Baseline `runtime/devagotchi/tests/test_shape/allowed.txt`, one `<rule>\t<path>:<line or
      name>` per line. It only shrinks; `DEVAGOTCHI_WRITE_TEST_SHAPE=1` drops entries that are
      gone and never adds any. Its decision functions get synthetic-input unit tests.
-   - It reuses `layout.rs`'s walker (`rust_files`, which skips `target`, `node_modules` and dot
-     folders).
+   - It reuses `support/mod.rs`'s walker (`rust_files`, which skips `target`, `node_modules` and
+     dot folders).
    - `every_test_is_named_as_a_claim` (rule 1): the fn after a `#[test]` or `#[tokio::test..]`
      line fails with fewer than 3 `_`-separated words, or when it matches
      `(_on_postgres|_on_both_engines|_on_sqlite)`.

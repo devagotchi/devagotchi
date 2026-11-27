@@ -1,0 +1,45 @@
+id = "layout.module-home"
+category = "layout"
+statement = """
+A folder per domain. Inside a crate, each domain is `src/<domain>/`, and `src/<domain>/mod.rs` is \
+its front door. A domain has exactly one home. No `<domain>.rs` beside a `<domain>/` folder."""
+why = """
+One module in two places (`x.rs` and `x/`) makes a reader look in two places for one thing, and \
+the folder no longer shows the module whole. Layout rule 2 (.ai/patterns/layout.md) keeps \
+the `mod.rs` form, which Clippy's self_named_module_files lint enforces and the Rust Reference \
+describes. The modules that were both when the check arrived (B3, 2026-11-19) are on the \
+baseline."""
+sources = [
+  "https://doc.rust-lang.org/reference/items/modules.html#module-source-filenames",
+  "https://rust-lang.github.io/rust-clippy/master/index.html#self_named_module_files",
+]
+severity = "error"
+status = "enforced"
+version = 1
+
+[scope]
+include = [
+  "platform/**/*.rs",
+  "engine/**/*.rs",
+  "interface/**/*.rs",
+  "interfaces/**/*.rs",
+  "runtime/**/*.rs",
+  "devtool/**/*.rs",
+  "agenthub/**/*.rs",
+  "apps/**/*.rs",
+]
+exclude = ["**/target", "**/node_modules", "**/.*"]
+
+[check]
+engine = "module_home"
+
+[guidance]
+expected = "The module `{module}` has one home, `{home}`, and no `{file}` beside its folder."
+fix = """
+Move `{file}` to `{home}` (`git mv` keeps its history); the `mod {module};` line in its parent \
+stays as it is."""
+example = "engine/hub/src/settings/mod.rs"
+
+[approval]
+by = "operator"
+date = "2026-11-26"

@@ -1,0 +1,4 @@
+# Bad: the package is not named devagotchi-<folder>.
+[package]
+name = "machine-broker"
+version = "0.1.0"

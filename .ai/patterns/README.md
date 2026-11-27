@@ -161,9 +161,11 @@ name a domain or a plan, never a file path.
 - An allow-list or baseline file only shrinks. Its `DEVAGOTCHI_WRITE_<X>` mode only lowers or
   drops entries, never adds them. CI never sets a write variable.
 - A check lands green together with the fix it guards, never red on `main`.
-- Workspace-wide source scans live in `runtime/devagotchi/tests/` and share one walker with
-  `runtime/devagotchi/tests/layout.rs`. Single-crate scans live in that crate's tests and share
-  the walker lifted from `engine/hub/src/site/brand_tests.rs`.
+- Workspace-wide source scans live in `runtime/devagotchi/tests/` and share one walker,
+  `runtime/devagotchi/tests/support/mod.rs`. Structure checks (file sizes, module homes, names)
+  are bebop rules in `.ai/rules/` (`devtool/bebop/README.md`), each with its own baseline;
+  `bebop baseline tighten` lowers and drops entries and never adds one. Single-crate scans live
+  in that crate's tests and share the walker lifted from `engine/hub/src/site/brand_tests.rs`.
 
 **G13. A test proves one claim or fails.**
 - Its name is a falsifiable sentence.
@@ -196,8 +198,10 @@ review.
 
 | Check | Holds | Lives in | Status |
 |---|---|---|---|
-| Size ratchet | layout 6 | `runtime/devagotchi/tests/layout.rs` | in place |
-| One home per module: no `<x>.rs` beside `<x>/` | layout 2 | `runtime/devagotchi/tests/layout.rs` (`layout/beside.txt`, shrink-only) | in place (B3) |
+| Size ratchet | layout 6 | bebop `layout.file-size-cap` (`.ai/rules/layout/file-size-cap/`, baseline shrink-only) | in place (bebop B0) |
+| One home per module: no `<x>.rs` beside `<x>/` | layout 2 | bebop `layout.module-home` (`.ai/rules/layout/module-home/`, baseline shrink-only) | in place (B3; bebop B0) |
+| No `*_tests.rs`: tests sit with their domain | layout 3 | bebop `layout.tests-with-their-domain` (baseline shrink-only) | in place (bebop B0) |
+| Names: N1, N2, N4, N5 | the program §5 | bebop `naming.*` (`.ai/rules/naming/`, baselines shrink-only) | in place (bebop B0) |
 | Test shape: names, skip shapes, scripts run by CI, workflow pins and timeouts | G13, tests-and-ci | `runtime/devagotchi/tests/test_shape.rs` | planned (B6) |
 | Link wire scan: dispatch wildcards, compared literals, personal paths | G5, G3, link 11 | `runtime/devagotchi/tests/link_protocol.rs` | in place (B2) |
 | SQL scan: qualified tables, `AssertSqlSafe`, `QueryBuilder`, `tenant_id` ratchet | persistence 12-18 | `runtime/devagotchi/tests/sql.rs` | planned (B6) |

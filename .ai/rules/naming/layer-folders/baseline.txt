@@ -1,0 +1,4 @@
+# naming.layer-folders: the violations on the tree when the rule was enforced.
+# <path>, sorted by path. The list only shrinks: fix the code, then run
+# `bebop baseline tighten`. Never add a line or raise a number to make a check pass.
+interfaces

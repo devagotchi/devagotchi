@@ -1,0 +1,49 @@
+id = "layout.file-size-cap"
+category = "layout"
+statement = """
+A new file holds at most 500 lines. Past that, split by what the code is about, not by line \
+count. Tests count: a long `tests.rs` becomes `tests/` with a file per subject."""
+why = """
+A file a person or an agent can read whole is one they can review whole; a file past the cap \
+holds several subjects, and its readers lose the thread. The cap is layout rule 6 \
+(.ai/patterns/layout.md), the practice ESLint's max-lines rule holds for JavaScript. The files \
+already over it when the rule arrived (main 332bf25, 2026-11-13) are on the baseline, each held to \
+its own number."""
+sources = [
+  "https://eslint.org/docs/latest/rules/max-lines",
+  "https://rust-lang.github.io/rust-clippy/master/index.html#too_many_lines",
+]
+severity = "error"
+status = "enforced"
+version = 1
+
+# Every Rust file of the workspace: the layers, AgentHub and the apps, as the layout test walked
+# them (runtime/devagotchi/tests/support/mod.rs ROOTS), plus devtool/ and the singular interface/.
+[scope]
+include = [
+  "platform/**/*.rs",
+  "engine/**/*.rs",
+  "interface/**/*.rs",
+  "interfaces/**/*.rs",
+  "runtime/**/*.rs",
+  "devtool/**/*.rs",
+  "agenthub/**/*.rs",
+  "apps/**/*.rs",
+]
+exclude = ["**/target", "**/node_modules", "**/.*"]
+
+[check]
+engine = "max_lines"
+max = 500
+
+[guidance]
+expected = "`{file}` holds at most {allowed} lines (the cap is {max}); it holds {lines}."
+fix = """
+Split `{file}` by what the code is about, not by line count: a long module becomes a folder with \
+`mod.rs` and a file per subject, and a long `tests.rs` becomes `tests/` with a file per subject. \
+Never raise a baseline number or add a line to make the check pass."""
+example = "engine/hub/src/settings"
+
+[approval]
+by = "operator"
+date = "2026-11-26"

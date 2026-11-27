@@ -1,10 +1,11 @@
-# Rust files over the 500-line cap when the cap arrived (main 332bf25, 2026-11-13).
+# layout.file-size-cap: Rust files over the 500-line cap when the cap arrived (main 332bf25,
+# 2026-11-13), moved here from runtime/devagotchi/tests/layout/oversize.txt by bebop B0.
 # <lines><TAB><path>, sorted by path. A listed file may shrink, never grow; a file that is
-# not listed may not exceed the cap. Never add a line or raise a number to make the test
-# pass: see .ai/patterns/layout.md.
+# not listed may not exceed the cap. Lower a number with `bebop baseline tighten`; never add
+# a line or raise a number to make the check pass: see .ai/patterns/layout.md.
 588	agenthub/src/clickhouse.rs
-855	runtime/devagotchi/tests/one_binary.rs
 623	engine/hub/src/agenthub/issue_lifecycle/tests.rs
+509	engine/hub/src/agenthub/web/tests/ticket.rs
 577	engine/hub/src/identity/accounts/oauth/mod.rs
 683	engine/hub/src/identity/accounts/oauth/tests.rs
 506	engine/hub/src/identity/accounts/tenants/mod.rs
@@ -14,36 +15,36 @@
 696	engine/hub/src/identity/nomen/mod.rs
 711	engine/hub/src/identity/nomen/tests/mod.rs
 764	engine/hub/src/identity/tests/providers.rs
+751	engine/hub/src/identity/web/oauth.rs
+1112	engine/hub/src/identity/web/passkeys.rs
+937	engine/hub/src/identity/web/providers.rs
+1534	engine/hub/src/identity/web/tests/passkeys.rs
 539	engine/hub/src/notify/mail.rs
 564	engine/hub/src/notify/signals/mod.rs
 844	engine/hub/src/offers/tests.rs
 574	engine/hub/src/ops/analytics/tests.rs
+607	engine/hub/src/ops/web/analytics.rs
+542	engine/hub/src/settings/web/tests/admin.rs
 1522	engine/hub/src/site/model.rs
 814	engine/hub/src/site/tests.rs
+654	engine/hub/src/site/web/landing/mod.rs
+633	engine/hub/src/site/web/tests/discovery.rs
 564	engine/hub/src/site/workflows.rs
 715	engine/hub/src/tenancy/tests/tenants.rs
-607	engine/hub/src/ops/web/analytics.rs
-509	engine/hub/src/agenthub/web/tests/ticket.rs
-633	engine/hub/src/site/web/tests/discovery.rs
-542	engine/hub/src/settings/web/tests/admin.rs
-654	engine/hub/src/site/web/landing/mod.rs
-751	engine/hub/src/identity/web/oauth.rs
 1082	engine/hub/src/tenancy/web/orgs.rs
 541	engine/hub/src/web/pages.rs
-1534	engine/hub/src/identity/web/tests/passkeys.rs
-1112	engine/hub/src/identity/web/passkeys.rs
-937	engine/hub/src/identity/web/providers.rs
 680	engine/hub/src/web/routes.rs
 1204	engine/hub/src/web/tests/mod.rs
-1086	engine/hub/src/workflows/web/mod.rs
 525	engine/hub/src/workflows/mcp.rs
 541	engine/hub/src/workflows/mod.rs
 625	engine/hub/src/workflows/stored/mod.rs
 1764	engine/hub/src/workflows/tests.rs
-516	platform/ipc/src/windows/security.rs
+1086	engine/hub/src/workflows/web/mod.rs
 1017	engine/kernel/src/capture/mod.rs
 647	engine/kernel/src/capture/tests.rs
 878	engine/machine-engine/src/broker.rs
 519	engine/machine-engine/src/execution/platform/linux.rs
 583	engine/machine-engine/src/execution/platform/windows.rs
 802	interfaces/mcp/src/connect.rs
+516	platform/ipc/src/windows/security.rs
+855	runtime/devagotchi/tests/one_binary.rs

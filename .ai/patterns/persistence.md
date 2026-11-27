@@ -372,7 +372,7 @@ yet. Each lands green with the fixes it guards (G12).
      migration and is compared in the same test. A line is only ever appended for a new
      migration; an existing line never changes.
 4. **SQL source scan** (rules 12-18), a new `runtime/devagotchi/tests/sql.rs`, sharing
-   `layout.rs`'s walker (G12). It walks `engine/hub/src` and `agenthub/src` and skips
+   the walker in `runtime/devagotchi/tests/support/mod.rs` (G12). It walks `engine/hub/src` and `agenthub/src` and skips
    test files and `#[cfg(test)]` modules.
    - (a) A `devagotchi.<prefix>_<name>` inside a string literal that is not followed by `(`.
      Function calls such as `devagotchi.machine_pushes_of(` stay qualified (rule 18).
@@ -562,7 +562,7 @@ Fixed in f13b8e1 (B0): `server_url()`, the REQUIRE flag, the `SKIPPED:` text, an
   each, e.g. connections: "In the hub's Postgres: `connector_keys` (migration 0025, renamed by
   0029), under the tenant's row-level security (`stored.rs`)."; tenancy: "the organisations'
   `org_*` and `project_*` tables (`orgs`)" (B6, with S12's front-door test).
-- `platform/store/src/lib.rs` (522 lines, `runtime/devagotchi/tests/layout/oversize.txt:55`): all
+- `platform/store/src/lib.rs` (522 lines when this was written, then on the size baseline): all
   the engine's logic and unrelated helpers (`write_private`, `random`) at the crate's top
   level -> S10 split into `engine.rs` (`open_in`, `SET ROLE`), `transaction.rs`
   (`transaction!`, `Failed`, `begin`, `finish`, `collided`), `tenancy.rs` (`scope`,

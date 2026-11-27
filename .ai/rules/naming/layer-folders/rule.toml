@@ -1,0 +1,61 @@
+id = "naming.layer-folders"
+category = "naming"
+statement = """
+Layer folders are singular: `platform/`, `engine/`, `interface/`, `runtime/`, `devtool/`. \
+`platform/` keeps the industry's name for what everything stands on."""
+why = """
+The top level is the map of the workspace: a layer per kind of code, each named once and in the \
+singular, beside a short list of folders that hold no layer's code (N4, the program §5, agreed \
+2026-11-25; layout rule 0). A layered architecture names its layers so each piece of code has \
+one obvious place. The non-code folders below are the ones at the root on 2026-11-26; a new one \
+is added with the operator's approval. `interfaces/` becomes `interface/` in step 5."""
+sources = ["https://martinfowler.com/bliki/PresentationDomainDataLayering.html"]
+severity = "error"
+status = "enforced"
+version = 1
+
+[scope]
+include = ["*"]
+
+[check]
+engine = "layer_folders"
+allowed = [
+  # The layers (N4).
+  "platform",
+  "engine",
+  "interface",
+  "runtime",
+  "devtool",
+  # AgentHub, its own repository (the submodule), and the apps (desktop inspector, website).
+  "agenthub",
+  "apps",
+  # Folders that hold no layer's code.
+  "audit",
+  "config",
+  "deploy",
+  "docs",
+  "plugins",
+  "reference",
+  "schemas",
+  "scripts",
+  "tests",
+  "verification",
+  ".agents",
+  ".ai",
+  ".claude",
+  ".claude-plugin",
+  ".codex",
+  ".config",
+  ".github",
+]
+
+[guidance]
+expected = """
+The top level holds only the singular layers and the agreed folders ({allowed}); `{name}/` is \
+not one of them."""
+fix = "To keep the rule, {suggestion}."
+example = "platform"
+
+[approval]
+by = "operator"
+date = "2026-11-26"

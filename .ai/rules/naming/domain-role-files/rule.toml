@@ -1,0 +1,48 @@
+id = "naming.domain-role-files"
+category = "naming"
+statement = """
+Every domain has the same role files: `mod.rs`, `model.rs`, `store.rs`, `service.rs`, `mcp.rs`, \
+`http.rs`, `web/`, `cli.rs`, `tests/`."""
+why = """
+When every domain holds the same few files, a reader knows where a type, a table, an operation, \
+a tool, a route or a test is before opening the domain, and the UI can derive its grouping from \
+the tree (N5, the program §5 and §2, agreed 2026-11-25). Only the roles a domain has exist. A \
+sub-domain is a folder with its own `mod.rs` that follows the same rule. B0 holds the hub's \
+domains (`engine/hub/src/<domain>/`); today's files outside the roles are on the baseline, which \
+steps 5 and 6 of the program take to zero."""
+sources = [
+  "https://martinfowler.com/bliki/PresentationDomainDataLayering.html",
+  "https://doc.rust-lang.org/book/ch07-05-separating-modules-into-different-files.html",
+]
+severity = "error"
+status = "enforced"
+version = 1
+
+[scope]
+include = ["engine/hub/src/**"]
+
+[check]
+engine = "domain_role_files"
+roots = ["engine/hub/src"]
+allowed_files = [
+  "mod.rs",
+  "model.rs",
+  "store.rs",
+  "service.rs",
+  "mcp.rs",
+  "http.rs",
+  "cli.rs",
+  "tests.rs",
+]
+allowed_dirs = ["web", "tests"]
+
+[guidance]
+expected = """
+`{domain}/` holds only its role files and folders ({roles}) and sub-domain folders that follow \
+the same rule; {detail}."""
+fix = "To keep the rule, {remedy}."
+example = "engine/hub/src/settings"
+
+[approval]
+by = "operator"
+date = "2026-11-26"

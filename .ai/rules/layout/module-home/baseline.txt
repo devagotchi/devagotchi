@@ -1,10 +1,8 @@
-# Modules that were both <x>.rs and a folder <x>/ of Rust when layout rule 2 got its check
-# (B3, 2026-11-19). Each becomes <x>/mod.rs in the batch that owns it; the list only gets
-# shorter. Never add a line: see .ai/patterns/layout.md, rule 2.
-platform/contracts/src/interactive.rs
-platform/contracts/src/system.rs
+# layout.module-home: modules that were both <x>.rs and a folder <x>/ of Rust when layout
+# rule 2 got its check (B3, 2026-11-19), moved here from runtime/devagotchi/tests/layout/beside.txt
+# by bebop B0. <path>, sorted. Each becomes <x>/mod.rs in the batch that owns it; the list only
+# gets shorter (`bebop baseline tighten`). Never add a line: see .ai/patterns/layout.md, rule 2.
 engine/hub/src/web/pages.rs
-platform/ipc/src/windows.rs
 engine/machine-engine/src/broker.rs
 engine/machine-engine/src/broker/system.rs
 engine/machine-engine/src/broker/system/web.rs
@@ -19,3 +17,6 @@ interfaces/mcp/src/adapter.rs
 interfaces/mcp/src/capabilities.rs
 interfaces/mcp/src/image.rs
 interfaces/mcp/src/run.rs
+platform/contracts/src/interactive.rs
+platform/contracts/src/system.rs
+platform/ipc/src/windows.rs

@@ -987,6 +987,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "devagotchi-bebop"
+version = "0.1.0"
+dependencies = [
+ "globset",
+ "ignore",
+ "serde",
+ "tempfile",
+ "toml 1.1.8+spec-1.1.0",
+]
+
+[[package]]
 name = "devagotchi-connectors"
 version = "0.1.0"
 dependencies = [

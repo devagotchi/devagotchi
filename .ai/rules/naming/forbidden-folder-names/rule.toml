@@ -1,0 +1,41 @@
+id = "naming.forbidden-folder-names"
+category = "naming"
+statement = """
+A folder names what it holds. It is kebab-case `<qualifier>-<subject>` (`postgres-store`, \
+`machine-broker`). Never `core`, `common`, `shared`, `utils`, `helpers`, `misc`, `lib`, `base` or \
+`manager`."""
+why = """
+A name that says nothing about what a folder holds becomes the place everything goes, and the \
+tree stops mapping the code (N1, the program §5, agreed 2026-11-25). The Go team's guidance on \
+package names calls util, common and misc out for the same reason. Third-party trees (`reference/`, \
+vendored code, build output) are not ours to name and are out of scope."""
+sources = ["https://go.dev/blog/package-names"]
+severity = "error"
+status = "enforced"
+version = 1
+
+[scope]
+include = ["**"]
+exclude = [
+  "reference",
+  "**/target",
+  "**/node_modules",
+  "**/vendor",
+  "**/third_party",
+]
+
+[check]
+engine = "forbidden_folder_name"
+names = ["core", "common", "shared", "utils", "helpers", "misc", "lib", "base", "manager"]
+
+[guidance]
+expected = """
+`{file}/` is named for what it holds, in kebab-case `<qualifier>-<subject>`, never `{name}`."""
+fix = """
+Rename `{file}/` for what it holds (as `postgres-store` or `machine-broker` do), or move each file \
+into the domain it serves; every path and document that names the folder moves with it."""
+example = "engine/machine-engine"
+
+[approval]
+by = "operator"
+date = "2026-11-26"
