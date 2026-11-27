@@ -20,6 +20,7 @@
 //! `crate::rules` (the check), `crate::tree` (the tree and the scope), and `toml` to read a
 //! crate's `Cargo.toml`.
 
+mod build_context;
 mod crate_names;
 mod domain_roles;
 mod file_names;
@@ -108,6 +109,10 @@ pub fn run(check: &Check, tree: &Tree, scope: &Scope) -> Result<Outcome, String>
             allowed_files,
             allowed_dirs,
         } => domain_roles::run(tree, scope, roots, allowed_files, allowed_dirs),
+        Check::MembersInBuildContext {
+            manifest,
+            ignore_file,
+        } => build_context::run(tree, manifest, ignore_file)?,
     };
     found.sort_by(|a, b| a.file.cmp(&b.file));
     found.dedup_by(|a, b| a.file == b.file);
@@ -125,5 +130,6 @@ pub fn vars(check: &Check) -> &'static [&'static str] {
         Check::CrateNameMatchesFolder { .. } => &["file", "name", "expected_name", "folder"],
         Check::LayerFolders { .. } => &["file", "name", "allowed", "suggestion"],
         Check::DomainRoleFiles { .. } => &["file", "name", "domain", "roles", "detail", "remedy"],
+        Check::MembersInBuildContext { .. } => &["file", "member", "top", "manifest"],
     }
 }

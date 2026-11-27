@@ -290,8 +290,16 @@ struct Roles {
     allowed_dirs: Vec<String>,
 }
 
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct BuildContext {
+    manifest: String,
+    ignore_file: String,
+}
+
 const ENGINES: &str = "max_lines, module_home, forbidden_file_name, forbidden_folder_name, \
-                       folder_case, crate_name_matches_folder, layer_folders, domain_role_files";
+                       folder_case, crate_name_matches_folder, layer_folders, domain_role_files, \
+                       members_in_build_context";
 
 fn parse_check(mut table: toml::Table) -> Result<Check, String> {
     let engine = match table.remove("engine") {
@@ -331,6 +339,16 @@ fn parse_check(mut table: toml::Table) -> Result<Check, String> {
         "layer_folders" => {
             let Allowed { allowed } = params(table, &engine)?;
             Check::LayerFolders { allowed }
+        }
+        "members_in_build_context" => {
+            let BuildContext {
+                manifest,
+                ignore_file,
+            } = params(table, &engine)?;
+            Check::MembersInBuildContext {
+                manifest,
+                ignore_file,
+            }
         }
         "domain_role_files" => {
             let Roles {

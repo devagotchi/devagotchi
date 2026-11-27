@@ -136,6 +136,11 @@ pub enum Check {
         allowed_files: Vec<String>,
         allowed_dirs: Vec<String>,
     },
+    /// Every workspace member `manifest` names is inside the build context `ignore_file` lets in.
+    MembersInBuildContext {
+        manifest: String,
+        ignore_file: String,
+    },
 }
 
 impl Check {
@@ -149,6 +154,7 @@ impl Check {
             Check::CrateNameMatchesFolder { .. } => "crate_name_matches_folder",
             Check::LayerFolders { .. } => "layer_folders",
             Check::DomainRoleFiles { .. } => "domain_role_files",
+            Check::MembersInBuildContext { .. } => "members_in_build_context",
         }
     }
 }
