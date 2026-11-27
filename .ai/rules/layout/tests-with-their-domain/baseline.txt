@@ -1,0 +1,33 @@
+# layout.tests-with-their-domain: the violations on the tree when the rule was enforced.
+# <path>, sorted by path. The list only shrinks: fix the code, then run
+# `bebop baseline tighten`. Never add a line or raise a number to make a check pass.
+agenthub/src/policy/catalog/access_seed_tests.rs
+engine/hub/src/identity/accounts/agents/concurrency_tests.rs
+engine/hub/src/identity/accounts/agents/directory_tests.rs
+engine/hub/src/identity/accounts/agents/receipt_tests.rs
+engine/hub/src/identity/accounts/api_keys/corruption_tests.rs
+engine/hub/src/machines/access/admission_tests.rs
+engine/hub/src/machines/access/broker_tests.rs
+engine/hub/src/machines/access/continuation_tests.rs
+engine/hub/src/machines/access/control_tests.rs
+engine/hub/src/machines/access/decision_tests.rs
+engine/hub/src/machines/access/default_tests.rs
+engine/hub/src/machines/access/grant_tests.rs
+engine/hub/src/machines/access/heartbeat_tests.rs
+engine/hub/src/machines/access/maintenance_tests.rs
+engine/hub/src/machines/access/notification_tests.rs
+engine/hub/src/machines/access/observation_tests.rs
+engine/hub/src/machines/access/operation_read_tests.rs
+engine/hub/src/machines/access/policy_tests.rs
+engine/hub/src/machines/access/read_tests.rs
+engine/hub/src/machines/access/reaper_tests.rs
+engine/hub/src/machines/access/request_tests.rs
+engine/hub/src/machines/access/resume_tests.rs
+engine/hub/src/machines/access/runtime_tests.rs
+engine/hub/src/machines/access/schema_tests.rs
+engine/hub/src/machines/access/settings_tests.rs
+engine/hub/src/machines/access/task_tests.rs
+engine/hub/src/machines/access/terms_tests.rs
+engine/hub/src/site/assets_tests.rs
+engine/hub/src/site/brand_tests.rs
+platform/contracts/src/grants/authority_tests.rs

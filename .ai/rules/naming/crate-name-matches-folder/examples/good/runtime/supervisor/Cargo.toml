@@ -1,0 +1,8 @@
+# Good: the crate is named for its folder; its binary keeps its own name.
+[package]
+name = "devagotchi-supervisor"
+version = "0.1.0"
+
+[[bin]]
+name = "devagotchi"
+path = "src/main.rs"

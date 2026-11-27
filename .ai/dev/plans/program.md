@@ -105,9 +105,10 @@ and icon, and the navigation is built from those files (`import.meta.glob`). Not
 wired by hand. ColdLight lives in `ui/src/lib/coldlight/`: Style Dictionary tokens,
 primitives, blocks and patterns, and their Storybook stories.
 
-**Held by checks.** `runtime/devagotchi/tests/layout.rs` holds the layers and the domain
-files, so a domain missing a role it claims, or a role file under another name, fails. A
-later test checks that every domain exists consistently in `engine/`, `interfaces/` and `ui/`.
+**Held by checks.** bebop's rules (§6) hold the layers and the domain files
+(`naming.layer-folders`, `naming.domain-role-files`), so a role file under another name, or a
+domain folder without its front door, fails unless today's baseline lists it. A later rule
+checks that every domain exists consistently in `engine/`, `interface/` and `ui/`.
 
 ## 3. The order, and where it stands
 
@@ -116,7 +117,7 @@ later test checks that every domain exists consistently in `engine/`, `interface
 | 1 | Absorb every open PR and branch | GitHub has only main and no open PR | done 2026-11-25: #284 to #291 merged; #291 (file access) with its review fixes |
 | 2 | The layers: every crate moved, every path and doc updated, `AGENTS.md` on the wrapper with sub-processes, layout rule 0 | moves only; the suite and CI green | done: #292, with the image's build context fixed in #293; main `9aae814` green on every leg, image published |
 | 3 | The domain files in every crate. The hub's 63 flat `web/` files go to their domains. Defects found on main get fixed here: the contract drift (`scripts/generate-contracts.cjs --check` fails on main), and unused code in `engine/hub/src/machines/access/` (`Requested`, `Revoked`, `revoke_machine`, `agent_resumed`) | the layout check holds the roles | in progress: the pages moved into their domains (`web/` keeps only the shell: `mod.rs`, `routes.rs`, `pages.rs`, `hub.css` and the shell's folders), and each domain merges its own `routes()`. Still open: the role-file names in every domain, `/go/*` routes (`workflows/web` is at its ratchet), identity's handlers in `web/routes.rs`, the contract drift and the unused code |
-| 4 | bebop B0 (§6): the rule format, the structure engine, XML and plain-text output, and examples as tests. The first rules are the layout tests (the 500-line ratchet, no file beside a folder of its name, no `*_tests.rs`), plus the naming rules N1 to N5 (§5). Today's violations go on a shrink-only baseline | the layout tests run as bebop rules; every rule's examples pass | pending |
+| 4 | bebop B0 (§6): the rule format, the structure engine, XML and plain-text output, and examples as tests. The first rules are the layout tests (the 500-line ratchet, no file beside a folder of its name, no `*_tests.rs`), plus the naming rules N1 to N5 (§5). Today's violations go on a shrink-only baseline | the layout tests run as bebop rules; every rule's examples pass | built on `increment-302/bebop-b0` (2026-11-26), not yet merged: `devtool/bebop` with eight enforced rules (`layout.file-size-cap`, `layout.module-home`, `layout.tests-with-their-domain`, `naming.forbidden-folder-names`, `naming.folder-case`, `naming.crate-name-matches-folder`, `naming.layer-folders`, `naming.domain-role-files`); `runtime/devagotchi/tests/layout.rs` and its two lists removed, their baselines moved beside the rules. N3 has no mechanical rule (§5) |
 | 5 | The names (§5), under bebop's naming rules: every crate, layer and hub domain renamed; table prefixes moved by one clean migration per domain, here and in AgentHub; MCP tool prefixes; `.ai/` per boundary (§8). The naming baseline goes to zero | no naming violation, no baseline | pending |
 | 6 | The rest of step 3: the role files in every domain; `/go/*` and identity's handlers out of `web/routes.rs`; the contract drift; the unused code | the role rules hold with no baseline | pending |
 | 7 | bebop B1 and B3: proposing and approving rules (only the operator approves), hooks on every edit and at the end of a turn, pre-commit and CI, and the internal/official build split | an agent's edit gets its XML back; a rule cannot be weakened without approval; the official build holds no devtool | pending |
@@ -163,7 +164,9 @@ bebop's `naming` rules hold these.
   The Desktop Commander tools keep their upstream names (`read_file`, `edit_file`, …), so the
   parity is exact.
 - **N3. Domains are plural count nouns** (`machines`, `workflows`, `notifications`). Mass
-  nouns stay as they are (`identity`, `tenancy`, `audit`).
+  nouns stay as they are (`identity`, `tenancy`, `audit`). Whether a noun is a count or a mass
+  noun needs judgment, so bebop has no mechanical rule for N3 (B0, 2026-11-26): it is held by
+  review, and by a proposed rule once B1 can ask the operator each case.
 - **N4. Layer folders are singular:** `platform/`, `engine/`, `interface/`, `runtime/`,
   `devtool/`. `platform/` keeps the industry's name for what everything stands on.
 - **N5. Every domain has the same role files:** `mod.rs`, `model.rs`, `store.rs`,
@@ -217,8 +220,12 @@ in the official build.
 - The official build is the release pipeline's `devagotchi` alone.
 - A check proves the split.
 
-**A rule is data.** Each rule is `<boundary>/.ai/rules/<category>/<id>.rule.yml`, held by the
-boundary that owns it. Nothing is shared until its reuse is confirmed. A rule records:
+**A rule is data.** Each rule is `<boundary>/.ai/rules/<category>/<name>/rule.toml` (its id is
+`<category>.<name>`), held by the boundary that owns it, with its `baseline.txt` and its
+`examples/good/` and `examples/bad/` trees in the same folder. B0 chose TOML in a folder per
+rule over the `<id>.rule.yml` first written here, so a rule's baseline and examples sit beside
+it; `devtool/bebop/README.md` has the format. Nothing is shared until its reuse is confirmed. A
+rule records:
 - `id` and `category`;
 - `statement`, the operator's words;
 - `why`, with the upstream practice it follows;
@@ -333,6 +340,9 @@ no local Postgres):
 - `cargo test --workspace` without Postgres: every test passes, the layout test included.
   The Postgres tests skip locally, and CI's `hub (postgres)` and `e2e (ubuntu-24.04)` run
   them.
+
+Step 4 checks (bebop B0), on `increment-302/bebop-b0` from main `b1d4b98`, Windows 11 with no
+local Postgres: recorded in that branch's commit and its report; CI pending.
 
 ## Delivery
 

@@ -1,0 +1,41 @@
+id = "naming.crate-name-matches-folder"
+category = "naming"
+statement = "One prefix names a thing everywhere: a crate is `devagotchi-<folder>`."
+why = """
+When a crate's name is its folder's, the name in a dependency, an error or a log says where the \
+code lives (N2, the program §5, agreed 2026-11-25). Cargo names a package in its manifest and a \
+workspace finds members by path; this rule keeps the two the same. A binary keeps its own name \
+(`[[bin]] name`): `runtime/supervisor` is `devagotchi-supervisor` and still builds `devagotchi`."""
+sources = [
+  "https://doc.rust-lang.org/cargo/reference/manifest.html#the-name-field",
+  "https://doc.rust-lang.org/cargo/reference/workspaces.html",
+]
+severity = "error"
+status = "enforced"
+version = 1
+
+[scope]
+include = [
+  "platform/*/Cargo.toml",
+  "engine/*/Cargo.toml",
+  "interface/*/Cargo.toml",
+  "interfaces/*/Cargo.toml",
+  "runtime/*/Cargo.toml",
+  "devtool/*/Cargo.toml",
+  "agenthub/Cargo.toml",
+]
+
+[check]
+engine = "crate_name_matches_folder"
+prefix = "devagotchi-"
+
+[guidance]
+expected = "The crate in `{folder}/` is named `{expected_name}`, not `{name}`."
+fix = """
+Set the package name in `{file}` to `{expected_name}`, or rename the folder so the two agree, and \
+update every dependency on the old name; a binary keeps its name with `[[bin]] name`."""
+example = "engine/machine-engine/Cargo.toml"
+
+[approval]
+by = "operator"
+date = "2026-11-26"

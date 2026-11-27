@@ -12,6 +12,7 @@ members = [
     "engine/hub",
     "runtime/link",
     "runtime/devagotchi",
+    "devtool/bebop",
     "apps/desktop/src-tauri",
 ]
 # `cargo build` / `cargo test` at the root build the broker, adapter and their
@@ -29,6 +30,7 @@ default-members = [
     "engine/hub",
     "runtime/link",
     "runtime/devagotchi",
+    "devtool/bebop",
 ]
 
 [workspace.package]

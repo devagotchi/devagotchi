@@ -905,7 +905,7 @@ Each lane is its own worktree with its **own `CARGO_TARGET_DIR`** (memory: a sha
 - `web/assets/sw.js`: 248, then 257.
 - `mcp/tools/machines.rs`: 210 → 213 → 220.
 - `engine/hub/site/default/content/messages.json` and `.github/workflows/ci.yml`: everyone appends. Rebase, do not reorder keys.
-- `runtime/devagotchi/tests/layout/oversize.txt`: numbers only go down (212, 246). Run `DEVAGOTCHI_WRITE_LAYOUT=1 cargo test -p devagotchi --test layout` after moves.
+- `.ai/rules/layout/file-size-cap/baseline.txt` (was `runtime/devagotchi/tests/layout/oversize.txt`): numbers only go down (212, 246). Run `bebop baseline tighten` after moves.
 
 ## Defaults I chose
 

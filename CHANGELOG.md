@@ -15,6 +15,24 @@ prerelease tag would not move the `:latest` image. The project stage stays alpha
 install, not a production promotion. The gap that is still open is in
 [.ai/docs/desktop-commander-parity.md](.ai/docs/desktop-commander-parity.md).
 
+### bebop, the rules devtool (B0)
+
+- A new crate, `devtool/bebop` (the `bebop` binary, never shipped: `dist = false`). A rule is
+  data: `.ai/rules/<category>/<name>/rule.toml`, with a shrink-only `baseline.txt` and good and
+  bad example trees beside it. `bebop check` reports each violation with the rule's statement,
+  why, what good looks like, the fix and an example, as XML (`--format xml`) or text; it exits
+  1 on a violation and 2 on a malformed rule. `bebop rule test` runs every rule's examples, and
+  `bebop baseline tighten` lowers and drops baseline entries and never adds one.
+- The layout tests are bebop rules now: `layout.file-size-cap` (the 500-line ratchet, its
+  list moved from `runtime/devagotchi/tests/layout/oversize.txt`) and `layout.module-home`
+  (from `beside.txt`), with `layout.tests-with-their-domain` (no `*_tests.rs`).
+  `runtime/devagotchi/tests/layout.rs` and `DEVAGOTCHI_WRITE_LAYOUT` are gone; use
+  `cargo run -p devagotchi-bebop -- baseline tighten`.
+- The naming rules N1, N2, N4 and N5 are enforced, each with today's violations on its
+  baseline: `naming.forbidden-folder-names`, `naming.folder-case`,
+  `naming.crate-name-matches-folder`, `naming.layer-folders` and `naming.domain-role-files`.
+  N3 (plural count nouns) needs judgment and has no mechanical rule.
+
 ### Each domain serves its own pages
 
 - The hub's flat `web/` folder had about 63 files from every domain. The pages now live in

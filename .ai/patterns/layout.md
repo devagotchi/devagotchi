@@ -15,6 +15,7 @@ it one step at a time; until a step lands, the code it covers stays where it is.
    | `runtime/` | the wrapper binary and the sub-processes it starts | `devagotchi`, `link` |
    | `agenthub/` | AgentHub, its own repository, pulled in as a submodule | `agenthub` |
    | `apps/` | the desktop inspector, the website | `apps/desktop`, `apps/website` |
+   | `devtool/` | the tools that build and check the workspace, never in the official build | `bebop` |
 
    The hub still holds both its engine and its interfaces per domain; they move into
    `interfaces/` domain by domain as the program ports each domain (program, step 8).
@@ -25,13 +26,13 @@ it one step at a time; until a step lands, the code it covers stays where it is.
 2. **A folder per domain.** Inside a crate, each domain is `src/<domain>/`, and
    `src/<domain>/mod.rs` is its front door: the module docs, the `mod` lines and the names
    the rest of the crate may use. A domain has exactly one home. No `<domain>.rs` beside a
-   `<domain>/` folder, and no two homes whose names differ by a letter. Checked by
-   `runtime/devagotchi/tests/layout.rs`
-   (`no_module_is_both_a_file_and_a_folder_beyond_those_listed`): the modules that were both
-   when the check arrived are in `layout/beside.txt`, which only gets shorter.
+   `<domain>/` folder, and no two homes whose names differ by a letter. Checked by bebop's
+   `layout.module-home` rule (`.ai/rules/layout/module-home/`): the modules that were both when
+   the check arrived are on its baseline, which only gets shorter.
 3. **Tests sit with their domain.** `src/<domain>/tests.rs`, declared from the domain's
    `mod.rs` as `#[cfg(test)] mod tests;`. No `<domain>_tests.rs` at the crate's top level.
-   Tests that drive a built binary stay in the crate's `tests/` folder.
+   Tests that drive a built binary stay in the crate's `tests/` folder. Checked by bebop's
+   `layout.tests-with-their-domain` rule (no `*_tests.rs`), with a shrink-only baseline.
 4. **The crate's top level is wiring only.** `lib.rs` or `main.rs`, the `mod` lines, and the
    few files that compose domains into the crate's entry points. Logic that belongs to one
    domain lives in that domain.
@@ -59,11 +60,29 @@ schema's tables; every one carries a prefix (the five made before the rule were 
 migration 0029: `auth_passwords`, `auth_preferences`, `auth_api_keys`, `auth_sign_in_settings`,
 `connector_keys`). It runs in CI's `hub-postgres` job.
 
+## The rules that hold this page
+
+The checks are bebop rules (`devtool/bebop/README.md`), each a folder under `.ai/rules/` with
+its `rule.toml`, its shrink-only `baseline.txt` and its good and bad examples:
+
+| Rule | Holds |
+|---|---|
+| `layout.file-size-cap` | rule 6, the size ratchet below |
+| `layout.module-home` | rule 2: no `<x>.rs` beside `<x>/` |
+| `layout.tests-with-their-domain` | rule 3: no `*_tests.rs` |
+| `naming.layer-folders` | rule 0 and N4: the top level is the singular layers and the agreed folders |
+| `naming.forbidden-folder-names`, `naming.folder-case` | N1 |
+| `naming.crate-name-matches-folder` | N2 |
+| `naming.domain-role-files` | N5, in the hub's domains |
+
+`cargo run -p devagotchi-bebop -- check --all` runs them; CI runs them through
+`the_workspace_keeps_every_enforced_rule` in `devtool/bebop/tests/workspace.rs`.
+
 ## The size ratchet
 
-Rule 6 is enforced by `runtime/devagotchi/tests/layout.rs`. It walks every `.rs` file under
-`crates/` and `apps/` (skipping `target`, `node_modules` and dot folders) and compares it
-with `runtime/devagotchi/tests/layout/oversize.txt`, the list of files that were already over
+Rule 6 is enforced by bebop's `layout.file-size-cap`. It walks every `.rs` file in the layers,
+`agenthub/` and `apps/` (skipping what `.gitignore` ignores and dot folders) and compares it
+with `.ai/rules/layout/file-size-cap/baseline.txt`, the list of files that were already over
 the cap when the rule arrived, each with its line count. Lines are counted as `wc -l` does.
 
 - A listed file may shrink. It may never hold more lines than its entry.
@@ -72,15 +91,15 @@ the cap when the rule arrived, each with its line count. Lines are counted as `w
 
 The list only gets shorter and its numbers only get smaller:
 
-- **A file shrank.** Lower its number, or run
-  `DEVAGOTCHI_WRITE_LAYOUT=1 cargo test -p devagotchi --test layout`, which lowers every
-  entry to today's count and drops entries now at or under the cap. It never adds an entry
-  and never raises a number.
+- **A file shrank.** Lower its number, or run `cargo run -p devagotchi-bebop -- baseline
+  tighten`, which lowers every entry to today's count and drops entries now at or under the
+  cap (and, for the other rules, entries that are fixed). It never adds an entry and never
+  raises a number.
 - **A file moved.** Change the path on its line by hand and keep the number, so the review
   shows the same count at the new path.
 - **A file needs to grow, or a new file needs more than 500 lines.** Split it. Raising a
   number or adding a line to the list is a change to this pattern, agreed with the operator
   first, never a way to make the test pass.
 
-What the tests do not check: rules 1 to 5 and 7 are held by review until the plan's later
-steps give them tests of their own.
+What the rules do not check yet: rules 1, 4, 5 and 7 are held by review until bebop's later
+phases (B2's code rules) give them rules of their own.

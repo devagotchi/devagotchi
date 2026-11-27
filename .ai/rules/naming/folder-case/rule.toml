@@ -1,0 +1,42 @@
+id = "naming.folder-case"
+category = "naming"
+statement = """
+A folder names what it holds. It is kebab-case `<qualifier>-<subject>` (`postgres-store`, \
+`machine-broker`)."""
+why = """
+One case for every crate folder makes a path predictable before it is read, and it is the case \
+Cargo package names take (N1, the program §5, agreed 2026-11-25; the Rust API guidelines on \
+naming). B0 holds it for the crate folders directly under the layers; whether a name is \
+`<qualifier>-<subject>` needs judgment and is held by review."""
+sources = [
+  "https://rust-lang.github.io/api-guidelines/naming.html",
+  "https://doc.rust-lang.org/cargo/reference/manifest.html#the-name-field",
+]
+severity = "error"
+status = "enforced"
+version = 1
+
+[scope]
+include = [
+  "platform/*",
+  "engine/*",
+  "interface/*",
+  "interfaces/*",
+  "runtime/*",
+  "devtool/*",
+]
+
+[check]
+engine = "folder_case"
+case = "kebab"
+
+[guidance]
+expected = "The crate folder `{file}/` is kebab-case: `{suggestion}`."
+fix = """
+Rename `{file}/` to `{suggestion}/`, and update the workspace members, the path dependencies and \
+every document that names it."""
+example = "engine/machine-engine"
+
+[approval]
+by = "operator"
+date = "2026-11-26"

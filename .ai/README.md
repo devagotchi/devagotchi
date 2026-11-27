@@ -41,6 +41,8 @@ its versioned contracts, not another agent or task engine.
 - [Patterns](patterns/README.md): reusable guidance, not duplicated architecture decisions.
 - [Connector pattern](patterns/connectors.md): how an AI client is defined, proven and added.
 - [Layout pattern](patterns/layout.md): where Rust code lives, and the file-size ratchet.
+- [Rules](rules/): the workspace's rules as data, one folder per rule, checked by
+  [bebop](../devtool/bebop/README.md) (`cargo run -p devagotchi-bebop -- check --all`).
 - [Capture schema](docs/capture-event.schema.json): generated from canonical Rust types.
 - [Cross-project training-data standard](docs/cross-project-training-standard.md):
   researched recommendations, data inventory, curation/evaluation gates and explicit

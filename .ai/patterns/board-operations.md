@@ -365,9 +365,8 @@ Each landed with the fix it guards (G12), in B3.
    `hosted/` or `approval.rs` (with a check that the scan sees what it looks for); every no-op
    above leaves the chain and the listener quiet; the handoff event's `assignee`, `from` and
    `to`; `board.settings_replaced` naming its changed keys.
-4. **`runtime/devagotchi/tests/layout.rs`** (layout rule 2):
-   `no_module_is_both_a_file_and_a_folder_beyond_those_listed`, against `layout/beside.txt`,
-   which only shrinks and lists nothing in AgentHub.
+4. **bebop's `layout.module-home`** (layout rule 2), against
+   `.ai/rules/layout/module-home/baseline.txt`, which only shrinks and lists nothing in AgentHub.
 5. **`engine/hub/src/mcp/tests/scan.rs`**: every tool body reaches its audit owner, against
    `audit-not-yet.txt`, which holds no board tool.
 

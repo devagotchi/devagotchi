@@ -299,7 +299,7 @@ guards ([G12](../patterns/README.md)). Single-crate source scans share the walke
    - `/app`, `/approvals`, `/admin` (as owner) and `/orgs` each contain `data-theme="dark"` and
      `id="me-link"`. It fails today on `/admin` and `/orgs`.
 
-Already in place and kept: `site/brand_tests.rs`; `runtime/devagotchi/tests/layout.rs` (the
+Already in place and kept: `site/brand_tests.rs`; bebop's `layout.file-size-cap` (the
 500-line ratchet); the per-flow `Hosted` tests; the browser suite's sideways-scroll checks in
 CI `e2e`.
 
@@ -487,7 +487,7 @@ All re-checked at main 2b3feec. Paths are under `engine/hub/src/` unless they sa
 
 - `web/pages.rs` with `web/pages/`, and `web/landing.rs` with `web/landing/`: each area has two
   homes. -> `pages` is shell and stays: `git mv pages.rs pages/mod.rs` now and move its
-  `runtime/devagotchi/tests/layout/oversize.txt` entry. `landing` moves in S8 to `site/web/landing/mod.rs`
+  `layout.file-size-cap` baseline entry (`.ai/rules/layout/file-size-cap/baseline.txt`). `landing` moves in S8 to `site/web/landing/mod.rs`
   (`.ai/dev/plans/structure-cleanup-map.md:223`).
 - `web/{analytics,claim,discovery,hub_settings,hub_settings_live,hub_settings_mail,hub_settings_sinks,landing,media,naming,operator,passkey,shippin,site,walkthrough}_tests.rs`,
   `web/app/approval_tests.rs`, `web/app/agenthub/ticket_tests.rs`: 17 `*_tests.rs` files beside

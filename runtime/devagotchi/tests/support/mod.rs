@@ -1,5 +1,6 @@
 //! What the tests that read the workspace's own source share: where it is, and its Rust
-//! files, walked one way (`layout.rs`, `link_protocol.rs`; G12).
+//! files, walked one way (`link_protocol.rs`, `release_builds.rs`; G12). The layout rules
+//! that walked the same roots are bebop rules now (`.ai/rules/layout/`).
 
 // Each test binary that includes this module uses only part of it.
 #![allow(dead_code)]
