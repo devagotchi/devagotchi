@@ -1,5 +1,6 @@
 //! The engines' tests, a file per engine, over small trees written to a temporary folder.
 
+mod build_context;
 mod crate_names;
 mod domain_roles;
 mod max_lines;

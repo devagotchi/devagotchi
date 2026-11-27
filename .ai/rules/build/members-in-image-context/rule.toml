@@ -1,0 +1,32 @@
+id = "build.members-in-image-context"
+category = "build"
+statement = "Every workspace member is inside the hub image's build context, so the image always builds from what the workspace holds."
+why = """
+`.dockerignore` lets only the folders it names into the image build (`*`, then `!<folder>/`). A \
+workspace member outside them is invisible to `cargo` inside the image, which then cannot load the \
+workspace: main 9a32c9e (the layers) and 8953a7a (bebop) both broke the image this way, and the \
+pull request jobs never build the image, so only main showed it. Docker reads the ignore file \
+before it sends the context, and Cargo loads every member before it builds one."""
+sources = [
+  "https://docs.docker.com/build/concepts/context/#dockerignore-files",
+  "https://doc.rust-lang.org/cargo/reference/workspaces.html#the-members-and-exclude-fields",
+]
+severity = "error"
+status = "proposed"
+version = 1
+
+[scope]
+include = ["Cargo.toml", ".dockerignore"]
+
+[check]
+engine = "members_in_build_context"
+manifest = "Cargo.toml"
+ignore_file = ".dockerignore"
+
+[guidance]
+expected = "The workspace member `{member}` is inside a folder `{file}` lets in."
+fix = """
+Add `!{top}/` to `{file}`, beside the other let-in folders, so the hub image's build can load \
+`{member}`; or, if `{member}` should not be built in the image, take it out of `{manifest}`'s \
+`members`."""
+example = ".dockerignore"
