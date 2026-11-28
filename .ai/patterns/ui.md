@@ -5,9 +5,11 @@ This page is how every screen of Devagotchi is built. The authority is the opera
 - [the program](../dev/plans/program.md) §1;
 - the operator's decision of 2026-11-25: **all existing UI converts to Svelte**.
 
-The shared rules G1 to G14 in [README.md](README.md) hold here too. The checks named below
-are built in program step 10, together with the first screens. Until each one exists, review
-holds its rule.
+The shared rules G1 to G14 in [README.md](README.md) hold here too. The foundation (program
+step 5) built the checks for U2's `fetch`, U4, U5, U6 and U13, run by `.github/workflows/ui.yml`;
+the others arrive with the first domain's screens (step 7), and until each one exists, review holds
+its rule. How to work in `ui/` day to day is [ui/README.md](../../ui/README.md); every component
+and token, with what each is for, is [ui/CATALOG.md](../../ui/CATALOG.md).
 
 ## What converts
 
@@ -40,7 +42,7 @@ The original AgentHub screens, by the domain each goes to:
 - It reads and writes only through the engine's JSON interfaces (`interfaces/http`, each
   domain's `http.rs`), and decides nothing the engine owns (G1).
 - A screen shows what the API answers, including its refusals' `next`.
-- Check: no `fetch` outside `ui/src/lib/api/`, and the API client is generated from the
+- Check: no `fetch` outside `ui/src/api/` (ESLint), and the API client is generated from the
   contracts.
 
 **U3. Folders are the navigation.**
@@ -51,29 +53,35 @@ The original AgentHub screens, by the domain each goes to:
   a `meta.ts`.
 
 **U4. Style Dictionary makes all CSS.**
-- Tokens live in `ui/src/lib/coldlight/tokens/`, in DTCG JSON, as three layers:
+- Tokens live in `ui/src/coldlight/tokens/`, in DTCG JSON, as three layers:
   - primitive (raw values);
   - semantic (roles: surface, text, accent, danger, space-m, step-0, …);
   - composite (typography, elevation, focus ring).
-- Style Dictionary emits them as CSS custom properties and TypeScript.
+- Style Dictionary emits them as CSS custom properties (`--cl-*`) and TypeScript. Primitive tokens
+  are never emitted, so a component can only reach a role.
 - Type and space are fluid `clamp()` scales between a phone and a desktop.
 - Layout uses flex and grid primitives. A component decides its own layout with a container
   query; pages have no viewport breakpoints of their own.
-- Check: stylelint rejects a literal colour, size or font outside the token build.
+- Check: stylelint rejects a literal colour, size, weight or font, and a `--cl-*` name the build
+  does not emit, and names the token to use. The token build refuses text under WCAG AA contrast
+  in either theme.
 
 **U5. ColdLight grows bottom up.**
-- `ui/src/lib/coldlight/` holds `tokens/`, `primitives/`, `blocks/`, `templates/` and
-  `patterns/`.
+- `ui/src/coldlight/` holds `tokens/`, `primitives/`, `blocks/`, `templates/` and
+  `patterns/`, imported as `#coldlight/…` (a subpath import: SvelteKit 3 retired `$lib` aliases).
 - Primitives come first: button, field, select, badge, notice, dialog, card, list, tabs,
   table, code, diff.
 - Blocks are made only of primitives, templates only of blocks and primitives. Patterns are
   whole experiences, such as resolving a conflict.
-- A level imports only from the levels below it. Check: an import-boundary lint rule.
+- A level imports only from the levels below it. Check: ESLint's `no-restricted-imports`, per level.
 
 **U6. Each component keeps its variants with it.**
 - `Button/` holds `Button.svelte`, `Button.variants.ts`, `Button.stories.svelte` and
-  `Button.test.ts`. Its variants are data, not copies.
-- Check: every component folder has a story and a test.
+  `Button.test.ts`. Its variants are data, not copies: the CSS selects each with a
+  `data-<axis>` attribute, and `expectVariantsStyled` fails a test when the data and the CSS
+  disagree. `<Name>.variants.ts` also says when to use the component, its props and its
+  accessibility; the catalog is generated from it.
+- Check: every component folder has a story and a test (review until bebop B4).
 
 **U7. Storybook shows every state.**
 - Every ColdLight component, and every page in each of its states: loading, empty, error,

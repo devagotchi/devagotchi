@@ -1,0 +1,165 @@
+{
+  "palette": {
+    "$description": "Raw colours: the hub's palette (engine/hub/site/default/tokens.json), named by hue and lightness step. Components never use these; the semantic layer gives them roles.",
+    "$type": "color",
+    "moss": {
+      "0": {
+        "$value": "#ffffff"
+      },
+      "50": {
+        "$value": "#f3f5f1"
+      },
+      "75": {
+        "$value": "#e8ede6"
+      },
+      "100": {
+        "$value": "#e4eae5"
+      },
+      "200": {
+        "$value": "#d8dfd6"
+      },
+      "400": {
+        "$value": "#9aa79f"
+      },
+      "600": {
+        "$value": "#56615a"
+      },
+      "800": {
+        "$value": "#2a3530"
+      },
+      "850": {
+        "$value": "#16201a"
+      },
+      "875": {
+        "$value": "#161e1a"
+      },
+      "900": {
+        "$value": "#121915"
+      },
+      "950": {
+        "$value": "#0e1411"
+      },
+      "$description": "The green-grey neutrals of surfaces, lines and text."
+    },
+    "pine": {
+      "100": {
+        "$value": "#e2efe7"
+      },
+      "300": {
+        "$value": "#7cc4a0"
+      },
+      "700": {
+        "$value": "#2f6b4f"
+      },
+      "800": {
+        "$value": "#1d4433"
+      },
+      "900": {
+        "$value": "#163828"
+      },
+      "$description": "The brand accent."
+    },
+    "leaf": {
+      "100": {
+        "$value": "#e3f3e8"
+      },
+      "200": {
+        "$value": "#b8ebc9"
+      },
+      "300": {
+        "$value": "#6fd39a"
+      },
+      "700": {
+        "$value": "#1f7a45"
+      },
+      "800": {
+        "$value": "#14532d"
+      },
+      "950": {
+        "$value": "#13301f"
+      },
+      "$description": "Success and online."
+    },
+    "ochre": {
+      "100": {
+        "$value": "#f6efd9"
+      },
+      "200": {
+        "$value": "#f0dfa6"
+      },
+      "300": {
+        "$value": "#e0c063"
+      },
+      "700": {
+        "$value": "#8a6d1d"
+      },
+      "750": {
+        "$value": "#7d6219"
+      },
+      "800": {
+        "$value": "#5e4a12"
+      },
+      "950": {
+        "$value": "#332a10"
+      },
+      "$description": "Warning and offline."
+    },
+    "amber": {
+      "100": {
+        "$value": "#f8ecd9"
+      },
+      "300": {
+        "$value": "#e3ad55"
+      },
+      "700": {
+        "$value": "#a1620c"
+      },
+      "750": {
+        "$value": "#8f560a"
+      },
+      "950": {
+        "$value": "#33240c"
+      },
+      "$description": "Pending and waiting."
+    },
+    "brick": {
+      "100": {
+        "$value": "#f8e3df"
+      },
+      "200": {
+        "$value": "#f6c1b8"
+      },
+      "300": {
+        "$value": "#f08a7a"
+      },
+      "700": {
+        "$value": "#a33a2c"
+      },
+      "800": {
+        "$value": "#7a2418"
+      },
+      "950": {
+        "$value": "#3a1b17"
+      },
+      "$description": "Danger, refusal and revoked."
+    },
+    "veil": {
+      "$description": "The dimming behind a dialog.",
+      "light": {
+        "$value": "rgba(14, 34, 24, 0.5)"
+      },
+      "dark": {
+        "$value": "rgba(3, 8, 6, 0.66)"
+      }
+    },
+    "shade": {
+      "8": {
+        "$value": "rgba(14, 34, 24, 0.08)"
+      },
+      "22": {
+        "$value": "rgba(14, 34, 24, 0.22)"
+      },
+      "$description": "The tints of shadows."
+    }
+  }
+}

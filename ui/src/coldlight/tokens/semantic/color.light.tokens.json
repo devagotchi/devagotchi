@@ -1,0 +1,110 @@
+{
+  "color": {
+    "$description": "Colour roles in the light theme. Each role says when to use it; the dark theme gives the same roles their dark values (color.dark.tokens.json).",
+    "$type": "color",
+    "canvas": {
+      "$value": "{palette.moss.50}",
+      "$description": "The page behind everything."
+    },
+    "surface": {
+      "$value": "{palette.moss.0}",
+      "$description": "A card, panel, dialog or field: anything that sits on the canvas."
+    },
+    "surface-sunk": {
+      "$value": "{palette.moss.75}",
+      "$description": "An inset area inside a surface: code, a table header, a quiet button on hover."
+    },
+    "text": {
+      "$value": "{palette.moss.850}",
+      "$description": "Body text and headings."
+    },
+    "text-muted": {
+      "$value": "{palette.moss.600}",
+      "$description": "Secondary text: hints, captions, timestamps."
+    },
+    "border": {
+      "$value": "{palette.moss.200}",
+      "$description": "The line around a surface, field or table cell."
+    },
+    "accent": {
+      "$value": "{palette.pine.700}",
+      "$description": "The one main action on a screen, links, the selected tab."
+    },
+    "on-accent": {
+      "$value": "{palette.moss.0}",
+      "$description": "Text and icons on an accent background."
+    },
+    "accent-subtle": {
+      "$value": "{palette.pine.100}",
+      "$description": "A quiet accent background: a selected row, an info notice."
+    },
+    "accent-hover": {
+      "$value": "{palette.pine.900}",
+      "$description": "A solid accent control under the pointer."
+    },
+    "success": {
+      "$value": "{palette.leaf.700}",
+      "$description": "Done, online, allowed."
+    },
+    "success-subtle": {
+      "$value": "{palette.leaf.100}",
+      "$description": "The background of a success notice or badge."
+    },
+    "warning": {
+      "$value": "{palette.ochre.750}",
+      "$description": "Needs attention but nothing failed: offline, expiring."
+    },
+    "warning-subtle": {
+      "$value": "{palette.ochre.100}",
+      "$description": "The background of a warning notice or badge."
+    },
+    "pending": {
+      "$value": "{palette.amber.750}",
+      "$description": "Waiting on someone or something: an approval, a running job."
+    },
+    "pending-subtle": {
+      "$value": "{palette.amber.100}",
+      "$description": "The background of a pending notice or badge."
+    },
+    "danger": {
+      "$value": "{palette.brick.700}",
+      "$description": "Failed, refused, revoked, or an action that destroys something."
+    },
+    "on-danger": {
+      "$value": "{palette.moss.0}",
+      "$description": "Text and icons on a danger background."
+    },
+    "danger-subtle": {
+      "$value": "{palette.brick.100}",
+      "$description": "The background of an error notice or badge."
+    },
+    "danger-hover": {
+      "$value": "{palette.brick.800}",
+      "$description": "A solid danger control under the pointer."
+    },
+    "focus": {
+      "$value": "{palette.pine.700}",
+      "$description": "The keyboard focus ring."
+    },
+    "overlay": {
+      "$value": "{palette.veil.light}",
+      "$description": "The dimming behind a dialog."
+    },
+    "diff-added": {
+      "$value": "{palette.leaf.100}",
+      "$description": "The background of a line a change adds (green)."
+    },
+    "diff-added-text": {
+      "$value": "{palette.leaf.800}",
+      "$description": "The text of a line a change adds."
+    },
+    "diff-removed": {
+      "$value": "{palette.brick.100}",
+      "$description": "The background of a line a change removes (red)."
+    },
+    "diff-removed-text": {
+      "$value": "{palette.brick.800}",
+      "$description": "The text of a line a change removes."
+    }
+  }
+}

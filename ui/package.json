@@ -1,0 +1,57 @@
+{
+  "name": "devagotchi-ui",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Devagotchi's UI: a SvelteKit app on ColdLight, its token-built design system.",
+  "license": "FSL-1.1-ALv2",
+  "type": "module",
+  "imports": {
+    "#coldlight/*": "./src/coldlight/*"
+  },
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "tokens": "node scripts/tokens/build.ts",
+    "catalog": "npm run tokens && node scripts/catalog/build.ts",
+    "catalog:check": "npm run tokens && node scripts/catalog/build.ts --check",
+    "dev": "npm run tokens && vite dev",
+    "build": "npm run tokens && vite build",
+    "check": "npm run tokens && svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --fail-on-warnings",
+    "lint": "npm run tokens && stylelint \"src/**/*.{css,svelte}\" && eslint .",
+    "test": "npm run tokens && node scripts/vitest.ts run",
+    "storybook": "npm run tokens && storybook dev -p 6006",
+    "build-storybook": "npm run tokens && storybook build --quiet",
+    "verify": "npm run check && npm run lint && npm run test && npm run catalog:check && npm run build"
+  },
+  "devDependencies": {
+    "@storybook/addon-a11y": "^10.6.9",
+    "@storybook/addon-svelte-csf": "^5.1.6",
+    "@storybook/sveltekit": "^10.6.9",
+    "@sveltejs/adapter-static": "^4.0.1",
+    "@sveltejs/kit": "^3.4.1",
+    "@sveltejs/vite-plugin-svelte": "^7.3.2",
+    "@testing-library/svelte": "^5.4.2",
+    "@testing-library/user-event": "^14.6.13",
+    "@types/node": "^24.0.0",
+    "eslint": "^10.16.0",
+    "eslint-plugin-svelte": "^3.24.1",
+    "jsdom": "^31.0.1",
+    "postcss-html": "^2.0.1",
+    "storybook": "^10.6.9",
+    "style-dictionary": "^5.8.0",
+    "stylelint": "^18.1.0",
+    "stylelint-config-standard": "^41.1.0",
+    "svelte": "^5.59.2",
+    "svelte-check": "^4.7.8",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.74.0",
+    "vite": "^8.4.0",
+    "vitest": "^5.1.2"
+  },
+  "overrides": {
+    "@bundled-es-modules/glob": {
+      "glob": "^14.0.6"
+    }
+  }
+}

@@ -1,0 +1,22 @@
+/* ColdLight's base: the page and the focus ring, from tokens only. Components style themselves. */
+@layer tokens, base;
+
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    background: var(--cl-color-canvas);
+    color: var(--cl-color-text);
+    font: var(--cl-type-body);
+  }
+
+  :focus-visible {
+    outline: var(--cl-focus-width) solid var(--cl-color-focus);
+    outline-offset: var(--cl-focus-offset);
+  }
+}

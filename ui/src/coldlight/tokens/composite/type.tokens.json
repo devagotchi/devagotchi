@@ -1,0 +1,60 @@
+{
+  "type": {
+    "$description": "Composite tokens: a role made of several values. Each typography token is one `font` shorthand.",
+    "$type": "typography",
+    "body": {
+      "$value": {
+        "fontFamily": "{font.ui}",
+        "fontSize": "{step.0}",
+        "fontWeight": "{weight.regular}",
+        "lineHeight": "{leading.normal}"
+      },
+      "$description": "Running text."
+    },
+    "label": {
+      "$value": {
+        "fontFamily": "{font.ui}",
+        "fontSize": "{step.0}",
+        "fontWeight": "{weight.medium}",
+        "lineHeight": "{leading.tight}"
+      },
+      "$description": "Buttons, field labels, tabs."
+    },
+    "small": {
+      "$value": {
+        "fontFamily": "{font.ui}",
+        "fontSize": "{step.-1}",
+        "fontWeight": "{weight.regular}",
+        "lineHeight": "{leading.normal}"
+      },
+      "$description": "Hints, captions, badges."
+    },
+    "title": {
+      "$value": {
+        "fontFamily": "{font.display}",
+        "fontSize": "{step.1}",
+        "fontWeight": "{weight.bold}",
+        "lineHeight": "{leading.tight}"
+      },
+      "$description": "The title of a card or dialog."
+    },
+    "heading": {
+      "$value": {
+        "fontFamily": "{font.display}",
+        "fontSize": "{step.3}",
+        "fontWeight": "{weight.bold}",
+        "lineHeight": "{leading.tight}"
+      },
+      "$description": "A page heading."
+    },
+    "code": {
+      "$value": {
+        "fontFamily": "{font.mono}",
+        "fontSize": "{step.-1}",
+        "fontWeight": "{weight.regular}",
+        "lineHeight": "{leading.normal}"
+      },
+      "$description": "Code, paths, commands, IDs and diffs."
+    }
+  }
+}
