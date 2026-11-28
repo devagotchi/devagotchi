@@ -1,0 +1,6 @@
+node_modules/
+.svelte-kit/
+build/
+storybook-static/
+# The token build's output; `npm run tokens` makes it from the DTCG sources.
+src/coldlight/tokens/build/

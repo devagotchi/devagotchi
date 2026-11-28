@@ -1,0 +1,1408 @@
+{
+  "generatedBy": "ui/scripts/catalog/build.ts",
+  "rules": [
+    "Build a screen from ColdLight components; reach for a lower level only when no higher one fits.",
+    "Style with tokens only: `var(--cl-…)` from the list below. stylelint refuses a literal colour, size, weight or font, and names the closest token.",
+    "Give every component its words through props or snippets; no text is written inside a component.",
+    "A level imports only from the levels below it: primitives, then blocks, templates and patterns.",
+    "Each component folder holds <Name>.svelte, <Name>.variants.ts, <Name>.stories.svelte and <Name>.test.ts."
+  ],
+  "components": [
+    {
+      "name": "Badge",
+      "level": "primitive",
+      "summary": "A short label for the state of something: online, approved, waiting, failed.",
+      "use": "Beside a name or in a table cell, to say in a word or two what state a thing is in, as the API reports it.",
+      "avoid": "Explaining what happened and what to do next: use Notice. Anything that can be pressed: use Button.",
+      "variants": {
+        "tone": {
+          "description": "What kind of state it names. The words say it too; colour is never the only sign.",
+          "default": "neutral",
+          "values": {
+            "neutral": "A plain fact with no judgement: a channel, a kind, a count.",
+            "accent": "Selected, current or yours: the board you are on, your own agent.",
+            "success": "Done, online, allowed.",
+            "warning": "Needs attention but nothing failed: offline, expiring.",
+            "pending": "Waiting on someone or something: an approval, a running job.",
+            "danger": "Failed, refused or revoked."
+          }
+        }
+      },
+      "props": [
+        {
+          "name": "children",
+          "type": "Snippet",
+          "required": true,
+          "description": "The state, in a word or two (Online, Waiting for approval)."
+        },
+        {
+          "name": "tone",
+          "type": "'neutral' | 'accent' | 'success' | 'warning' | 'pending' | 'danger'",
+          "description": "See the tone variants."
+        }
+      ],
+      "a11y": "Plain inline text, read in its place: it has no role and takes no focus. Its words carry the meaning, so a screen reader and a colour-blind reader get the same state.",
+      "example": "<Badge tone=\"success\">Online</Badge>",
+      "path": "src/coldlight/primitives/Badge/"
+    },
+    {
+      "name": "Button",
+      "level": "primitive",
+      "summary": "A control that does one thing when pressed.",
+      "use": "Any action: save, approve, cancel, open a dialog. A screen has at most one solid accent button, its main action.",
+      "avoid": "Going to another page: use a link. Choosing one of several options: use Tabs or Select.",
+      "variants": {
+        "tone": {
+          "description": "What kind of action it is.",
+          "default": "neutral",
+          "values": {
+            "neutral": "An ordinary action.",
+            "accent": "The main action of the screen.",
+            "danger": "An action that destroys or refuses something: delete, revoke, deny."
+          }
+        },
+        "emphasis": {
+          "description": "How loudly it asks to be pressed.",
+          "default": "outline",
+          "values": {
+            "solid": "Filled with its tone: the one action the screen is for.",
+            "outline": "Edged: a normal action beside others.",
+            "quiet": "Text only: a minor or repeated action, such as one in every row of a table."
+          }
+        }
+      },
+      "props": [
+        {
+          "name": "children",
+          "type": "Snippet",
+          "required": true,
+          "description": "The label: a verb for what it does (Save, Approve)."
+        },
+        {
+          "name": "tone",
+          "type": "'neutral' | 'accent' | 'danger'",
+          "description": "See the tone variants."
+        },
+        {
+          "name": "emphasis",
+          "type": "'solid' | 'outline' | 'quiet'",
+          "description": "See the emphasis variants."
+        },
+        {
+          "name": "busy",
+          "type": "boolean",
+          "description": "The action is running: the button is disabled and says so to screen readers."
+        },
+        {
+          "name": "disabled",
+          "type": "boolean",
+          "description": "The action cannot run now. Say why nearby."
+        },
+        {
+          "name": "type",
+          "type": "'button' | 'submit' | 'reset'",
+          "description": "Defaults to button; a form's own button is submit."
+        },
+        {
+          "name": "onclick",
+          "type": "(event: MouseEvent) => void",
+          "description": "What pressing it does."
+        }
+      ],
+      "a11y": "A native <button>: Enter and Space press it, and it is labelled by its text. When busy it carries aria-busy. It is at least 48 dp in both directions.",
+      "example": "<Button tone=\"accent\" emphasis=\"solid\" onclick={save}>Save</Button>",
+      "path": "src/coldlight/primitives/Button/"
+    },
+    {
+      "name": "Card",
+      "level": "primitive",
+      "summary": "A surface that groups one thing: its title, a line about it, its actions and its content.",
+      "use": "One machine, one agent, one setting group, one dashboard figure: anything a screen shows several of side by side or one after another.",
+      "avoid": "A row in a long list: use List or Table. A message about a failure: use Notice. Content that must be answered before going on: use Dialog.",
+      "variants": {
+        "emphasis": {
+          "description": "How far it stands off the canvas.",
+          "default": "flat",
+          "values": {
+            "flat": "Edged and level with the page: the usual card, many to a screen.",
+            "raised": "Lifted with a shadow: the one card a screen is about, or one that can be picked up."
+          }
+        }
+      },
+      "props": [
+        {
+          "name": "title",
+          "type": "string",
+          "description": "What the card is about, as a heading."
+        },
+        {
+          "name": "headingLevel",
+          "type": "2 | 3 | 4 | 5 | 6",
+          "description": "The title's heading level, so it fits the page's outline. Defaults to 2."
+        },
+        {
+          "name": "description",
+          "type": "string",
+          "description": "One line about it, under the title."
+        },
+        {
+          "name": "actions",
+          "type": "Snippet",
+          "description": "Buttons for the whole card: beside the title on a wide card, under it on a narrow one."
+        },
+        {
+          "name": "children",
+          "type": "Snippet",
+          "description": "The content."
+        },
+        {
+          "name": "emphasis",
+          "type": "'flat' | 'raised'",
+          "description": "See the emphasis variants."
+        }
+      ],
+      "a11y": "A plain group: the title is a real heading at the level given, so screen reader users can jump between cards by heading. Actions come after the title in reading and Tab order.",
+      "example": "<Card title=\"texas\" description=\"Windows 11, online\">{#snippet actions()}<Button>Open</Button>{/snippet}…</Card>",
+      "path": "src/coldlight/primitives/Card/"
+    },
+    {
+      "name": "Code",
+      "level": "primitive",
+      "summary": "Code, a path, a command or an ID, set in the code face and kept exactly as written.",
+      "use": "Anything a person types, pastes or reads character by character: a command to run, a config line, a file path, a token's prefix, a machine ID.",
+      "avoid": "Changes between two versions: use Diff. Ordinary emphasis in a sentence: use the text's own weight.",
+      "variants": {
+        "display": {
+          "description": "Where it sits.",
+          "default": "block",
+          "values": {
+            "block": "Its own block: a command or a snippet of several lines. It scrolls sideways inside itself rather than wrapping.",
+            "inline": "Inside a sentence: a path, a flag or an ID. It wraps anywhere rather than widening the page."
+          }
+        }
+      },
+      "props": [
+        {
+          "name": "code",
+          "type": "string",
+          "required": true,
+          "description": "The exact text."
+        },
+        {
+          "name": "language",
+          "type": "string",
+          "description": "What it is written in (bash, toml). A block shows it as a label; both carry it as data-language. There is no highlighting."
+        },
+        {
+          "name": "copyLabel",
+          "type": "string",
+          "description": "The label of a copy button (Copy). Without it there is no button."
+        },
+        {
+          "name": "copiedLabel",
+          "type": "string",
+          "description": "What is announced, and shown, once the text is on the clipboard (Copied)."
+        },
+        {
+          "name": "copyFailedLabel",
+          "type": "string",
+          "description": "What is announced, and shown, when the clipboard refuses and the text is selected to copy by hand (Copy it by hand; the text is selected)."
+        },
+        {
+          "name": "display",
+          "type": "'block' | 'inline'",
+          "description": "See the display variants."
+        }
+      ],
+      "a11y": "Inline it is a <code>; as a block it is <pre><code>, focusable so a keyboard can scroll a long line. The copy button is a Button, at least 48 dp. A copy is announced through a polite live region (role=status). If the clipboard refuses, the text is selected instead, ready to copy by hand.",
+      "example": "<Code code=\"devagotchi hub serve\" language=\"bash\" copyLabel={t.copy} copiedLabel={t.copied} />",
+      "path": "src/coldlight/primitives/Code/"
+    },
+    {
+      "name": "Dialog",
+      "level": "primitive",
+      "summary": "A modal window over the page that holds one task or one question until it is answered or closed.",
+      "use": "A confirmation before something hard to undo, a short form that belongs to the current screen, or a choice the screen cannot go on without.",
+      "avoid": "Telling someone something happened: use Notice. Long or multi-step work: give it its own page.",
+      "variants": {
+        "tone": {
+          "description": "What kind of question it asks.",
+          "default": "neutral",
+          "values": {
+            "neutral": "An ordinary task or question.",
+            "danger": "A confirmation before something destructive: delete, revoke, deny. Its top edge and title carry the danger colour."
+          }
+        }
+      },
+      "props": [
+        {
+          "name": "open",
+          "type": "boolean",
+          "description": "Whether it is showing. Bindable: closing it by Escape or the close button sets it to false."
+        },
+        {
+          "name": "title",
+          "type": "string",
+          "required": true,
+          "description": "The heading, and the dialog's accessible name."
+        },
+        {
+          "name": "description",
+          "type": "string",
+          "description": "One sentence under the title that says what is being asked; it becomes the accessible description."
+        },
+        {
+          "name": "children",
+          "type": "Snippet",
+          "required": true,
+          "description": "The body: the form or the details."
+        },
+        {
+          "name": "actions",
+          "type": "Snippet",
+          "description": "The footer buttons. The main action goes last."
+        },
+        {
+          "name": "closeLabel",
+          "type": "string",
+          "required": true,
+          "description": "The accessible name of the close button (Close)."
+        },
+        {
+          "name": "tone",
+          "type": "'neutral' | 'danger'",
+          "description": "See the tone variants."
+        },
+        {
+          "name": "onclose",
+          "type": "() => void",
+          "description": "Called when the person closes it by Escape or the close button."
+        }
+      ],
+      "a11y": "A native <dialog> opened with showModal(): it sits in the top layer, keeps focus inside, and Escape closes it. It is named by its title (aria-labelledby) and described by its description (aria-describedby). The close button is at least 48 dp.",
+      "example": "<Dialog bind:open title={t.revokeTitle} closeLabel={t.close} tone=\"danger\">{t.revokeBody}</Dialog>",
+      "path": "src/coldlight/primitives/Dialog/"
+    },
+    {
+      "name": "Diff",
+      "level": "primitive",
+      "summary": "Two versions of a text, line by line: what a change keeps, removes (red) and adds (green).",
+      "use": "Previewing a change before anything is written: a file edit, a setting, an import. The conflict pattern shows one for each choice.",
+      "avoid": "Showing one version: use Code.",
+      "variants": {
+        "wrap": {
+          "description": "What a line longer than the box does.",
+          "default": "scroll",
+          "values": {
+            "scroll": "The diff scrolls sideways inside itself; lines keep their shape. For code.",
+            "wrap": "Long lines wrap. For prose and settings."
+          }
+        }
+      },
+      "props": [
+        {
+          "name": "before",
+          "type": "string",
+          "required": true,
+          "description": "The version now in place."
+        },
+        {
+          "name": "after",
+          "type": "string",
+          "required": true,
+          "description": "The version the change would write."
+        },
+        {
+          "name": "label",
+          "type": "string",
+          "required": true,
+          "description": "What is being compared, for screen readers (the file or setting name)."
+        },
+        {
+          "name": "addedLabel",
+          "type": "string",
+          "required": true,
+          "description": "The word read before an added line (Added)."
+        },
+        {
+          "name": "removedLabel",
+          "type": "string",
+          "required": true,
+          "description": "The word read before a removed line (Removed)."
+        },
+        {
+          "name": "unchanged",
+          "type": "Snippet",
+          "description": "Shown when the two versions are the same."
+        },
+        {
+          "name": "wrap",
+          "type": "'scroll' | 'wrap'",
+          "description": "See the wrap variants."
+        }
+      ],
+      "a11y": "A list of lines labelled by `label`. Each added or removed line starts with its word, read aloud and hidden on screen; the + and − markers and the colours repeat it for sighted readers, so colour is never the only signal. A scrolling diff can be reached and scrolled with the keyboard.",
+      "example": "<Diff label=\"config.toml\" before={current} after={incoming} addedLabel=\"Added\" removedLabel=\"Removed\" />",
+      "path": "src/coldlight/primitives/Diff/"
+    },
+    {
+      "name": "Field",
+      "level": "primitive",
+      "summary": "A labelled text input, or a labelled text area when it takes more than one line.",
+      "use": "Any free text a person types: a name, an email, a URL, a search, a number, a note. Give it a hint when the format is not obvious, and an error when the value is refused.",
+      "avoid": "Choosing one of a known set of values: use Select. A yes or no: use a checkbox.",
+      "variants": {
+        "width": {
+          "description": "How much of the line the control takes.",
+          "default": "fill",
+          "values": {
+            "fill": "The whole width of its container: the usual field in a form.",
+            "fit": "Only as wide as its content needs: a short value such as a port or a count, beside other controls."
+          }
+        }
+      },
+      "props": [
+        {
+          "name": "label",
+          "type": "string",
+          "required": true,
+          "description": "What the field is for, as a noun (Email, Machine name). Mark a required field in the label's words."
+        },
+        {
+          "name": "value",
+          "type": "string | number | null",
+          "description": "The text in the field. Bind it: bind:value. A number field binds a number."
+        },
+        {
+          "name": "hint",
+          "type": "string",
+          "description": "How to fill it in: the format, a limit, an example. Read out after the label."
+        },
+        {
+          "name": "error",
+          "type": "string",
+          "description": "Why the value is refused and how to fix it, from the API's refusal. When set, the field is marked invalid and the message is read out."
+        },
+        {
+          "name": "multiline",
+          "type": "boolean",
+          "description": "A text area for more than one line, instead of a single-line input."
+        },
+        {
+          "name": "type",
+          "type": "'text' | 'email' | 'password' | 'url' | 'search' | 'number'",
+          "description": "The kind of text, which picks the phone keyboard. Ignored when multiline."
+        },
+        {
+          "name": "width",
+          "type": "'fill' | 'fit'",
+          "description": "See the width variants."
+        },
+        {
+          "name": "required",
+          "type": "boolean",
+          "description": "The form cannot be sent without it."
+        },
+        {
+          "name": "disabled",
+          "type": "boolean",
+          "description": "It cannot be changed now. Say why in the hint."
+        },
+        {
+          "name": "name",
+          "type": "string",
+          "description": "The form field's name."
+        },
+        {
+          "name": "autocomplete",
+          "type": "string",
+          "description": "What the browser may fill in: email, username, current-password, off."
+        }
+      ],
+      "a11y": "A native <input> or <textarea> with a <label> bound to it, so the label is its accessible name and clicking the label focuses it. The hint and the error are linked with aria-describedby; an error also sets aria-invalid. The control is at least 48 dp tall.",
+      "example": "<Field label=\"Email\" type=\"email\" autocomplete=\"email\" hint=\"We send the sign-in link here.\" bind:value={email} />",
+      "path": "src/coldlight/primitives/Field/"
+    },
+    {
+      "name": "List",
+      "level": "primitive",
+      "summary": "A vertical list of items drawn from data, one row each, with dividers, and an empty state when there are none.",
+      "use": "Machines, agents, notes, recent activity: things that read one per line and are each the same shape. Give it an empty snippet that says what would be here and how to add one (U7).",
+      "avoid": "Rows compared column by column: use Table. A few unrelated things: use Cards.",
+      "variants": {
+        "density": {
+          "description": "How much room each row has.",
+          "default": "comfortable",
+          "values": {
+            "comfortable": "Room to read and to touch: the usual list.",
+            "compact": "Tight rows for long lists of short items, such as an activity feed."
+          }
+        }
+      },
+      "props": [
+        {
+          "name": "items",
+          "type": "T[]",
+          "required": true,
+          "description": "The items, in the order the API gave them."
+        },
+        {
+          "name": "item",
+          "type": "Snippet<[T]>",
+          "required": true,
+          "description": "How one item is drawn."
+        },
+        {
+          "name": "key",
+          "type": "(item: T) => string",
+          "required": true,
+          "description": "Each item's stable identity, usually its id, so rows keep their state when the list changes."
+        },
+        {
+          "name": "label",
+          "type": "string",
+          "required": true,
+          "description": "What the list is (Machines), read out as the list's name."
+        },
+        {
+          "name": "empty",
+          "type": "Snippet",
+          "description": "Shown in place of the list when there are no items: what would be here and how to add one."
+        },
+        {
+          "name": "density",
+          "type": "'comfortable' | 'compact'",
+          "description": "See the density variants."
+        }
+      ],
+      "a11y": "A native <ul> named by aria-label, so a screen reader says what the list is and how many items it has. Each item is an <li> in data order. When empty, the empty snippet is shown instead and no empty list is announced.",
+      "example": "<List items={machines} key={(m) => m.id} label=\"Machines\">{#snippet item(m)}{m.name}{/snippet}</List>",
+      "path": "src/coldlight/primitives/List/"
+    },
+    {
+      "name": "Notice",
+      "level": "primitive",
+      "summary": "An inline message that says what happened, why, and what to do next (U9).",
+      "use": "A refusal or failure from the API, shown from its {code, message, next}; a warning before an action; the result of one. When the API offers a fix, put it in next as a Button.",
+      "avoid": "A one-word state: use Badge. A question that must be answered before going on: use Dialog.",
+      "variants": {
+        "tone": {
+          "description": "What kind of message it is.",
+          "default": "info",
+          "values": {
+            "info": "Something worth knowing; nothing is wrong.",
+            "success": "What was asked for was done.",
+            "warning": "Nothing failed yet, but something needs attention.",
+            "danger": "Something failed or was refused."
+          }
+        }
+      },
+      "props": [
+        {
+          "name": "title",
+          "type": "string",
+          "required": true,
+          "description": "What happened, in one short line (Deploy refused)."
+        },
+        {
+          "name": "children",
+          "type": "Snippet",
+          "required": true,
+          "description": "Why it happened: the API's message, as plain text in full sentences."
+        },
+        {
+          "name": "next",
+          "type": "Snippet",
+          "description": "What to do next: the API's next, usually as a Button that does it."
+        },
+        {
+          "name": "tone",
+          "type": "'info' | 'success' | 'warning' | 'danger'",
+          "description": "See the tone variants."
+        },
+        {
+          "name": "live",
+          "type": "boolean",
+          "description": "It appeared because of something the person just did, so a screen reader announces it: as an alert for warning and danger, politely for info and success. Leave it off for a notice that is part of the page from the start."
+        }
+      ],
+      "a11y": "Static by default: its text is read in its place. With live, a warning or danger notice has role=alert and is announced at once; an info or success notice has role=status and is announced when the reader is idle. Its title says what happened in words, so colour is never the only sign. Any control in next is reached by Tab in reading order.",
+      "example": "<Notice tone=\"danger\" title=\"Deploy refused\" live>Port 80 needs administrator rights.{#snippet next()}<Button onclick={usePort8080}>Use port 8080</Button>{/snippet}</Notice>",
+      "path": "src/coldlight/primitives/Notice/"
+    },
+    {
+      "name": "Select",
+      "level": "primitive",
+      "summary": "A labelled choice of one value from a known list, on the platform's own picker.",
+      "use": "Choosing one of a handful or more of options that come from the API's configuration: a region, a role, a channel.",
+      "avoid": "Two to four options that should all be visible: use radio buttons or Tabs. Free text: use Field.",
+      "variants": {
+        "width": {
+          "description": "How much of the line the control takes.",
+          "default": "fill",
+          "values": {
+            "fill": "The whole width of its container: the usual select in a form.",
+            "fit": "Only as wide as its longest option: a filter beside other controls."
+          }
+        }
+      },
+      "props": [
+        {
+          "name": "label",
+          "type": "string",
+          "required": true,
+          "description": "What is being chosen, as a noun (Region, Role)."
+        },
+        {
+          "name": "options",
+          "type": "Array<{ value: string; label: string; disabled?: boolean }>",
+          "required": true,
+          "description": "The choices, in order, from the API's configuration. A disabled option is shown but cannot be chosen."
+        },
+        {
+          "name": "value",
+          "type": "string",
+          "description": "The chosen option's value. Bind it: bind:value."
+        },
+        {
+          "name": "hint",
+          "type": "string",
+          "description": "What the choice changes. Read out after the label."
+        },
+        {
+          "name": "error",
+          "type": "string",
+          "description": "Why the choice is refused and what to choose instead. When set, the select is marked invalid and the message is read out."
+        },
+        {
+          "name": "width",
+          "type": "'fill' | 'fit'",
+          "description": "See the width variants."
+        },
+        {
+          "name": "required",
+          "type": "boolean",
+          "description": "The form cannot be sent without a choice."
+        },
+        {
+          "name": "disabled",
+          "type": "boolean",
+          "description": "It cannot be changed now. Say why in the hint."
+        },
+        {
+          "name": "name",
+          "type": "string",
+          "description": "The form field's name."
+        }
+      ],
+      "a11y": "A native <select> with a <label> bound to it, so the label is its accessible name and the platform's picker, keyboard and screen reader handling all apply. The hint and the error are linked with aria-describedby; an error also sets aria-invalid. The control is at least 48 dp tall.",
+      "example": "<Select label=\"Region\" options={regions} bind:value={region} />",
+      "path": "src/coldlight/primitives/Select/"
+    },
+    {
+      "name": "Table",
+      "level": "primitive",
+      "summary": "A semantic data table: rows of the same kind of record, compared column by column.",
+      "use": "Records a person scans and compares: machines, tokens, grants, audit lines. On a narrow screen it scrolls sideways inside itself.",
+      "avoid": "A handful of records each read on its own: use List or Card. Laying out a page: use grid, never a table.",
+      "variants": {
+        "density": {
+          "description": "How much room each row has.",
+          "default": "comfortable",
+          "values": {
+            "comfortable": "Room to read: the default for most tables.",
+            "compact": "More rows on the screen: long logs and audit trails that are scanned rather than read."
+          }
+        }
+      },
+      "props": [
+        {
+          "name": "caption",
+          "type": "string",
+          "required": true,
+          "description": "What the table holds. It names the table and its scrolling region."
+        },
+        {
+          "name": "captionHidden",
+          "type": "boolean",
+          "description": "Hide the caption visually when a heading beside the table already says the same; screen readers still hear it."
+        },
+        {
+          "name": "columns",
+          "type": "Array<{ key: string; label: string; align?: 'start' | 'end' }>",
+          "required": true,
+          "description": "The columns, in order. Numbers align to the end."
+        },
+        {
+          "name": "rows",
+          "type": "T[]",
+          "required": true,
+          "description": "The records, one per row."
+        },
+        {
+          "name": "rowKey",
+          "type": "(row: T) => string",
+          "required": true,
+          "description": "A stable, unique key for a record, such as its id."
+        },
+        {
+          "name": "cell",
+          "type": "Snippet<[T, string]>",
+          "required": true,
+          "description": "Renders one cell, given the record and the column key."
+        },
+        {
+          "name": "empty",
+          "type": "Snippet",
+          "description": "The empty state, shown in one full-width row when there are no records: what is missing and what to do."
+        },
+        {
+          "name": "density",
+          "type": "'comfortable' | 'compact'",
+          "description": "See the density variants."
+        }
+      ],
+      "a11y": "A native <table> with a <caption> and column headers (th scope=col). It sits in a region named by the caption that can be focused (tabindex=0), so a keyboard can scroll a table wider than the screen.",
+      "example": "<Table caption={t.machines} {columns} rows={machines} rowKey={(m) => m.id}>{#snippet cell(m, key)}{m[key]}{/snippet}</Table>",
+      "path": "src/coldlight/primitives/Table/"
+    },
+    {
+      "name": "Tabs",
+      "level": "primitive",
+      "summary": "A row of tabs that shows one of several panels of the same thing at a time.",
+      "use": "Views of one object that a person moves between freely: a machine's overview, sessions and logs; the tabs of a settings domain.",
+      "avoid": "Steps that must happen in order: use a form with sections. Going to another page: use links. Choosing a value for a form: use Select.",
+      "variants": {},
+      "props": [
+        {
+          "name": "label",
+          "type": "string",
+          "required": true,
+          "description": "The accessible name of the row of tabs (Machine views)."
+        },
+        {
+          "name": "tabs",
+          "type": "Array<{ id: string; label: string; disabled?: boolean }>",
+          "required": true,
+          "description": "The tabs, in order. A disabled tab is shown but cannot be chosen."
+        },
+        {
+          "name": "selected",
+          "type": "string",
+          "description": "The id of the chosen tab. Bindable. Without one, the first tab that is not disabled is chosen."
+        },
+        {
+          "name": "panel",
+          "type": "Snippet<[string]>",
+          "required": true,
+          "description": "Renders the panel of the chosen tab, given its id."
+        }
+      ],
+      "a11y": "The WAI-ARIA tabs pattern with automatic activation: one tab is in the Tab order (roving tabindex); ArrowLeft and ArrowRight move to the previous and next tab and choose it, Home and End the first and last; disabled tabs are skipped. The chosen tab has aria-selected and aria-controls its panel; the panel is labelled by its tab. Each tab is at least 48 dp tall. The row scrolls sideways inside itself on a narrow screen.",
+      "example": "<Tabs label={t.machineViews} {tabs} bind:selected>{#snippet panel(id)}<MachineView {id} />{/snippet}</Tabs>",
+      "path": "src/coldlight/primitives/Tabs/"
+    },
+    {
+      "name": "ConflictResolver",
+      "level": "pattern",
+      "summary": "The friendly popup for a change that meets a newer version: keep yours, take the incoming one, or merge both, with a red and green preview before anything is written.",
+      "use": "Whenever the engine refuses a write because the target changed since it was read (changed_since_read), an import collides, or a setting is stale (ui.md U10). It is the only conflict UI: use it everywhere.",
+      "avoid": "Asking someone to confirm an ordinary change with no newer version: use Dialog.",
+      "variants": {},
+      "props": [
+        {
+          "name": "open",
+          "type": "boolean",
+          "description": "Whether it is showing. Bindable."
+        },
+        {
+          "name": "title",
+          "type": "string",
+          "required": true,
+          "description": "What happened, as a heading (This file changed while you were editing)."
+        },
+        {
+          "name": "description",
+          "type": "string",
+          "description": "One sentence on why it matters and what the choice does."
+        },
+        {
+          "name": "name",
+          "type": "string",
+          "required": true,
+          "description": "What is in conflict: the file path or setting, read out with the preview."
+        },
+        {
+          "name": "existing",
+          "type": "string",
+          "required": true,
+          "description": "The version in place now, as the engine reported it."
+        },
+        {
+          "name": "incoming",
+          "type": "string",
+          "required": true,
+          "description": "The version this change would write."
+        },
+        {
+          "name": "merged",
+          "type": "string",
+          "description": "Both merged, as the engine produced it. Without it, merging is not offered: the UI never merges by itself (U2)."
+        },
+        {
+          "name": "choice",
+          "type": "'incoming' | 'existing' | 'merged'",
+          "description": "The selected choice. Bindable; defaults to incoming."
+        },
+        {
+          "name": "labels",
+          "type": "ConflictLabels",
+          "required": true,
+          "description": "Every word it shows: the three choices and their hints, apply, cancel, close, the diff words, the no-change message and the counts."
+        },
+        {
+          "name": "onresolve",
+          "type": "(choice, text) => void",
+          "required": true,
+          "description": "Called with the choice and the text to write when the person applies it."
+        },
+        {
+          "name": "oncancel",
+          "type": "() => void",
+          "description": "Called when the person closes it without choosing."
+        }
+      ],
+      "a11y": "A modal Dialog: focus stays inside and Escape cancels. The choices are a radio group with a legend, each choice reads its line counts, and the preview is a labelled Diff whose added and removed lines are read with their words.",
+      "example": "<ConflictResolver bind:open title=\"config.toml changed while you were editing\" name=\"config.toml\" {existing} {incoming} {merged} {labels} onresolve={(choice, text) => api.files.write(path, text)} />",
+      "path": "src/coldlight/patterns/ConflictResolver/"
+    }
+  ],
+  "tokens": [
+    {
+      "name": "step.0",
+      "css": "--cl-step-0",
+      "layer": "semantic",
+      "type": "dimension",
+      "description": "Body text, fields and buttons.",
+      "value": "clamp(1rem, 0.9489rem + 0.2273vw, 1.125rem)"
+    },
+    {
+      "name": "step.1",
+      "css": "--cl-step-1",
+      "layer": "semantic",
+      "type": "dimension",
+      "description": "The title of a card or dialog.",
+      "value": "clamp(1.2rem, 1.116rem + 0.375vw, 1.406rem)"
+    },
+    {
+      "name": "step.2",
+      "css": "--cl-step-2",
+      "layer": "semantic",
+      "type": "dimension",
+      "description": "A section heading.",
+      "value": "clamp(1.44rem, 1.31rem + 0.5778vw, 1.758rem)"
+    },
+    {
+      "name": "step.3",
+      "css": "--cl-step-3",
+      "layer": "semantic",
+      "type": "dimension",
+      "description": "A page heading.",
+      "value": "clamp(1.728rem, 1.536rem + 0.8532vw, 2.197rem)"
+    },
+    {
+      "name": "step.4",
+      "css": "--cl-step-4",
+      "layer": "semantic",
+      "type": "dimension",
+      "description": "A large number on a dashboard.",
+      "value": "clamp(2.074rem, 1.798rem + 1.224vw, 2.747rem)"
+    },
+    {
+      "name": "step.5",
+      "css": "--cl-step-5",
+      "layer": "semantic",
+      "type": "dimension",
+      "description": "The landing page headline.",
+      "value": "clamp(2.488rem, 2.102rem + 1.718vw, 3.433rem)"
+    },
+    {
+      "name": "step.-2",
+      "css": "--cl-step--2",
+      "layer": "semantic",
+      "type": "dimension",
+      "description": "The smallest text: legal lines, a badge in a dense table.",
+      "value": "clamp(0.6944rem, 0.684rem + 0.04646vw, 0.72rem)"
+    },
+    {
+      "name": "step.-1",
+      "css": "--cl-step--1",
+      "layer": "semantic",
+      "type": "dimension",
+      "description": "Small text: hints, captions, badges.",
+      "value": "clamp(0.8333rem, 0.8061rem + 0.1212vw, 0.9rem)"
+    },
+    {
+      "name": "space.3xs",
+      "css": "--cl-space-3xs",
+      "layer": "semantic",
+      "type": "dimension",
+      "description": "Between an icon and its label.",
+      "value": "clamp(0.25rem, 0.2372rem + 0.05682vw, 0.2812rem)"
+    },
+    {
+      "name": "space.2xs",
+      "css": "--cl-space-2xs",
+      "layer": "semantic",
+      "type": "dimension",
+      "description": "Inside a badge; between a label and its field.",
+      "value": "clamp(0.5rem, 0.4744rem + 0.1136vw, 0.5625rem)"
+    },
+    {
+      "name": "space.xs",
+      "css": "--cl-space-xs",
+      "layer": "semantic",
+      "type": "dimension",
+      "description": "Inside a button or field; between list items.",
+      "value": "clamp(0.75rem, 0.7116rem + 0.1705vw, 0.8438rem)"
+    },
+    {
+      "name": "space.s",
+      "css": "--cl-space-s",
+      "layer": "semantic",
+      "type": "dimension",
+      "description": "Inside a card; between fields.",
+      "value": "clamp(1rem, 0.9489rem + 0.2273vw, 1.125rem)"
+    },
+    {
+      "name": "space.m",
+      "css": "--cl-space-m",
+      "layer": "semantic",
+      "type": "dimension",
+      "description": "Between cards; inside a dialog.",
+      "value": "clamp(1.5rem, 1.423rem + 0.3409vw, 1.688rem)"
+    },
+    {
+      "name": "space.l",
+      "css": "--cl-space-l",
+      "layer": "semantic",
+      "type": "dimension",
+      "description": "Between sections.",
+      "value": "clamp(2rem, 1.898rem + 0.4545vw, 2.25rem)"
+    },
+    {
+      "name": "space.xl",
+      "css": "--cl-space-xl",
+      "layer": "semantic",
+      "type": "dimension",
+      "description": "Between page regions.",
+      "value": "clamp(3rem, 2.847rem + 0.6818vw, 3.375rem)"
+    },
+    {
+      "name": "space.2xl",
+      "css": "--cl-space-2xl",
+      "layer": "semantic",
+      "type": "dimension",
+      "description": "Around a landing page section.",
+      "value": "clamp(4rem, 3.795rem + 0.9091vw, 4.5rem)"
+    },
+    {
+      "name": "space.3xl",
+      "css": "--cl-space-3xl",
+      "layer": "semantic",
+      "type": "dimension",
+      "description": "The widest gaps of the landing page.",
+      "value": "clamp(6rem, 5.693rem + 1.364vw, 6.75rem)"
+    },
+    {
+      "name": "radius.s",
+      "css": "--cl-radius-s",
+      "layer": "semantic",
+      "type": "dimension",
+      "description": "Badges, code, small controls.",
+      "value": "0.375rem"
+    },
+    {
+      "name": "radius.m",
+      "css": "--cl-radius-m",
+      "layer": "semantic",
+      "type": "dimension",
+      "description": "Buttons and fields.",
+      "value": "0.5rem"
+    },
+    {
+      "name": "radius.l",
+      "css": "--cl-radius-l",
+      "layer": "semantic",
+      "type": "dimension",
+      "description": "Cards and dialogs.",
+      "value": "0.75rem"
+    },
+    {
+      "name": "radius.xl",
+      "css": "--cl-radius-xl",
+      "layer": "semantic",
+      "type": "dimension",
+      "description": "Large landing page panels.",
+      "value": "1.25rem"
+    },
+    {
+      "name": "radius.pill",
+      "css": "--cl-radius-pill",
+      "layer": "semantic",
+      "type": "dimension",
+      "description": "Fully rounded ends: status pills.",
+      "value": "62.4375rem"
+    },
+    {
+      "name": "line.thin",
+      "css": "--cl-line-thin",
+      "layer": "semantic",
+      "type": "dimension",
+      "description": "Borders and dividers.",
+      "value": "0.0625rem"
+    },
+    {
+      "name": "line.thick",
+      "css": "--cl-line-thick",
+      "layer": "semantic",
+      "type": "dimension",
+      "description": "The underline of the selected tab.",
+      "value": "0.125rem"
+    },
+    {
+      "name": "size.target",
+      "css": "--cl-size-target",
+      "layer": "semantic",
+      "type": "dimension",
+      "description": "The smallest touch target: 48 dp, for every control (U13).",
+      "value": "3rem"
+    },
+    {
+      "name": "size.measure",
+      "css": "--cl-size-measure",
+      "layer": "semantic",
+      "type": "dimension",
+      "description": "The widest a column of running text gets.",
+      "value": "65ch"
+    },
+    {
+      "name": "size.dialog",
+      "css": "--cl-size-dialog",
+      "layer": "semantic",
+      "type": "dimension",
+      "description": "The width of a dialog on a wide screen.",
+      "value": "34rem"
+    },
+    {
+      "name": "weight.regular",
+      "css": "--cl-weight-regular",
+      "layer": "semantic",
+      "type": "fontWeight",
+      "description": "Body text.",
+      "value": "400"
+    },
+    {
+      "name": "weight.medium",
+      "css": "--cl-weight-medium",
+      "layer": "semantic",
+      "type": "fontWeight",
+      "description": "Labels, buttons and table headers.",
+      "value": "550"
+    },
+    {
+      "name": "weight.bold",
+      "css": "--cl-weight-bold",
+      "layer": "semantic",
+      "type": "fontWeight",
+      "description": "Headings.",
+      "value": "650"
+    },
+    {
+      "name": "leading.tight",
+      "css": "--cl-leading-tight",
+      "layer": "semantic",
+      "type": "number",
+      "description": "Headings and controls.",
+      "value": "1.2"
+    },
+    {
+      "name": "leading.normal",
+      "css": "--cl-leading-normal",
+      "layer": "semantic",
+      "type": "number",
+      "description": "Running text.",
+      "value": "1.5"
+    },
+    {
+      "name": "font.ui",
+      "css": "--cl-font-ui",
+      "layer": "semantic",
+      "type": "fontFamily",
+      "description": "Every piece of interface text.",
+      "value": "system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif"
+    },
+    {
+      "name": "font.display",
+      "css": "--cl-font-display",
+      "layer": "semantic",
+      "type": "fontFamily",
+      "description": "Headings and large numbers.",
+      "value": "'DIN Alternate', Bahnschrift, DIN, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif"
+    },
+    {
+      "name": "font.mono",
+      "css": "--cl-font-mono",
+      "layer": "semantic",
+      "type": "fontFamily",
+      "description": "Code, paths, commands and IDs.",
+      "value": "ui-monospace, SFMono-Regular, 'Cascadia Mono', Consolas, 'DejaVu Sans Mono', monospace"
+    },
+    {
+      "name": "opacity.disabled",
+      "css": "--cl-opacity-disabled",
+      "layer": "semantic",
+      "type": "number",
+      "description": "A control that cannot be used right now.",
+      "value": "0.45"
+    },
+    {
+      "name": "duration.fast",
+      "css": "--cl-duration-fast",
+      "layer": "semantic",
+      "type": "duration",
+      "description": "A hover or press. Reduced motion sets every duration to 0ms.",
+      "value": "120ms"
+    },
+    {
+      "name": "duration.normal",
+      "css": "--cl-duration-normal",
+      "layer": "semantic",
+      "type": "duration",
+      "description": "A dialog or panel opening.",
+      "value": "200ms"
+    },
+    {
+      "name": "easing.standard",
+      "css": "--cl-easing-standard",
+      "layer": "semantic",
+      "type": "cubicBezier",
+      "description": "Every transition.",
+      "value": "cubic-bezier(0.2, 0, 0, 1)"
+    },
+    {
+      "name": "color.canvas",
+      "css": "--cl-color-canvas",
+      "layer": "semantic",
+      "type": "color",
+      "description": "The page behind everything.",
+      "value": "#f3f5f1",
+      "dark": "#0e1411"
+    },
+    {
+      "name": "color.surface",
+      "css": "--cl-color-surface",
+      "layer": "semantic",
+      "type": "color",
+      "description": "A card, panel, dialog or field: anything that sits on the canvas.",
+      "value": "#ffffff",
+      "dark": "#161e1a"
+    },
+    {
+      "name": "color.surface-sunk",
+      "css": "--cl-color-surface-sunk",
+      "layer": "semantic",
+      "type": "color",
+      "description": "An inset area inside a surface: code, a table header, a quiet button on hover.",
+      "value": "#e8ede6",
+      "dark": "#121915"
+    },
+    {
+      "name": "color.text",
+      "css": "--cl-color-text",
+      "layer": "semantic",
+      "type": "color",
+      "description": "Body text and headings.",
+      "value": "#16201a",
+      "dark": "#e4eae5"
+    },
+    {
+      "name": "color.text-muted",
+      "css": "--cl-color-text-muted",
+      "layer": "semantic",
+      "type": "color",
+      "description": "Secondary text: hints, captions, timestamps.",
+      "value": "#56615a",
+      "dark": "#9aa79f"
+    },
+    {
+      "name": "color.border",
+      "css": "--cl-color-border",
+      "layer": "semantic",
+      "type": "color",
+      "description": "The line around a surface, field or table cell.",
+      "value": "#d8dfd6",
+      "dark": "#2a3530"
+    },
+    {
+      "name": "color.accent",
+      "css": "--cl-color-accent",
+      "layer": "semantic",
+      "type": "color",
+      "description": "The one main action on a screen, links, the selected tab.",
+      "value": "#2f6b4f",
+      "dark": "#7cc4a0"
+    },
+    {
+      "name": "color.on-accent",
+      "css": "--cl-color-on-accent",
+      "layer": "semantic",
+      "type": "color",
+      "description": "Text and icons on an accent background.",
+      "value": "#ffffff",
+      "dark": "#0e1411"
+    },
+    {
+      "name": "color.accent-subtle",
+      "css": "--cl-color-accent-subtle",
+      "layer": "semantic",
+      "type": "color",
+      "description": "A quiet accent background: a selected row, an info notice.",
+      "value": "#e2efe7",
+      "dark": "#1d4433"
+    },
+    {
+      "name": "color.accent-hover",
+      "css": "--cl-color-accent-hover",
+      "layer": "semantic",
+      "type": "color",
+      "description": "A solid accent control under the pointer.",
+      "value": "#163828",
+      "dark": "#e2efe7"
+    },
+    {
+      "name": "color.success",
+      "css": "--cl-color-success",
+      "layer": "semantic",
+      "type": "color",
+      "description": "Done, online, allowed.",
+      "value": "#1f7a45",
+      "dark": "#6fd39a"
+    },
+    {
+      "name": "color.success-subtle",
+      "css": "--cl-color-success-subtle",
+      "layer": "semantic",
+      "type": "color",
+      "description": "The background of a success notice or badge.",
+      "value": "#e3f3e8",
+      "dark": "#13301f"
+    },
+    {
+      "name": "color.warning",
+      "css": "--cl-color-warning",
+      "layer": "semantic",
+      "type": "color",
+      "description": "Needs attention but nothing failed: offline, expiring.",
+      "value": "#7d6219",
+      "dark": "#e0c063"
+    },
+    {
+      "name": "color.warning-subtle",
+      "css": "--cl-color-warning-subtle",
+      "layer": "semantic",
+      "type": "color",
+      "description": "The background of a warning notice or badge.",
+      "value": "#f6efd9",
+      "dark": "#332a10"
+    },
+    {
+      "name": "color.pending",
+      "css": "--cl-color-pending",
+      "layer": "semantic",
+      "type": "color",
+      "description": "Waiting on someone or something: an approval, a running job.",
+      "value": "#8f560a",
+      "dark": "#e3ad55"
+    },
+    {
+      "name": "color.pending-subtle",
+      "css": "--cl-color-pending-subtle",
+      "layer": "semantic",
+      "type": "color",
+      "description": "The background of a pending notice or badge.",
+      "value": "#f8ecd9",
+      "dark": "#33240c"
+    },
+    {
+      "name": "color.danger",
+      "css": "--cl-color-danger",
+      "layer": "semantic",
+      "type": "color",
+      "description": "Failed, refused, revoked, or an action that destroys something.",
+      "value": "#a33a2c",
+      "dark": "#f08a7a"
+    },
+    {
+      "name": "color.on-danger",
+      "css": "--cl-color-on-danger",
+      "layer": "semantic",
+      "type": "color",
+      "description": "Text and icons on a danger background.",
+      "value": "#ffffff",
+      "dark": "#0e1411"
+    },
+    {
+      "name": "color.danger-subtle",
+      "css": "--cl-color-danger-subtle",
+      "layer": "semantic",
+      "type": "color",
+      "description": "The background of an error notice or badge.",
+      "value": "#f8e3df",
+      "dark": "#3a1b17"
+    },
+    {
+      "name": "color.danger-hover",
+      "css": "--cl-color-danger-hover",
+      "layer": "semantic",
+      "type": "color",
+      "description": "A solid danger control under the pointer.",
+      "value": "#7a2418",
+      "dark": "#f6c1b8"
+    },
+    {
+      "name": "color.focus",
+      "css": "--cl-color-focus",
+      "layer": "semantic",
+      "type": "color",
+      "description": "The keyboard focus ring.",
+      "value": "#2f6b4f",
+      "dark": "#7cc4a0"
+    },
+    {
+      "name": "color.overlay",
+      "css": "--cl-color-overlay",
+      "layer": "semantic",
+      "type": "color",
+      "description": "The dimming behind a dialog.",
+      "value": "rgba(14, 34, 24, 0.5)",
+      "dark": "rgba(3, 8, 6, 0.66)"
+    },
+    {
+      "name": "color.diff-added",
+      "css": "--cl-color-diff-added",
+      "layer": "semantic",
+      "type": "color",
+      "description": "The background of a line a change adds (green).",
+      "value": "#e3f3e8",
+      "dark": "#13301f"
+    },
+    {
+      "name": "color.diff-added-text",
+      "css": "--cl-color-diff-added-text",
+      "layer": "semantic",
+      "type": "color",
+      "description": "The text of a line a change adds.",
+      "value": "#14532d",
+      "dark": "#b8ebc9"
+    },
+    {
+      "name": "color.diff-removed",
+      "css": "--cl-color-diff-removed",
+      "layer": "semantic",
+      "type": "color",
+      "description": "The background of a line a change removes (red).",
+      "value": "#f8e3df",
+      "dark": "#3a1b17"
+    },
+    {
+      "name": "color.diff-removed-text",
+      "css": "--cl-color-diff-removed-text",
+      "layer": "semantic",
+      "type": "color",
+      "description": "The text of a line a change removes.",
+      "value": "#7a2418",
+      "dark": "#f6c1b8"
+    },
+    {
+      "name": "elevation.raised",
+      "css": "--cl-elevation-raised",
+      "layer": "composite",
+      "type": "shadow",
+      "description": "A card that sits slightly above the canvas.",
+      "value": "0rem 0.0625rem 0.1875rem 0rem rgba(14, 34, 24, 0.08)"
+    },
+    {
+      "name": "elevation.overlay",
+      "css": "--cl-elevation-overlay",
+      "layer": "composite",
+      "type": "shadow",
+      "description": "A dialog or popover over the page.",
+      "value": "0rem 0.75rem 2rem 0rem rgba(14, 34, 24, 0.22)"
+    },
+    {
+      "name": "focus.width",
+      "css": "--cl-focus-width",
+      "layer": "composite",
+      "type": "dimension",
+      "description": "The width of the focus ring.",
+      "value": "0.125rem"
+    },
+    {
+      "name": "focus.offset",
+      "css": "--cl-focus-offset",
+      "layer": "composite",
+      "type": "dimension",
+      "description": "The gap between a control and its focus ring.",
+      "value": "0.125rem"
+    },
+    {
+      "name": "type.body",
+      "css": "--cl-type-body",
+      "layer": "composite",
+      "type": "typography",
+      "description": "Running text.",
+      "value": "400 clamp(1rem, 0.9489rem + 0.2273vw, 1.125rem)/1.5 system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif"
+    },
+    {
+      "name": "type.label",
+      "css": "--cl-type-label",
+      "layer": "composite",
+      "type": "typography",
+      "description": "Buttons, field labels, tabs.",
+      "value": "550 clamp(1rem, 0.9489rem + 0.2273vw, 1.125rem)/1.2 system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif"
+    },
+    {
+      "name": "type.small",
+      "css": "--cl-type-small",
+      "layer": "composite",
+      "type": "typography",
+      "description": "Hints, captions, badges.",
+      "value": "400 clamp(0.8333rem, 0.8061rem + 0.1212vw, 0.9rem)/1.5 system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif"
+    },
+    {
+      "name": "type.title",
+      "css": "--cl-type-title",
+      "layer": "composite",
+      "type": "typography",
+      "description": "The title of a card or dialog.",
+      "value": "650 clamp(1.2rem, 1.116rem + 0.375vw, 1.406rem)/1.2 'DIN Alternate', Bahnschrift, DIN, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif"
+    },
+    {
+      "name": "type.heading",
+      "css": "--cl-type-heading",
+      "layer": "composite",
+      "type": "typography",
+      "description": "A page heading.",
+      "value": "650 clamp(1.728rem, 1.536rem + 0.8532vw, 2.197rem)/1.2 'DIN Alternate', Bahnschrift, DIN, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif"
+    },
+    {
+      "name": "type.code",
+      "css": "--cl-type-code",
+      "layer": "composite",
+      "type": "typography",
+      "description": "Code, paths, commands, IDs and diffs.",
+      "value": "400 clamp(0.8333rem, 0.8061rem + 0.1212vw, 0.9rem)/1.5 ui-monospace, SFMono-Regular, 'Cascadia Mono', Consolas, 'DejaVu Sans Mono', monospace"
+    }
+  ]
+}

@@ -29,6 +29,9 @@ allowed = [
   # AgentHub, its own repository (the submodule), and the apps (desktop inspector, website).
   "agenthub",
   "apps",
+  # The UI and ColdLight, a Svelte app beside the Rust layers (ui.md U1, the program §8, both
+  # approved by the operator; added 2026-11-28 with the UI foundation).
+  "ui",
   # Folders that hold no layer's code.
   "audit",
   "config",

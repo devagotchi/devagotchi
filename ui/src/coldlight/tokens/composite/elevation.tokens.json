@@ -1,0 +1,37 @@
+{
+  "elevation": {
+    "$description": "Composite tokens: the shadows that lift a surface, and the keyboard focus ring.",
+    "$type": "shadow",
+    "raised": {
+      "$value": {
+        "color": "{palette.shade.8}",
+        "offsetX": "0rem",
+        "offsetY": "0.0625rem",
+        "blur": "0.1875rem",
+        "spread": "0rem"
+      },
+      "$description": "A card that sits slightly above the canvas."
+    },
+    "overlay": {
+      "$value": {
+        "color": "{palette.shade.22}",
+        "offsetX": "0rem",
+        "offsetY": "0.75rem",
+        "blur": "2rem",
+        "spread": "0rem"
+      },
+      "$description": "A dialog or popover over the page."
+    }
+  },
+  "focus": {
+    "$type": "dimension",
+    "width": {
+      "$value": "{scale.width.2}",
+      "$description": "The width of the focus ring."
+    },
+    "offset": {
+      "$value": "{scale.width.2}",
+      "$description": "The gap between a control and its focus ring."
+    }
+  }
+}

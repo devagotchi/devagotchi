@@ -1,0 +1,84 @@
+{
+  "color": {
+    "$description": "The same colour roles in the dark theme. Descriptions live in color.light.tokens.json.",
+    "$type": "color",
+    "canvas": {
+      "$value": "{palette.moss.950}"
+    },
+    "surface": {
+      "$value": "{palette.moss.875}"
+    },
+    "surface-sunk": {
+      "$value": "{palette.moss.900}"
+    },
+    "text": {
+      "$value": "{palette.moss.100}"
+    },
+    "text-muted": {
+      "$value": "{palette.moss.400}"
+    },
+    "border": {
+      "$value": "{palette.moss.800}"
+    },
+    "accent": {
+      "$value": "{palette.pine.300}"
+    },
+    "on-accent": {
+      "$value": "{palette.moss.950}"
+    },
+    "accent-subtle": {
+      "$value": "{palette.pine.800}"
+    },
+    "accent-hover": {
+      "$value": "{palette.pine.100}"
+    },
+    "success": {
+      "$value": "{palette.leaf.300}"
+    },
+    "success-subtle": {
+      "$value": "{palette.leaf.950}"
+    },
+    "warning": {
+      "$value": "{palette.ochre.300}"
+    },
+    "warning-subtle": {
+      "$value": "{palette.ochre.950}"
+    },
+    "pending": {
+      "$value": "{palette.amber.300}"
+    },
+    "pending-subtle": {
+      "$value": "{palette.amber.950}"
+    },
+    "danger": {
+      "$value": "{palette.brick.300}"
+    },
+    "on-danger": {
+      "$value": "{palette.moss.950}"
+    },
+    "danger-subtle": {
+      "$value": "{palette.brick.950}"
+    },
+    "danger-hover": {
+      "$value": "{palette.brick.200}"
+    },
+    "focus": {
+      "$value": "{palette.pine.300}"
+    },
+    "overlay": {
+      "$value": "{palette.veil.dark}"
+    },
+    "diff-added": {
+      "$value": "{palette.leaf.950}"
+    },
+    "diff-added-text": {
+      "$value": "{palette.leaf.200}"
+    },
+    "diff-removed": {
+      "$value": "{palette.brick.950}"
+    },
+    "diff-removed-text": {
+      "$value": "{palette.brick.200}"
+    }
+  }
+}

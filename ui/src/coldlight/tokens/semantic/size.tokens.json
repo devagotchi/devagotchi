@@ -1,0 +1,197 @@
+{
+  "step": {
+    "0": {
+      "$value": "{scale.step.0}",
+      "$description": "Body text, fields and buttons."
+    },
+    "1": {
+      "$value": "{scale.step.1}",
+      "$description": "The title of a card or dialog."
+    },
+    "2": {
+      "$value": "{scale.step.2}",
+      "$description": "A section heading."
+    },
+    "3": {
+      "$value": "{scale.step.3}",
+      "$description": "A page heading."
+    },
+    "4": {
+      "$value": "{scale.step.4}",
+      "$description": "A large number on a dashboard."
+    },
+    "5": {
+      "$value": "{scale.step.5}",
+      "$description": "The landing page headline."
+    },
+    "$description": "Size roles: the fluid type steps and spaces, corner radii, line widths, touch targets, widths, weights and fonts.",
+    "$type": "dimension",
+    "-2": {
+      "$value": "{scale.step.-2}",
+      "$description": "The smallest text: legal lines, a badge in a dense table."
+    },
+    "-1": {
+      "$value": "{scale.step.-1}",
+      "$description": "Small text: hints, captions, badges."
+    }
+  },
+  "space": {
+    "$type": "dimension",
+    "3xs": {
+      "$value": "{scale.space.3xs}",
+      "$description": "Between an icon and its label."
+    },
+    "2xs": {
+      "$value": "{scale.space.2xs}",
+      "$description": "Inside a badge; between a label and its field."
+    },
+    "xs": {
+      "$value": "{scale.space.xs}",
+      "$description": "Inside a button or field; between list items."
+    },
+    "s": {
+      "$value": "{scale.space.s}",
+      "$description": "Inside a card; between fields."
+    },
+    "m": {
+      "$value": "{scale.space.m}",
+      "$description": "Between cards; inside a dialog."
+    },
+    "l": {
+      "$value": "{scale.space.l}",
+      "$description": "Between sections."
+    },
+    "xl": {
+      "$value": "{scale.space.xl}",
+      "$description": "Between page regions."
+    },
+    "2xl": {
+      "$value": "{scale.space.2xl}",
+      "$description": "Around a landing page section."
+    },
+    "3xl": {
+      "$value": "{scale.space.3xl}",
+      "$description": "The widest gaps of the landing page."
+    }
+  },
+  "radius": {
+    "$type": "dimension",
+    "s": {
+      "$value": "{scale.radius.6}",
+      "$description": "Badges, code, small controls."
+    },
+    "m": {
+      "$value": "{scale.radius.8}",
+      "$description": "Buttons and fields."
+    },
+    "l": {
+      "$value": "{scale.radius.12}",
+      "$description": "Cards and dialogs."
+    },
+    "xl": {
+      "$value": "{scale.radius.20}",
+      "$description": "Large landing page panels."
+    },
+    "pill": {
+      "$value": "{scale.radius.pill}",
+      "$description": "Fully rounded ends: status pills."
+    }
+  },
+  "line": {
+    "$type": "dimension",
+    "thin": {
+      "$value": "{scale.width.1}",
+      "$description": "Borders and dividers."
+    },
+    "thick": {
+      "$value": "{scale.width.2}",
+      "$description": "The underline of the selected tab."
+    }
+  },
+  "size": {
+    "$type": "dimension",
+    "target": {
+      "$value": "{scale.width.48}",
+      "$description": "The smallest touch target: 48 dp, for every control (U13)."
+    },
+    "measure": {
+      "$value": "{scale.width.measure}",
+      "$description": "The widest a column of running text gets."
+    },
+    "dialog": {
+      "$value": "{scale.width.dialog}",
+      "$description": "The width of a dialog on a wide screen."
+    }
+  },
+  "weight": {
+    "$type": "fontWeight",
+    "regular": {
+      "$value": "{scale.weight.400}",
+      "$description": "Body text."
+    },
+    "medium": {
+      "$value": "{scale.weight.550}",
+      "$description": "Labels, buttons and table headers."
+    },
+    "bold": {
+      "$value": "{scale.weight.650}",
+      "$description": "Headings."
+    }
+  },
+  "leading": {
+    "$type": "number",
+    "tight": {
+      "$value": "{scale.leading.tight}",
+      "$description": "Headings and controls."
+    },
+    "normal": {
+      "$value": "{scale.leading.normal}",
+      "$description": "Running text."
+    }
+  },
+  "font": {
+    "$type": "fontFamily",
+    "ui": {
+      "$value": "{family.system}",
+      "$description": "Every piece of interface text."
+    },
+    "display": {
+      "$value": "{family.din}",
+      "$description": "Headings and large numbers."
+    },
+    "mono": {
+      "$value": "{family.mono}",
+      "$description": "Code, paths, commands and IDs."
+    }
+  },
+  "opacity": {
+    "$type": "number",
+    "disabled": {
+      "$value": "{scale.opacity.45}",
+      "$description": "A control that cannot be used right now."
+    }
+  },
+  "duration": {
+    "$type": "duration",
+    "fast": {
+      "$value": "{scale.time.120}",
+      "$description": "A hover or press. Reduced motion sets every duration to 0ms."
+    },
+    "normal": {
+      "$value": "{scale.time.200}",
+      "$description": "A dialog or panel opening."
+    }
+  },
+  "easing": {
+    "$type": "cubicBezier",
+    "standard": {
+      "$value": [
+        0.2,
+        0,
+        0,
+        1
+      ],
+      "$description": "Every transition."
+    }
+  }
+}
